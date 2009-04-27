@@ -49,6 +49,19 @@
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
+// Classes
+$path = realpath(dirname(__FILE__)) . DIRECTORY_SEPARATOR;
+
+DevblocksPlatform::registerClasses($path. 'api/Extension.php', array(
+    'Extension_UsermeetTool'
+));
+DevblocksPlatform::registerClasses($path. 'api/Model.php', array(
+    'Model_CommunityTool'
+));
+DevblocksPlatform::registerClasses($path. 'api/DAO.php', array(
+    'DAO_CommunityTool'
+));
+
 class UmPortalController extends DevblocksControllerExtension {
     const ID = 'usermeet.controller.portal';
 	private $tools = array();
