@@ -91,37 +91,6 @@ abstract class Extension_UsermeetTool extends DevblocksExtension implements Devb
 	    }
 	}
 	
-	/**
-	 * @return Model_CommunitySession
-	 */
-	protected function getSession() {
-		$fingerprint = $this->getFingerprint();
-		
-		$session_id = md5($fingerprint['ip'] . $this->getPortal() . $fingerprint['local_sessid']);
-		$session = DAO_CommunitySession::get($session_id);
-		
-		return $session;
-	}
-	
-	protected function getFingerprint() {
-		$sFingerPrint = DevblocksPlatform::importGPC($_COOKIE['GroupLoginPassport'],'string','');
-		$fingerprint = null;
-		if(!empty($sFingerPrint)) {
-			$fingerprint = unserialize($sFingerPrint);
-		}
-		return $fingerprint;
-	}
-	
-	// [TODO] Experimental ==========================================
-	public function setPortal($code) {
-		$this->portal = $code;
-	}
-	
-	public function getPortal() {
-		return $this->portal;
-	}
-	//===============================================================
-	
 	public function writeResponse(DevblocksHttpResponse $response) {
 	}
 	
@@ -189,51 +158,23 @@ abstract class Extension_UmScController extends DevblocksExtension implements De
 	    }
 	}
 	
-	/**
-	 * @return Model_CommunitySession
-	 * // [TODO] This should inherit from usermeet.core (if they lose sync we lose sessions)
-	 */
-	protected function getSession() {
-		$fingerprint = $this->getFingerprint();
-		
-		$session_id = md5($fingerprint['ip'] . $this->getPortal() . $fingerprint['local_sessid']);
-		$session = DAO_CommunitySession::get($session_id);
-		
-		return $session;
-	}
-	
-	protected function getFingerprint() {
-		$sFingerPrint = DevblocksPlatform::importGPC($_COOKIE['GroupLoginPassport'],'string','');
-		$fingerprint = null;
-		if(!empty($sFingerPrint)) {
-			$fingerprint = unserialize($sFingerPrint);
-		}
-		return $fingerprint;
-	}
-	
-	// [TODO] Experimental ==========================================
-	public function setPortal($code) {
-		$this->portal = $code;
-	}
-	
-	public function getPortal() {
-		return $this->portal;
-	}
-	//===============================================================
-	
 	public function writeResponse(DevblocksHttpResponse $response) {
 		/* Expect Overload */
 	}
 	
-	/**
-	 * @param Model_CommunityTool $instance
-	 */
-//	public function configure($instance) {
-//	}
-//	
-//	public function saveConfiguration() {
-//	}
+	public function isVisible() {
+		/* Expect Overload */
+		return true;
+	}
+	
+	public function configure() {
+		// [TODO] Translate
+		echo "This module has no configuration options.<br><br>";
+	}
+	
+	public function saveConfiguration() {
+		/* Expect Overload */
+	}
     
 };
 
-?>

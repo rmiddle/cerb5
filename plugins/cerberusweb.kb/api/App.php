@@ -438,7 +438,65 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 			$return_path = explode('/', $return);
 			DevblocksPlatform::redirect(new DevblocksHttpResponse($return_path));
 		}
-	}	
+	}
+	
+	// For Display->Reply toolbar button
+	function showTicketReplyKbSearchAction() {
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->cache_lifetime = "0";
+		$tpl->assign('path', $this->_TPL_PATH);
+
+		@$msg_id = DevblocksPlatform::importGPC($_REQUEST['msg_id'],'integer',0);
+		$tpl->assign('msg_id', $msg_id);
+
+		$topics = DAO_KbCategory::getWhere(sprintf("%s = 0", DAO_KbCategory::PARENT_ID));
+		$tpl->assign('topics', $topics);
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'ajax/reply_kb_search.tpl');
+	}
+	
+	// For Display->Reply toolbar button
+	function doTicketReplyKbSearchAction() {
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->cache_lifetime = "0";
+		$tpl->assign('path', $this->_TPL_PATH);
+
+		@$q = DevblocksPlatform::importGPC($_REQUEST['q'],'string','');
+		$tpl->assign('q', $q);
+
+		@$topic_id = DevblocksPlatform::importGPC($_REQUEST['topic_id'],'integer',0);
+		$tpl->assign('topic_id', $topic_id);
+
+		@$msg_id = DevblocksPlatform::importGPC($_REQUEST['msg_id'],'integer',0);
+		$tpl->assign('msg_id', $msg_id);
+
+		$params = array();
+		
+		if(!empty($topic_id))
+			$params[SearchFields_KbArticle::CATEGORY_ID] = 
+				new DevblocksSearchCriteria(SearchFields_KbArticle::CATEGORY_ID, '=', $topic_id);
+
+		if(!empty($q))
+			$params[SearchFields_KbArticle::CATEGORY_ID] = 
+				array(
+					DevblocksSearchCriteria::GROUP_OR,
+					new DevblocksSearchCriteria(SearchFields_KbArticle::TITLE, DevblocksSearchCriteria::OPER_FULLTEXT, $q),
+					new DevblocksSearchCriteria(SearchFields_KbArticle::CONTENT, DevblocksSearchCriteria::OPER_FULLTEXT, $q),
+				);
+
+		list($results, $null) = DAO_KbArticle::search(
+			$params,
+			25,
+			0,
+			DAO_KbArticle::VIEWS,
+			false,
+			false
+		);
+		
+		$tpl->assign('results', $results);
+
+		$tpl->display('file:' . $this->_TPL_PATH . 'ajax/reply_kb_search_results.tpl');
+	}
 };
 
 class DAO_KbArticle extends DevblocksORMHelper {
@@ -621,7 +679,6 @@ class DAO_KbArticle extends DevblocksORMHelper {
 			"kb.format as %s, ".
 			"kb.content as %s ".
 			"FROM kb_article kb ",
-//			"INNER JOIN team tm ON (tm.id = t.team_id) ".
 			    SearchFields_KbArticle::ID,
 			    SearchFields_KbArticle::TITLE,
 			    SearchFields_KbArticle::UPDATED,
@@ -634,6 +691,7 @@ class DAO_KbArticle extends DevblocksORMHelper {
 			(isset($tables['katc']) ? "LEFT JOIN kb_article_to_category katc ON (kb.id=katc.kb_article_id)" : " ").
 			
 			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "").
+			"GROUP BY kb.id ".
 			(!empty($sortBy) ? sprintf("ORDER BY %s %s",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : "")
 		;
 		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
