@@ -17,7 +17,7 @@
 <input type="hidden" name="rules[]" value="event">
 <label><input type="checkbox" name="value_event[]" value="mail_outgoing" {if isset($crit_event.mail_outgoing)}checked="checked"{/if}> Outgoing message</label><br>
 <label><input type="checkbox" name="value_event[]" value="mail_incoming" {if isset($crit_event.mail_incoming)}checked="checked"{/if}> Incoming message</label><br>
-<label><input type="checkbox" name="value_event[]" value="ticket_assignment" {if isset($crit_event.ticket_assignment)}checked="checked"{/if}> Ticket assignment</label><br>
+<label><input type="checkbox" name="value_event[]" value="ticket_assignment" {if isset($crit_event.ticket_assignment)}checked="checked"{/if}> Ticket assigned to me</label><br>
 <label><input type="checkbox" name="value_event[]" value="ticket_comment" {if isset($crit_event.ticket_comment)}checked="checked"{/if}> New comment</label><br>
 <br>
 
@@ -104,7 +104,7 @@
 		</td>
 		<td valign="top">
 			<select name="value_next_worker_id" onchange="document.getElementById('chkRuleNextWorkerId').checked=(''==selectValue(this)?false:true);">
-				<option value=""></option>
+				<option value="0">- {$translate->_('common.nobody')} -</option>
 				{foreach from=$workers item=worker}
 					<option value="{$worker->id}" {if $crit_next_worker.value==$worker->id}selected="selected"{/if}>{$worker->getName()}</option>
 				{/foreach}

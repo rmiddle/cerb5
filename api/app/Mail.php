@@ -360,6 +360,9 @@ class CerberusMail {
 			}
 		}
 		
+		// Train as not spam
+		CerberusBayes::markTicketAsNotSpam($ticket_id);
+		
 		// Inbound/Outbound Reply Event
 		// [TODO] This pivots on $no_mail for now, but this functionality may change
 	    $eventMgr = DevblocksPlatform::getEventService();
@@ -537,7 +540,7 @@ class CerberusMail {
 					return;
 					
 				// Ignore bounces
-				if($first_split[1]=="postmaster" || $first_split[1] == "mailer-daemon")
+				if($first_split[0]=="postmaster" || $first_split[0] == "mailer-daemon")
 					return;
 				
 				// Ignore autoresponses to autoresponses

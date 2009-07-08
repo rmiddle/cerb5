@@ -23,6 +23,10 @@ class UmScApp extends Extension_UsermeetTool {
 			if(is_array($enabled_modules))
 			foreach($enabled_modules as $module_id) {
 				$module = DevblocksPlatform::getExtension($module_id,true,true); /* @var $module Extension_UmScController */
+				
+				if(empty($module) || !$module instanceof Extension_UmScController)
+					continue;
+				
 				@$module_uri = $module->manifest->params['uri'];
 	
 				if($module->isVisible())
@@ -104,6 +108,11 @@ class UmScApp extends Extension_UsermeetTool {
 		switch($module_uri) {
 			case 'ajax':
 				$controller = new UmScAjaxController(null);
+				$controller->handleRequest(new DevblocksHttpRequest($stack));
+				break;
+				
+			case 'rss':
+				$controller = new UmScRssController(null);
 				$controller->handleRequest(new DevblocksHttpRequest($stack));
 				break;
 				
@@ -401,6 +410,33 @@ class UmScAbstractViewLoader {
 		$inst->renderSortAsc = $model->renderSortAsc;
 
 		return $inst;
+	}
+};
+
+class UmScRssController extends Extension_UmScController {
+	function __construct($manifest=null) {
+		parent::__construct($manifest);
+	}
+	
+	function handleRequest(DevblocksHttpRequest $request) {
+		@$path = $request->path;
+				
+		if(empty($path) || !is_array($path))
+			return;
+
+		$uri = array_shift($path);
+		
+		$rss_controllers = DevblocksPlatform::getExtensions('usermeet.sc.rss.controller');
+		
+		foreach($rss_controllers as $extension_id => $rss_controller) {
+			if(0==strcasecmp($rss_controller->params['uri'],$uri)) {
+				$controller = DevblocksPlatform::getExtension($extension_id, true);
+				$controller->handleRequest(new DevblocksHttpRequest($path));
+				return;
+			}
+		}
+		
+		// [TOOD] subcontroller not found
 	}
 };
 

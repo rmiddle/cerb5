@@ -384,6 +384,7 @@ class SearchFields_TimeTrackingEntry {
 	 */
 	static function getFields() {
 		$translate = DevblocksPlatform::getTranslationService();
+		
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'tt', 'id', null, $translate->_('timetracking_entry.id')),
 			self::TIME_ACTUAL_MINS => new DevblocksSearchField(self::TIME_ACTUAL_MINS, 'tt', 'time_actual_mins', null, $translate->_('timetracking_entry.time_actual_mins')),
@@ -406,6 +407,9 @@ class SearchFields_TimeTrackingEntry {
 			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',null,$field->name);
 		}
 		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
+		
 		return $columns;
 	}
 };
@@ -414,8 +418,10 @@ class C4_TimeTrackingEntryView extends C4_AbstractView {
 	const DEFAULT_ID = 'timetracking_entries';
 
 	function __construct() {
+		$translate = DevblocksPlatform::getTranslationService();
+		
 		$this->id = self::DEFAULT_ID;
-		$this->name = 'Time Tracking Entries';
+		$this->name = $translate->_('timetracking.activity.tab');
 		$this->renderLimit = 10;
 		$this->renderSortBy = SearchFields_TimeTrackingEntry::LOG_DATE;
 		$this->renderSortAsc = false;

@@ -98,6 +98,9 @@ class CrmOppsActivityTab extends Extension_ActivityTab {
 		}
 
 		$tpl->assign('response_uri', 'activity/opps');
+
+		$quick_search_type = $visit->get('crm.opps.quick_search_type');
+		$tpl->assign('quick_search_type', $quick_search_type);
 		
 		$tpl->assign('view', $view);
 		$tpl->assign('view_fields', C4_CrmOpportunityView::getFields());
@@ -110,6 +113,8 @@ endif;
 
 class CrmPage extends CerberusPageExtension {
 	private $plugin_path = '';
+	
+	const SESSION_OPP_TAB = '';
 	
 	function __construct($manifest) {
 		parent::__construct($manifest);
@@ -140,6 +145,11 @@ class CrmPage extends CerberusPageExtension {
 					break; // [TODO] Not found
 				}
 				$tpl->assign('opp', $opp);						
+
+				if(null == (@$tab_selected = $stack[0])) {
+					$tab_selected = $visit->get(self::SESSION_OPP_TAB, '');
+				}
+				$tpl->assign('tab_selected', $tab_selected);
 
 				$address = DAO_Address::get($opp->primary_email_id);
 				$tpl->assign('address', $address);
@@ -187,6 +197,8 @@ class CrmPage extends CerberusPageExtension {
 						$tpl->assign('series_stats', $series_stats);
 					}
 				}
+				
+				
 				
 				$tpl->display($tpl_path . 'crm/opps/display/index.tpl');
 				break;
@@ -263,7 +275,7 @@ class CrmPage extends CerberusPageExtension {
 		 */
 		$license = CerberusLicense::getInstance();
 		if(empty($id) && (empty($license['serial']) || (!empty($license['serial']) && isset($license['a'])))
-			&& 10 <= DAO_FeedbackEntry::getItemCount()) {
+			&& 10 <= DAO_CrmOpportunity::getItemCount()) {
 			$tpl->display('file:' . $tpl_path . 'crm/opps/rpc/trial.tpl');
 			return;
 		}
@@ -428,6 +440,9 @@ class CrmPage extends CerberusPageExtension {
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
 		
+		$visit = CerberusApplication::getVisit();
+		$visit->set(self::SESSION_OPP_TAB, 'tasks');
+		
 		$opp = DAO_CrmOpportunity::get($opp_id);
 		$tpl->assign('opp', $opp);
 		
@@ -464,15 +479,34 @@ class CrmPage extends CerberusPageExtension {
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
 		
+		$visit = CerberusApplication::getVisit();
+		$translate = DevblocksPlatform::getTranslationService();
+		
+		// Remember the selected tab
+		$visit->set(self::SESSION_OPP_TAB, 'mail');
+		
+		// Opp
 		$opp = DAO_CrmOpportunity::get($opp_id);
 		$tpl->assign('opp', $opp);
 
+		// Recall the history scope
+		$scope = $visit->get('crm.opps.history.scope', '');
+
+		// Addy
 		$address = DAO_Address::get($opp->primary_email_id);
 		$tpl->assign('address', $address);
+
+		// Addy->Org
+		if(!empty($address->contact_org_id)) {
+			if(null != ($contact_org = DAO_ContactOrg::get($address->contact_org_id)))
+				$tpl->assign('contact_org', $contact_org);
+		}
 		
+		// View
 		$view = C4_AbstractViewLoader::getView('C4_TicketView', 'opp_tickets');
 		$view->id = 'opp_tickets';
-		$view->name = 'Open Tickets';
+		$view->name = '';
+		$view->renderPage = 0;
 		$view->view_columns = array(
 			SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
 			SearchFields_Ticket::TICKET_UPDATED_DATE,
@@ -480,16 +514,62 @@ class CrmPage extends CerberusPageExtension {
 			SearchFields_Ticket::TICKET_CATEGORY_ID,
 			SearchFields_Ticket::TICKET_NEXT_WORKER_ID,
 		);
-		$view->params = array(
-			SearchFields_Ticket::REQUESTER_ID => new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ID,'in',array($opp->primary_email_id)),
-			SearchFields_Ticket::TICKET_DELETED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_DELETED,'=',0),
-		);
-		$view->name = "Requester: " . $address->email;
+
+		// Sanitize scope options
+		if('org'==$scope && empty($contact_org))
+			$scope = '';
+		if('domain'==$scope) {
+			$email_parts = explode('@', $address->email);
+			if(!is_array($email_parts) || 2 != count($email_parts))
+				$scope = '';
+		}
+
+		switch($scope) {
+			case 'org':
+				$view->params = array(
+					SearchFields_Ticket::TICKET_FIRST_CONTACT_ORG_ID => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_FIRST_CONTACT_ORG_ID,'=',$address->contact_org_id),
+					SearchFields_Ticket::TICKET_DELETED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_DELETED,'=',0),
+				);
+				$view->name = ucwords($translate->_('contact_org.name')) . ": " . $contact_org->name;
+				break;
+				
+			case 'domain':
+				$view->params = array(
+					SearchFields_Ticket::REQUESTER_ADDRESS => new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ADDRESS,'like','*@'.$email_parts[1]),
+					SearchFields_Ticket::TICKET_DELETED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_DELETED,'=',0),
+				);
+				$view->name = ucwords($translate->_('common.email')) . ": *@" . $email_parts[1];
+				break;
+				
+			default:
+			case 'email':
+				$scope = 'email';
+				$view->params = array(
+					SearchFields_Ticket::REQUESTER_ID => new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ID,'in',array($opp->primary_email_id)),
+					SearchFields_Ticket::TICKET_DELETED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_DELETED,'=',0),
+				);
+				$view->name = ucwords($translate->_('common.email')) . ": " . $address->email;
+				break;
+		}
+		
+		$tpl->assign('scope', $scope);
+		
 		$tpl->assign('view', $view);
 		
 		C4_AbstractViewLoader::setView($view->id, $view);
 		
 		$tpl->display('file:' . $tpl_path . 'crm/opps/display/tabs/mail.tpl');
+	}
+	
+	function doOppHistoryScopeAction() {
+		@$opp_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer');
+		@$scope = DevblocksPlatform::importGPC($_REQUEST['scope'],'string','');
+		
+		$visit = CerberusApplication::getVisit();
+
+		$visit->set('crm.opps.history.scope', $scope);
+		
+		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('crm','opps',$opp_id,'mail')));
 	}
 	
 	function showOppPropertiesTabAction() {
@@ -498,6 +578,9 @@ class CrmPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
+		
+		$visit = CerberusApplication::getVisit();
+		$visit->set(self::SESSION_OPP_TAB, 'properties');
 		
 		$opp = DAO_CrmOpportunity::get($opp_id);
 		$tpl->assign('opp', $opp);
@@ -568,6 +651,9 @@ class CrmPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
+		
+		$visit = CerberusApplication::getVisit();
+		$visit->set(self::SESSION_OPP_TAB, 'notes');
 		
 		$opp = DAO_CrmOpportunity::get($opp_id);
 		$tpl->assign('opp', $opp);
@@ -709,6 +795,53 @@ class CrmPage extends CerberusPageExtension {
 		
 		$view->render();
 		return;
+	}
+	
+	function doQuickSearchAction() {
+        @$type = DevblocksPlatform::importGPC($_POST['type'],'string'); 
+        @$query = DevblocksPlatform::importGPC($_POST['query'],'string');
+
+        $query = trim($query);
+        
+        $visit = CerberusApplication::getVisit(); /* @var $visit CerberusVisit */
+        $translate = DevblocksPlatform::getTranslationService();
+		
+        if(null == ($searchView = C4_AbstractViewLoader::getView('',CrmOppsActivityTab::VIEW_ACTIVITY_OPPS))) {
+        	$searchView = new C4_CrmOpportunityView();
+        	$searchView->id = CrmOppsActivityTab::VIEW_ACTIVITY_OPPS;
+        	$searchView->name = $translate->_('common.search_results');
+        	C4_AbstractViewLoader::setView($searchView->id, $searchView);
+        }
+		
+		$visit->set('crm.opps.quick_search_type', $type);
+		
+        $params = array();
+        
+        switch($type) {
+            case "title":
+		        if($query && false===strpos($query,'*'))
+		            $query = '*' . $query . '*';
+            	$params[SearchFields_CrmOpportunity::NAME] = new DevblocksSearchCriteria(SearchFields_CrmOpportunity::NAME,DevblocksSearchCriteria::OPER_LIKE,$query);               
+                break;
+            case "email":
+		        if($query && false===strpos($query,'*'))
+		            $query = '*' . $query . '*';
+            	$params[SearchFields_CrmOpportunity::EMAIL_ADDRESS] = new DevblocksSearchCriteria(SearchFields_CrmOpportunity::EMAIL_ADDRESS,DevblocksSearchCriteria::OPER_LIKE,$query);               
+                break;
+            case "org":
+		        if($query && false===strpos($query,'*'))
+		            $query = '*' . $query . '*';
+            	$params[SearchFields_CrmOpportunity::ORG_NAME] = new DevblocksSearchCriteria(SearchFields_CrmOpportunity::ORG_NAME,DevblocksSearchCriteria::OPER_LIKE,$query);      
+                break;
+        }
+        
+        $searchView->params = $params;
+        $searchView->renderPage = 0;
+        $searchView->renderSortBy = null;
+        
+        C4_AbstractViewLoader::setView($searchView->id,$searchView);
+        
+        DevblocksPlatform::redirect(new DevblocksHttpResponse(array('activity','opps')));
 	}
 	
 	// Ajax
@@ -1066,6 +1199,11 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 		return $objects;
 	}
 	
+	static function getItemCount() {
+		$db = DevblocksPlatform::getDatabaseService();
+		return $db->GetOne("SELECT count(id) FROM crm_opportunity");
+	}
+	
 	static function maint() {
 		$db = DevblocksPlatform::getDatabaseService();
 		$logger = DevblocksPlatform::getConsoleLog();
@@ -1250,6 +1388,9 @@ class SearchFields_CrmOpportunity implements IDevblocksSearchFields {
 			$key = 'cf_'.$field_id;
 			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',null,$field->name);
 		}
+		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
 		
 		return $columns;
 	}

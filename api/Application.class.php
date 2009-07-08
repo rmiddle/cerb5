@@ -48,7 +48,7 @@
  * 		and Joe Geck.
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 907);
+define("APP_BUILD", 919);
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -553,14 +553,17 @@ class CerberusApplication extends DevblocksApplication {
 				* back and forth between them, ignore the last move action in the chain  
 				* which is trying to start over.
 				*/
-				if(!isset($moveMap[$ticket_id])) {
-					$moveMap[$ticket_id] = array();
-				} else {
-					if(isset($moveMap[$ticket_id][$group_id])) {
-						$dont_move = true;
+				if(isset($match->actions['move'])) { 
+					if(!isset($moveMap[$ticket_id])) {
+						$moveMap[$ticket_id] = array();
+					} else {
+						if(isset($moveMap[$ticket_id][$group_id])) {
+							$dont_move = true;
+						}
 					}
+					
+					$moveMap[$ticket_id][$group_id] = $match->id;
 				}
-				$moveMap[$ticket_id][$group_id] = $match->id;
 	
 				// Stop any move actions if we're going to loop again
 				if($dont_move) {

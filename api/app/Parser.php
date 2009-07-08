@@ -448,6 +448,8 @@ class CerberusParser {
 		$group_id = 0;
 		
 		if(empty($id)) { // New Ticket
+			$sMask = CerberusApplication::generateTicketMask();
+		
 			// Routing new tickets
 			if(null != ($routing_rules = Model_MailToGroupRule::getMatches(
 				$fromAddressInst,
@@ -477,7 +479,7 @@ class CerberusParser {
 			// [JAS] It's important to not set the group_id on the ticket until the messages exist
 			// or inbox filters will just abort.
 			$fields = array(
-				DAO_Ticket::MASK => CerberusApplication::generateTicketMask(),
+				DAO_Ticket::MASK => $sMask,
 				DAO_Ticket::SUBJECT => $sSubject,
 				DAO_Ticket::IS_CLOSED => 0,
 				DAO_Ticket::FIRST_WROTE_ID => intval($fromAddressInst->id),
@@ -601,69 +603,72 @@ class CerberusParser {
 		}
 
 		// Finalize our new ticket details (post-message creation)
-		if($bIsNew && !empty($email_id)) { // First thread
-			DAO_Ticket::updateTicket($id,array(
+		if($bIsNew && !empty($id) && !empty($email_id)) {
+			// First thread (needed for anti-spam)
+			DAO_Ticket::updateTicket($id, array(
+				 DAO_Ticket::FIRST_MESSAGE_ID => $email_id
+			));
+			
+			// Prime the change fields (which a few things like anti-spam might change before we commit)
+			$change_fields = array(
 			    DAO_Ticket::TEAM_ID => $group_id, // this triggers move rules
-			    DAO_Ticket::FIRST_MESSAGE_ID => $email_id,
-		    ));
+			);
+			
+		    $out = CerberusBayes::calculateTicketSpamProbability($id);
+
+		    if(!empty($group_id)) {
+		    	@$spam_threshold = DAO_GroupSettings::get($group_id, DAO_GroupSettings::SETTING_SPAM_THRESHOLD, 80);
+		        @$spam_action = DAO_GroupSettings::get($group_id, DAO_GroupSettings::SETTING_SPAM_ACTION, '');
+		        @$spam_action_param = DAO_GroupSettings::get($group_id, DAO_GroupSettings::SETTING_SPAM_ACTION_PARAM,'');
+		        
+			    if($out['probability']*100 >= $spam_threshold) {
+			    	$enumSpamTraining = CerberusTicketSpamTraining::SPAM;
+			    	
+			        switch($spam_action) {
+			            default:
+			            case 0: // do nothing
+                            break;
+							
+			            case 1: // delete
+							$change_fields[DAO_Ticket::IS_CLOSED] = 1;
+							$change_fields[DAO_Ticket::IS_DELETED] = 1;
+                            break;
+							
+			            case 2: // move
+							$buckets = DAO_Bucket::getAll();
+							
+							// Verify bucket exists
+                            if(!empty($spam_action_param) && isset($buckets[$spam_action_param])) {
+                            	$change_fields[DAO_Ticket::TEAM_ID] = $group_id;
+								$change_fields[DAO_Ticket::CATEGORY_ID] = $spam_action_param;
+                            }	                            
+			                break;
+			        }
+			    }
+			} // end spam training		
+		
+			// Save properties
+			if(!empty($change_fields))
+				DAO_Ticket::updateTicket($id, $change_fields);
+		}
+
+		// Reply notifications (new messages are handled by 'move' listener)
+		if(!$bIsNew) {
+			// Inbound Reply Event
+		    $eventMgr = DevblocksPlatform::getEventService();
+		    $eventMgr->trigger(
+		        new Model_DevblocksEvent(
+		            'ticket.reply.inbound',
+	                array(
+	                    'ticket_id' => $id,
+	                )
+	            )
+		    );
 		}
 
 		// New ticket processing
 		if($bIsNew) {
 			
-    		// Allow spam training overloading
-		    if(!empty($enumSpamTraining)) {
-			    if($enumSpamTraining == CerberusTicketSpamTraining::SPAM) {
-	                CerberusBayes::markTicketAsSpam($id);
-	                
-                	DAO_Ticket::updateTicket($id,array(
-						DAO_Ticket::IS_CLOSED => 1,
-						DAO_Ticket::IS_DELETED => 1
-					));
-	                
-			    } elseif($enumSpamTraining == CerberusTicketSpamTraining::NOT_SPAM) {
-		            CerberusBayes::markTicketAsNotSpam($id);
-		        }
-				
-			} else { // No overload
-			    $out = CerberusBayes::calculateTicketSpamProbability($id);
-
-			    // [TODO] Move this group logic to a post-parse event listener
-			    if(!empty($group_id)) {
-			    	@$spam_threshold = DAO_GroupSettings::get($group_id, DAO_GroupSettings::SETTING_SPAM_THRESHOLD, 80);
-			        @$spam_action = DAO_GroupSettings::get($group_id, DAO_GroupSettings::SETTING_SPAM_ACTION, '');
-			        @$spam_action_param = DAO_GroupSettings::get($group_id, DAO_GroupSettings::SETTING_SPAM_ACTION_PARAM,'');
-			        
-				    if($out['probability']*100 >= $spam_threshold) {
-				    	$enumSpamTraining = CerberusTicketSpamTraining::SPAM;
-				    	
-				        switch($spam_action) {
-				            default:
-				            case 0: // do nothing
-	                            break;
-				            case 1: // delete
-	                            // [TODO] Would have been much nicer to delete before this point
-	                            DAO_Ticket::updateTicket($id,array(
-	                                DAO_Ticket::IS_CLOSED => 1,
-	                                DAO_Ticket::IS_DELETED => 1
-	                            ));
-	                            break;
-				            case 2: // move
-								$buckets = DAO_Bucket::getAll();
-								
-								// Verify bucket exists
-	                            if(!empty($spam_action_param) && isset($buckets[$spam_action_param])) {
-		                            DAO_Ticket::updateTicket($id,array(
-		                                DAO_Ticket::TEAM_ID => $group_id,
-		                                DAO_Ticket::CATEGORY_ID => $spam_action_param
-		                            ));
-	                            }	                            
-				                break;
-				        }
-				    }
-			    }
-			} // end spam training
-
 			// Auto reply
 			@$autoreply_enabled = DAO_GroupSettings::get($group_id, DAO_GroupSettings::SETTING_AUTO_REPLY_ENABLED, 0);
 			@$autoreply = DAO_GroupSettings::get($group_id, DAO_GroupSettings::SETTING_AUTO_REPLY, '');

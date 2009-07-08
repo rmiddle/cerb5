@@ -90,7 +90,7 @@ class ChWebApiConfigTab extends Extension_ConfigTab {
 
 			// ACL
 			@$aclAddresses = DevblocksPlatform::importGPC($_REQUEST['aclAddresses'.$access_id],'integer',0);
-			@$aclFnr = DevblocksPlatform::importGPC($_REQUEST['aclFnr'.$access_id],'integer',0);
+//			@$aclFnr = DevblocksPlatform::importGPC($_REQUEST['aclFnr'.$access_id],'integer',0);
 			@$aclOrgs = DevblocksPlatform::importGPC($_REQUEST['aclOrgs'.$access_id],'integer',0);
 			@$aclTasks = DevblocksPlatform::importGPC($_REQUEST['aclTasks'.$access_id],'integer',0);
 			@$aclParser = DevblocksPlatform::importGPC($_REQUEST['aclParser'.$access_id],'integer',0);
@@ -102,7 +102,7 @@ class ChWebApiConfigTab extends Extension_ConfigTab {
 				$aclKBTopics[$v] = 1;
 			
 			$rights['acl_addresses'] = $aclAddresses;
-			$rights['acl_fnr'] = $aclFnr;
+//			$rights['acl_fnr'] = $aclFnr;
 			$rights['acl_orgs'] = $aclOrgs;
 			$rights['acl_tasks'] = $aclTasks;
 			$rights['acl_parser'] = $aclParser;
@@ -268,7 +268,7 @@ class ChRestFrontController extends DevblocksControllerExtension {
 	function handleRequest(DevblocksHttpRequest $request) {
 		$controllers = array(
 			'addresses' => 'Rest_AddressesController',
-			'fnr' => 'Rest_FnrController',
+//			'fnr' => 'Rest_FnrController',
 			'orgs' => 'Rest_OrgsController',
 			'tasks' => 'Rest_TasksController',
 			'parser' => 'Rest_ParserController',
@@ -463,8 +463,12 @@ abstract class Ch_RestController implements DevblocksHttpRequestHandler {
 		return $contents;
 	}
 	
-	protected function _renderResults($results, $fields, $element='element', $container='elements') {
+	protected function _renderResults($results, $fields, $element='element', $container='elements', $attribs=array()) {
 		$xml =& new SimpleXMLElement("<$container/>");
+
+		if(is_array($attribs))
+		foreach($attribs as $k=>$v)
+			$xml->addAttribute($k, htmlspecialchars($v));
 
 		foreach($results as $result) {
 			$e =& $xml->addChild($element);
@@ -644,17 +648,22 @@ class Rest_AddressesController extends Ch_RestController {
 			}
 		}
 
-		list($results, $null) = DAO_Address::search(
+		list($results, $total) = DAO_Address::search(
 			array(),
 			$params,
 			50,
 			$p_page,
 			SearchFields_Address::EMAIL,
 			true,
-			false
+			true
 		);
 		
-		$this->_renderResults($results, $search_params, 'address', 'addresses');
+		$attribs = array(
+			'page_results' => count($results),
+			'total_results' => intval($total)
+		);
+		
+		$this->_renderResults($results, $search_params, 'address', 'addresses', $attribs);
 	}
 	
 	private function _postValidateAction($path) {
@@ -956,17 +965,22 @@ class Rest_OrgsController extends Ch_RestController {
 			}
 		}
 
-		list($orgs, $null) = DAO_ContactOrg::search(
+		list($orgs, $total) = DAO_ContactOrg::search(
 			array(),
 			$params,
 			50,
 			$p_page,
 			DAO_ContactOrg::NAME,
 			true,
-			false
+			true
 		);
 		
-		$this->_renderResults($orgs, $search_params, 'org', 'orgs');
+		$attribs = array(
+			'page_results' => count($orgs),
+			'total_results' => intval($total)
+		);
+		
+		$this->_renderResults($orgs, $search_params, 'org', 'orgs', $attribs);
 	}
 	
 	private function _getIdAction($path) {
@@ -1062,7 +1076,6 @@ class Rest_TicketsController extends Ch_RestController {
 			't_id' => 'id',
 			't_mask' => 'mask',
 			't_subject' => 'subject',
-			'tm_name' => 'team_name',
 			't_category_id' => null,
 			't_created_date' => 'created_date',
 			't_updated_date' => 'updated_date',
@@ -1083,7 +1096,8 @@ class Rest_TicketsController extends Ch_RestController {
 			't_interesting_words' => null,
 			't_due_date' => 'due_date',
 			't_first_contact_org_id' => 'first_contact_org_id',
-			'tm_id' => 'team_id',
+			't_team_id' => 'group_id',
+			't_category_id' => 'bucket_id',
 		);
 		
 		if ($dir === true && array_key_exists($idx, $translations))
@@ -1103,7 +1117,8 @@ class Rest_TicketsController extends Ch_RestController {
 			case 'first_wrote_address_id':
 			case 'last_wrote_address_id':
 			case 'first_contact_org_id':
-			case 'team_id':
+			case 'group_id':
+			case 'bucket_id':
 				return is_numeric($value) ? true : false;
 			case 'is_waiting':
 			case 'is_closed':
@@ -1115,7 +1130,6 @@ class Rest_TicketsController extends Ch_RestController {
 				return (is_numeric($value) && 1 > $value && 0 < $value) ? true : false;
 			case 'mask':
 			case 'subject':
-			case 'team_name':
 			case 'first_wrote':
 			case 'last_wrote':
 				return !empty($value) ? true : false;
@@ -1259,18 +1273,23 @@ class Rest_TicketsController extends Ch_RestController {
 				}
 			}
 		}
-
-		list($results, $null) = DAO_Ticket::search(
+		
+		list($results, $total) = DAO_Ticket::search(
 			array(SearchFields_Ticket::TICKET_ID),
 			$params,
 			50,
 			$p_page,
 			SearchFields_Ticket::TICKET_UPDATED_DATE,
 			false,
-			false
+			true
 		);
 		
-		$this->_renderResults($results, $search_params, 'ticket', 'tickets');
+		$attribs = array(
+			'page_results' => count($results),
+			'total_results' => intval($total)
+		);
+		
+		$this->_renderResults($results, $search_params, 'ticket', 'tickets', $attribs);
 	}
 	
 	private function _getIdAction($path) {
@@ -2168,17 +2187,22 @@ class Rest_TasksController extends Ch_RestController {
 			}
 		}
 
-		list($tasks, $null) = DAO_Task::search(
+		list($tasks, $total) = DAO_Task::search(
 			array(),
 			$params,
 			50,
 			$p_page,
 			DAO_Task::DUE_DATE,
 			true,
-			false
+			true
 		);
 		
-		$this->_renderResults($tasks, $search_params, 'task', 'tasks');
+		$attribs = array(
+			'page_results' => count($tasks),
+			'total_results' => intval($total)
+		);
+		
+		$this->_renderResults($tasks, $search_params, 'task', 'tasks', $attribs);
 	}
 	
 	private function _getIdAction($path, $params=array()) {
@@ -2330,16 +2354,21 @@ class Rest_KBArticlesController extends Ch_RestController {
 		}
 		$params[SearchFields_KbArticle::TOP_CATEGORY_ID] = new DevblocksSearchCriteria(SearchFields_KbArticle::TOP_CATEGORY_ID,'in',array_keys(@$keychain->rights['acl_kb_topics']));
 		
-		list($results, $null) = DAO_KbArticle::search(
+		list($results, $total) = DAO_KbArticle::search(
 			$params,
 			50,
 			$p_page,
 			SearchFields_KbArticle::ID,
 			false,
-			false
+			true
+		);
+
+		$attribs = array(
+			'page_results' => count($results),
+			'total_results' => intval($total)
 		);
 		
-		$this->_renderResults($results, $search_params, 'article', 'articles');
+		$this->_renderResults($results, $search_params, 'article', 'articles', $attribs);
 	}
 	
 	private function _getIdAction($path,$keychain) {
@@ -2445,7 +2474,7 @@ class Rest_KBArticlesController extends Ch_RestController {
 		$category->addChild('parent_id', $cats[$tree_idx]->parent_id);
 		$category->addChild('name', $cats[$tree_idx]->name);
 		$category->addChild('article_count', $tree[$cats[$tree_idx]->parent_id][$tree_idx]);
-		if (is_array($tree[$tree_idx]))
+		if(isset($tree[$tree_idx]) && is_array($tree[$tree_idx]))
 			foreach($tree[$tree_idx] as $subtree_idx => $count)
 				$this->_addSubCategory($subtree_idx, $tree, $cats, $category);
 	}
@@ -2556,149 +2585,149 @@ class Rest_ParserController extends Ch_RestController {
 	
 };
 
-class Rest_FnrController extends Ch_RestController {
-	
-	//****
-
-	protected function getAction($path,$keychain) {
-		if(Model_WebapiKey::ACL_NONE==intval(@$keychain->rights['acl_fnr']))
-			$this->_error("Action not permitted.");
-		
-		// Single GET
-//		if(1==count($path) && is_numeric($path[0]))
-//			$this->_getIdAction($path);
-		
-		// Actions
-		switch(array_shift($path)) {
-			case 'search':
-				$this->_getSearchAction($path);
-				break;
-			case 'topics':
-				switch(array_shift($path)) {
-					case 'list':
-						$this->_getTopicsListAction($path);
-						break;
-				}
-				break;
-		}
-	}
-
-	protected function putAction($path,$keychain) {
-//		if(Model_WebapiKey::ACL_FULL!=intval($keychain->rights['acl_tickets']))
+//class Rest_FnrController extends Ch_RestController {
+//	
+//	//****
+//
+//	protected function getAction($path,$keychain) {
+//		if(Model_WebapiKey::ACL_NONE==intval(@$keychain->rights['acl_fnr']))
 //			$this->_error("Action not permitted.");
 //		
-//		// Single PUT
-//		if(1==count($path) && is_numeric($path[0]))
-//			$this->_putIdAction($path);
-	}
-	
-	protected function postAction($path,$keychain) {
-//		if(Model_WebapiKey::ACL_FULL != intval(@$keychain->rights['acl_parser']))
-//			$this->_error("Action not permitted.");
+//		// Single GET
+////		if(1==count($path) && is_numeric($path[0]))
+////			$this->_getIdAction($path);
 //		
 //		// Actions
 //		switch(array_shift($path)) {
-//			case 'parse':
-//				$this->_postSourceParseAction($path);
+//			case 'search':
+//				$this->_getSearchAction($path);
 //				break;
-//			case 'queue':
-//				$this->_postSourceQueueAction($path);
+//			case 'topics':
+//				switch(array_shift($path)) {
+//					case 'list':
+//						$this->_getTopicsListAction($path);
+//						break;
+//				}
 //				break;
 //		}
-	}
-	
-	protected function deleteAction($path,$keychain) {
-//		if(Model_WebapiKey::ACL_FULL!=intval($keychain->rights['acl_tickets']))
-//			$this->_error("Action not permitted.");
+//	}
+//
+//	protected function putAction($path,$keychain) {
+////		if(Model_WebapiKey::ACL_FULL!=intval($keychain->rights['acl_tickets']))
+////			$this->_error("Action not permitted.");
+////		
+////		// Single PUT
+////		if(1==count($path) && is_numeric($path[0]))
+////			$this->_putIdAction($path);
+//	}
+//	
+//	protected function postAction($path,$keychain) {
+////		if(Model_WebapiKey::ACL_FULL != intval(@$keychain->rights['acl_parser']))
+////			$this->_error("Action not permitted.");
+////		
+////		// Actions
+////		switch(array_shift($path)) {
+////			case 'parse':
+////				$this->_postSourceParseAction($path);
+////				break;
+////			case 'queue':
+////				$this->_postSourceQueueAction($path);
+////				break;
+////		}
+//	}
+//	
+//	protected function deleteAction($path,$keychain) {
+////		if(Model_WebapiKey::ACL_FULL!=intval($keychain->rights['acl_tickets']))
+////			$this->_error("Action not permitted.");
+////		
+////		// Single DELETE
+////		if(1==count($path) && is_numeric($path[0]))
+////			$this->_deleteIdAction($path);
+//	}
+//	
+//	//****
+//	
+//	private function _getTopicsListAction($path) {
+//		$topics = DAO_FnrTopic::getWhere();
+//
+//		$xml_out = new SimpleXMLElement("<topics></topics>");
 //		
-//		// Single DELETE
-//		if(1==count($path) && is_numeric($path[0]))
-//			$this->_deleteIdAction($path);
-	}
-	
-	//****
-	
-	private function _getTopicsListAction($path) {
-		$topics = DAO_FnrTopic::getWhere();
-
-		$xml_out = new SimpleXMLElement("<topics></topics>");
-		
-		foreach($topics as $topic_id => $topic) { /* @var $topic Model_FnrTopic */
-			$eTopic = $xml_out->addChild('topic');
-			$eTopic->addChild('id', $topic->id);
-			$eTopic->addChild('name', $topic->name);
-
-			$eResources = $eTopic->addChild('resources');
-			$resources = $topic->getResources();
-
-			foreach($resources as $resource) { /* @var $resource Model_FnrExternalResource */
-				$eResource = $eResources->addChild('resource');
-				$eResource->addChild('id', $resource->id);
-				$eResource->addChild('name', $resource->name);
-				$eResource->addChild('topic_id', $resource->topic_id);
-//				$eResource->addChild('url', $resource->url);
-			}
-		}
-		
-		$this->_render($xml_out->asXML());
-	}
-	
-	private function _getSearchAction($path) {
-		@$p_query = DevblocksPlatform::importGPC($_REQUEST['query'],'string','');
-		@$p_resources = DevblocksPlatform::importGPC($_REQUEST['resources'],'string','');
-		
-		$resource_where = null;
-		
-		// Specific topics only?
-		if(!empty($p_resources)) {
-			$db = DevblocksPlatform::getDatabaseService();
-			$resource_ids = DevblocksPlatform::parseCsvString($p_resources);
-			if(!empty($resource_ids)) {
-				$resource_where = sprintf("%s IN (%s)",
-					DAO_FnrExternalResource::ID,
-					$db->qstr(implode(',', $resource_ids))
-				);
-			}
-		}
-
-		$resources = DAO_FnrExternalResource::getWhere($resource_where);
-		
-		$feeds = Model_FnrExternalResource::searchResources(
-			$resources,
-			$p_query
-		);
-		
-		$xml_out = new SimpleXMLElement("<resources></resources>");
-		
-		foreach($feeds as $matches) {
-			$eMatch = $xml_out->addChild("resource");
-			$eMatch->addChild('name', $matches['name']);
-			$eMatch->addChild('topic', $matches['topic_name']);
-			$eMatch->addChild('link', $matches['feed']->link);
-			$eResults = $eMatch->addChild("results");
-			
-			foreach($matches['feed'] as $item) {
-				$eResult = $eResults->addChild("result");
-				
-				if($item instanceof Zend_Feed_Entry_Rss) {
-					$eResult->addChild('title', (string) $item->title());
-					$eResult->addChild('link', (string) $item->link());
-					$eResult->addChild('date', (string) $item->pubDate());
-					$eResult->addChild('description', (string) $item->description());
-					
-				} elseif($item instanceof Zend_Feed_Atom) {
-					$eResult->addChild('title', (string) $item->title());
-					$eResult->addChild('link', (string) $item->link['href']);
-					$eResult->addChild('date', (string) $item->published());
-					$eResult->addChild('description', (string) $item->summary());
-				}
-			}
-		}
-		
-		$this->_render($xml_out->asXML());
-	}
-	
-};
+//		foreach($topics as $topic_id => $topic) { /* @var $topic Model_FnrTopic */
+//			$eTopic = $xml_out->addChild('topic');
+//			$eTopic->addChild('id', $topic->id);
+//			$eTopic->addChild('name', $topic->name);
+//
+//			$eResources = $eTopic->addChild('resources');
+//			$resources = $topic->getResources();
+//
+//			foreach($resources as $resource) { /* @var $resource Model_FnrExternalResource */
+//				$eResource = $eResources->addChild('resource');
+//				$eResource->addChild('id', $resource->id);
+//				$eResource->addChild('name', $resource->name);
+//				$eResource->addChild('topic_id', $resource->topic_id);
+////				$eResource->addChild('url', $resource->url);
+//			}
+//		}
+//		
+//		$this->_render($xml_out->asXML());
+//	}
+//	
+//	private function _getSearchAction($path) {
+//		@$p_query = DevblocksPlatform::importGPC($_REQUEST['query'],'string','');
+//		@$p_resources = DevblocksPlatform::importGPC($_REQUEST['resources'],'string','');
+//		
+//		$resource_where = null;
+//		
+//		// Specific topics only?
+//		if(!empty($p_resources)) {
+//			$db = DevblocksPlatform::getDatabaseService();
+//			$resource_ids = DevblocksPlatform::parseCsvString($p_resources);
+//			if(!empty($resource_ids)) {
+//				$resource_where = sprintf("%s IN (%s)",
+//					DAO_FnrExternalResource::ID,
+//					$db->qstr(implode(',', $resource_ids))
+//				);
+//			}
+//		}
+//
+//		$resources = DAO_FnrExternalResource::getWhere($resource_where);
+//		
+//		$feeds = Model_FnrExternalResource::searchResources(
+//			$resources,
+//			$p_query
+//		);
+//		
+//		$xml_out = new SimpleXMLElement("<resources></resources>");
+//		
+//		foreach($feeds as $matches) {
+//			$eMatch = $xml_out->addChild("resource");
+//			$eMatch->addChild('name', $matches['name']);
+//			$eMatch->addChild('topic', $matches['topic_name']);
+//			$eMatch->addChild('link', $matches['feed']->link);
+//			$eResults = $eMatch->addChild("results");
+//			
+//			foreach($matches['feed'] as $item) {
+//				$eResult = $eResults->addChild("result");
+//				
+//				if($item instanceof Zend_Feed_Entry_Rss) {
+//					$eResult->addChild('title', (string) $item->title());
+//					$eResult->addChild('link', (string) $item->link());
+//					$eResult->addChild('date', (string) $item->pubDate());
+//					$eResult->addChild('description', (string) $item->description());
+//					
+//				} elseif($item instanceof Zend_Feed_Atom) {
+//					$eResult->addChild('title', (string) $item->title());
+//					$eResult->addChild('link', (string) $item->link['href']);
+//					$eResult->addChild('date', (string) $item->published());
+//					$eResult->addChild('description', (string) $item->summary());
+//				}
+//			}
+//		}
+//		
+//		$this->_render($xml_out->asXML());
+//	}
+//	
+//};
 
 class Rest_WorkerController extends Ch_RestController {
 	// don't return password hashes if we implement worker object access!!!

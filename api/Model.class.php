@@ -415,6 +415,10 @@ class Model_GroupInboxFilter {
 		foreach($filters as $filter) { /* @var $filter Model_GroupInboxFilter */
 			$passed = 0;
 
+			// Skip filters with no criteria
+			if(!is_array($filter->criteria) || empty($filter->criteria))
+				continue; 
+
 			// check criteria
 			foreach($filter->criteria as $rule_key => $rule) {
 				@$value = $rule['value'];
@@ -1784,8 +1788,10 @@ class C4_AddressView extends C4_AbstractView {
 	const DEFAULT_ID = 'addresses';
 
 	function __construct() {
+		$translate = DevblocksPlatform::getTranslationService();
+		
 		$this->id = self::DEFAULT_ID;
-		$this->name = 'E-mail Addresses';
+		$this->name = $translate->_('addy_book.tab.addresses');
 		$this->renderLimit = 10;
 		$this->renderSortBy = 'a_email';
 		$this->renderSortAsc = true;
@@ -2221,8 +2227,10 @@ class C4_ContactOrgView extends C4_AbstractView {
 	const DEFAULT_ID = 'contact_orgs';
 
 	function __construct() {
+		$translate = DevblocksPlatform::getTranslationService();
+		
 		$this->id = self::DEFAULT_ID;
-		$this->name = 'Organizations';
+		$this->name = $translate->_('addy_book.tab.organizations');
 		$this->renderSortBy = 'c_name';
 		$this->renderSortAsc = true;
 
@@ -3717,56 +3725,6 @@ class Model_Community {
 	public $id = 0;
 	public $name = '';
 }
-
-class Model_FnrTopic {
-	public $id = 0;
-	public $name = '';
-
-	function getResources() {
-		$where = sprintf("%s = %d",
-		DAO_FnrExternalResource::TOPIC_ID,
-		$this->id
-		);
-		$resources = DAO_FnrExternalResource::getWhere($where);
-		return $resources;
-	}
-};
-
-class Model_FnrQuery {
-	public $id;
-	public $query;
-	public $created;
-	public $source;
-	public $no_match;
-};
-
-class Model_FnrExternalResource {
-	public $id = 0;
-	public $name = '';
-	public $url = '';
-	public $topic_id = 0;
-
-	public static function searchResources($resources, $query) {
-		$feeds = array();
-		$topics = DAO_FnrTopic::getWhere();
-
-		if(is_array($resources))
-		foreach($resources as $resource) { /* @var $resource Model_FnrExternalResource */
-			try {
-				$url = str_replace("#find#",rawurlencode($query),$resource->url);
-				$feed = Zend_Feed::import($url);
-				if($feed->count())
-					$feeds[] = array(
-					'name' => $resource->name,
-					'topic_name' => @$topics[$resource->topic_id]->name,
-					'feed' => $feed
-				);
-			} catch(Exception $e) {}
-		}
-		
-		return $feeds;
-	}
-};
 
 class Model_MailTemplate {
 	const TYPE_COMPOSE = 1;

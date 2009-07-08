@@ -724,11 +724,16 @@ class SearchFields_Worker implements IDevblocksSearchFields {
 	 * @return DevblocksSearchField[]
 	 */
 	static function getFields() {
-		return array(
+		$columns = array(
 			SearchFields_Worker::ID => new DevblocksSearchField(SearchFields_Worker::ID, 'w', 'id'),
 			SearchFields_Worker::LAST_ACTIVITY => new DevblocksSearchField(SearchFields_Worker::LAST_ACTIVITY, 'w', 'last_activity'),
 			SearchFields_Worker::LAST_ACTIVITY_DATE => new DevblocksSearchField(SearchFields_Worker::LAST_ACTIVITY_DATE, 'w', 'last_activity_date'),
 		);
+		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
+
+		return $columns;		
 	}
 };
 
@@ -981,6 +986,8 @@ class DAO_WorkerRole extends DevblocksORMHelper {
 };
 
 class DAO_WorkerEvent extends DevblocksORMHelper {
+	const CACHE_COUNT_PREFIX = 'workerevent_count_';
+	
 	const ID = 'id';
 	const CREATED_DATE = 'created_date';
 	const WORKER_ID = 'worker_id';
@@ -1001,6 +1008,12 @@ class DAO_WorkerEvent extends DevblocksORMHelper {
 		$db->Execute($sql);
 		
 		self::update($id, $fields);
+		
+		// Invalidate the worker notification count cache
+		if(isset($fields[self::WORKER_ID])) {
+			$cache = DevblocksPlatform::getCacheService();
+			self::clearCountCache($fields[self::WORKER_ID]);
+		}
 		
 		return $id;
 	}
@@ -1044,6 +1057,25 @@ class DAO_WorkerEvent extends DevblocksORMHelper {
 		return null;
 	}
 	
+	static function getUnreadCountByWorker($worker_id) {
+		$db = DevblocksPlatform::getDatabaseService();
+		$cache = DevblocksPlatform::getCacheService();
+		
+	    if(null === ($count = $cache->load(self::CACHE_COUNT_PREFIX.$worker_id))) {
+			$sql = sprintf("SELECT count(*) ".
+				"FROM worker_event ".
+				"WHERE worker_id = %d ".
+				"AND is_read = 0",
+				$worker_id
+			);
+			
+			$count = $db->GetOne($sql);
+			$cache->save($count, self::CACHE_COUNT_PREFIX.$worker_id);
+	    }
+		
+		return intval($count);
+	}
+	
 	/**
 	 * @param ADORecordSet $rs
 	 * @return Model_WorkerEvent[]
@@ -1076,6 +1108,11 @@ class DAO_WorkerEvent extends DevblocksORMHelper {
 		$db->Execute(sprintf("DELETE FROM worker_event WHERE id IN (%s)", $ids_list));
 		
 		return true;
+	}
+
+	static function clearCountCache($worker_id) {
+		$cache = DevblocksPlatform::getCacheService();
+		$cache->remove(self::CACHE_COUNT_PREFIX.$worker_id);
 	}
 
     /**
@@ -1174,7 +1211,7 @@ class SearchFields_WorkerEvent implements IDevblocksSearchFields {
 	static function getFields() {
 		$translate = DevblocksPlatform::getTranslationService();
 		
-		return array(
+		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'we', 'id', null, $translate->_('worker_event.id')),
 			self::CREATED_DATE => new DevblocksSearchField(self::CREATED_DATE, 'we', 'created_date', null, $translate->_('worker_event.created_date')),
 			self::WORKER_ID => new DevblocksSearchField(self::WORKER_ID, 'we', 'worker_id', null, $translate->_('worker_event.worker_id')),
@@ -1183,6 +1220,11 @@ class SearchFields_WorkerEvent implements IDevblocksSearchFields {
 			self::IS_READ => new DevblocksSearchField(self::IS_READ, 'we', 'is_read', null, $translate->_('worker_event.is_read')),
 			self::URL => new DevblocksSearchField(self::URL, 'we', 'url', null, $translate->_('common.url')),
 		);
+		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
+
+		return $columns;		
 	}
 };
 
@@ -1485,6 +1527,7 @@ class SearchFields_ContactOrg {
 	 */
 	static function getFields() {
 		$translate = DevblocksPlatform::getTranslationService();
+		
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'c', 'id', null, $translate->_('contact_org.id')),
 			self::NAME => new DevblocksSearchField(self::NAME, 'c', 'name', null, $translate->_('contact_org.name')),
@@ -1506,6 +1549,9 @@ class SearchFields_ContactOrg {
 			$key = 'cf_'.$field_id;
 			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',null,$field->name);
 		}
+		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
 		
 		return $columns;
 	}
@@ -1899,6 +1945,9 @@ class SearchFields_Address implements IDevblocksSearchFields {
 			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',null,$field->name);
 		}
 		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
+		
 		return $columns;
 	}
 };
@@ -2277,7 +2326,7 @@ class SearchFields_Message implements IDevblocksSearchFields {
 	 * @return DevblocksSearchField[]
 	 */
 	static function getFields() {
-		return array(
+		$columns = array(
 			SearchFields_Message::ID => new DevblocksSearchField(SearchFields_Message::ID, 'm', 'id'),
 			SearchFields_Message::TICKET_ID => new DevblocksSearchField(SearchFields_Message::TICKET_ID, 'm', 'ticket_id'),
 			
@@ -2286,6 +2335,11 @@ class SearchFields_Message implements IDevblocksSearchFields {
 
 			SearchFields_Message::MESSAGE_CONTENT => new DevblocksSearchField(SearchFields_Message::MESSAGE_CONTENT, 'mc', 'content', 'B'),
 		);
+		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
+
+		return $columns;
 	}
 };
 
@@ -2841,7 +2895,8 @@ class SearchFields_Attachment implements IDevblocksSearchFields {
 	 */
 	static function getFields() {
 		$translate = DevblocksPlatform::getTranslationService();
-		return array(
+		
+		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'a', 'id', null, $translate->_('attachment.id')),
 			self::MESSAGE_ID => new DevblocksSearchField(self::MESSAGE_ID, 'a', 'message_id', null, $translate->_('attachment.message_id')),
 			self::DISPLAY_NAME => new DevblocksSearchField(self::DISPLAY_NAME, 'a', 'display_name', null, $translate->_('attachment.display_name')),
@@ -2859,6 +2914,11 @@ class SearchFields_Attachment implements IDevblocksSearchFields {
 			
 			self::ADDRESS_EMAIL => new DevblocksSearchField(self::ADDRESS_EMAIL, 'ad', 'email', null, $translate->_('message.header.from')),
 		);
+		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
+
+		return $columns;		
 	}
 };
 
@@ -3421,9 +3481,11 @@ class DAO_Ticket extends C4_ORMHelper {
 				"INNER JOIN address a2 ON (t.last_wrote_address_id=a2.id) "
 				).
 				
+				(isset($tables['msg']) || isset($tables['mc']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
+				(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " "). // [TODO] Choose between first message and all?
+				(isset($tables['mc']) ? "INNER JOIN message_content mc ON (mc.message_id=msg.id) " : " ").
 				(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
 				(isset($tables['ra']) ? "INNER JOIN address ra ON (ra.id=r.address_id) " : " ").
-				(isset($tables['msg']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
 				
 				(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "").
 		        "GROUP BY domain HAVING count(*) > 1 ".
@@ -3454,9 +3516,11 @@ class DAO_Ticket extends C4_ORMHelper {
 				"INNER JOIN address a2 ON (t.last_wrote_address_id=a2.id) "
 				).
 				
+				(isset($tables['msg']) || isset($tables['mc']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
+				(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " "). // [TODO] Choose between first message and all?
+				(isset($tables['mc']) ? "INNER JOIN message_content mc ON (mc.message_id=msg.id) " : " ").
 				(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
 				(isset($tables['ra']) ? "INNER JOIN address ra ON (ra.id=r.address_id) " : " ").
-				(isset($tables['msg']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
 				
 				(!empty($sender_wheres) ? sprintf("WHERE %s ",implode(' AND ',$sender_wheres)) : "").
 		        "GROUP BY a1.email HAVING count(*) > 1 ".
@@ -3494,9 +3558,11 @@ class DAO_Ticket extends C4_ORMHelper {
 				"INNER JOIN address a2 ON (t.last_wrote_address_id=a2.id) "
 				).
 				
+				(isset($tables['msg']) || isset($tables['mc']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
+				(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " "). // [TODO] Choose between first message and all?
+				(isset($tables['mc']) ? "INNER JOIN message_content mc ON (mc.message_id=msg.id) " : " ").
 				(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
 				(isset($tables['ra']) ? "INNER JOIN address ra ON (ra.id=r.address_id) " : " ").
-				(isset($tables['msg']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
 				
 				(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "").
 		        "GROUP BY substring(t.subject from 1 for 8) ".
@@ -3526,9 +3592,11 @@ class DAO_Ticket extends C4_ORMHelper {
 					"INNER JOIN address a2 ON (t.last_wrote_address_id=a2.id) "
 					).
 					
+					(isset($tables['msg']) || isset($tables['mc']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
+					(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " "). // [TODO] Choose between first message and all?
+					(isset($tables['mc']) ? "INNER JOIN message_content mc ON (mc.message_id=msg.id) " : " ").
 					(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
 					(isset($tables['ra']) ? "INNER JOIN address ra ON (ra.id=r.address_id) " : " ").
-					(isset($tables['msg']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
 					
 					(!empty($prefix_wheres) ? sprintf("WHERE %s ",implode(' AND ',$prefix_wheres)) : "").
 			        "GROUP BY t.id, t.subject ";
@@ -3576,10 +3644,11 @@ class DAO_Ticket extends C4_ORMHelper {
 				"INNER JOIN address a2 ON (t.last_wrote_address_id=a2.id) "
 				).
 				
+				(isset($tables['msg']) || isset($tables['mc']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
+				(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " "). // [TODO] Choose between first message and all?
+				(isset($tables['mc']) ? "INNER JOIN message_content mc ON (mc.message_id=msg.id) " : " ").
 				(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
 				(isset($tables['ra']) ? "INNER JOIN address ra ON (ra.id=r.address_id) " : " ").
-				(isset($tables['msg']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
-				(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " ").
 				
 				(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "").
 		        "GROUP BY mh.header_value HAVING mh.header_value <> '' ".
@@ -3793,7 +3862,7 @@ class DAO_Ticket extends C4_ORMHelper {
 		// [JAS]: Count all
 		if($withCounts) {
 			$count_sql = 
-				($has_multiple_values ? "SELECT COUNT(DISTINCT t.id) " : "SELECT COUNT(t.id) ").
+				"SELECT COUNT(DISTINCT t.id) ".
 				$join_sql.
 				$where_sql;
 			$total = $db->GetOne($count_sql);
@@ -3911,6 +3980,9 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 			$key = 'cf_'.$field_id;
 			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',null,$field->name);
 		}
+		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
 		
 		return $columns;
 	}
@@ -5090,10 +5162,15 @@ class SearchFields_Community implements IDevblocksSearchFields {
 	 * @return DevblocksSearchField[]
 	 */
 	static function getFields() {
-		return array(
+		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'c', 'id'),
 			self::NAME => new DevblocksSearchField(self::NAME, 'c', 'name'),
 		);
+		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
+
+		return $columns;		
 	}
 };	
 
@@ -5472,7 +5549,7 @@ class SearchFields_Note implements IDevblocksSearchFields {
 	 * @return DevblocksSearchField[]
 	 */
 	static function getFields() {
-		return array(
+		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'n', 'id'),
 			self::SOURCE_EXT_ID => new DevblocksSearchField(self::SOURCE_EXT_ID, 'n', 'source_extension_id'),
 			self::SOURCE_ID => new DevblocksSearchField(self::SOURCE_ID, 'n', 'source_id'),
@@ -5480,6 +5557,11 @@ class SearchFields_Note implements IDevblocksSearchFields {
 			self::WORKER_ID => new DevblocksSearchField(self::WORKER_ID, 'n', 'worker_id'),
 			self::CONTENT => new DevblocksSearchField(self::CONTENT, 'n', 'content'),
 		);
+		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
+
+		return $columns;		
 	}
 };
 
@@ -5841,7 +5923,7 @@ class SearchFields_GroupInboxFilter implements IDevblocksSearchFields {
 	 * @return DevblocksSearchField[]
 	 */
 	static function getFields() {
-		return array(
+		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'trr', 'id'),
 			self::GROUP_ID => new DevblocksSearchField(self::GROUP_ID, 'trr', 'group_id'),
 			self::POS => new DevblocksSearchField(self::POS, 'trr', 'pos'),
@@ -5849,256 +5931,13 @@ class SearchFields_GroupInboxFilter implements IDevblocksSearchFields {
 			self::STICKY_ORDER => new DevblocksSearchField(self::STICKY_ORDER, 'trr', 'sticky_order'),
 			self::IS_STACKABLE => new DevblocksSearchField(self::IS_STACKABLE, 'trr', 'is_stackable'),
 		);
+		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
+
+		return $columns;		
 	}
 };	
-
-class DAO_FnrQuery extends DevblocksORMHelper {
-	const ID = 'id';
-	const QUERY = 'query';
-	const CREATED = 'created';
-	const SOURCE = 'source';
-	const NO_MATCH = 'no_match';
-
-	static function create($fields) {
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$id = $db->GenID('fnr_query_seq');
-		
-		$sql = sprintf("INSERT INTO fnr_query (id) ".
-			"VALUES (%d)",
-			$id
-		);
-		$db->Execute($sql);
-		
-		self::update($id, $fields);
-		
-		return $id;
-	}
-	
-	static function update($ids, $fields) {
-		parent::_update($ids, 'fnr_query', $fields);
-	}
-	
-	/**
-	 * @param string $where
-	 * @return Model_FnrQuery[]
-	 */
-	static function getWhere($where=null) {
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$sql = "SELECT id, query, created, source, no_match ".
-			"FROM fnr_query ".
-			(!empty($where) ? sprintf("WHERE %s ",$where) : "").
-			"ORDER BY id asc";
-		$rs = $db->Execute($sql);
-		
-		return self::_getObjectsFromResult($rs);
-	}
-
-	/**
-	 * @param integer $id
-	 * @return Model_FnrQuery	 */
-	static function get($id) {
-		$objects = self::getWhere(sprintf("%s = %d",
-			self::ID,
-			$id
-		));
-		
-		if(isset($objects[$id]))
-			return $objects[$id];
-		
-		return null;
-	}
-	
-	/**
-	 * @param ADORecordSet $rs
-	 * @return Model_FnrQuery[]
-	 */
-	static private function _getObjectsFromResult($rs) {
-		$objects = array();
-		
-		if(is_a($rs,'ADORecordSet'))
-		while(!$rs->EOF) {
-			$object = new Model_FnrQuery();
-			$object->id = $rs->fields['id'];
-			$object->query = $rs->fields['query'];
-			$object->created = $rs->fields['created'];
-			$object->source = $rs->fields['source'];
-			$object->no_match = $rs->fields['no_match'];
-			$objects[$object->id] = $object;
-			$rs->MoveNext();
-		}
-		
-		return $objects;
-	}
-	
-	static function delete($ids) {
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$id_list = implode(',', $ids);
-		$db->Execute(sprintf("DELETE QUICK FROM fnr_query WHERE id IN (%s)",$id_list));
-	}
-
-};
-
-class DAO_FnrTopic extends DevblocksORMHelper {
-	const _TABLE = 'fnr_topic';
-	
-	const ID = 'id';
-	const NAME = 'name';
-	
-	public static function create($fields) {
-		$db = DevblocksPlatform::getDatabaseService();
-		$id = $db->GenID('generic_seq');
-		
-		$sql = sprintf("INSERT INTO %s (id,name) ".
-			"VALUES (%d,'')",
-			self::_TABLE,
-			$id
-		);
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
-
-		self::update($id, $fields);
-		
-		return $id;
-	}
-	
-	public static function update($ids, $fields) {
-		parent::_update($ids, self::_TABLE, $fields);
-	}
-	
-	public static function delete($ids) {
-		if(!is_array($ids)) $ids = array($ids);
-		$db = DevblocksPlatform::getDatabaseService();
-
-		$ids_string = implode(',', $ids);
-		
-		$sql = sprintf("DELETE QUICK FROM fnr_topic WHERE id IN (%s)", $ids_string);
-		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
-		
-		$sql = sprintf("DELETE QUICK FROM fnr_external_resource WHERE topic_id IN (%s)", $ids_string);
-		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
-	}
-	
-	public function getWhere($where=null) {
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$sql = sprintf("SELECT id, name ".
-			"FROM %s ".
-			(!empty($where) ? ("WHERE $where ") : " ").
-			" ORDER BY name ",
-			self::_TABLE
-		);
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
-
-		return self::_createObjectsFromResultSet($rs);
-	}
-	
-	public static function get($id) {
-		$objects = self::getWhere(sprintf("id = %d", $id));
-		
-		if(isset($objects[$id]))
-			return $objects[$id];
-			
-		return null;
-	}
-	
-	public static function _createObjectsFromResultSet(ADORecordSet $rs) {
-		$objects = array();
-		
-		if(is_a($rs,'ADORecordSet'))
-		while(!$rs->EOF) {
-			$object = new Model_FnrTopic();
-			$object->id = intval($rs->fields['id']);
-			$object->name = $rs->fields['name'];
-			$objects[$object->id] = $object;
-			$rs->MoveNext();
-		}
-		
-		return $objects;
-	}
-};
-
-class DAO_FnrExternalResource extends DevblocksORMHelper {
-	const _TABLE = 'fnr_external_resource';
-	
-	const ID = 'id';
-	const NAME = 'name';
-	const URL = 'url';
-	const TOPIC_ID = 'topic_id';
-	
-	public static function create($fields) {
-		$db = DevblocksPlatform::getDatabaseService();
-		$id = $db->GenID('generic_seq');
-		
-		$sql = sprintf("INSERT INTO %s (id,name,url,topic_id) ".
-			"VALUES (%d,'','',0)",
-			self::_TABLE,
-			$id
-		);
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
-
-		self::update($id, $fields);
-		
-		return $id;
-	}
-	
-	public static function update($ids, $fields) {
-		parent::_update($ids, self::_TABLE, $fields);
-	}
-	
-	public static function delete($ids) {
-		if(!is_array($ids)) $ids = array($ids);
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$sql = sprintf("DELETE QUICK FROM %s WHERE id IN (%s)",
-			self::_TABLE,
-			implode(',', $ids)
-		);
-		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
-	}
-	
-	public function getWhere($where=null) {
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$sql = sprintf("SELECT id, name, url, topic_id ".
-			"FROM %s ".
-			(!empty($where) ? ("WHERE $where ") : " ").
-			" ORDER BY name ",
-			self::_TABLE
-		);
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
-
-		return self::_createObjectsFromResultSet($rs);
-	}
-	
-	public static function get($id) {
-		$objects = self::getWhere(sprintf("id = %d", $id));
-		
-		if(isset($objects[$id]))
-			return $objects[$id];
-			
-		return null;
-	}
-	
-	public static function _createObjectsFromResultSet(ADORecordSet $rs) {
-		$objects = array();
-		
-		if(is_a($rs,'ADORecordSet'))
-		while(!$rs->EOF) {
-			$object = new Model_FnrTopic();
-			$object->id = intval($rs->fields['id']);
-			$object->name = $rs->fields['name'];
-			$object->topic_id = intval($rs->fields['topic_id']);
-			$object->url = $rs->fields['url'];
-			$objects[$object->id] = $object;
-			$rs->MoveNext();
-		}
-		
-		return $objects;
-	}
-	
-};
 
 class DAO_MailTemplate extends DevblocksORMHelper {
 	const _TABLE = 'mail_template';
@@ -7262,6 +7101,7 @@ class SearchFields_Task implements IDevblocksSearchFields {
 	 */
 	static function getFields() {
 		$translate = DevblocksPlatform::getTranslationService();
+		
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 't', 'id', null, $translate->_('task.id')),
 			self::TITLE => new DevblocksSearchField(self::TITLE, 't', 'title', null, $translate->_('task.title')),
@@ -7281,6 +7121,9 @@ class SearchFields_Task implements IDevblocksSearchFields {
 			$key = 'cf_'.$field_id;
 			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',null,$field->name);
 		}
+		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
 		
 		return $columns;
 	}
