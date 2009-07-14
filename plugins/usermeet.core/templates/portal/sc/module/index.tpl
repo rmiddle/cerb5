@@ -16,13 +16,13 @@
 </head>
 
 <body>
-
-<div align="center" id="logo">
-{if empty($logo_url)}
-	<a href="{devblocks_url}c=home{/devblocks_url}"><img src="{devblocks_url}c=resource&p=usermeet.core&f=images/_wgm/logo.gif{/devblocks_url}" alt="Logo" border="0"></a><br>
-{else}
-	<a href="{devblocks_url}c=home{/devblocks_url}"><img src="{$logo_url}" alt="Logo" border="0"></a><br>
+{if empty($header_html)}
+	{devblocks_url assign=logo_url}c=resource&p=usermeet.core&f=images/_wgm/logo.gif{/devblocks_url}
+	{assign var=header_html value="<div align=\"center\"><img src=\""|cat:$logo_url|cat:"\" alt=\"Logo\" border=\"0\"></div>"}
 {/if}
+
+<div>
+	{$header_html}
 </div>
 
 <table cellpadding="5" cellspacing="0" border="0" width="100%" align="center">
@@ -39,7 +39,7 @@
 				<td>
 				{foreach from=$menu item=item name=menu}
 					{if !empty($item->manifest->params.icon)}<img src="{devblocks_url}c=resource&p={$item->manifest->plugin_id}&f={$item->manifest->params.icon}{/devblocks_url}" align="top" style="padding:1px;">{/if}
-					<a href="{devblocks_url}c={$item->manifest->params.uri}{/devblocks_url}" {if !empty($module) && 0==strcasecmp($module->manifest->params.uri,$item->manifest->params.uri)}class="selected"{/if}>{$item->manifest->params.menu_title|capitalize}</a>
+					<a href="{devblocks_url}c={$item->manifest->params.uri}{/devblocks_url}" {if !empty($module) && 0==strcasecmp($module->manifest->params.uri,$item->manifest->params.uri)}class="selected"{/if}>{$item->manifest->params.menu_title|devblocks_translate|capitalize}</a>
 					<br>
 				{/foreach}
 				</td>
@@ -60,7 +60,8 @@
 						<td><button type="submit">{$translate->_('portal.sc.public.themes.click_to_log_out')}</button></td>
 					</tr>
 				</table>
-				</form> 
+				</form>
+				<br>
 			{else}
 				<form action="{devblocks_url}c=login{/devblocks_url}" method="post">
 				<table cellpadding="0" cellspacing="0" border="0" class="sidebar">
@@ -86,6 +87,7 @@
 					</tr>
 				</table>
 				</form>
+				<br>
 			{/if}
 			{/if}
 			
@@ -100,9 +102,11 @@
 		</td>
 	</tr>
 	
+	{if !empty($footer_html)}
 	<tr>
 		<td colspan="2" id="footer">{$footer_html}</td>
 	</tr>
+	{/if}
 
 	<tr>
 		<td colspan="2" id="tagline">

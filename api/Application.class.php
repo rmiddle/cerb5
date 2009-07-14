@@ -48,7 +48,7 @@
  * 		and Joe Geck.
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 919);
+define("APP_BUILD", 920);
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -69,6 +69,7 @@ DevblocksPlatform::registerClasses($path . 'Mail.php', array(
 DevblocksPlatform::registerClasses($path . 'Parser.php', array(
 	'CerberusParser',
 	'CerberusParserMessage',
+	'ParserFile',
 ));
 
 DevblocksPlatform::registerClasses($path . 'Update.php', array(

@@ -1,8 +1,9 @@
 <?php
 class UmScApp extends Extension_UsermeetTool {
-	const PARAM_LOGO_URL = 'common.logo_url';
 	const PARAM_PAGE_TITLE = 'common.page_title';
+	const PARAM_DEFAULT_LOCALE = 'common.locale';
 	const PARAM_STYLE_CSS = 'common.style_css';
+	const PARAM_HEADER_HTML = 'common.header_html';
 	const PARAM_FOOTER_HTML = 'common.footer_html';
 	const PARAM_ALLOW_LOGINS = 'common.allow_logins';
 	const PARAM_ENABLED_MODULES = 'common.enabled_modules';
@@ -41,6 +42,10 @@ class UmScApp extends Extension_UsermeetTool {
     	$stack = $request->path;
         $module_uri = array_shift($stack);
         
+		// Set locale in scope
+        $default_locale = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_DEFAULT_LOCALE, 'en_US');
+		DevblocksPlatform::setLocale($default_locale);
+		
 		switch($module_uri) {
 			case 'login':
 				$this->doLogin();
@@ -76,14 +81,14 @@ class UmScApp extends Extension_UsermeetTool {
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('tpl_path', $tpl_path);
 		
-		$logo_url = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_LOGO_URL, '');
-		$tpl->assign('logo_url', $logo_url);
-        
 		$page_title = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_PAGE_TITLE, 'Support Center');
 		$tpl->assign('page_title', $page_title);
-        
+
         $style_css = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_STYLE_CSS, '');
 		$tpl->assign('style_css', $style_css);
+
+        $header_html = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_HEADER_HTML, '');
+		$tpl->assign('header_html', $header_html);
 
         $footer_html = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_FOOTER_HTML, '');
 		$tpl->assign('footer_html', $footer_html);
@@ -162,6 +167,7 @@ class UmScApp extends Extension_UsermeetTool {
 				}
 		        $tpl->assign('menu', $menu_modules);
 
+				// Modules
 		        if(isset($modules[$module_uri])) {
 					$controller = $modules[$module_uri];
 		        } else {
@@ -172,7 +178,7 @@ class UmScApp extends Extension_UsermeetTool {
 				array_unshift($stack, $module_uri);
 				$tpl->assign('module', $controller);
 				$tpl->assign('module_response', new DevblocksHttpResponse($stack));
-				
+
    				$tpl->display('file:' . $tpl_path . 'portal/sc/module/index.tpl');
 		    	break;
 		}
@@ -186,18 +192,30 @@ class UmScApp extends Extension_UsermeetTool {
         $tpl_path = dirname(dirname(__FILE__)) . '/templates/';
         $tpl->assign('config_path', $tpl_path);
         
-        $logo_url = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_LOGO_URL, '');
-		$tpl->assign('logo_url', $logo_url);
-        
+		// Locales
+		
+        $default_locale = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_DEFAULT_LOCALE, 'en_US');
+		$tpl->assign('default_locale', $default_locale);
+		
+		$locales = DAO_Translation::getDefinedLangCodes();
+		$tpl->assign('locales', $locales);
+
+		// Personalization
+
         $page_title = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_PAGE_TITLE, 'Support Center');
 		$tpl->assign('page_title', $page_title);
-        
+
         $style_css = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_STYLE_CSS, '');
 		$tpl->assign('style_css', $style_css);
+
+        $header_html = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_HEADER_HTML, '');
+		$tpl->assign('header_html', $header_html);
 
         $footer_html = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_FOOTER_HTML, '');
 		$tpl->assign('footer_html', $footer_html);
         
+		// Options
+		
         $allow_logins = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_ALLOW_LOGINS, 0);
 		$tpl->assign('allow_logins', $allow_logins);
 
@@ -233,7 +251,6 @@ class UmScApp extends Extension_UsermeetTool {
         @$aEnabledModules = DevblocksPlatform::importGPC($_POST['enabled_modules'],'array',array());
         @$aIdxModules = DevblocksPlatform::importGPC($_POST['idx_modules'],'array',array());
         @$aPosModules = DevblocksPlatform::importGPC($_POST['pos_modules'],'array',array());
-        @$sLogoUrl = DevblocksPlatform::importGPC($_POST['logo_url'],'string','');
         @$sPageTitle = DevblocksPlatform::importGPC($_POST['page_title'],'string','Contact Us');
 
 		// Modules (toggle + sort)
@@ -251,16 +268,23 @@ class UmScApp extends Extension_UsermeetTool {
 			$aEnabledModules[] = $aIdxModules[$idx]; 
 
         DAO_CommunityToolProperty::set(UmPortalHelper::getCode(), self::PARAM_ENABLED_MODULES, implode(',',$aEnabledModules));
-        DAO_CommunityToolProperty::set(UmPortalHelper::getCode(), self::PARAM_LOGO_URL, $sLogoUrl);
         DAO_CommunityToolProperty::set(UmPortalHelper::getCode(), self::PARAM_PAGE_TITLE, $sPageTitle);
 
 		// Logins
         @$iAllowLogins = DevblocksPlatform::importGPC($_POST['allow_logins'],'integer',0);
         DAO_CommunityToolProperty::set(UmPortalHelper::getCode(), self::PARAM_ALLOW_LOGINS, $iAllowLogins);
 
+		// Default Locale
+        @$sDefaultLocale = DevblocksPlatform::importGPC($_POST['default_locale'],'string','en_US');
+		DAO_CommunityToolProperty::set(UmPortalHelper::getCode(), self::PARAM_DEFAULT_LOCALE, $sDefaultLocale);
+
         // Style
         @$sStyleCss = DevblocksPlatform::importGPC($_POST['style_css'],'string','');
         DAO_CommunityToolProperty::set(UmPortalHelper::getCode(), self::PARAM_STYLE_CSS, $sStyleCss);
+
+        // Header
+        @$sHeaderHtml = DevblocksPlatform::importGPC($_POST['header_html'],'string','');
+        DAO_CommunityToolProperty::set(UmPortalHelper::getCode(), self::PARAM_HEADER_HTML, $sHeaderHtml);
 
         // Footer
         @$sFooterHtml = DevblocksPlatform::importGPC($_POST['footer_html'],'string','');
