@@ -69,17 +69,25 @@
 					Attachment = <b>{$crit.value}</b><br>
 				{elseif 0==strcasecmp('cf_',substr($crit_key,0,3))}
 					{include file="$core_tpl/internal/custom_fields/filters/render_criteria_list.tpl"}
+				{elseif isset($filter_criteria_exts.$crit_key)}
+					{assign var=filter_criteria_ext value=$filter_criteria_exts.$crit_key}
+					{$filter_criteria_ext->name}<br>
 				{/if}
 			{/foreach}
 			
 			<blockquote style="margin:2px;margin-left:20px;font-size:95%;color:rgb(100,100,100);">
 			{foreach from=$filter->actions item=action key=action_key}
-				{if $action_key=="blackhole"}
-					Blackhole<br>
+				{if isset($filter_action_exts.$action_key)}
+					{assign var=filter_action_ext value=$filter_action_exts.$action_key}
+					{$filter_action_ext->name}<br>
+				{elseif $action_key=="blackhole"}
+					Stop filtering, and Blackhole<br>
 				{elseif $action_key=="redirect"}
-					Redirect to <b>{$action.to}</b><br>
+					Stop filtering, and Redirect to <b>{$action.to}</b><br>
 				{elseif $action_key=="bounce"}
-					Bounce<br>
+					Stop filtering, and Bounce<br>
+				{elseif $action_key=="nothing"}
+					Stop filtering, and Continue delivery<br>
 				{/if}
 			{/foreach}
 			<span>(Matched {$filter->pos} incoming messages)</span><br>

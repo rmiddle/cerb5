@@ -50,6 +50,11 @@
  */
 
 class C4_ORMHelper extends DevblocksORMHelper {
+	static public function qstr($str) {
+		$db = DevblocksPlatform::getDatabaseService();
+		return $db->qstr($str);	
+	}
+	
 	static protected function _appendSelectJoinSqlForCustomFieldTables($tables, $params, $key, $select_sql, $join_sql) {
 		$custom_fields = DAO_CustomField::getAll();
 		$field_ids = array();
@@ -394,7 +399,7 @@ class DAO_Worker extends DevblocksORMHelper {
 		$sql = "SELECT a.id, a.first_name, a.last_name, a.email, a.pass, a.title, a.is_superuser, a.is_disabled, a.last_activity_date, a.last_activity ".
 			"FROM worker a ".
 			((!empty($ids) ? sprintf("WHERE a.id IN (%s) ",implode(',',$ids)) : " ").
-			"ORDER BY a.last_name, a.first_name "
+			"ORDER BY a.first_name, a.last_name "
 		);
 		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
 		
@@ -2119,14 +2124,12 @@ class DAO_AddressToWorker { // extends DevblocksORMHelper
 	static function getByWorker($worker_id) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$sql = sprintf("SELECT address, worker_id, is_confirmed, code, code_expire ".
-			"FROM address_to_worker ".
-			"WHERE worker_id = %d",
+		$addresses = self::getWhere(sprintf("%s = %d",
+			DAO_AddressToWorker::WORKER_ID,
 			$worker_id
-		);
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */ 
+		));
 		
-		return self::_getObjectsFromResult($rs);
+		return $addresses;
 	}
 	
 	/**
@@ -2141,14 +2144,10 @@ class DAO_AddressToWorker { // extends DevblocksORMHelper
 		// Force lower
 		$address = strtolower($address);
 		
-		$sql = sprintf("SELECT address, worker_id, is_confirmed, code, code_expire ".
-			"FROM address_to_worker ".
-			"WHERE address = %s",
+		$addresses = self::getWhere(sprintf("%s = %s",
+			DAO_AddressToWorker::ADDRESS,
 			$db->qstr($address)
-		);
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */ 
-		
-		$addresses = self::_getObjectsFromResult($rs);
+		));
 		
 		if(isset($addresses[$address]))
 			return $addresses[$address];
@@ -2156,15 +2155,16 @@ class DAO_AddressToWorker { // extends DevblocksORMHelper
 		return NULL;
 	}
 	
-	static function getWhere($where) {
+	static function getWhere($where=null) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
 		$sql = "SELECT address, worker_id, is_confirmed, code, code_expire ".
 			"FROM address_to_worker ".
-			(!empty($where) ? sprintf("WHERE %s ", $where) : " ");
+			(!empty($where) ? sprintf("WHERE %s ", $where) : " ").
+			"ORDER BY address";
 		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */ 
 
-		return self::_getObjectsFromResult($rs);		
+		return self::_getObjectsFromResult($rs);
 	}
 	
 	/**

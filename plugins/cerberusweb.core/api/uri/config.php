@@ -577,7 +577,15 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		// Custom Fields
 		$custom_fields =  DAO_CustomField::getAll();
 		$tpl->assign('custom_fields', $custom_fields);
+
+		// Criteria extensions
+		$filter_criteria_exts = DevblocksPlatform::getExtensions('cerberusweb.mail_filter.criteria', false);
+		$tpl->assign('filter_criteria_exts', $filter_criteria_exts);
 		
+		// Action extensions
+		$filter_action_exts = DevblocksPlatform::getExtensions('cerberusweb.mail_filter.action', false);
+		$tpl->assign('filter_action_exts', $filter_action_exts);
+
 		$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/mail/mail_preparse.tpl');
 	}
 
@@ -628,6 +636,14 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$org_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
 		$tpl->assign('org_fields', $org_fields);
 		
+		// Criteria extensions
+		$filter_criteria_exts = DevblocksPlatform::getExtensions('cerberusweb.mail_filter.criteria', false);
+		$tpl->assign('filter_criteria_exts', $filter_criteria_exts);
+		
+		// Action extensions
+		$filter_action_exts = DevblocksPlatform::getExtensions('cerberusweb.mail_filter.action', false);
+		$tpl->assign('filter_action_exts', $filter_action_exts);
+		
 		$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/mail/preparser/peek.tpl');
 	}
 	
@@ -649,6 +665,9 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 		// Custom fields
 		$custom_fields = DAO_CustomField::getAll();
+		
+		// Criteria extensions
+		$filter_criteria_exts = DevblocksPlatform::getExtensions('cerberusweb.mail_filter.criteria', false);
 		
 		// Criteria
 		if(is_array($rules))
@@ -703,7 +722,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 					break;
 				case 'attachment':
 					break;
-				default: // ignore invalids // [TODO] Very redundant
+				default: // ignore invalids
 					// Custom fields
 					if("cf_" == substr($rule,0,3)) {
 						$field_id = intval(substr($rule,3));
@@ -752,6 +771,10 @@ class ChConfigurationPage extends CerberusPageExtension  {
 								break;
 						}
 						
+					} elseif(isset($filter_criteria_exts[$rule])) { // Extensions
+						//$crit_ext = $filter_criteria_exts[$rule]->createInstance();
+						/* @var $crit_ext Extension_MailFilterCriteria */
+						// [TODO] Custom properties
 					} else {
 						continue;
 					}
@@ -763,28 +786,48 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		}
 		
 		// Actions
+		$filter_action_exts = DevblocksPlatform::getExtensions('cerberusweb.mail_filter.action', false);
+
 		if(is_array($do))
 		foreach($do as $act) {
 			$action = array();
 			
 			switch($act) {
-				case 'blackhole':
-					$action = array();
+				case 'stop':
+					if(null != (@$do_stop = DevblocksPlatform::importGPC($_POST['do_stop'],'string',null))) {
+						$act = $do_stop;
+						switch($do_stop) {
+							case 'nothing':
+								$action = array();
+								break;
+							case 'blackhole':
+								$action = array();
+								break;
+							case 'redirect':
+								if(null != (@$to = DevblocksPlatform::importGPC($_POST['do_redirect'],'string',null)))
+									$action = array(
+										'to' => $to
+									);
+								break;
+							case 'bounce':
+								if(null != (@$msg = DevblocksPlatform::importGPC($_POST['do_bounce'],'string',null)))
+									$action = array(
+										'message' => $msg
+									);
+								break;
+						}
+					}
 					break;
-				case 'redirect':
-					if(null != (@$to = DevblocksPlatform::importGPC($_POST['do_redirect'],'string',null)))
-						$action = array(
-							'to' => $to
-						);
-					break;
-				case 'bounce':
-					if(null != (@$msg = DevblocksPlatform::importGPC($_POST['do_bounce'],'string',null)))
-						$action = array(
-							'message' => $msg
-						);
-					break;
+					
 				default: // ignore invalids
-					continue;
+					// Check action plugins
+					if(isset($filter_action_exts[$act])) {
+						$action = array(
+							// [TODO] Custom params
+						);
+					} else {
+						continue;
+					}
 					break;
 			}
 			
