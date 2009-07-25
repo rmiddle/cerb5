@@ -309,6 +309,55 @@ class CerberusParser {
 		$logger = DevblocksPlatform::getConsoleLog();
 		$settings = CerberusSettings::getInstance();
 		$helpdesk_senders = CerberusApplication::getHelpdeskSenders();
+    // Pre-parse mail filters
+		$pre_filters = Model_PreParseRule::getMatches($message);
+		if(is_array($pre_filters) && !empty($pre_filters)) {
+			// Load filter action manifests for reuse
+			$ext_action_mfts = DevblocksPlatform::getExtensions('cerberusweb.mail_filter.action', false);
+
+			// Loop through all matching filters
+			foreach($pre_filters as $pre_filter) {
+
+	        	// Do something with matching filter's actions
+	        	foreach($pre_filter->actions as $action_key => $action) {
+
+	        		switch($action_key) {
+	        			case 'blackhole':
+	        				return NULL;
+	        				break;
+
+	        			case 'redirect':
+	        				@$to = $action['to'];
+	        				CerberusMail::reflect($message, $to);
+	        				return NULL;
+	        				break;
+
+	        			case 'bounce':
+	        				@$msg = $action['message'];
+							@$subject = 'Delivery failed: ' . self::fixQuotePrintableString($message->headers['subject']);
+
+	        				// [TODO] Follow the RFC spec on a true bounce
+							if(null != ($fromAddressInst = CerberusParser::getAddressFromHeaders($message->headers))) {
+	        					CerberusMail::quickSend($fromAddressInst->email,$subject,$msg);
+							}
+	        				return NULL;
+	        				break;
+
+						default:
+							// Plugin pre-parser filter actions
+							if(isset($ext_action_mfts[$action_key])) {
+								if(null != (@$ext_action = $ext_action_mfts[$action_key]->createInstance())) {
+									try {
+										/* @var $ext_action Extension_MailFilterAction */
+										$ext_action->run($pre_filter, $message);
+									} catch(Exception $e) {	}
+								}
+							}
+							break;
+	        		}
+	        	}
+	        }
+		}
 
 		$headers =& $message->headers;
 
