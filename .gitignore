@@ -1,3 +1,5 @@
 .tmp*
 .htaccess
 .settings/*
+*~
+git-create-branch.sh
