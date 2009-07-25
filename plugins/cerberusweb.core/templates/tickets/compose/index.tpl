@@ -124,7 +124,7 @@
 								<br>
 								<br>
 
-								<div id="ticketClosed" style="display:block;margin-left:10px;">
+								<div id="ticketClosed" style="display:none;margin-left:10px;">
 								<b>{$translate->_('display.reply.next.resume')}</b> {$translate->_('display.reply.next.resume_eg')}<br>
 								<input type="text" name="ticket_reopen" size="55" value=""><br>
 								{$translate->_('display.reply.next.resume_blank')}<br>
