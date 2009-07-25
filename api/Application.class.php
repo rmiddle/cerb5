@@ -377,7 +377,7 @@ class CerberusApplication extends DevblocksApplication {
 	 *
 	 * @return a unique ticket mask as a string
 	 */
-	static function generateTicketMask($pattern = "LLL-NNNNN-NNN") {
+	static function generateTicketMask($pattern = "Y-M-D-NNNNN") {
 		$letters = "ABCDEFGHIJKLMNPQRSTUVWXYZ";
 		$numbers = "123456789";
 

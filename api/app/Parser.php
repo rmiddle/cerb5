@@ -263,6 +263,38 @@ class CerberusParser {
     }
 
 	/**
+	 *
+	 * @return Model_Address
+	 * @param array $headers
+	 */
+	static public function getAddressFromHeaders($headers) {
+		$sReturnPath = @$headers['return-path'];
+		$sReplyTo = @$headers['reply-to'];
+		$sFrom = @$headers['from'];
+
+		$from = array();
+
+		if(!empty($sReplyTo)) {
+			$from = CerberusParser::parseRfcAddress($sReplyTo);
+		} elseif(!empty($sFrom)) {
+			$from = CerberusParser::parseRfcAddress($sFrom);
+		} elseif(!empty($sReturnPath)) {
+			$from = CerberusParser::parseRfcAddress($sReturnPath);
+		}
+
+		if(empty($from) || !is_array($from)) {
+			return NULL;
+		}
+
+		@$fromAddress = $from[0]->mailbox.'@'.$from[0]->host;
+		if(null == ($fromInst = CerberusApplication::hashLookupAddress($fromAddress, true))) {
+			return NULL;
+		}
+
+		return $fromInst;
+	}
+
+	/**
 	 * Enter description here...
 	 *
 	 * @param CerberusParserMessage $message
@@ -270,7 +302,6 @@ class CerberusParser {
 	 */
 	static public function parseMessage(CerberusParserMessage $message, $options=array()) {
 //		print_r($rfcMessage);
-
 		/*
 		 * options:
 		 * 'no_autoreply'
@@ -281,10 +312,14 @@ class CerberusParser {
 
 		$headers =& $message->headers;
 
-		// To/From/Cc/Bcc
-		$sReturnPath = @$headers['return-path'];
-		$sReplyTo = @$headers['reply-to'];
-		$sFrom = @$headers['from'];
+		// From
+		if(null == ($fromAddressInst = CerberusParser::getAddressFromHeaders($headers))) {
+			$logger->err("[Parser] 'From' address could not be created.");
+			return NULL;
+		}
+
+		// To/Cc/Bcc
+		$to = array();
 		$sTo = @$headers['to'];
 		$bIsNew = true;
 
@@ -635,7 +670,8 @@ class CerberusParser {
 		// Pre-load custom fields
 		if(isset($message->custom_fields) && !empty($message->custom_fields))
 		foreach($message->custom_fields as $cf_id => $cf_val) {
-			if(!empty($cf_val))
+			if((is_array($cf_val) && !empty($cf_val))
+				|| (!is_array($cf_val) && 0 != strlen($cf_val)))
 				DAO_CustomFieldValue::setFieldValue('cerberusweb.fields.source.ticket',$id,$cf_id,$cf_val);
 		}
 

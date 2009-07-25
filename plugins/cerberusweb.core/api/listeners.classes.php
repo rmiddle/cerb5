@@ -486,6 +486,10 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 		@$ticket_ids = $event->params['ticket_ids'];
 		@$changed_fields = $event->params['changed_fields'];
 
+   $total_time_worked = 0;
+   $cf_client = "";
+   $cf_asset = "";
+
 		// for anything other than setting is_closed = 1, we don't need to do anything
 		// also don't send if the ticket is being deleted
 		if((!isset($changed_fields[DAO_Ticket::IS_CLOSED]) || 1 != $changed_fields[DAO_Ticket::IS_CLOSED])
@@ -571,8 +575,6 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
         }
       }
     }
-
-
 
 	}
 };
