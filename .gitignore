@@ -1,3 +1,6 @@
 .tmp*
 .htaccess
 .settings/*
+git-create-branch.sh
+framework.config.php
+
