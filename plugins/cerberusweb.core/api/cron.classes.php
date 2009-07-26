@@ -1115,9 +1115,8 @@ class Pop3Cron extends CerberusCronPageExtension {
 				$fp = fopen($filename,'w');
 
 				if($fp) {
-          fwrite($fp,"\r\nDownloaded-From: $account->nickname");
+          fwrite($fp,"Downloaded-From: $account->nickname\r\n");
 					fwrite($fp,$headers,strlen($headers));
-          fwrite($fp,"\r\nDownloaded-From: $account->nickname");
 					fwrite($fp,"\r\n\r\n");
 					fwrite($fp,$body,strlen($body));
 					@fclose($fp);
