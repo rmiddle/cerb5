@@ -8,9 +8,9 @@ class AnswernetReportsPlugin extends DevblocksPlugin {
 if (class_exists('DevblocksTranslationsExtension',true)):
 	class AnswernetTranslations extends DevblocksTranslationsExtension {
 		function __construct($manifest) {
-			parent::__construct($manifest);	
+			parent::__construct($manifest);
 		}
-		
+
 		function getTmxFile() {
 			return dirname(dirname(__FILE__)) . '/strings.xml';
 		}
@@ -31,36 +31,36 @@ class AnswernetReportGroupsTime extends Extension_ReportGroup {
 
 class AnswernetReportWorkers extends Extension_Report {
 	private $tpl_path = null;
-	
+
 	function __construct($manifest) {
 		parent::__construct($manifest);
 		$this->tpl_path = dirname(dirname(__FILE__)).'/templates';
 	}
-	
+
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->tpl_path);
-		
+
 		$tpl->assign('start', '-5 year');
 		$tpl->assign('end', 'now');
-		
+
 		$db = DevblocksPlatform::getDatabaseService();
-		
+
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
-		
+
 		// Teams
 		$teams = DAO_Group::getAll();
 		$tpl->assign('teams', $teams);
-		
+
 		// Categories
 		$team_categories = DAO_Bucket::getTeams(); // [TODO] Cache these
 		$tpl->assign('team_categories', $team_categories);
 
 		$tpl->display('file:' . $this->tpl_path . '/report_stats.tpl');
 	}
-	
+
 	function getTicketAssignmentReportAction() {
 		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
 		@$end = DevblocksPlatform::importGPC($_REQUEST['end'],'string','');
@@ -82,7 +82,7 @@ class AnswernetReportWorkers extends Extension_Report {
 			$start_time = strtotime($start);
 			$end_time = strtotime($end);
 		}
-		
+
 		$db = DevblocksPlatform::getDatabaseService();
 
 		$tpl = DevblocksPlatform::getTemplateService();
@@ -93,7 +93,7 @@ class AnswernetReportWorkers extends Extension_Report {
 		$groups = DAO_Group::getAll();
 		$buckets = DAO_Bucket::getAll();
 		$tpl->assign('workers', $workers);
-		
+
 		$sql = "SELECT w.id worker_id, t.id ticket_id, t.mask, t.subject, t.created_date, ";
 		$sql .= "t.updated_date, t.is_waiting, t.team_id, t.category_id ";
 		$sql .= "FROM ticket t inner join worker w on t.next_worker_id = w.id ";
@@ -113,7 +113,7 @@ class AnswernetReportWorkers extends Extension_Report {
 		}
 		$sql .= "ORDER by w.last_name";
 		$rs_buckets = $db->Execute($sql);
-	
+
 		$ticket_assignments = array();
 		while(!$rs_buckets->EOF) {
 			$worker_id = intval($rs_buckets->fields['worker_id']);
@@ -128,39 +128,39 @@ class AnswernetReportWorkers extends Extension_Report {
 			}
 			$team_id = intval($rs_buckets->fields['team_id']);
 			$category_id = intval($rs_buckets->fields['category_id']);
-			
+
 			if(!isset($ticket_assignments[$worker_id]))
 				$ticket_assignments[$worker_id] = array();
-				
+
 			unset($assignment);
 			$assignment->mask = $mask;
 			$assignment->subject = $subject;
-			$assignment->created_date = $created_date; 
-			$assignment->updated_date = $updated_date; 
-			$assignment->status = $status; 
-			$assignment->team_id = $groups[$team_id]->name; 
+			$assignment->created_date = $created_date;
+			$assignment->updated_date = $updated_date;
+			$assignment->status = $status;
+			$assignment->team_id = $groups[$team_id]->name;
       if ( $category_id ) {
-			  $assignment->category_id = $buckets[$category_id]->name; 
+			  $assignment->category_id = $buckets[$category_id]->name;
 			} else {
-			  $assignment->category_id = 'Inbox'; 
-			}	
+			  $assignment->category_id = 'Inbox';
+			}
 			$ticket_assignments[$worker_id][] = $assignment;
-			
+
 			$rs_buckets->MoveNext();
 		}
-		
+
 		$tpl->assign('ticket_assignments', $ticket_assignments);
 		//print_r($ticket_assignments);exit;
 		$tpl->display('file:' . $this->tpl_path . '/report_stats_html.tpl');
 	}
-	
+
 	function getTicketAssignmentChartAction() {
 		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
 		@$end = DevblocksPlatform::importGPC($_REQUEST['end'],'string','');
 		@$countonly = DevblocksPlatform::importGPC($_REQUEST['countonly'],'integer',0);
 		@$sel_worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);
 		@$sel_group_id = DevblocksPlatform::importGPC($_REQUEST['group_id'],'string','');
-		
+
 		list($g_id, $b_id) = CerberusApplication::translateTeamCategoryCode($sel_group_id);
 
 		// use date range if specified, else use duration prior to now
@@ -175,9 +175,9 @@ class AnswernetReportWorkers extends Extension_Report {
 			$start_time = strtotime($start);
 			$end_time = strtotime($end);
 		}
-		
+
 		$db = DevblocksPlatform::getDatabaseService();
-		
+
 		$workers = DAO_Worker::getAll();
 
 		$sql = "SELECT w.id worker_id ,count(*) as hits ";
@@ -209,9 +209,9 @@ class AnswernetReportWorkers extends Extension_Report {
 		while(!$rs->EOF) {
 	    	$hits = intval($rs->fields['hits']);
 			$worker_id = $rs->fields['worker_id'];
-			
+
 			echo $workers[$worker_id]->getName(true), "\t", $hits . "\n";
-			
+
 		    $rs->MoveNext();
 	    }
 	}
@@ -220,25 +220,25 @@ class AnswernetReportWorkers extends Extension_Report {
 if (class_exists('Extension_Report',true)):
 class AnswernetReportAssetTime extends Extension_Report {
 	private $tpl_path = null;
-	
+
 	function __construct($manifest) {
 		parent::__construct($manifest);
 		$this->tpl_path = dirname(dirname(__FILE__)).'/templates';
 	}
-	
+
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->tpl_path);
-		
+
 		$tpl->assign('start', '-30 days');
 		$tpl->assign('end', 'now');
-		
+
 		$db = DevblocksPlatform::getDatabaseService();
-		
+
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
-		
+
 		// Teams
 		$teams = DAO_Group::getAll();
 		$tpl->assign('teams', $teams);
@@ -249,12 +249,12 @@ class AnswernetReportAssetTime extends Extension_Report {
 
 		$tpl->display('file:' . $this->tpl_path . '/report_asset_time.tpl');
 	}
-/*	
+/*
 	function getTimeSpentTicketReportAction() {
 		$db = DevblocksPlatform::getDatabaseService();
 
 		@$sel_worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);
-		
+
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->tpl_path);
@@ -262,11 +262,11 @@ class AnswernetReportAssetTime extends Extension_Report {
 		// import dates from form
 		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
 		@$end = DevblocksPlatform::importGPC($_REQUEST['end'],'string','');
-		
+
 		// use date rang@$sel_worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);e if specified, else use duration prior to now
 		$start_time = 0;
 		$end_time = 0;
-		
+
 		if (empty($start) && empty($end)) {
 			$start = "-30 days";
 			$end = "now";
@@ -276,26 +276,26 @@ class AnswernetReportAssetTime extends Extension_Report {
 			$start_time = strtotime($start);
 			$end_time = strtotime($end);
 		}
-				
+
 		if($start_time === false || $end_time === false) {
 			$start = "-30 days";
 			$end = "now";
 			$start_time = strtotime($start);
 			$end_time = strtotime($end);
-			
+
 			$tpl->assign('invalidDate', true);
 		}
-		
+
 		// reload variables in template
 		$tpl->assign('start', $start);
 		$tpl->assign('end', $end);
-		
+
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
 
 		$sources = DAO_TimeTrackingEntry::getSources();
-		$tpl->assign('sources', $sources);		
-		
+		$tpl->assign('sources', $sources);
+
 		$sql = sprintf("SELECT tte.log_date, tte.time_actual_mins, tte.worker_id, tte.notes, ".
 				"tte.source_extension_id, tte.source_id, ".
 				"tta.name activity_name, o.name org_name, o.id org_id ".
@@ -311,9 +311,9 @@ class AnswernetReportAssetTime extends Extension_Report {
 		);
 		//echo $sql;
 		$rs = $db->Execute($sql);
-	
+
 		$time_entries = array();
-		
+
 		if(is_a($rs,'ADORecordSet'))
 		while(!$rs->EOF) {
 			$mins = intval($rs->fields['time_actual_mins']);
@@ -323,11 +323,11 @@ class AnswernetReportAssetTime extends Extension_Report {
 			$org_name = $rs->fields['org_name'];
 			$log_date = intval($rs->fields['log_date']);
 			$notes = $rs->fields['notes'];
-			
-			
+
+
 			if(!isset($time_entries[$worker_id]))
 				$time_entries[$worker_id] = array();
-				
+
 			unset($time_entry);
 			$time_entry['activity_name'] = $activity;
 			$time_entry['org_name'] = $org_name;
@@ -335,20 +335,20 @@ class AnswernetReportAssetTime extends Extension_Report {
 			$time_entry['log_date'] = $log_date;
 			$time_entry['notes'] = $notes;
 			$time_entry['source_extension_id'] = $rs->fields['source_extension_id'];
-			$time_entry['source_id'] = intval($rs->fields['source_id']);			
-			
+			$time_entry['source_id'] = intval($rs->fields['source_id']);
+
 			$time_entries[$worker_id]['entries'][] = $time_entry;
 			@$time_entries[$worker_id]['total_mins'] = intval($time_entries[$worker_id]['total_mins']) + $mins;
-			
+
 			$rs->MoveNext();
 		}
 		//print_r($time_entries);
 		$tpl->assign('time_entries', $time_entries);
-		
+
 		$tpl->display('file:' . $this->tpl_path . '/report_ticket_time_html.tpl');
 	}
 */
-	
+
 	function getTimeSpentAssetChartAction() {
 		// import dates from form
 		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
@@ -371,11 +371,11 @@ class AnswernetReportAssetTime extends Extension_Report {
 			$start_time = strtotime($start);
 			$end_time = strtotime($end);
 		}
-		
+
 		$db = DevblocksPlatform::getDatabaseService();
-		
+
 		$groups = DAO_Group::getAll();
-		
+
 		$sql = "SELECT sum(tte.time_actual_mins) mins, cfs.field_value ";
 		$sql .= "FROM timetracking_entry tte ";
 		$sql .= "INNER JOIN ticket t ON tte.source_id = t.id ";
@@ -415,36 +415,36 @@ endif;
 if (class_exists('Extension_Report',true)):
 class AnswernetReportClientTime extends Extension_Report {
 	private $tpl_path = null;
-	
+
 	function __construct($manifest) {
 		parent::__construct($manifest);
 		$this->tpl_path = dirname(dirname(__FILE__)).'/templates';
 	}
-	
+
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->tpl_path);
-		
+
 		$tpl->assign('start', '-30 days');
 		$tpl->assign('end', 'now');
-		
+
 		$db = DevblocksPlatform::getDatabaseService();
-		
+
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
-		
+
 		// Teams
 		$teams = DAO_Group::getAll();
 		$tpl->assign('teams', $teams);
-		
+
 		// Categories
 		$team_categories = DAO_Bucket::getTeams(); // [TODO] Cache these
 		$tpl->assign('team_categories', $team_categories);
 
 		$tpl->display('file:' . $this->tpl_path . '/report_client_time.tpl');
 	}
-	
+
 	function getTimeSpentClientChartAction() {
 		// import dates from form
 		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
@@ -467,11 +467,11 @@ class AnswernetReportClientTime extends Extension_Report {
 			$start_time = strtotime($start);
 			$end_time = strtotime($end);
 		}
-		
+
 		$db = DevblocksPlatform::getDatabaseService();
-		
+
 		$groups = DAO_Group::getAll();
-		
+
 		$sql = "SELECT sum(tte.time_actual_mins) mins, cfs.field_value ";
 		$sql .= "FROM timetracking_entry tte ";
 		$sql .= "INNER JOIN ticket t ON tte.source_id = t.id ";
@@ -511,36 +511,36 @@ endif;
 if (class_exists('Extension_Report',true)):
 class AnswernetReportSiteNameTime extends Extension_Report {
 	private $tpl_path = null;
-	
+
 	function __construct($manifest) {
 		parent::__construct($manifest);
 		$this->tpl_path = dirname(dirname(__FILE__)).'/templates';
 	}
-	
+
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->tpl_path);
-		
+
 		$tpl->assign('start', '-30 days');
 		$tpl->assign('end', 'now');
-		
+
 		$db = DevblocksPlatform::getDatabaseService();
-		
+
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
-		
+
 		// Teams
 		$teams = DAO_Group::getAll();
 		$tpl->assign('teams', $teams);
-		
+
 		// Categories
 		$team_categories = DAO_Bucket::getTeams(); // [TODO] Cache these
 		$tpl->assign('team_categories', $team_categories);
 
 		$tpl->display('file:' . $this->tpl_path . '/report_sitename_time.tpl');
 	}
-	
+
 	function getTimeSpentSiteNameChartAction() {
 		// import dates from form
 		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
@@ -563,11 +563,11 @@ class AnswernetReportSiteNameTime extends Extension_Report {
 			$start_time = strtotime($start);
 			$end_time = strtotime($end);
 		}
-		
+
 		$db = DevblocksPlatform::getDatabaseService();
-		
+
 		$groups = DAO_Group::getAll();
-		
+
 		$sql = "SELECT sum(tte.time_actual_mins) mins, cfs.field_value ";
 		$sql .= "FROM timetracking_entry tte ";
 		$sql .= "INNER JOIN ticket t ON tte.source_id = t.id ";
@@ -607,36 +607,36 @@ endif;
 if (class_exists('Extension_Report',true)):
 class AnswernetReportTicketTime extends Extension_Report {
 	private $tpl_path = null;
-	
+
 	function __construct($manifest) {
 		parent::__construct($manifest);
 		$this->tpl_path = dirname(dirname(__FILE__)).'/templates';
 	}
-	
+
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->tpl_path);
-		
+
 		$tpl->assign('start', '-30 days');
 		$tpl->assign('end', 'now');
-		
+
 		$db = DevblocksPlatform::getDatabaseService();
-		
+
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
 
 		// Teams
 		$teams = DAO_Group::getAll();
 		$tpl->assign('teams', $teams);
-		
+
 		// Categories
 		$team_categories = DAO_Bucket::getTeams(); // [TODO] Cache these
 		$tpl->assign('team_categories', $team_categories);
-		
+
 		$tpl->display('file:' . $this->tpl_path . '/report_ticket_time.tpl');
 	}
-	
+
 	function getTimeSpentTicketChartAction() {
 		$sql_array = array();
 
@@ -661,12 +661,12 @@ class AnswernetReportTicketTime extends Extension_Report {
 			$start_time = strtotime($start);
 			$end_time = strtotime($end);
 		}
-		
+
 		$db = DevblocksPlatform::getDatabaseService();
-		
+
 //		$groups = DAO_Group::getAll();
 //		$buckets = DAO_Bucket::getAll();
-		
+
 		$sql = "SELECT sum(tte.time_actual_mins) mins, t.mask ";
 		$sql .= "FROM timetracking_entry tte ";
 		$sql .= "INNER JOIN ticket t ON tte.source_id = t.id ";
@@ -695,9 +695,9 @@ class AnswernetReportTicketTime extends Extension_Report {
 	    while(!$rs->EOF) {
 	    	$mins = intval($rs->fields['mins']);
 			$ticket_mask = $rs->fields['mask'];
-			
+
 			echo $ticket_mask, "\t", $mins . "\n";
-			
+
 		    $rs->MoveNext();
 	    }
 	}
@@ -707,29 +707,29 @@ endif;
 if (class_exists('Extension_Report',true)):
 class AnswernetReportWorkerTime extends Extension_Report {
 	private $tpl_path = null;
-	
+
 	function __construct($manifest) {
 		parent::__construct($manifest);
 		$this->tpl_path = dirname(dirname(__FILE__)).'/templates';
 	}
-	
+
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->tpl_path);
-		
+
 		$tpl->assign('start', '-30 days');
 		$tpl->assign('end', 'now');
-		
+
 		$db = DevblocksPlatform::getDatabaseService();
-		
+
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
 
 		// Teams
 		$teams = DAO_Group::getAll();
 		$tpl->assign('teams', $teams);
-		
+
 		// Categories
 		$team_categories = DAO_Bucket::getTeams(); // [TODO] Cache these
 		$tpl->assign('team_categories', $team_categories);
@@ -737,7 +737,7 @@ class AnswernetReportWorkerTime extends Extension_Report {
 		// Security
 		if(null == ($active_worker = CerberusApplication::getActiveWorker()))
 			die($translate->_('common.access_denied'));
-		
+
 		$tpl->assign('active_worker', $active_worker);
 
 		$filename = "worker-".$active_worker->id.".csv";
@@ -746,7 +746,7 @@ class AnswernetReportWorkerTime extends Extension_Report {
 
 		$tpl->display('file:' . $this->tpl_path . '/report_worker_time.tpl');
 	}
-	
+
 	function getTimeSpentWorkerReportAction() {
 		$db = DevblocksPlatform::getDatabaseService();
 		$subtotal = array();
@@ -755,11 +755,11 @@ class AnswernetReportWorkerTime extends Extension_Report {
 
 		@$sel_worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);
 		@$report_type = DevblocksPlatform::importGPC($_REQUEST['report_type'],'integer',0);
-		
+
 		// Security
 		if(null == ($active_worker = CerberusApplication::getActiveWorker()))
 			die($translate->_('common.access_denied'));
-		
+
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->tpl_path);
@@ -767,11 +767,11 @@ class AnswernetReportWorkerTime extends Extension_Report {
 		// import dates from form
 		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
 		@$end = DevblocksPlatform::importGPC($_REQUEST['end'],'string','');
-		
+
 		// use date rang@$sel_worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);e if specified, else use duration prior to now
 		$start_time = 0;
 		$end_time = 0;
-		
+
 		if (empty($start) && empty($end)) {
 			$start = "-30 days";
 			$end = "now";
@@ -781,26 +781,26 @@ class AnswernetReportWorkerTime extends Extension_Report {
 			$start_time = strtotime($start);
 			$end_time = strtotime($end);
 		}
-				
+
 		if($start_time === false || $end_time === false) {
 			$start = "-30 days";
 			$end = "now";
 			$start_time = strtotime($start);
 			$end_time = strtotime($end);
-			
+
 			$tpl->assign('invalidDate', true);
 		}
-		
+
 		// reload variables in template
 		$tpl->assign('start', $start);
 		$tpl->assign('end', $end);
-		
+
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
 
 		$sources = DAO_TimeTrackingEntry::getSources();
-		$tpl->assign('sources', $sources);		
-		
+		$tpl->assign('sources', $sources);
+
 		$sql = "SELECT tte.log_date, tte.time_actual_mins, tte.worker_id, tte.notes, ";
 		$sql .= "tte.source_extension_id, tte.source_id, ";
 		$sql .= "tta.name activity_name ";
@@ -817,7 +817,7 @@ class AnswernetReportWorkerTime extends Extension_Report {
 
 		// echo $sql;
 		$rs = $db->Execute($sql);
-	
+
 		$time_entries = array();
 
 		$filename = "worker-".$active_worker->id.".csv";
@@ -835,7 +835,7 @@ class AnswernetReportWorkerTime extends Extension_Report {
 		flock($fh, LOCK_EX);
 		$label = array( "Worker Name", "Ticket No", "Client", "Asset", "Site Name", "Billing Group", "Billing Min", "Sub-Total", "Total", "Date Recorded", "Notes");
 		fputcsv($fh, $label, ",", "\"");
-		
+
 		if(is_a($rs,'ADORecordSet'))
 		while(!$rs->EOF) {
 			$csv = array();
@@ -846,7 +846,7 @@ class AnswernetReportWorkerTime extends Extension_Report {
 			$activity = $rs->fields['activity_name'];
 			$log_date = intval($rs->fields['log_date']);
 			$notes = $rs->fields['notes'];
-	
+
 			if(!isset($time_entries[$worker_id])) {
 				$time_entries[$worker_id] = array();
 				$time_entries[$worker_id]['mins'] = array();
@@ -942,7 +942,7 @@ class AnswernetReportWorkerTime extends Extension_Report {
 
 			$subtotal['total'] = "";
 			$total_cm['total'] = $time_entries[$worker_id]['mins']['total'];
-			
+
 			fputcsv($fh, $csv, ",", "\"");
 			$rs->MoveNext();
 		}
@@ -954,7 +954,7 @@ class AnswernetReportWorkerTime extends Extension_Report {
 		fputcsv($fh, $subtotal, ",", "\"");
 		fputcsv($fh, $total_cm, ",", "\"");
 		fclose($fh);
-		
+
 		$tpl->display('file:' . $this->tpl_path . '/report_worker_time_html.tpl');
 	}
 
@@ -963,29 +963,29 @@ endif;
 if (class_exists('Extension_Report',true)):
 class AnswernetReportPlus1Time extends Extension_Report {
 	private $tpl_path = null;
-	
+
 	function __construct($manifest) {
 		parent::__construct($manifest);
 		$this->tpl_path = dirname(dirname(__FILE__)).'/templates';
 	}
-	
+
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->tpl_path);
-		
+
 		$tpl->assign('start', '-30 days');
 		$tpl->assign('end', 'now');
-		
+
 		$db = DevblocksPlatform::getDatabaseService();
-		
+
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
 
 		// Teams
 		$teams = DAO_Group::getAll();
 		$tpl->assign('teams', $teams);
-		
+
 		// Categories
 		$team_categories = DAO_Bucket::getTeams(); // [TODO] Cache these
 		$tpl->assign('team_categories', $team_categories);
@@ -993,7 +993,7 @@ class AnswernetReportPlus1Time extends Extension_Report {
 		// Security
 		if(null == ($active_worker = CerberusApplication::getActiveWorker()))
 			die($translate->_('common.access_denied'));
-		
+
 		$tpl->assign('active_worker', $active_worker);
 
 		$filename = "report-plus1-".$active_worker->id.".csv";
@@ -1002,14 +1002,14 @@ class AnswernetReportPlus1Time extends Extension_Report {
 
 		$tpl->display('file:' . $this->tpl_path . '/report_plus1_time.tpl');
 	}
-	
+
 	function getTimeSpentPlus1ReportAction() {
 		$db = DevblocksPlatform::getDatabaseService();
 
 		// Security
 		if(null == ($active_worker = CerberusApplication::getActiveWorker()))
 			die($translate->_('common.access_denied'));
-		
+
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->tpl_path);
@@ -1017,10 +1017,10 @@ class AnswernetReportPlus1Time extends Extension_Report {
 		// import dates from form
 		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
 		@$end = DevblocksPlatform::importGPC($_REQUEST['end'],'string','');
-		
+
 		$start_time = 0;
 		$end_time = 0;
-		
+
 		if (empty($start) && empty($end)) {
 			$start = "-30 days";
 			$end = "now";
@@ -1030,26 +1030,26 @@ class AnswernetReportPlus1Time extends Extension_Report {
 			$start_time = strtotime($start);
 			$end_time = strtotime($end);
 		}
-				
+
 		if($start_time === false || $end_time === false) {
 			$start = "-30 days";
 			$end = "now";
 			$start_time = strtotime($start);
 			$end_time = strtotime($end);
-			
+
 			$tpl->assign('invalidDate', true);
 		}
 
 		$groups = DAO_Group::getAll();
 		$buckets = DAO_Bucket::getAll();
-		
+
 		// reload variables in template
 		$tpl->assign('start', $start);
 		$tpl->assign('end', $end);
-		
-		$sources = DAO_TimeTrackingEntry::getSources();
+
+    $sources = DAO_TimeTrackingEntry::getSources();
 		$tpl->assign('sources', $sources);
-		
+
 		$sql = "SELECT t.mask, t.id, sum(tte.time_actual_mins) mins, a.email, ";
 		$sql .= "t.subject, t.created_date, t.updated_date, t.is_closed, ";
 		$sql .= "t.is_waiting, t.team_id, t.category_id ";
@@ -1062,7 +1062,7 @@ class AnswernetReportPlus1Time extends Extension_Report {
 
 		// echo $sql;
 		$rs = $db->Execute($sql);
-	
+
 		$time_entries = array();
 
 		$filename = "report-plus1-".$active_worker->id.".csv";
@@ -1081,12 +1081,12 @@ class AnswernetReportPlus1Time extends Extension_Report {
 
 		$label = array( "Ticket Mask", "Ticket Number", "Client Name", "Asset Name", "Site Name", "Requestor", "Subject", "Created Date", "Last Updated", "Group", "Bucket", "Status", "Total Min");
 		fputcsv($fh, $label, ",", "\"");
-		
+
 		if(is_a($rs,'ADORecordSet'))
 		while(!$rs->EOF) {
 			$csv = array();
 			$custom_fields = array();
-	
+
 			$mask = $rs->fields['mask'];
 			$id = intval($rs->fields['id']);
 			$email = $rs->fields['email'];
@@ -1105,7 +1105,7 @@ class AnswernetReportPlus1Time extends Extension_Report {
 				$status = "Completed";
 			}
 			$mins = intval($rs->fields['mins']);
-	
+
 			if(!isset($time_entries[$id])) {
 				$time_entries[$id] = array();
 			}
@@ -1146,15 +1146,15 @@ class AnswernetReportPlus1Time extends Extension_Report {
 			$time_entry['created_date'] = $created_date;
 			$csv['updated_date'] = date("Y-m-d h:i A", $updated_date);
 			$time_entry['updated_date'] = $updated_date;
-			$csv['group'] = $groups[$team_id]->name; 
-			$time_entry['group'] = $groups[$team_id]->name; 
+			$csv['group'] = $groups[$team_id]->name;
+			$time_entry['group'] = $groups[$team_id]->name;
 	      if ( $category_id ) {
-				$csv['bucket'] = $buckets[$category_id]->name; 
-				$time_entry['bucket'] = $buckets[$category_id]->name; 
+				$csv['bucket'] = $buckets[$category_id]->name;
+				$time_entry['bucket'] = $buckets[$category_id]->name;
 			} else {
-				$csv['bucket'] = 'Inbox'; 
+				$csv['bucket'] = 'Inbox';
 				$time_entry['bucket'] = 'Inbox';
-			}	
+			}
 			$csv['status'] = $status;
 			$time_entry['status'] = $status;
 
