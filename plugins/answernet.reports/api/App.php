@@ -751,7 +751,7 @@ class AnswernetReportWorkerTime extends Extension_Report {
 		$db = DevblocksPlatform::getDatabaseService();
 		$subtotal = array();
 		$total_cm = array();
-
+    DevblocksPlatform::getExtensions('timetracking.source', true);
 
 		@$sel_worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);
 		@$report_type = DevblocksPlatform::importGPC($_REQUEST['report_type'],'integer',0);
@@ -1005,6 +1005,7 @@ class AnswernetReportPlus1Time extends Extension_Report {
 
 	function getTimeSpentPlus1ReportAction() {
 		$db = DevblocksPlatform::getDatabaseService();
+    DevblocksPlatform::getExtensions('timetracking.source', true);
 
 		// Security
 		if(null == ($active_worker = CerberusApplication::getActiveWorker()))
