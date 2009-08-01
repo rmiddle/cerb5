@@ -565,6 +565,7 @@ class CerberusParser {
 		if(empty($id)) { // New Ticket
 			$sMask = CerberusApplication::generateTicketMask();
 			$groups = DAO_Group::getAll();
+
 			// Routing new tickets
 			if(null != ($routing_rules = Model_MailToGroupRule::getMatches(
 				$fromAddressInst,
@@ -575,16 +576,29 @@ class CerberusParser {
 					// Only end up with the last 'move' action (ignore the previous)
 					if(isset($rule->actions['move'])) {
 						$group_id = intval($rule->actions['move']['group_id']);
+<<<<<<< HEAD:api/app/Parser.php
 
 
+=======
+
+
+>>>>>>> wgm/master:api/app/Parser.php
 						// We don't need to move again when running rule actions
 						unset($rule->actions['move']);
 					}
 				}
 			}
+<<<<<<< HEAD:api/app/Parser.php
 			// Make sure the group exists
 			if(!isset($groups[$group_id]))
 				$group_id = null;
+=======
+
+			// Make sure the group exists
+			if(!isset($groups[$group_id]))
+				$group_id = null;
+
+>>>>>>> wgm/master:api/app/Parser.php
 			// Last ditch effort to check for a default group to deliver to
 			if(empty($group_id)) {
 				if(null != ($default_team = DAO_Group::getDefaultGroup())) {

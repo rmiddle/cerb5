@@ -216,6 +216,7 @@ class DAO_Bayes {
 			$w->word = mb_convert_case($rs->fields['word'], MB_CASE_LOWER);
 			$w->spam = intval($rs->fields['spam']);
 			$w->nonspam = intval($rs->fields['nonspam']);
+
 			$outwords[mb_convert_case($w->word, MB_CASE_LOWER)] = $w;
 			unset($tmp[$w->word]); // check off we've indexed this word
 			$rs->MoveNext();
