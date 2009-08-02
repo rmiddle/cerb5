@@ -173,12 +173,12 @@
 {* Get Org Fields *}
 {include file="file:$core_tpl/internal/custom_fields/filters/peek_get_custom_fields.tpl" fields=$org_fields filter=$filter divName="divGetOrgFields" label="Sender organization"}
 
-{{if is_array($filter_criteria_exts) && !empty($filter_criteria_exts)}
+{if is_array($filter_criteria_exts) && !empty($filter_criteria_exts)
 {foreach from=$filter_criteria_exts item=filter_criteria_ext key=extid}
 {assign var=ext_crit value=$filter->criteria.$extid}
 <label><input type="checkbox" name="rules[]" value="{$extid}" {if !is_null($ext_crit)}checked="checked"{/if} onclick="toggleDiv('crit_{$extid}',(this.checked?'block':'none'));"> <b>{$filter_criteria_ext->manifest->name}</b></label><br>
 <blockquote style="margin:0px 0px 5px 10px;display:{if !is_null($ext_crit)}block{else}none{/if};" id="crit_{$extid}">
-      {if method_exists($filter_criteria_ext,'renderConfig')}{$filter_criteria_ext->renderConfig($filter)}{/if}
+  {if method_exists($filter_criteria_ext,'renderConfig')}{$filter_criteria_ext->renderConfig($filter)}{/if}
 </blockquote>
 {/foreach}
 {/if}
@@ -186,12 +186,12 @@
 
 <h2>Then perform these actions:</h2>
 
-{{if is_array($filter_action_exts) && !empty($filter_action_exts)}
+{if is_array($filter_action_exts) && !empty($filter_action_exts)}
 {foreach from=$filter_action_exts item=filter_action_ext key=extid}
 {assign var=ext_act value=$filter->actions.$extid}
 <label><input type="checkbox" name="do[]" value="{$extid}" {if !is_null($ext_act)}checked="checked"{/if} onclick="toggleDiv('do_{$extid}',(this.checked?'block':'none'));"> {$filter_action_ext->manifest->name}</label><br>
 <blockquote style="margin:0px 0px 5px 10px;display:{if !is_null($ext_act)}block{else}none{/if};" id="do_{$extid}">
-      {if method_exists($filter_action_ext,'renderConfig')}{$filter_action_ext->renderConfig($filter)}{/if}
+  {if method_exists($filter_action_ext,'renderConfig')}{$filter_action_ext->renderConfig($filter)}{/if}
 </blockquote>
 {/foreach}
 {/if}

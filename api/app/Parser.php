@@ -302,7 +302,6 @@ class CerberusParser {
 	 * @return integer
 	 */
 	static public function parseMessage(CerberusParserMessage $message, $options=array()) {
-//		print_r($rfcMessage);
 		/*
 		 * options:
 		 * 'no_autoreply'

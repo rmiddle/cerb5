@@ -579,11 +579,11 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$tpl->assign('custom_fields', $custom_fields);
 
 		// Criteria extensions
-		$filter_criteria_exts = DevblocksPlatform::getExtensions('cerberusweb.mail_filter.criteria', true);
+		$filter_criteria_exts = DevblocksPlatform::getExtensions('cerberusweb.mail_filter.criteria', false);
 		$tpl->assign('filter_criteria_exts', $filter_criteria_exts);
 
 		// Action extensions
-		$filter_action_exts = DevblocksPlatform::getExtensions('cerberusweb.mail_filter.action', true);
+		$filter_action_exts = DevblocksPlatform::getExtensions('cerberusweb.mail_filter.action', false);
 		$tpl->assign('filter_action_exts', $filter_action_exts);
 
 		$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/mail/mail_preparse.tpl');
