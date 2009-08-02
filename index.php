@@ -44,9 +44,9 @@
  * feeling of feeding a couple obsessed developers who want to help you get 
  * more done than 'the other guy'.
  *
+ *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  * - Jeff Standen, Mike Fogg, Brenan Cavish, Darren Sugita, Dan Hildebrandt
  * 		and Joe Geck.
- *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
 if(version_compare(PHP_VERSION, "5.1.2", "<"))
