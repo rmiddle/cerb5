@@ -188,8 +188,8 @@ class EmailResponseReportMetLife extends Extension_Report {
     $worksheet_inbound->setColumn(2, 2, $radius*0.72);
     $worksheet_inbound->setColumn(3, 4, $radius*1.51);
     $worksheet_inbound->setColumn(5, 5, $radius*2.76);
-    $worksheet_inbound->setColumn(6, 6, $radius*2.22);
-    $worksheet_inbound->setColumn(7, 7, $radius*0.83);
+    $worksheet_inbound->setColumn(6, 9, $radius*2.22);
+    $worksheet_inbound->setColumn(10, 10, $radius*0.83);
     $worksheet_inbound->setRow(0, 36);
     $worksheet_inbound->freezePanes(array(2, 0, 2, 0));
 
@@ -200,9 +200,9 @@ class EmailResponseReportMetLife extends Extension_Report {
     $worksheet_outbound->setColumn(2, 2, $radius*0.72);
     $worksheet_outbound->setColumn(3, 4, $radius*1.51);
     $worksheet_outbound->setColumn(5, 5, $radius*2.76);
-    $worksheet_outbound->setColumn(6, 6, $radius*2.22);
-    $worksheet_outbound->setColumn(7, 7, $radius*1.20);
-    $worksheet_outbound->setColumn(8, 8, $radius*0.83);
+    $worksheet_outbound->setColumn(6, 9, $radius*2.22);
+    $worksheet_outbound->setColumn(10, 10, $radius*1.20);
+    $worksheet_outbound->setColumn(11, 11, $radius*0.83);
     $worksheet_outbound->setRow(0, 36);
     $worksheet_outbound->freezePanes(array(2, 0, 2, 0));
 
@@ -473,6 +473,18 @@ class EmailResponseReportMetLife extends Extension_Report {
     $format_inbound_title2->setVAlign('top');
     $format_inbound_title2->setTextWrap();
 
+    // Setup templating for the formating of certain cells in the Inbound Group.
+    $format_inbound_title3 =& $workbook->addFormat();
+    $format_inbound_title3->setSize(15);
+    $format_inbound_title3->setColor(8);
+    $format_inbound_title3->setBorder(1);
+    $format_inbound_title3->setFgColor(34);
+    $format_inbound_title3->setBold();
+    $format_inbound_title3->setHAlign('center');
+    $format_inbound_title3->setVAlign('vjustify');
+    $format_inbound_title3->setVAlign('top');
+    $format_inbound_title3->setTextWrap();
+
     // Added headers since they never change in the Inbound Group.
     $worksheet_inbound->setInputEncoding('utf-8');
     $worksheet_inbound->write(0, 0, 'Inbound Email From', $format_inbound_title);
@@ -482,7 +494,10 @@ class EmailResponseReportMetLife extends Extension_Report {
     $worksheet_inbound->write(0, 4, 'Ticket Mask', $format_inbound_title);
     $worksheet_inbound->write(0, 5, 'Subject Line', $format_inbound_title);
     $worksheet_inbound->write(0, 6, 'Email Contents', $format_inbound_title);
-    $worksheet_inbound->write(0, 7, 'Group', $format_inbound_title);
+    $worksheet_inbound->write(0, 7, 'Category', $format_inbound_title3);
+    $worksheet_inbound->write(0, 8, 'Code', $format_inbound_title3);
+    $worksheet_inbound->write(0, 9, 'Description(or snapshot)', $format_inbound_title3);
+    $worksheet_inbound->write(0, 10, 'Group', $format_inbound_title);
     $worksheet_inbound->write(1, 0, $week_range_text, $format_inbound_title2);
     $worksheet_inbound->write(1, 1, "", $format_inbound_title2);
     $worksheet_inbound->write(1, 2, "", $format_inbound_title2);
@@ -491,6 +506,9 @@ class EmailResponseReportMetLife extends Extension_Report {
     $worksheet_inbound->write(1, 5, "", $format_inbound_title2);
     $worksheet_inbound->write(1, 6, "", $format_inbound_title2);
     $worksheet_inbound->write(1, 7, "", $format_inbound_title2);
+    $worksheet_inbound->write(1, 8, "", $format_inbound_title2);
+    $worksheet_inbound->write(1, 9, "", $format_inbound_title2);
+    $worksheet_inbound->write(1, 10, "", $format_inbound_title2);
 
     // Setup templating for the formating of certain cells in the Outbound Group.
     $format_outbound_title =& $workbook->addFormat();
@@ -513,6 +531,17 @@ class EmailResponseReportMetLife extends Extension_Report {
     $format_outbound_title2->setVAlign('top');
     $format_outbound_title2->setTextWrap();
 
+    $format_outbound_title3 =& $workbook->addFormat();
+    $format_outbound_title3->setSize(15);
+    $format_outbound_title3->setColor(8);
+    $format_outbound_title3->setBorder(1);
+    $format_outbound_title3->setFgColor(34);
+    $format_outbound_title3->setBold();
+    $format_outbound_title3->setHAlign('center');
+    $format_outbound_title3->setVAlign('vjustify');
+    $format_outbound_title3->setVAlign('top');
+    $format_outbound_title3->setTextWrap();
+
     // Added headers since they never change in the Outbound Group.
     $worksheet_outbound->setInputEncoding('utf-8');
     $worksheet_outbound->write(0, 0, 'Outbound Email To', $format_outbound_title);
@@ -522,8 +551,11 @@ class EmailResponseReportMetLife extends Extension_Report {
     $worksheet_outbound->write(0, 4, 'Ticket Mask', $format_outbound_title);
     $worksheet_outbound->write(0, 5, 'Subject Line', $format_outbound_title);
     $worksheet_outbound->write(0, 6, 'Email Contents', $format_outbound_title);
-    $worksheet_outbound->write(0, 7, 'Responder', $format_outbound_title);
-    $worksheet_outbound->write(0, 8, 'Group', $format_outbound_title);
+    $worksheet_outbound->write(0, 7, 'Category', $format_outbound_title3);
+    $worksheet_outbound->write(0, 8, 'Code', $format_outbound_title3);
+    $worksheet_outbound->write(0, 9, 'Description(or snapshot)', $format_outbound_title3);
+    $worksheet_outbound->write(0, 10, 'Responder', $format_outbound_title);
+    $worksheet_outbound->write(0, 11, 'Group', $format_outbound_title);
 
     $worksheet_outbound->write(1, 0, $week_range_text, $format_outbound_title2);
     $worksheet_outbound->write(1, 1, "", $format_outbound_title2);
@@ -534,6 +566,9 @@ class EmailResponseReportMetLife extends Extension_Report {
     $worksheet_outbound->write(1, 6, "", $format_outbound_title2);
     $worksheet_outbound->write(1, 7, "", $format_outbound_title2);
     $worksheet_outbound->write(1, 8, "", $format_outbound_title2);
+    $worksheet_outbound->write(1, 9, "", $format_outbound_title2);
+    $worksheet_outbound->write(1, 10, "", $format_outbound_title2);
+    $worksheet_outbound->write(1, 11, "", $format_outbound_title2);
 
     print $translate->_('reports.ui.group.emailresponse.answernet.done');
     print '<br>';
@@ -618,8 +653,8 @@ class EmailResponseReportMetLife extends Extension_Report {
         $worksheet_outbound->write($row_outbound, 4, $mask, $format_general);
         $worksheet_outbound->write($row_outbound, 5, trim($message_subject), $format_general_nowrap);
         $worksheet_outbound->write($row_outbound, 6, trim(strip_tags($message_content)));
-        $worksheet_outbound->writeString($row_outbound, 7, $worker_name, $format_general);
-        $worksheet_outbound->write($row_outbound, 8, $team_text, $format_general);
+        $worksheet_outbound->writeString($row_outbound, 10, $worker_name, $format_general);
+        $worksheet_outbound->write($row_outbound, 11, $team_text, $format_general);
         $row_outbound++;
       }
       else {
@@ -631,7 +666,7 @@ class EmailResponseReportMetLife extends Extension_Report {
         $worksheet_inbound->write($row_inbound, 4, $mask, $format_general);
         $worksheet_inbound->write($row_inbound, 5, trim($message_subject), $format_general_nowrap);
         $worksheet_inbound->writeString($row_inbound, 6, trim(strip_tags($message_content)));
-        $worksheet_inbound->write($row_inbound, 7, $team_text, $format_general);
+        $worksheet_inbound->write($row_inbound, 10, $team_text, $format_general);
         $row_inbound++;
       }
 
