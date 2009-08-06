@@ -372,20 +372,6 @@ class CerberusParser {
 		$sTo = @$headers['to'];
 		$bIsNew = true;
 
-		// Overloadable
-		$enumSpamTraining = '';
-
-		$from = array();
-		$to = array();
-
-		if(!empty($sReplyTo)) {
-			$from = CerberusParser::parseRfcAddress($sReplyTo);
-		} elseif(!empty($sFrom)) {
-			$from = CerberusParser::parseRfcAddress($sFrom);
-		} elseif(!empty($sReturnPath)) {
-			$from = CerberusParser::parseRfcAddress($sReturnPath);
-		}
-
 		if(!empty($sTo)) {
 		    // [TODO] Do we still need this RFC address parser?
 			$to = CerberusParser::parseRfcAddress($sTo);
@@ -406,23 +392,14 @@ class CerberusParser {
 		if(empty($iDate) || $iDate > time())
 			$iDate = time();
 
-		if(empty($from) || !is_array($from)) {
-			$logger->warn("[Parser] Invalid 'From' address: " . $from);
-			return NULL;
-		}
-
-		@$fromAddress = $from[0]->mailbox.'@'.$from[0]->host;
-		@$fromPersonal = $from[0]->personal;
-		if(null == ($fromAddressInst = CerberusApplication::hashLookupAddress($fromAddress, true))) {
-			$logger->err("[Parser] 'From' address could not be created: " . $fromAddress);
-			return NULL;
-		}
-
 		// Is banned?
 		if(1==$fromAddressInst->is_banned) {
 			$logger->info("[Parser] Ignoring ticket from banned address: " . $fromAddressInst->email);
 			return NULL;
 		}
+
+    // Overloadable
+    $enumSpamTraining = '';
 
 		// Message Id / References / In-Reply-To
 		@$sMessageId = $headers['message-id'];
@@ -527,35 +504,6 @@ class CerberusParser {
 	        	 * [TODO] check that this sender is a requester on the matched ticket
 	        	 * Otherwise blank out the $id
 	        	 */
-        	}
-        }
-
-        // Pre-parse mail rules
-        if(null != ($pre_filter = Model_PreParseRule::getMatches(
-        	(empty($id) ? 1 : 0), // is_new
-        	$fromAddressInst,
-        	$message
-        ))) {
-        	// Do something with matching filter's actions
-        	foreach($pre_filter->actions as $action_key => $action) {
-        		switch($action_key) {
-        			case 'blackhole':
-        				return NULL;
-        				break;
-
-        			case 'redirect':
-        				@$to = $action['to'];
-        				CerberusMail::reflect($message, $to);
-        				return NULL;
-        				break;
-
-        			case 'bounce':
-        				@$msg = $action['message'];
-        				// [TODO] Follow the RFC spec on a true bounce
-        				CerberusMail::quickSend($fromAddress,"Delivery failed: ".$sSubject,$msg);
-        				return NULL;
-        				break;
-        		}
         	}
         }
 
