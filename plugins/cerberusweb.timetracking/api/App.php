@@ -1089,7 +1089,7 @@ class ChTimeTrackingAjaxController extends DevblocksControllerExtension {
     if (strlen($notes_long) > 255) {
       @$notes=substr($notes_long,0,255);
     } else {
-      @$notes=$notes_long
+      @$notes=$notes_long;
     }
 
 		// Translate org string into org id, if exists
