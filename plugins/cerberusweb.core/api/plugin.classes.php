@@ -49,9 +49,6 @@
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
-class ChCorePlugin extends DevblocksPlugin {
-};
-
 class ChTranslations extends DevblocksTranslationsExtension {
 	function __construct($manifest) {
 		parent::__construct($manifest);	
@@ -282,6 +279,10 @@ class ChWorkspaceSource_Address extends Extension_WorkspaceSource {
 
 class ChWorkspaceSource_Org extends Extension_WorkspaceSource {
 	const ID = 'core.workspace.source.org';
+};
+
+class ChWorkspaceSource_Notification extends Extension_WorkspaceSource {
+	const ID = 'core.workspace.source.notifications';
 };
 
 class ChWorkspaceSource_Task extends Extension_WorkspaceSource {
