@@ -1187,6 +1187,7 @@ class ChTimeTrackingAjaxController extends DevblocksControllerExtension {
 
 	function clearEntryAction() {
 		$this->_destroyTimer();
+<<<<<<< HEAD:plugins/cerberusweb.timetracking/api/App.php
 	}
 
 	function showBulkPanelAction() {
@@ -1241,6 +1242,62 @@ class ChTimeTrackingAjaxController extends DevblocksControllerExtension {
 		return;
 	}
 
+=======
+	}
+	
+	function showBulkPanelAction() {
+		@$id_csv = DevblocksPlatform::importGPC($_REQUEST['ids']);
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
+
+		$tpl = DevblocksPlatform::getTemplateService();
+		$path = dirname(dirname(__FILE__)) . '/templates/';
+		$tpl->assign('path', $path);
+		$tpl->assign('view_id', $view_id);
+
+	    if(!empty($id_csv)) {
+	        $ids = DevblocksPlatform::parseCsvString($id_csv);
+	        $tpl->assign('ids', implode(',', $ids));
+	    }
+		
+		// Custom Fields
+		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_TimeEntry::ID);
+		$tpl->assign('custom_fields', $custom_fields);
+		
+		$tpl->cache_lifetime = "0";
+		$tpl->display('file:' . $path . 'timetracking/time/bulk.tpl');
+	}
+	
+	function doBulkUpdateAction() {
+		// Checked rows
+	    @$ids_str = DevblocksPlatform::importGPC($_REQUEST['ids'],'string');
+		$ids = DevblocksPlatform::parseCsvString($ids_str);
+
+		// Filter: whole list or check
+	    @$filter = DevblocksPlatform::importGPC($_REQUEST['filter'],'string','');
+	    
+	    // View
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
+		$view = C4_AbstractViewLoader::getView($view_id);
+		
+		// Time Tracking fields
+//		@$list_id = trim(DevblocksPlatform::importGPC($_POST['list_id'],'integer',0));
+
+		$do = array();
+		
+		// Do: ...
+//		if(0 != strlen($list_id))
+//			$do['list_id'] = $list_id;
+			
+		// Do: Custom fields
+		$do = DAO_CustomFieldValue::handleBulkPost($do);
+			
+		$view->doBulkUpdate($filter, $do, $ids);
+		
+		$view->render();
+		return;
+	}
+	
+>>>>>>> wgm/master:plugins/cerberusweb.timetracking/api/App.php
 };
 
 if (class_exists('Extension_ActivityTab')):
@@ -1256,8 +1313,13 @@ class TimeTrackingActivityTab extends Extension_ActivityTab {
 		$tpl->cache_lifetime = "0";
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
+<<<<<<< HEAD:plugins/cerberusweb.timetracking/api/App.php
 
 		if(null == ($view = C4_AbstractViewLoader::getView('', self::VIEW_ACTIVITY_TIMETRACKING))) {
+=======
+		
+		if(null == ($view = C4_AbstractViewLoader::getView(self::VIEW_ACTIVITY_TIMETRACKING))) {
+>>>>>>> wgm/master:plugins/cerberusweb.timetracking/api/App.php
 			$view = new C4_TimeTrackingEntryView();
 			$view->id = self::VIEW_ACTIVITY_TIMETRACKING;
 			$view->renderSortBy = SearchFields_TimeTrackingEntry::LOG_DATE;

@@ -472,7 +472,13 @@ class ChGroupsPage extends CerberusPageExtension  {
    			DAO_GroupInboxFilter::update($id, $fields);
    		}
    		
-		if(!empty($view_id) && null != ($view = C4_AbstractViewLoader::getView('C4_TicketView', $view_id))) {
+		$defaults = new C4_AbstractViewModel();
+		$defaults->class_name = 'C4_TicketView';
+		$defaults->id = $view_id;
+		
+		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
+		
+		if(!empty($view_id) && null != $view) {
 			/* @var $view C4_TicketView */
 
 			// Loop through all the tickets in this inbox
@@ -673,7 +679,6 @@ class ChGroupsPage extends CerberusPageExtension  {
 
 	    if(is_array($categories))
 	    foreach($categories as $category) {
-	        // [TODO] Dupe checking
 	        $cat_id = DAO_Bucket::create($category, $team_id);
 	    }
 	    
@@ -800,7 +805,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 		}
 		
 		// Reload view (if linked)
-		if(!empty($view_id) && null != ($view = C4_AbstractViewLoader::getView('', $view_id))) {
+		if(!empty($view_id) && null != ($view = C4_AbstractViewLoader::getView($view_id))) {
 			$view->render();
 		}
 		exit;

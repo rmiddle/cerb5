@@ -2507,14 +2507,21 @@ class DAO_MessageContent {
 
 class DAO_MessageHeader {
     const MESSAGE_ID = 'message_id';
-    const TICKET_ID = 'ticket_id';
     const HEADER_NAME = 'header_name';
     const HEADER_VALUE = 'header_value';
+<<<<<<< HEAD:api/DAO.class.php
 
     static function create($message_id, $ticket_id, $header, $value) {
     	$db = DevblocksPlatform::getDatabaseService();
 
         if(empty($header) || empty($value) || empty($message_id) || empty($ticket_id))
+=======
+    
+    static function create($message_id, $header, $value) {
+    	$db = DevblocksPlatform::getDatabaseService();
+    	
+        if(empty($header) || empty($value) || empty($message_id))
+>>>>>>> wgm/master:api/DAO.class.php
             return;
 
         $header = strtolower($header);
@@ -2523,15 +2530,21 @@ class DAO_MessageHeader {
         if(is_array($value)) {
         	$value = implode("\r\n",$value);
         }
+<<<<<<< HEAD:api/DAO.class.php
 
 		$db->Execute(sprintf("INSERT INTO message_header (message_id, ticket_id, header_name, header_value) ".
 			"VALUES (%d, %d, %s, %s)",
+=======
+        
+		$db->Execute(sprintf("INSERT INTO message_header (message_id, header_name, header_value) ".
+			"VALUES (%d, %s, %s)",
+>>>>>>> wgm/master:api/DAO.class.php
 			$message_id,
-			$ticket_id,
 			$db->qstr($header),
 			$db->qstr($value)
 		));
     }
+<<<<<<< HEAD:api/DAO.class.php
 
 //    static function update($message_id, $ticket_id, $header, $value) {
 //        $db = DevblocksPlatform::getDatabaseService();
@@ -2572,6 +2585,9 @@ class DAO_MessageHeader {
 //        }
 //    }
 
+=======
+    
+>>>>>>> wgm/master:api/DAO.class.php
     static function getAll($message_id) {
         $db = DevblocksPlatform::getDatabaseService();
 
@@ -3021,9 +3037,16 @@ class DAO_Ticket extends C4_ORMHelper {
 
 	static function getTicketByMessageId($message_id) {
 		$db = DevblocksPlatform::getDatabaseService();
+<<<<<<< HEAD:api/DAO.class.php
 
 		$sql = sprintf("SELECT mh.ticket_id, mh.message_id ".
+=======
+		
+		$sql = sprintf("SELECT t.id AS ticket_id, mh.message_id AS message_id ".
+>>>>>>> wgm/master:api/DAO.class.php
 			"FROM message_header mh ".
+			"INNER JOIN message m ON (m.id=mh.message_id) ".
+			"INNER JOIN ticket t ON (t.id=m.ticket_id) ".
 			"WHERE mh.header_name = 'message-id' AND mh.header_value = %s",
 			$db->qstr($message_id)
 		);
@@ -3140,6 +3163,7 @@ class DAO_Ticket extends C4_ORMHelper {
 				implode(',', $merge_ticket_ids)
 			);
 			$db->Execute($sql);
+<<<<<<< HEAD:api/DAO.class.php
 
 			// Message headers
 			$sql = sprintf("UPDATE message_header SET ticket_id = %d WHERE ticket_id IN (%s)",
@@ -3148,6 +3172,9 @@ class DAO_Ticket extends C4_ORMHelper {
 			);
 			$db->Execute($sql);
 
+=======
+			
+>>>>>>> wgm/master:api/DAO.class.php
 			// Requesters (merge)
 			$sql = sprintf("INSERT IGNORE INTO requester (address_id,ticket_id) ".
 				"SELECT address_id, %d FROM requester WHERE ticket_id IN (%s)",
@@ -4643,7 +4670,7 @@ class DAO_Bucket extends DevblocksORMHelper {
 			return 0;
 
 		$db = DevblocksPlatform::getDatabaseService();
-		if(null != ($next_pos = $db->GetOne(sprintf("SELECT MAX(pos) FROM category WHERE team_id = %d", $group_id))))
+		if(null != ($next_pos = $db->GetOne(sprintf("SELECT MAX(pos)+1 FROM category WHERE team_id = %d", $group_id))))
 			return $next_pos;
 
 		return 0;
@@ -4711,17 +4738,21 @@ class DAO_Bucket extends DevblocksORMHelper {
 
 	static function create($name, $team_id) {
 		$db = DevblocksPlatform::getDatabaseService();
+<<<<<<< HEAD:api/DAO.class.php
 
+=======
+		
+		// Check for dupes
+>>>>>>> wgm/master:api/DAO.class.php
 		$buckets = self::getAll();
-		$duplicate = false;
+		if(is_array($buckets))
 		foreach($buckets as $bucket) {
-			if($name==$bucket->name && $team_id==$bucket->team_id) {
-				$duplicate = true;
-				$id = $bucket->id;
-				break;
+			if(0==strcasecmp($name,$bucket->name) && $team_id==$bucket->team_id) {
+				return $bucket->id;
 			}
 		}
 
+<<<<<<< HEAD:api/DAO.class.php
 		if(!$duplicate) {
 			$id = $db->GenID('generic_seq');
 			$next_pos = self::getNextPos($team_id);
@@ -4733,12 +4764,29 @@ class DAO_Bucket extends DevblocksORMHelper {
 				$db->qstr($name),
 				$team_id
 			);
+=======
+		$id = $db->GenID('generic_seq');
+		$next_pos = self::getNextPos($team_id);
+		
+		$sql = sprintf("INSERT INTO category (id,pos,name,team_id,is_assignable) ".
+			"VALUES (%d,%d,%s,%d,1)",
+			$id,
+			$next_pos,
+			$db->qstr($name),
+			$team_id
+		);
+>>>>>>> wgm/master:api/DAO.class.php
 
-			$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
+		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
 
+<<<<<<< HEAD:api/DAO.class.php
 			self::clearCache();
 		}
 
+=======
+		self::clearCache();
+		
+>>>>>>> wgm/master:api/DAO.class.php
 		return $id;
 	}
 
@@ -5295,8 +5343,11 @@ class DAO_WorkerWorkspaceList extends DevblocksORMHelper {
 };
 
 class DAO_WorkerPref extends DevblocksORMHelper {
+<<<<<<< HEAD:api/DAO.class.php
     const SETTING_OVERVIEW = 'worker_overview';
 
+=======
+>>>>>>> wgm/master:api/DAO.class.php
     const CACHE_PREFIX = 'ch_workerpref_';
 
 	static function set($worker_id, $key, $value) {

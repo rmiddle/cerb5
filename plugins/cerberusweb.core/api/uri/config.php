@@ -150,7 +150,11 @@ class ChConfigurationPage extends CerberusPageExtension  {
 
 		$tpl->assign('response_uri', 'config/attachments');
 
-		$view = C4_AbstractViewLoader::getView('C4_AttachmentView', C4_AttachmentView::DEFAULT_ID);
+		$defaults = new C4_AbstractViewModel();
+		$defaults->class_name = 'C4_AttachmentView';
+		$defaults->id = C4_AttachmentView::DEFAULT_ID;
+
+		$view = C4_AbstractViewLoader::getView(C4_AttachmentView::DEFAULT_ID, $defaults);
 		$tpl->assign('view', $view);
 		$tpl->assign('view_fields', C4_AttachmentView::getFields());
 		$tpl->assign('view_searchable_fields', C4_AttachmentView::getSearchFields());
@@ -194,8 +198,13 @@ class ChConfigurationPage extends CerberusPageExtension  {
 
 	    // View
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
+<<<<<<< HEAD:plugins/cerberusweb.core/api/uri/config.php
 		$view = C4_AbstractViewLoader::getView('',$view_id);
 
+=======
+		$view = C4_AbstractViewLoader::getView($view_id);
+		
+>>>>>>> wgm/master:plugins/cerberusweb.core/api/uri/config.php
 		// Attachment fields
 		@$deleted = trim(DevblocksPlatform::importGPC($_POST['deleted'],'integer',0));
 
@@ -427,34 +436,28 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		    }
 		}
 
+<<<<<<< HEAD:plugins/cerberusweb.core/api/uri/config.php
+=======
+	    // [JAS]: [TODO] convert to field constants
+		$fields = array(
+		    'enabled' => $enabled,
+			'nickname' => $nickname,
+			'protocol' => $protocol,
+			'host' => $host,
+			'username' => $username,
+			'password' => $password,
+			'port' => $port
+		);
+		
+>>>>>>> wgm/master:plugins/cerberusweb.core/api/uri/config.php
 		if(!empty($id) && !empty($delete)) {
 			DAO_Mail::deletePop3Account($id);
 
 		} elseif(!empty($id)) {
-		    // [JAS]: [TODO] convert to field constants
-			$fields = array(
-			    'enabled' => $enabled,
-				'nickname' => $nickname,
-				'protocol' => $protocol,
-				'host' => $host,
-				'username' => $username,
-				'password' => $password,
-				'port' => $port
-			);
 			DAO_Mail::updatePop3Account($id, $fields);
 
 		} else {
             if(!empty($host) && !empty($username)) {
-			    // [JAS]: [TODO] convert to field constants
-                $fields = array(
-				    'enabled' => 1,
-					'nickname' => $nickname,
-					'protocol' => $protocol,
-					'host' => $host,
-					'username' => $username,
-					'password' => $password,
-					'port' => $port
-				);
 			    $id = DAO_Mail::createPop3Account($fields);
             }
 		}
