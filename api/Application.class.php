@@ -276,17 +276,11 @@ class CerberusApplication extends DevblocksApplication {
 		} else {
 			$errors[] = "The 'SPL' PHP extension is required.  Please enable it.";
 		}
-<<<<<<< HEAD:api/Application.class.php
-
-=======
-		
 		// Extension: JSON
 		if(extension_loaded("json")) {
 		} else {
 			$errors[] = "The 'JSON' PHP extension is required.  Please enable it.";
 		}
-		
->>>>>>> wgm/master:api/Application.class.php
 		return $errors;
 	}
 

@@ -309,6 +309,7 @@ class CerberusParser {
 		$logger = DevblocksPlatform::getConsoleLog();
 		$settings = CerberusSettings::getInstance();
 		$helpdesk_senders = CerberusApplication::getHelpdeskSenders();
+
     // Pre-parse mail filters
 		$pre_filters = Model_PreParseRule::getMatches($message);
 		if(is_array($pre_filters) && !empty($pre_filters)) {
@@ -855,7 +856,7 @@ class CerberusParser {
 		// [TODO] This should only happen if the destination has subject masks enabled
 		if(!is_array($aSubject))
 			$aSubject = array($aSubject);
-			
+
 		foreach($aSubject as $sSubject) {
 			if(preg_match("/.*\[.*?\#(.*?)\].*/", $sSubject, $matches)) {
 				if(isset($matches[1])) {
@@ -869,15 +870,7 @@ class CerberusParser {
 				}
 			}
 		}
-<<<<<<< HEAD:api/app/Parser.php
 
-		// [TODO] As a last case, check Microsoft's Thread-Topic header
-		if(!empty($sThreadTopic)) {
-		}
-
-=======
-		
->>>>>>> wgm/master:api/app/Parser.php
 		return NULL;
 	}
 
@@ -913,26 +906,7 @@ class CerberusParser {
 	static function parseRfcAddress($address_string) {
 		return CerberusUtils::parseRfcAddressList($address_string);
 	}
-<<<<<<< HEAD:api/app/Parser.php
 
-	static function fixQuotePrintableString($str) {
-		$out = '';
-
-		$parts = imap_mime_header_decode($str);
-		if(is_array($parts))
-		foreach($parts as $part) {
-			try {
-				$charset = ($part->charset != 'default') ? $part->charset : 'auto';
-				@$out .= mb_convert_encoding($part->text,LANG_CHARSET_CODE,$charset);
-			} catch(Exception $e) {}
-		}
-
-		// Strip invalid characters in our encoding
-		if(!mb_check_encoding($out, LANG_CHARSET_CODE))
-			$out = mb_convert_encoding($out, LANG_CHARSET_CODE, LANG_CHARSET_CODE);
-
-=======
-	
 	static function fixQuotePrintableString($input) {
 		$out = '';
 
@@ -942,7 +916,7 @@ class CerberusParser {
 
 		foreach($input as $str) {
 			$out .= !empty($out) ? ' ' : '';
-			
+
 			$parts = imap_mime_header_decode($str);
 			if(is_array($parts))
 			foreach($parts as $part) {
@@ -951,13 +925,12 @@ class CerberusParser {
 					@$out .= mb_convert_encoding($part->text,LANG_CHARSET_CODE,$charset);
 				} catch(Exception $e) {}
 			}
-			
+
 			// Strip invalid characters in our encoding
 			if(!mb_check_encoding($out, LANG_CHARSET_CODE))
 				$out = mb_convert_encoding($out, LANG_CHARSET_CODE, LANG_CHARSET_CODE);
 		}
-		
->>>>>>> wgm/master:api/app/Parser.php
+
 		return trim($out);
 	}
 

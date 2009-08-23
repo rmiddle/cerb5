@@ -12,27 +12,15 @@ class ChWatchersConfigTab extends Extension_ConfigTab {
 		$tpl->cache_lifetime = "0";
 
 		$tpl->assign('response_uri', 'config/watchers');
-<<<<<<< HEAD:plugins/cerberusweb.watchers/api/App.php
 
-		if(null == ($view = C4_AbstractViewLoader::getView('', C4_WatcherView::DEFAULT_ID))) {
-			$view = new C4_WatcherView();
-			$view->renderSortBy = SearchFields_WatcherMailFilter::POS;
-			$view->renderSortAsc = 0;
+    $defaults = new C4_AbstractViewModel();
+    $defaults->class_name = 'C4_WatcherView';
+    $defaults->id = C4_WatcherView::DEFAULT_ID;
+    $defaults->renderSortBy = SearchFields_WatcherMailFilter::POS;
+    $defaults->renderSortAsc = 0;
 
-			C4_AbstractViewLoader::setView($view->id, $view);
-		}
-
-=======
-		
-		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'C4_WatcherView';
-		$defaults->id = C4_WatcherView::DEFAULT_ID;
-		$defaults->renderSortBy = SearchFields_WatcherMailFilter::POS;
-		$defaults->renderSortAsc = 0;
-		
 		$view = C4_AbstractViewLoader::getView(C4_WatcherView::DEFAULT_ID, $defaults);
-		
->>>>>>> wgm/master:plugins/cerberusweb.watchers/api/App.php
+
 		$tpl->assign('view', $view);
 		$tpl->assign('view_fields', C4_WatcherView::getFields());
 		$tpl->assign('view_searchable_fields', C4_WatcherView::getSearchFields());
@@ -575,13 +563,8 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 		$tpl->assign('workers', $workers);
 
 		$tpl->assign('response_uri', 'preferences/watchers');
-<<<<<<< HEAD:plugins/cerberusweb.watchers/api/App.php
 
-		if(null == ($view = C4_AbstractViewLoader::getView('', 'prefs.watchers'))) {
-=======
-		
 		if(null == ($view = C4_AbstractViewLoader::getView('prefs.watchers'))) {
->>>>>>> wgm/master:plugins/cerberusweb.watchers/api/App.php
 			$view = new C4_WatcherView();
 			$view->id = 'prefs.watchers';
 			$view->name = "My Watcher Filters";
@@ -639,13 +622,8 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 
 	    // View
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
-<<<<<<< HEAD:plugins/cerberusweb.watchers/api/App.php
-		$view = C4_AbstractViewLoader::getView('',$view_id);
-
-=======
 		$view = C4_AbstractViewLoader::getView($view_id);
-		
->>>>>>> wgm/master:plugins/cerberusweb.watchers/api/App.php
+
 		// Watcher fields
 		@$status = trim(DevblocksPlatform::importGPC($_POST['do_status'],'string',''));
 

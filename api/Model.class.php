@@ -77,11 +77,7 @@ class Model_PreParseRule {
 
 		// From address
 		$fromInst = CerberusParser::getAddressFromHeaders($headers);
-<<<<<<< HEAD:api/Model.class.php
 
-=======
-		
->>>>>>> wgm/master:api/Model.class.php
 		// Stackable
 		$matches = array();
 
@@ -1178,29 +1174,18 @@ class C4_AbstractViewLoader {
 		$active_worker = CerberusApplication::getActiveWorker();
 		if(is_null(self::$views)) self::_init();
 
-<<<<<<< HEAD:api/Model.class.php
-		if(!self::exists($view_label)) {
-			if(empty($class) || !class_exists($class))
-			return null;
+    if(self::exists($view_label)) {
+      $model = self::$views[$view_label];
+      return self::unserializeAbstractView($model);
 
-			$view = new $class;
-			self::setView($view_label, $view);
-			return $view;
-		}
-=======
-		if(self::exists($view_label)) {
-			$model = self::$views[$view_label];
-			return self::unserializeAbstractView($model);
-			
-		} else {
-			// See if the worker has their own saved prefs
-			@$prefs = unserialize(DAO_WorkerPref::get($active_worker->id, 'view'.$view_label));
->>>>>>> wgm/master:api/Model.class.php
+    } else {
+      // See if the worker has their own saved prefs
+      @$prefs = unserialize(DAO_WorkerPref::get($active_worker->id, 'view'.$view_label));
 
 			// If no worker prefsd, check if we're passed defaults
 			if((empty($prefs) || !$prefs instanceof C4_AbstractViewModel) && !empty($defaults))
 				$prefs = $defaults;
-			
+
 			// Create a default view if it doesn't exist
 			if(!empty($prefs) && $prefs instanceof C4_AbstractViewModel) {
 				if(!empty($prefs->class_name) || class_exists($prefs->class_name)) {
@@ -1218,7 +1203,7 @@ class C4_AbstractViewLoader {
 					return $view;
 				}
 			}
-			
+
 		}
 
 		return null;
