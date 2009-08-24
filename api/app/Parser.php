@@ -525,6 +525,7 @@ class CerberusParser {
 					if(isset($rule->actions['move'])) {
 						$group_id = intval($rule->actions['move']['group_id']);
 
+
 						// We don't need to move again when running rule actions
 						unset($rule->actions['move']);
 					}
