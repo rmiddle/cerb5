@@ -42,7 +42,7 @@ class ChContactsPage extends CerberusPageExtension {
 		// Display series support (inherited paging from Display)
 		@$view_id = array_shift($stack);
 		if(!empty($view_id)) {
-			$view = C4_AbstractViewLoader::getView('',$view_id);
+			$view = C4_AbstractViewLoader::getView($view_id);
 
 			$range = 250;
 			$block_size = 250;
@@ -180,7 +180,7 @@ class ChContactsPage extends CerberusPageExtension {
 		return;
 		
 //			case 'people':
-//				$view = C4_AbstractViewLoader::getView('', 'addybook_people'); // C4_AddressView::DEFAULT_ID
+//				$view = C4_AbstractViewLoader::getView('addybook_people'); // C4_AddressView::DEFAULT_ID
 //				
 //				if(null == $view) {
 //					$view = new C4_AddressView();
@@ -206,7 +206,11 @@ class ChContactsPage extends CerberusPageExtension {
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
-		$view = C4_AbstractViewLoader::getView('C4_ContactOrgView', C4_ContactOrgView::DEFAULT_ID);
+		$defaults = new C4_AbstractViewModel();
+		$defaults->class_name = 'C4_ContactOrgView';
+		$defaults->id = C4_ContactOrgView::DEFAULT_ID;
+		
+		$view = C4_AbstractViewLoader::getView(C4_ContactOrgView::DEFAULT_ID, $defaults);
 		$tpl->assign('view', $view);
 		$tpl->assign('contacts_page', 'orgs');
 		$tpl->assign('response_uri', 'contacts/orgs');
@@ -220,7 +224,11 @@ class ChContactsPage extends CerberusPageExtension {
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
-		$view = C4_AbstractViewLoader::getView('C4_AddressView', C4_AddressView::DEFAULT_ID);
+		$defaults = new C4_AbstractViewModel();
+		$defaults->class_name = 'C4_AddressView';
+		$defaults->id = C4_AddressView::DEFAULT_ID;
+		
+		$view = C4_AbstractViewLoader::getView(C4_AddressView::DEFAULT_ID, $defaults);
 		$tpl->assign('view', $view);
 		$tpl->assign('contacts_page', 'addresses');
 		$tpl->assign('response_uri', 'contacts/addresses');
@@ -280,7 +288,6 @@ class ChContactsPage extends CerberusPageExtension {
 	}
 	
 	// Post
-	// [TODO] Allow XML also?
 	function doImportAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
 		
@@ -322,6 +329,7 @@ class ChContactsPage extends CerberusPageExtension {
 			// Overrides
 			$contact_password = '';
 			
+			if(is_array($pos))
 			foreach($pos as $idx => $p) {
 				$key = $field[$idx];
 				$val = $parts[$idx];
@@ -360,16 +368,21 @@ class ChContactsPage extends CerberusPageExtension {
 								}
 								break;
 								
-							case 'password':
+							case 'pass':
 								$key = null;
-								$contact_password = $val;
+								// Detect if we need to MD5 a plaintext password.
+								if(preg_match("/[a-z0-9]{32}/", $val)) {
+									$contact_password = $val;
+								} else {
+									$contact_password = md5($val);
+								}
 								break;
 						}
 
 						// Custom fields
 						if('cf_' == substr($key,0,3)) {
 							$custom_fields[substr($key,3)] = $val;
-						} else {
+						} elseif(!empty($key)) {
 							$fields[$key] = $val;
 						}
 						
@@ -409,6 +422,21 @@ class ChContactsPage extends CerberusPageExtension {
 						);
 					
 					if(isset($fields['email'])) {
+						// Overrides
+						if(!empty($contact_password)) {
+							if($replace_passwords) { // always replace
+								$fields[DAO_Address::IS_REGISTERED] = 1;
+								$fields[DAO_Address::PASS] = $contact_password;
+								
+							} else { // only replace if null
+								if(null == ($addy = DAO_Address::lookupAddress($fields['email'], false))
+									|| !$addy->is_registered) {
+										$fields[DAO_Address::IS_REGISTERED] = 1;
+										$fields[DAO_Address::PASS] = $contact_password;
+								}
+							}
+						}
+						
 						if(empty($addys)) {
 							$id = DAO_Address::create($fields);
 						} else {
@@ -416,22 +444,6 @@ class ChContactsPage extends CerberusPageExtension {
 							DAO_Address::update($id, $fields);
 						}
 
-						// Overrides
-						if(!empty($contact_password) && !empty($id)) {
-							if($replace_passwords) { // always replace
-								DAO_AddressAuth::update(
-									$id,
-									array(DAO_AddressAuth::PASS => $contact_password) 
-								);
-							} else { // only replace if null
-								if(null == ($auth = DAO_AddressAuth::get($id))) {
-									DAO_AddressAuth::update(
-										$id,
-										array(DAO_AddressAuth::PASS => $contact_password) 
-									);
-								}
-							}
-						}
 					}
 				}
 			}
@@ -496,14 +508,17 @@ class ChContactsPage extends CerberusPageExtension {
 		$contact = DAO_ContactOrg::get($org);
 		$tpl->assign('contact', $contact);
 		
-		$view = C4_AbstractViewLoader::getView('C4_AddressView', 'org_contacts');
-		$view->id = 'org_contacts';
-		$view->name = 'Contacts: ' . $contact->name;
-		$view->view_columns = array(
+		$defaults = new C4_AbstractViewModel();
+		$defaults->class_name = 'C4_AddressView';
+		$defaults->id = 'org_contacts';
+		$defaults->view_columns = array(
 			SearchFields_Address::FIRST_NAME,
 			SearchFields_Address::LAST_NAME,
 			SearchFields_Address::NUM_NONSPAM,
 		);
+		
+		$view = C4_AbstractViewLoader::getView('org_contacts', $defaults);
+		$view->name = 'Contacts: ' . $contact->name;
 		$view->params = array(
 			new DevblocksSearchCriteria(SearchFields_Address::CONTACT_ORG_ID,'=',$org)
 		);
@@ -529,15 +544,18 @@ class ChContactsPage extends CerberusPageExtension {
 		$contact = DAO_ContactOrg::get($org);
 		$tpl->assign('contact', $contact);
 		
-		$view = C4_AbstractViewLoader::getView('C4_TaskView', 'org_tasks');
-		$view->id = 'org_tasks';
-		$view->name = $translate->_('common.tasks') . ' ' . $contact->name;
-		$view->view_columns = array(
+		$defaults = new C4_AbstractViewModel();
+		$defaults->class_name = 'C4_TaskView';
+		$defaults->id = 'org_tasks';
+		$defaults->view_columns = array(
 			SearchFields_Task::SOURCE_EXTENSION,
 			SearchFields_Task::DUE_DATE,
 			SearchFields_Task::WORKER_ID,
 			SearchFields_Task::COMPLETED_DATE,
 		);
+		
+		$view = C4_AbstractViewLoader::getView('org_tasks', $defaults);
+		$view->name = $translate->_('common.tasks') . ' ' . $contact->name;
 		$view->params = array(
 			new DevblocksSearchCriteria(SearchFields_Task::SOURCE_EXTENSION,'=','cerberusweb.tasks.org'),
 			new DevblocksSearchCriteria(SearchFields_Task::SOURCE_ID,'=',$org),
@@ -600,7 +618,7 @@ class ChContactsPage extends CerberusPageExtension {
 		
 		$visit = CerberusApplication::getVisit(); /* @var $visit CerberusVisit */
 
-		$tickets_view = C4_AbstractViewLoader::getView('','contact_history');
+		$tickets_view = C4_AbstractViewLoader::getView('contact_history');
 		
 		// All org contacts
 		$people = DAO_Address::getWhere(sprintf("%s = %d",
@@ -738,7 +756,7 @@ class ChContactsPage extends CerberusPageExtension {
 		if(null == ($address = DAO_Address::get($id)))
 			return;
 		
-		if(null == ($search_view = C4_AbstractViewLoader::getView('', CerberusApplication::VIEW_SEARCH))) {
+		if(null == ($search_view = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_SEARCH))) {
 			$search_view = C4_TicketView::createSearchView();
 		}
 		
@@ -832,6 +850,8 @@ class ChContactsPage extends CerberusPageExtension {
 		@$last_name = trim(DevblocksPlatform::importGPC($_REQUEST['last_name'],'string',''));
 		@$contact_org = trim(DevblocksPlatform::importGPC($_REQUEST['contact_org'],'string',''));
 		@$is_banned = DevblocksPlatform::importGPC($_REQUEST['is_banned'],'integer',0);
+		@$pass = DevblocksPlatform::importGPC($_REQUEST['pass'],'string','');
+		@$unregister = DevblocksPlatform::importGPC($_REQUEST['unregister'],'integer',0);
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string', '');
 		
 		if($active_worker->hasPriv('core.addybook.addy.actions.update')) {
@@ -842,12 +862,23 @@ class ChContactsPage extends CerberusPageExtension {
 				$contact_org = DAO_ContactOrg::get($contact_org_id);
 			}
 			
+			// Common fields
 			$fields = array(
 				DAO_Address::FIRST_NAME => $first_name,
 				DAO_Address::LAST_NAME => $last_name,
 				DAO_Address::CONTACT_ORG_ID => $contact_org_id,
 				DAO_Address::IS_BANNED => $is_banned,
 			);
+			
+			// Are we clearing the contact's login?
+			if($unregister) {
+				$fields[DAO_Address::IS_REGISTERED] = 0;
+				$fields[DAO_Address::PASS] = '';
+				
+			} elseif(!empty($pass)) { // Are we changing their password?
+				$fields[DAO_Address::IS_REGISTERED] = 1;
+				$fields[DAO_Address::PASS] = md5($pass);
+			}
 			
 			if($id==0) {
 				$fields = $fields + array(DAO_Address::EMAIL => $email);
@@ -877,7 +908,7 @@ class ChContactsPage extends CerberusPageExtension {
 		}
 		
 		if(!empty($view_id)) {
-			$view = C4_AbstractViewLoader::getView('', $view_id);
+			$view = C4_AbstractViewLoader::getView($view_id);
 			$view->render();
 		}
 	}
@@ -1032,7 +1063,7 @@ class ChContactsPage extends CerberusPageExtension {
 			}
 		}
 		
-		$view = C4_AbstractViewLoader::getView('', $view_id);
+		$view = C4_AbstractViewLoader::getView($view_id);
 		$view->render();		
 	}
 	
@@ -1042,7 +1073,7 @@ class ChContactsPage extends CerberusPageExtension {
 	    @$filter = DevblocksPlatform::importGPC($_REQUEST['filter'],'string','');
 	    
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
-		$view = C4_AbstractViewLoader::getView('',$view_id);
+		$view = C4_AbstractViewLoader::getView($view_id);
 
 		@$org_name = trim(DevblocksPlatform::importGPC($_POST['contact_org'],'string',''));
 		@$sla = DevblocksPlatform::importGPC($_POST['sla'],'string','');
@@ -1083,7 +1114,7 @@ class ChContactsPage extends CerberusPageExtension {
 	    
 	    // View
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
-		$view = C4_AbstractViewLoader::getView('',$view_id);
+		$view = C4_AbstractViewLoader::getView($view_id);
 		
 		// Org fields
 		@$country = trim(DevblocksPlatform::importGPC($_POST['country'],'string',''));
@@ -1109,7 +1140,11 @@ class ChContactsPage extends CerberusPageExtension {
 
         $query = trim($query);
         
-		$view = C4_AbstractViewLoader::getView('C4_AddressView', C4_AddressView::DEFAULT_ID);
+		$defaults = new C4_AbstractViewModel();
+		$defaults->class_name = 'C4_AddressView';
+		$defaults->id = C4_AddressView::DEFAULT_ID;
+		
+		$view = C4_AbstractViewLoader::getView(C4_AddressView::DEFAULT_ID, $defaults);
 
         $params = array();
         
@@ -1140,7 +1175,11 @@ class ChContactsPage extends CerberusPageExtension {
 
         $query = trim($query);
         
-		$view = C4_AbstractViewLoader::getView('C4_ContactOrgView', C4_ContactOrgView::DEFAULT_ID);
+		$defaults = new C4_AbstractViewModel();
+		$defaults->class_name = 'C4_ContactOrgView';
+		$defaults->id = C4_ContactOrgView::DEFAULT_ID;
+		
+		$view = C4_AbstractViewLoader::getView(C4_ContactOrgView::DEFAULT_ID, $defaults);
 
         $params = array();
         

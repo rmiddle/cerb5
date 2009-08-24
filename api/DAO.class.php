@@ -1576,6 +1576,8 @@ class DAO_Address extends C4_ORMHelper {
 	const NUM_NONSPAM = 'num_nonspam';
 	const IS_BANNED = 'is_banned';
 	const LAST_AUTOREPLY = 'last_autoreply';
+  const IS_REGISTERED = 'is_registered';
+  const PASS = 'pass';
 
 	private function __construct() {}
 
@@ -1590,6 +1592,8 @@ class DAO_Address extends C4_ORMHelper {
 			'num_spam' => $translate->_('address.num_spam'),
 			'num_nonspam' => $translate->_('address.num_nonspam'),
 			'is_banned' => $translate->_('address.is_banned'),
+			'is_registered' => $translate->_('address.is_registered'),
+			'pass' => ucwords($translate->_('common.password')),
 		);
 	}
 
@@ -1627,8 +1631,8 @@ class DAO_Address extends C4_ORMHelper {
 
 		// Make sure the address doesn't exist already
 		if(null == ($check = self::getByEmail($full_address))) {
-			$sql = sprintf("INSERT INTO address (id,email,first_name,last_name,contact_org_id,num_spam,num_nonspam,is_banned,last_autoreply) ".
-				"VALUES (%d,%s,'','',0,0,0,0,0)",
+			$sql = sprintf("INSERT INTO address (id,email,first_name,last_name,contact_org_id,num_spam,num_nonspam,is_banned,is_registered,pass,last_autoreply) ".
+				"VALUES (%d,%s,'','',0,0,0,0,0,'',0)",
 				$id,
 				$db->qstr($full_address)
 			);
@@ -1657,11 +1661,6 @@ class DAO_Address extends C4_ORMHelper {
 		$db = DevblocksPlatform::getDatabaseService();
 		$logger = DevblocksPlatform::getConsoleLog();
 
-		$sql = "DELETE QUICK address_auth FROM address_auth LEFT JOIN address ON address_auth.address_id=address.id WHERE address.id IS NULL";
-		$db->Execute($sql);
-
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' address_auth records.');
-
 		$sql = "DELETE QUICK address_to_worker FROM address_to_worker LEFT JOIN worker ON address_to_worker.worker_id=worker.id WHERE worker.id IS NULL";
 		$db->Execute($sql);
 
@@ -1680,9 +1679,6 @@ class DAO_Address extends C4_ORMHelper {
         $sql = sprintf("DELETE QUICK FROM address WHERE id IN (%s)", $address_ids);
         $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
 
-        // Auth logins
-        DAO_AddressAuth::delete($ids);
-
         // Custom fields
         DAO_CustomFieldValue::deleteBySourceIds(ChCustomFieldSource_Address::ID, $ids);
     }
@@ -1692,7 +1688,7 @@ class DAO_Address extends C4_ORMHelper {
 
 		$addresses = array();
 
-		$sql = sprintf("SELECT a.id, a.email, a.first_name, a.last_name, a.contact_org_id, a.num_spam, a.num_nonspam, a.is_banned, a.last_autoreply ".
+		$sql = sprintf("SELECT a.id, a.email, a.first_name, a.last_name, a.contact_org_id, a.num_spam, a.num_nonspam, a.is_banned, a.is_registered, a.pass, a.last_autoreply ".
 			"FROM address a ".
 			((!empty($where)) ? "WHERE %s " : " ").
 			"ORDER BY a.email ",
@@ -1711,6 +1707,8 @@ class DAO_Address extends C4_ORMHelper {
 			$address->num_spam = intval($rs->fields['num_spam']);
 			$address->num_nonspam = intval($rs->fields['num_nonspam']);
 			$address->is_banned = intval($rs->fields['is_banned']);
+			$address->is_registered = intval($rs->fields['is_registered']);
+			$address->pass = $rs->fields['pass'];
 			$address->last_autoreply = intval($rs->fields['last_autoreply']);
 			$addresses[$address->id] = $address;
 			$rs->MoveNext();
@@ -1840,7 +1838,9 @@ class DAO_Address extends C4_ORMHelper {
 			"o.name as %s, ".
 			"a.num_spam as %s, ".
 			"a.num_nonspam as %s, ".
-			"a.is_banned as %s ",
+			"a.is_banned as %s, ".
+			"a.is_registered as %s, ".
+			"a.pass as %s ",
 			    SearchFields_Address::ID,
 			    SearchFields_Address::EMAIL,
 			    SearchFields_Address::FIRST_NAME,
@@ -1849,7 +1849,9 @@ class DAO_Address extends C4_ORMHelper {
 			    SearchFields_Address::ORG_NAME,
 			    SearchFields_Address::NUM_SPAM,
 			    SearchFields_Address::NUM_NONSPAM,
-			    SearchFields_Address::IS_BANNED
+			    SearchFields_Address::IS_BANNED,
+			    SearchFields_Address::IS_REGISTERED,
+			    SearchFields_Address::PASS
 			 );
 
 		$join_sql =
@@ -1920,6 +1922,8 @@ class SearchFields_Address implements IDevblocksSearchFields {
 	const NUM_SPAM = 'a_num_spam';
 	const NUM_NONSPAM = 'a_num_nonspam';
 	const IS_BANNED = 'a_is_banned';
+  const IS_REGISTERED = 'a_is_registered';
+  const PASS = 'a_pass';
 
 	const ORG_NAME = 'o_name';
 
@@ -1937,6 +1941,8 @@ class SearchFields_Address implements IDevblocksSearchFields {
 			self::NUM_SPAM => new DevblocksSearchField(self::NUM_SPAM, 'a', 'num_spam', null, $translate->_('address.num_spam')),
 			self::NUM_NONSPAM => new DevblocksSearchField(self::NUM_NONSPAM, 'a', 'num_nonspam', null, $translate->_('address.num_nonspam')),
 			self::IS_BANNED => new DevblocksSearchField(self::IS_BANNED, 'a', 'is_banned', null, $translate->_('address.is_banned')),
+      self::IS_REGISTERED => new DevblocksSearchField(self::IS_REGISTERED, 'a', 'is_registered', null, $translate->_('address.is_registered')),
+      self::PASS => new DevblocksSearchField(self::PASS, 'a', 'pass', null, ucwords($translate->_('common.password'))),
 
 			self::CONTACT_ORG_ID => new DevblocksSearchField(self::CONTACT_ORG_ID, 'a', 'contact_org_id', null, $translate->_('address.contact_org_id')),
 			self::ORG_NAME => new DevblocksSearchField(self::ORG_NAME, 'o', 'name', null, $translate->_('contact_org.name')),
@@ -1954,85 +1960,6 @@ class SearchFields_Address implements IDevblocksSearchFields {
 		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
 
 		return $columns;
-	}
-};
-
-class DAO_AddressAuth extends DevblocksORMHelper  {
-	const ADDRESS_ID = 'address_id';
-	const CONFIRM = 'confirm';
-	const PASS = 'pass';
-
-	static function update($id, $fields) {
-		$db = DevblocksPlatform::getDatabaseService();
-		$auth = self::get($id);
-
-		// Create if necessary
-		if(empty($auth)) {
-			$sql = sprintf("INSERT INTO address_auth (address_id, confirm, pass) ".
-				"VALUES (%d, '', '')",
-				$id
-			);
-			$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
-		}
-		unset($auth);
-
-		parent::_update($id, 'address_auth', $fields, self::ADDRESS_ID);
-	}
-
-	/**
-	 * Enter description here...
-	 *
-	 * @param unknown_type $id
-	 * @return Model_AddressAuth
-	 */
-	static function get($id) {
-		$addresses = self::getWhere(sprintf("%s = %d",self::ADDRESS_ID,$id));
-
-		if(isset($addresses[$id]))
-			return $addresses[$id];
-
-		return null;
-	}
-
-	/**
-	 * Enter description here...
-	 *
-	 * @param unknown_type $where
-	 * @return Model_AddressAuth[]
-	 */
-	static function getWhere($where=null) {
-		$db = DevblocksPlatform::getDatabaseService();
-
-		$sql = "SELECT address_id, confirm, pass ".
-			"FROM address_auth ".
-			(!empty($where) ? sprintf("WHERE %s ", $where) : "")
-		;
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
-
-		$objects = array();
-
-		if(is_a($rs,'ADORecordSet'))
-		while(!$rs->EOF) {
-			$object = new Model_AddressAuth();
-			$object->address_id = intval($rs->fields['address_id']);
-			$object->confirm = $rs->fields['confirm'];
-			$object->pass = $rs->fields['pass'];
-			$objects[$object->address_id] = $object;
-			$rs->MoveNext();
-		}
-
-		return $objects;
-	}
-
-	static function delete($ids) {
-        if(!is_array($ids)) $ids = array($ids);
-        if(empty($ids)) return;
-
-		$db = DevblocksPlatform::getDatabaseService();
-
-        $address_ids = implode(',', $ids);
-        $sql = sprintf("DELETE QUICK FROM address_auth WHERE address_id IN (%s)", $address_ids);
-        $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
 	}
 };
 
@@ -2507,14 +2434,13 @@ class DAO_MessageContent {
 
 class DAO_MessageHeader {
     const MESSAGE_ID = 'message_id';
-    const TICKET_ID = 'ticket_id';
     const HEADER_NAME = 'header_name';
     const HEADER_VALUE = 'header_value';
 
-    static function create($message_id, $ticket_id, $header, $value) {
+    static function create($message_id, $header, $value) {
     	$db = DevblocksPlatform::getDatabaseService();
 
-        if(empty($header) || empty($value) || empty($message_id) || empty($ticket_id))
+        if(empty($header) || empty($value) || empty($message_id))
             return;
 
         $header = strtolower($header);
@@ -2524,53 +2450,13 @@ class DAO_MessageHeader {
         	$value = implode("\r\n",$value);
         }
 
-		$db->Execute(sprintf("INSERT INTO message_header (message_id, ticket_id, header_name, header_value) ".
-			"VALUES (%d, %d, %s, %s)",
+		$db->Execute(sprintf("INSERT INTO message_header (message_id, header_name, header_value) ".
+			"VALUES (%d, %s, %s)",
 			$message_id,
-			$ticket_id,
 			$db->qstr($header),
 			$db->qstr($value)
 		));
     }
-
-//    static function update($message_id, $ticket_id, $header, $value) {
-//        $db = DevblocksPlatform::getDatabaseService();
-//
-//        $header = strtolower($header);
-//
-//        if(empty($header) || empty($value) || empty($message_id) || empty($ticket_id))
-//            return;
-//
-//        // Handle stacked headers
-//        if(is_array($value)) {
-//        	$value = implode("\r\n",$value);
-//        }
-//
-//        // Insert not replace?  (Can be multiple stacked headers like received?)
-//        $db->Replace(
-//            'message_header',
-//            array(
-//                self::MESSAGE_ID => $message_id,
-//                self::TICKET_ID => $ticket_id,
-//                self::HEADER_NAME => $db->qstr($header),
-//                self::HEADER_VALUE => $db->qstr('')
-//            ),
-//            array('message_id','header_name'),
-//            false
-//        );
-//
-//        if(!empty($value) && !empty($message_id) && !empty($header)) {
-//        	if(is_array($value)) {
-//        		$value = implode("\r\n",$value);
-//        	}
-//        	$db->UpdateBlob(
-//        		'message_header',
-//        		self::HEADER_VALUE,
-//        		$value,
-//        		'message_id='.$message_id.' AND header_name='.$db->qstr($header)
-//        	);
-//        }
-//    }
 
     static function getAll($message_id) {
         $db = DevblocksPlatform::getDatabaseService();
@@ -3022,8 +2908,10 @@ class DAO_Ticket extends C4_ORMHelper {
 	static function getTicketByMessageId($message_id) {
 		$db = DevblocksPlatform::getDatabaseService();
 
-		$sql = sprintf("SELECT mh.ticket_id, mh.message_id ".
+		$sql = sprintf("SELECT t.id AS ticket_id, mh.message_id AS message_id ".
 			"FROM message_header mh ".
+			"INNER JOIN message m ON (m.id=mh.message_id) ".
+			"INNER JOIN ticket t ON (t.id=m.ticket_id) ".
 			"WHERE mh.header_name = 'message-id' AND mh.header_value = %s",
 			$db->qstr($message_id)
 		);
@@ -3136,13 +3024,6 @@ class DAO_Ticket extends C4_ORMHelper {
 
 			// Messages
 			$sql = sprintf("UPDATE message SET ticket_id = %d WHERE ticket_id IN (%s)",
-				$oldest_id,
-				implode(',', $merge_ticket_ids)
-			);
-			$db->Execute($sql);
-
-			// Message headers
-			$sql = sprintf("UPDATE message_header SET ticket_id = %d WHERE ticket_id IN (%s)",
 				$oldest_id,
 				implode(',', $merge_ticket_ids)
 			);
@@ -4643,7 +4524,7 @@ class DAO_Bucket extends DevblocksORMHelper {
 			return 0;
 
 		$db = DevblocksPlatform::getDatabaseService();
-		if(null != ($next_pos = $db->GetOne(sprintf("SELECT MAX(pos) FROM category WHERE team_id = %d", $group_id))))
+		if(null != ($next_pos = $db->GetOne(sprintf("SELECT MAX(pos)+1 FROM category WHERE team_id = %d", $group_id))))
 			return $next_pos;
 
 		return 0;
@@ -4712,32 +4593,29 @@ class DAO_Bucket extends DevblocksORMHelper {
 	static function create($name, $team_id) {
 		$db = DevblocksPlatform::getDatabaseService();
 
+		// Check for dupes
 		$buckets = self::getAll();
-		$duplicate = false;
+		if(is_array($buckets))
 		foreach($buckets as $bucket) {
-			if($name==$bucket->name && $team_id==$bucket->team_id) {
-				$duplicate = true;
-				$id = $bucket->id;
-				break;
+			if(0==strcasecmp($name,$bucket->name) && $team_id==$bucket->team_id) {
+				return $bucket->id;
 			}
 		}
 
-		if(!$duplicate) {
-			$id = $db->GenID('generic_seq');
-			$next_pos = self::getNextPos($team_id);
+		$id = $db->GenID('generic_seq');
+		$next_pos = self::getNextPos($team_id);
 
-			$sql = sprintf("INSERT INTO category (id,pos,name,team_id,is_assignable) ".
-				"VALUES (%d,%d,%s,%d,1)",
-				$id,
-				$next_pos,
-				$db->qstr($name),
-				$team_id
-			);
+		$sql = sprintf("INSERT INTO category (id,pos,name,team_id,is_assignable) ".
+			"VALUES (%d,%d,%s,%d,1)",
+			$id,
+			$next_pos,
+			$db->qstr($name),
+			$team_id
+		);
 
-			$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
+		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
 
-			self::clearCache();
-		}
+		self::clearCache();
 
 		return $id;
 	}
@@ -5295,8 +5173,6 @@ class DAO_WorkerWorkspaceList extends DevblocksORMHelper {
 };
 
 class DAO_WorkerPref extends DevblocksORMHelper {
-    const SETTING_OVERVIEW = 'worker_overview';
-
     const CACHE_PREFIX = 'ch_workerpref_';
 
 	static function set($worker_id, $key, $value) {

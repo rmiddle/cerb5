@@ -182,6 +182,7 @@
 </blockquote>
 {/foreach}
 {/if}
+
 <br>
 
 <h2>Then perform these actions:</h2>

@@ -150,7 +150,11 @@ class ChConfigurationPage extends CerberusPageExtension  {
 
 		$tpl->assign('response_uri', 'config/attachments');
 
-		$view = C4_AbstractViewLoader::getView('C4_AttachmentView', C4_AttachmentView::DEFAULT_ID);
+		$defaults = new C4_AbstractViewModel();
+		$defaults->class_name = 'C4_AttachmentView';
+		$defaults->id = C4_AttachmentView::DEFAULT_ID;
+
+		$view = C4_AbstractViewLoader::getView(C4_AttachmentView::DEFAULT_ID, $defaults);
 		$tpl->assign('view', $view);
 		$tpl->assign('view_fields', C4_AttachmentView::getFields());
 		$tpl->assign('view_searchable_fields', C4_AttachmentView::getSearchFields());
@@ -194,7 +198,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 
 	    // View
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
-		$view = C4_AbstractViewLoader::getView('',$view_id);
+		$view = C4_AbstractViewLoader::getView($view_id);
 
 		// Attachment fields
 		@$deleted = trim(DevblocksPlatform::importGPC($_POST['deleted'],'integer',0));
@@ -427,34 +431,25 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		    }
 		}
 
+	    // [JAS]: [TODO] convert to field constants
+		$fields = array(
+		    'enabled' => $enabled,
+			'nickname' => $nickname,
+			'protocol' => $protocol,
+			'host' => $host,
+			'username' => $username,
+			'password' => $password,
+			'port' => $port
+		);
+
 		if(!empty($id) && !empty($delete)) {
 			DAO_Mail::deletePop3Account($id);
 
 		} elseif(!empty($id)) {
-		    // [JAS]: [TODO] convert to field constants
-			$fields = array(
-			    'enabled' => $enabled,
-				'nickname' => $nickname,
-				'protocol' => $protocol,
-				'host' => $host,
-				'username' => $username,
-				'password' => $password,
-				'port' => $port
-			);
 			DAO_Mail::updatePop3Account($id, $fields);
 
 		} else {
             if(!empty($host) && !empty($username)) {
-			    // [JAS]: [TODO] convert to field constants
-                $fields = array(
-				    'enabled' => 1,
-					'nickname' => $nickname,
-					'protocol' => $protocol,
-					'host' => $host,
-					'username' => $username,
-					'password' => $password,
-					'port' => $port
-				);
 			    $id = DAO_Mail::createPop3Account($fields);
             }
 		}
@@ -1351,12 +1346,14 @@ class ChConfigurationPage extends CerberusPageExtension  {
 					        $mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 					        $mail = $mail_service->createMessage();
 
-					        $sendTo = new Swift_Address($email, $first_name . $last_name);
-					        $sendFrom = new Swift_Address($replyFrom, $replyPersonal);
-
+							$mail->setTo(array($email => $first_name . ' ' . $last_name));
+							$mail->setFrom(array($replyFrom => $replyPersonal));
 					        $mail->setSubject('Your new helpdesk login information!');
 					        $mail->generateId();
-					        $mail->headers->set('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+
+							$headers = $mail->getHeaders();
+
+					        $headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
 
 						    $body = sprintf("Your new helpdesk login information is below:\r\n".
 								"\r\n".
@@ -1371,9 +1368,9 @@ class ChConfigurationPage extends CerberusPageExtension  {
 							        $password
 						    );
 
-						    $mail->attach(new Swift_Message_Part($body, 'text/plain', 'base64', LANG_CHARSET_CODE));
+							$mail->setBody($body);
 
-							if(!$mailer->send($mail, $sendTo, $sendFrom)) {
+							if(!$mailer->send($mail)) {
 								throw new Exception('Password notification email failed to send.');
 							}
 						} catch (Exception $e) {

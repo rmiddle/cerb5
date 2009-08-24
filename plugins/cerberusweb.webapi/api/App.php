@@ -673,13 +673,11 @@ class Rest_AddressesController extends Ch_RestController {
 		@$confirmation_code = $xml_in->params->confirmation_code;
 		
 		if(null != ($addy = DAO_Address::lookupAddress($email, false))) {
-			$auth = DAO_AddressAuth::get($addy->id);
-			
-			if(!empty($auth->pass) && $pass_hash==$auth->pass) {
+			if($addy->is_registered && !empty($addy->pass) && $pass_hash==$addy->pass) {
 				$xml = new SimpleXMLElement("<success></success>");
 				$xml->addChild('address',$email);
 			}
-			if(!empty($auth->confirm) && $confirmation_code==$auth->confirm) {
+			if(!$addy->is_registered && !empty($addy->pass) && $confirmation_code==$addy->pass) {
 				$xml = new SimpleXMLElement("<success></success>");
 				$xml->addChild('address',$email);
 			}
@@ -765,14 +763,14 @@ class Rest_AddressesController extends Ch_RestController {
 			}
 		}
 		
-		if(!empty($fields))
-			DAO_Address::update($address->id,$fields);
-
 		// update password if requested
 		@$password = DevblocksPlatform::importGPC($xml_in->password,'string','');
 		if (!empty($password)) {
-			DAO_AddressAuth::update($in_id, array(DAO_AddressAuth::PASS => md5($password)));
+			$fields[DAO_Address::PASS] = md5($password); 
 		}
+		
+		if(!empty($fields))
+			DAO_Address::update($address->id,$fields);
 		
 		// send confirmation if requested
 		@$confirmation_link = DevblocksPlatform::importGPC($xml_in->send_confirmation,'string','');
@@ -797,18 +795,18 @@ class Rest_AddressesController extends Ch_RestController {
 			
 			if(!empty($email) && null != ($addy = DAO_Address::lookupAddress($email, false))) {
 				$fields = array(
-					DAO_AddressAuth::CONFIRM => $code
+					DAO_Address::IS_REGISTERED => 0,
+					DAO_Address::PASS => $code,
 				);
-				DAO_AddressAuth::update($addy->id, $fields);
+				DAO_Address::update($addy->id, $fields);
 				
 			} else {
 				return;
 			}
 			
 			$message = $mail_service->createMessage();
-			$message->setTo($email);
-			$send_from = new Swift_Address($from, $from_personal);
-			$message->setFrom($send_from);
+			$message->setTo(array($email));
+			$message->setFrom(array($from => $from_personal));
 			$message->setSubject("Account Confirmation Code");
 			$message->setBody(sprintf("Below is your confirmation code.  Please copy and paste it into the confirmation form at:\r\n".
 				"%s\r\n".
@@ -819,9 +817,12 @@ class Rest_AddressesController extends Ch_RestController {
 				$link,
 				$code
 			));
-			$message->headers->set('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
 			
-			$mailer->send($message,$email,$send_from);
+			$headers = $mail->getHeaders();
+			
+			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+			
+			$result = $mailer->send($message);
 		}
 		catch (Exception $e) {
 			return;

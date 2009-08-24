@@ -1,15 +1,11 @@
 <!DOCTYPE plugin SYSTEM "../../libs/devblocks/plugin.dtd">
 <plugin>
 	<id>cerberusweb.kb</id>
-	<name>Cerberus Helpdesk: Knowledgebase</name>
+	<name>[Cerb4] Knowledgebase</name>
 	<description>((Knowledgebase))</description>
 	<author>WebGroup Media, LLC.</author>
 	<revision>0</revision>
 	<link>http://www.cerberusweb.com/</link>
-	<class>
-		<file>api/Plugin.php</file>
-		<name>ChKbPlugin</name>
-	</class>
 	
 	<!-- Exported Classes -->
 	
@@ -31,6 +27,7 @@
 		<priv id="core.kb.articles.modify" label="acl.core.kb.articles.modify" />
 		<priv id="core.kb.categories.modify" label="acl.core.kb.categories.modify" />
 		<priv id="core.kb.topics.modify" label="acl.core.kb.topics.modify" />
+		<priv id="kb.articles.actions.update_all" label="acl.kb.articles.actions.update_all" />
 	</acl>
 	
 	<extensions>

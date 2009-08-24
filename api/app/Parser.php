@@ -309,6 +309,7 @@ class CerberusParser {
 		$logger = DevblocksPlatform::getConsoleLog();
 		$settings = CerberusSettings::getInstance();
 		$helpdesk_senders = CerberusApplication::getHelpdeskSenders();
+
     // Pre-parse mail filters
 		$pre_filters = Model_PreParseRule::getMatches($message);
 		if(is_array($pre_filters) && !empty($pre_filters)) {
@@ -524,6 +525,7 @@ class CerberusParser {
 					if(isset($rule->actions['move'])) {
 						$group_id = intval($rule->actions['move']['group_id']);
 
+
 						// We don't need to move again when running rule actions
 						unset($rule->actions['move']);
 					}
@@ -626,7 +628,7 @@ class CerberusParser {
 
 		// Headers
 		foreach($headers as $hk => $hv) {
-		    DAO_MessageHeader::create($email_id, $id, $hk, $hv);
+		    DAO_MessageHeader::create($email_id, $hk, $hv);
 		}
 
 		// [mdf] Loop through files to insert attachment records in the db, and move temporary files
@@ -806,7 +808,7 @@ class CerberusParser {
 	 * @return array
 	 */
 	static private function findParentMessage($headers) {
-		@$sSubject = $headers['subject'];
+		@$aSubject = $headers['subject'];
 		@$sMessageId = trim($headers['message-id']);
 		@$sInReplyTo = trim($headers['in-reply-to']);
 		@$sReferences = trim($headers['references']);
@@ -853,20 +855,21 @@ class CerberusParser {
 
 		// Try matching the subject line
 		// [TODO] This should only happen if the destination has subject masks enabled
-		if(preg_match("/.*\[.*?\#(.*?)\].*/", $sSubject, $matches)) {
-			if(isset($matches[1])) {
-				$mask = $matches[1];
-				if(null != ($ticket = DAO_Ticket::getTicketByMask($mask))) {
-					return array(
-						'ticket_id' => intval($ticket->id),
-						'message_id' => intval($ticket->first_message_id)
-					);
+		if(!is_array($aSubject))
+			$aSubject = array($aSubject);
+
+		foreach($aSubject as $sSubject) {
+			if(preg_match("/.*\[.*?\#(.*?)\].*/", $sSubject, $matches)) {
+				if(isset($matches[1])) {
+					$mask = $matches[1];
+					if(null != ($ticket = DAO_Ticket::getTicketByMask($mask))) {
+						return array(
+							'ticket_id' => intval($ticket->id),
+							'message_id' => intval($ticket->first_message_id)
+						);
+					}
 				}
 			}
-		}
-
-		// [TODO] As a last case, check Microsoft's Thread-Topic header
-		if(!empty($sThreadTopic)) {
 		}
 
 		return NULL;
@@ -905,21 +908,29 @@ class CerberusParser {
 		return CerberusUtils::parseRfcAddressList($address_string);
 	}
 
-	static function fixQuotePrintableString($str) {
+	static function fixQuotePrintableString($input) {
 		$out = '';
 
-		$parts = imap_mime_header_decode($str);
-		if(is_array($parts))
-		foreach($parts as $part) {
-			try {
-				$charset = ($part->charset != 'default') ? $part->charset : 'auto';
-				@$out .= mb_convert_encoding($part->text,LANG_CHARSET_CODE,$charset);
-			} catch(Exception $e) {}
-		}
+		// Make a single element array from any !array input
+		if(!is_array($input))
+			$input = array($input);
 
-		// Strip invalid characters in our encoding
-		if(!mb_check_encoding($out, LANG_CHARSET_CODE))
-			$out = mb_convert_encoding($out, LANG_CHARSET_CODE, LANG_CHARSET_CODE);
+		foreach($input as $str) {
+			$out .= !empty($out) ? ' ' : '';
+
+			$parts = imap_mime_header_decode($str);
+			if(is_array($parts))
+			foreach($parts as $part) {
+				try {
+					$charset = ($part->charset != 'default') ? $part->charset : 'auto';
+					@$out .= mb_convert_encoding($part->text,LANG_CHARSET_CODE,$charset);
+				} catch(Exception $e) {}
+			}
+
+			// Strip invalid characters in our encoding
+			if(!mb_check_encoding($out, LANG_CHARSET_CODE))
+				$out = mb_convert_encoding($out, LANG_CHARSET_CODE, LANG_CHARSET_CODE);
+		}
 
 		return trim($out);
 	}

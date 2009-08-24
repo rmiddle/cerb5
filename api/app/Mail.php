@@ -79,18 +79,22 @@ class CerberusMail {
 		    if(empty($from_personal))
 				@$from_personal = $settings->get(CerberusSettings::DEFAULT_REPLY_PERSONAL,'');
 
-			$sendTo = new Swift_Address($to);
-			$sendFrom = new Swift_Address($from_addy, $from_personal);
-
+			$mail->setTo(array($to));
+			$mail->setFrom(array($from_addy => $from_personal));
 			$mail->setSubject($subject);
 			$mail->generateId();
-			$mail->headers->set('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
-			$mail->attach(new Swift_Message_Part($body, 'text/plain', 'base64', LANG_CHARSET_CODE));
 
-			if(!$mailer->send($mail, $sendTo, $sendFrom)) {
-				// [TODO] Report when the message wasn't sent.
+			$headers = $mail->getHeaders();
+
+			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+
+			$mail->setBody($body);
+
+			// [TODO] Report when the message wasn't sent.
+			if(!$mailer->send($mail)) {
 				return false;
 			}
+
 		} catch (Exception $e) {
 			return false;
 		}
@@ -173,12 +177,6 @@ class CerberusMail {
 			}
 		} else { // regular mail sending
 			try {
-				$sendTo = new Swift_RecipientList();
-				foreach($toList as $to)
-					$sendTo->addTo($to);
-
-				$sendFrom = new Swift_Address($from, $personal);
-
 				$mail_service = DevblocksPlatform::getMailService();
 				$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 				$email = $mail_service->createMessage();
@@ -188,28 +186,13 @@ class CerberusMail {
 				// cc
 				$ccs = array();
 				if(!empty($cc) && null != ($ccList = DevblocksPlatform::parseCsvString(str_replace(';',',',$cc)))) {
-					foreach($ccList as $ccAddy) {
-						$sendTo->addCc($ccAddy);
-						$ccs[] = new Swift_Address($ccAddy);
-					}
-					if(!empty($ccs))
-						$email->setCc($ccs);
+					$email->setCc($ccList);
 				}
 
 				// bcc
 				if(!empty($bcc) && null != ($bccList = DevblocksPlatform::parseCsvString(str_replace(';',',',$bcc)))) {
-					foreach($bccList as $bccAddy) {
-						$sendTo->addBcc($bccAddy);
-					}
+					$email->setBcc($bccList);
 				}
-
-				$email->setFrom($sendFrom);
-				$email->setSubject($subject_mailed);
-				$email->generateId();
-				$email->headers->set('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
-
-				$email->attach(new Swift_Message_Part($content, 'text/plain', 'base64', LANG_CHARSET_CODE));
-
         // ######################
         //Answernet Demo Account
         if($team_id == 751) {
@@ -228,20 +211,29 @@ class CerberusMail {
         }
 				// [TODO] These attachments should probably save to the DB
 
-				// Mime Attachments
-				if (is_array($files) && !empty($files)) {
-					foreach ($files['tmp_name'] as $idx => $file) {
-						if(empty($file) || empty($files['name'][$idx]))
-							continue;
+				$email->setFrom(array($from => $personal));
+				$email->setSubject($subject_mailed);
+				$email->generateId();
 
-						$email->attach(new Swift_Message_Attachment(
-							new Swift_File($file), $files['name'][$idx], $files['type'][$idx]));
+				$headers = $email->getHeaders();
+
+				$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+
+				$email->setBody($content);
+
+        // Mime Attachments
+        if (is_array($files) && !empty($files)) {
+          foreach ($files['tmp_name'] as $idx => $file) {
+            if(empty($file) || empty($files['name'][$idx]))
+              continue;
+
+						$email->attach(Swift_Attachment::fromPath($file)->setFilename($files['name'][$idx]));
 					}
 				}
 
 				// [TODO] Allow separated addresses (parseRfcAddress)
 		//		$mailer->log->enable();
-				if(!$mailer->send($email, $sendTo, $sendFrom)) {
+				if(!$mailer->send($email)) {
 					$mail_succeeded = false;
 					throw new Exception('Mail failed to send: unknown reason');
 				}
@@ -252,14 +244,12 @@ class CerberusMail {
 			}
 
 		    // Headers
-		    if (!empty($email) && !empty($email->headers)) {
-				foreach($email->headers->getList() as $hdr => $v) {
-					if(null != ($hdr_val = $email->headers->getEncoded($hdr))) {
-						if(!empty($hdr_val))
-							$mail_headers[$hdr] = $hdr_val;
-					}
+			foreach($email->getHeaders()->getAll() as $hdr) {
+				if(null != ($hdr_val = $hdr->getFieldBody())) {
+					if(!empty($hdr_val))
+						$mail_headers[$hdr->getFieldName()] = $hdr_val;
 				}
-		    }
+			}
 		}
 
 		$fromAddressInst = CerberusApplication::hashLookupAddress($from, true);
@@ -333,7 +323,7 @@ class CerberusMail {
 
 		// Headers
 		foreach($mail_headers as $hdr => $hdr_val) {
-			DAO_MessageHeader::create($message_id, $ticket_id, $hdr, CerberusParser::fixQuotePrintableString($hdr_val));
+			DAO_MessageHeader::create($message_id, $hdr, CerberusParser::fixQuotePrintableString($hdr_val));
 		}
 
 		// add files to ticket
@@ -444,6 +434,7 @@ class CerberusMail {
 	    'bucket_id'
 	    'agent_id',
 		'is_autoreply',
+		'dont_send',
 		'dont_save_copy'
 		*/
 
@@ -493,12 +484,13 @@ class CerberusMail {
 						(!empty($from_personal) ? (', ' . $from_personal) : "");
 			}
 
-			$sendFrom = new Swift_Address($from_addy, $from_personal);
-
 			// Headers
-			$mail->setFrom($sendFrom);
+			$mail->setFrom(array($from_addy => $from_personal));
 			$mail->generateId();
-			$mail->headers->set('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+
+			$headers = $mail->getHeaders();
+
+			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
 
 			// Subject
 			if(empty($subject)) $subject = $ticket->subject;
@@ -521,17 +513,15 @@ class CerberusMail {
 				));
 			}
 
-			$sendTo = new Swift_RecipientList();
-
 			// References
 			if(!empty($message) && false !== (@$in_reply_to = $message_headers['message-id'])) {
-			    $mail->headers->set('References', $in_reply_to);
-			    $mail->headers->set('In-Reply-To', $in_reply_to);
+			    $headers->addTextHeader('References', $in_reply_to);
+			    $headers->addTextHeader('In-Reply-To', $in_reply_to);
 			}
 
 			// Auto-reply handling (RFC-3834 compliant)
 			if(isset($properties['is_autoreply']) && $properties['is_autoreply']) {
-				$mail->headers->set('Auto-Submitted','auto-replied');
+				$headers->addTextHeader('Auto-Submitted','auto-replied');
 
 				if(null == ($first_address = DAO_Address::get($ticket->first_wrote_address_id)))
 					return;
@@ -573,54 +563,36 @@ class CerberusMail {
 				));
 
 				// Auto-reply just to the initial requester
-				$sendTo->addTo($first_address->email);
-				$mail->setTo($first_address->email);
+				$mail->addTo(array($first_address->email));
 
 			// Not an auto-reply
 			} else {
 				// Forwards
 				if(!empty($properties['to'])) {
-				    $to = array();
 				    $aTo = DevblocksPlatform::parseCsvString(str_replace(';',',',$properties['to']));
-				    foreach($aTo as $addy) {
-				    	$to[] = new Swift_Address($addy);
-				    	$sendTo->addTo($addy);
-				    }
-				    if(!empty($to))
-				    	$mail->setTo($to);
+					$mail->addTo($aTo);
 
 				// Replies
 				} else {
 				    // Recipients
-					$to = array();
 					$requesters = DAO_Ticket::getRequestersByTicket($ticket_id);
 				    if(is_array($requesters)) {
 					    foreach($requesters as $requester) { /* @var $requester Model_Address */
-							$to[] = new Swift_Address($requester->email);
-							$sendTo->addTo($requester->email);
+							$mail->addTo($requester->email);
 					    }
 				    }
-				    $mail->setTo($to);
 				}
 
 			    // Ccs
 			    if(!empty($properties['cc'])) {
-				    $ccs = array();
 				    $aCc = DevblocksPlatform::parseCsvString(str_replace(';',',',$properties['cc']));
-				    foreach($aCc as $addy) {
-				    	$sendTo->addCc($addy);
-				    	$ccs[] = new Swift_Address($addy);
-				    }
-				    if(!empty($ccs))
-				    	$mail->setCc($ccs);
+					$mail->setCc($aCc);
 			    }
 
 			    // Bccs
 			    if(!empty($properties['bcc'])) {
 				    $aBcc = DevblocksPlatform::parseCsvString(str_replace(';',',',$properties['bcc']));
-				    foreach($aBcc as $addy) {
-				    	$sendTo->addBcc($addy);
-				    }
+					$mail->setBcc($aBcc);
 			    }
 			}
 
@@ -638,9 +610,8 @@ class CerberusMail {
 				);
 			}
 
-			// Body
-			$mail->attach(new Swift_Message_Part($content, 'text/plain', 'base64', LANG_CHARSET_CODE));
-
+      // Body
+      $mail->setBody($content);
       // ######################
       // No need to grab the ticket info for $ticket since it is grabbed eailer.
       // team_id is install spefic.
@@ -659,14 +630,15 @@ class CerberusMail {
         $answernet_body = '<html><body>'.$content.'<br><br><a href="http://www.idesignmarketing.com"><img src="http://files.myfirstperson.com/iDesign_banner.gif" style="border-style: none"/></a><br></body></html>';
         $mail->attach(new Swift_Message_Part(nl2br($answernet_body), 'text/html', 'base64', $message->encoding));
       }
-			// Mime Attachments
-			if (is_array($files) && !empty($files)) {
-				foreach ($files['tmp_name'] as $idx => $file) {
-					if(empty($file) || empty($files['name'][$idx]))
-						continue;
 
-					$mail->attach(new Swift_Message_Attachment(
-						new Swift_File($file), $files['name'][$idx], $files['type'][$idx]));
+
+      // Mime Attachments
+      if (is_array($files) && !empty($files)) {
+        foreach ($files['tmp_name'] as $idx => $file) {
+          if(empty($file) || empty($files['name'][$idx]))
+            continue;
+
+					$mail->attach(Swift_Attachment::fromPath($file)->setFilename($files['name'][$idx]));
 				}
 			}
 
@@ -678,15 +650,19 @@ class CerberusMail {
 					$attachment = DAO_Attachment::get($file_id);
 					$attachment_path = $attachments_path . $attachment->filepath;
 
-					$mail->attach(new Swift_Message_Attachment(
-						new Swift_File($attachment_path), $attachment->display_name, $attachment->mime_type));
+					$mail->attach(Swift_Attachment::fromPath($attachment_path)->setFilename($attachment->display_name));
 				}
 			}
 
 			if(!DEMO_MODE) {
-				if(!$mailer->send($mail, $sendTo, $sendFrom)) {
-					$mail_succeeded = false;
-					throw new Exception('Mail not sent.');
+				// If we're not supposed to send
+				if(isset($properties['dont_send']) && $properties['dont_send']) {
+					// ...do nothing
+				} else { // otherwise send
+					if(!$mailer->send($mail)) {
+						$mail_succeeded = false;
+						throw new Exception('Mail not sent.');
+					}
 				}
 			}
 		} catch (Exception $e) {
@@ -727,12 +703,13 @@ class CerberusMail {
 			// Content
 		    DAO_MessageContent::create($message_id, $content);
 
+			$headers = $mail->getHeaders();
+
 		    // Headers
-		    if(!empty($mail->headers) && method_exists($mail->headers,'getList'))
-			foreach($mail->headers->getList() as $hdr => $v) {
-				if(null != ($hdr_val = $mail->headers->getEncoded($hdr))) {
+			foreach($headers->getAll() as $hdr) {
+				if(null != ($hdr_val = $hdr->getFieldBody())) {
 					if(!empty($hdr_val))
-		    			DAO_MessageHeader::create($message_id, $ticket_id, $hdr, CerberusParser::fixQuotePrintableString($hdr_val));
+		    			DAO_MessageHeader::create($message_id, $hdr->getFieldName(), CerberusParser::fixQuotePrintableString($hdr_val));
 				}
 			}
 
@@ -869,35 +846,33 @@ class CerberusMail {
 			@$from_addy = $settings->get(CerberusSettings::DEFAULT_REPLY_FROM, $_SERVER['SERVER_ADMIN']);
 			@$from_personal = $settings->get(CerberusSettings::DEFAULT_REPLY_PERSONAL,'');
 
-			$sendTo = new Swift_Address($to);
-			$sendFrom = new Swift_Address($from_addy, $from_personal);
+			$mail->setTo(array($to));
 
-//			if(is_array($message->headers))
-//			foreach($message->headers as $header => $val) {
-//				if(0==strcasecmp($header,'to'))
-//					continue;
-//				$mail->headers->set($header, $val);
-//			}
+			$headers = $mail->getHeaders();
 
-			if(isset($message->headers['subject']))
-				$mail->headers->set('Subject', $message->headers['subject']);
+			if(isset($message->headers['subject'])) {
+				if(is_array($message->headers['subject']))
+					$subject = array_shift($message->headers['subject']);
+				else
+					$subject = $message->headers['subject'];
+				$mail->setSubject($subject);
+			}
 			if(isset($message->headers['message-id']))
-				$mail->headers->set('Message-Id', $message->headers['message-id']);
+				$headers->addTextHeader('Message-Id', $message->headers['message-id']);
 			if(isset($message->headers['in-reply-to']))
-				$mail->headers->set('In-Reply-To', $message->headers['in-reply-to']);
+				$headers->addTextHeader('In-Reply-To', $message->headers['in-reply-to']);
 			if(isset($message->headers['references']))
-				$mail->headers->set('References', $message->headers['references']);
+				$headers->addTextHeader('References', $message->headers['references']);
 			if(isset($message->headers['from']))
-				$mail->headers->set('From', $message->headers['from']);
+				$mail->setFrom($message->headers['from']);
 			if(isset($message->headers['return-path']))
-				$mail->headers->set('Return-Path', $message->headers['return-path']);
+				$mail->setReturnPath($message->headers['return-path']);
 			if(isset($message->headers['reply-to']))
-				$mail->headers->set('Reply-To', $message->headers['reply-to']);
+        $mail->setReplyTo($message->headers['reply-to']);
 
-			$mail->headers->set('X-CerberusRedirect','1');
+			$headers->addTextHeader('X-CerberusRedirect','1');
 
-			$mail->attach(new Swift_Message_Part($message->body, 'text/plain', 'base64', $message->encoding));
-
+			$mail->setBody($message->body);
       // ######################
       $ticket_id = $message->ticket_id;
       $ticket = DAO_Ticket::getTicket($ticket_id);
@@ -918,21 +893,21 @@ class CerberusMail {
         $mail->attach(new Swift_Message_Part(nl2br($answernet_body), 'text/html', 'base64', $message->encoding));
       }
 
-			// Files
-			if(is_array($message->files))
-			foreach($message->files as $file_name => $file) { /* @var $file ParserFile */
-				$mail->attach(new Swift_Message_Attachment(
-					new Swift_File($file->tmpname), $file_name, $file->mime_type));
-			}
+      // Files
+      if(is_array($message->files))
+        foreach($message->files as $file_name => $file) { /* @var $file ParserFile */
+          $mail->attach(Swift_Attachment::fromPath($file->tmpname)->setFilename($file_name));
+      }
 
-			if(!$mailer->send($mail, $sendTo, $sendFrom)) {
-				return false;
-			}
-		} catch (Exception $e) {
-			return false;
-		}
-	}
+      $result = $mailer->send($mail);
+
+      if(!$result) {
+        return false;
+      }
+
+    } catch (Exception $e) {
+      return false;
+    }
+  }
 
 };
-
-?>

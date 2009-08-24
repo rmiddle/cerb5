@@ -48,8 +48,6 @@
  * 		and Joe Geck.
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-class ChMobilePlugin extends DevblocksPlugin {
-};
 
 class MobileController extends DevblocksControllerExtension {
     const ID = 'cerberusweb.controller.mobile';
@@ -625,7 +623,7 @@ class ChMobileTicketsPage extends CerberusMobilePageExtension  {
 			break;
 		}
 		
-		$mobileView = C4_AbstractViewLoader::getView('', "VIEW_MOBILE");
+		$mobileView = C4_AbstractViewLoader::getView("VIEW_MOBILE");
 		//print_r($mobileView);		
 		if($mobileView == NULL) {
 			$mobileView = new C4_MobileTicketView();//C4_TicketView();

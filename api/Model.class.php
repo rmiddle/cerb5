@@ -1170,22 +1170,43 @@ class C4_AbstractViewLoader {
 	 * @param string $view_label ID
 	 * @return C4_AbstractView instance
 	 */
-	static function getView($class, $view_label) {
+	static function getView($view_label, C4_AbstractViewModel $defaults=null) {
+		$active_worker = CerberusApplication::getActiveWorker();
 		if(is_null(self::$views)) self::_init();
 
-		if(!self::exists($view_label)) {
-			if(empty($class) || !class_exists($class))
-			return null;
+    if(self::exists($view_label)) {
+      $model = self::$views[$view_label];
+      return self::unserializeAbstractView($model);
 
-			$view = new $class;
-			self::setView($view_label, $view);
-			return $view;
+    } else {
+      // See if the worker has their own saved prefs
+      @$prefs = unserialize(DAO_WorkerPref::get($active_worker->id, 'view'.$view_label));
+
+			// If no worker prefsd, check if we're passed defaults
+			if((empty($prefs) || !$prefs instanceof C4_AbstractViewModel) && !empty($defaults))
+				$prefs = $defaults;
+
+			// Create a default view if it doesn't exist
+			if(!empty($prefs) && $prefs instanceof C4_AbstractViewModel) {
+				if(!empty($prefs->class_name) || class_exists($prefs->class_name)) {
+					$view = new $prefs->class_name;
+					$view->id = $view_label;
+					if(!empty($prefs->view_columns))
+						$view->view_columns = $prefs->view_columns;
+					if(!empty($prefs->renderLimit))
+						$view->renderLimit = $prefs->renderLimit;
+					if(null !== $prefs->renderSortBy)
+						$view->renderSortBy = $prefs->renderSortBy;
+					if(null !== $prefs->renderSortAsc)
+						$view->renderSortAsc = $prefs->renderSortAsc;
+					self::setView($view_label, $view);
+					return $view;
+				}
+			}
+
 		}
 
-		$model = self::$views[$view_label];
-		$view = self::unserializeAbstractView($model);
-
-		return $view;
+		return null;
 	}
 
 	/**
@@ -1266,6 +1287,8 @@ class Model_Address {
 	public $num_spam = 0;
 	public $num_nonspam = 0;
 	public $is_banned = 0;
+	public $is_registered = 0;
+	public $pass = '';
 	public $last_autoreply;
 
 	function Model_Address() {}
@@ -1278,12 +1301,6 @@ class Model_Address {
 		);
 	}
 };
-
-class Model_AddressAuth {
-	public $address_id;
-	public $confirm;
-	public $pass;
-}
 
 class Model_AddressToWorker {
 	public $address;
@@ -1837,12 +1854,13 @@ class C4_AddressView extends C4_AbstractView {
 			SearchFields_Address::FIRST_NAME,
 			SearchFields_Address::LAST_NAME,
 			SearchFields_Address::ORG_NAME,
+			SearchFields_Address::IS_REGISTERED,
 			SearchFields_Address::NUM_NONSPAM,
 			SearchFields_Address::NUM_SPAM,
 		);
 
 		$this->params = array(
-			SearchFields_Address::NUM_NONSPAM => new DevblocksSearchCriteria(SearchFields_Address::NUM_NONSPAM,'>',0),
+			SearchFields_Address::IS_REGISTERED => new DevblocksSearchCriteria(SearchFields_Address::IS_REGISTERED,'=',1),
 		);
 	}
 
@@ -1892,6 +1910,7 @@ class C4_AddressView extends C4_AbstractView {
 				$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/internal/views/criteria/__number.tpl');
 				break;
 			case SearchFields_Address::IS_BANNED:
+			case SearchFields_Address::IS_REGISTERED:
 				$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
 				break;
 			default:
@@ -1936,7 +1955,7 @@ class C4_AddressView extends C4_AbstractView {
 		parent::doResetCriteria();
 
 		$this->params = array(
-			SearchFields_Address::NUM_NONSPAM => new DevblocksSearchCriteria(SearchFields_Address::NUM_NONSPAM,'>',0),
+			SearchFields_Address::IS_REGISTERED => new DevblocksSearchCriteria(SearchFields_Address::IS_REGISTERED,'=',1),
 		);
 	}
 
@@ -1961,6 +1980,10 @@ class C4_AddressView extends C4_AbstractView {
 				break;
 
 			case SearchFields_Address::IS_BANNED:
+				@$bool = DevblocksPlatform::importGPC($_REQUEST['bool'],'integer',1);
+				$criteria = new DevblocksSearchCriteria($field,$oper,$bool);
+				break;
+			case SearchFields_Address::IS_REGISTERED:
 				@$bool = DevblocksPlatform::importGPC($_REQUEST['bool'],'integer',1);
 				$criteria = new DevblocksSearchCriteria($field,$oper,$bool);
 				break;
@@ -2846,6 +2869,8 @@ class C4_WorkerEventView extends C4_AbstractView {
 				$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/internal/views/criteria/__date.tpl');
 				break;
 			case SearchFields_WorkerEvent::WORKER_ID:
+				$workers = DAO_Worker::getAllActive();
+				$tpl->assign('workers', $workers);
 				$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/internal/views/criteria/__worker.tpl');
 				break;
 			default:
@@ -2859,6 +2884,20 @@ class C4_WorkerEventView extends C4_AbstractView {
 		$values = !is_array($param->value) ? array($param->value) : $param->value;
 
 		switch($field) {
+			case SearchFields_WorkerEvent::WORKER_ID:
+				$workers = DAO_Worker::getAll();
+				$strings = array();
+
+				foreach($values as $val) {
+					if(empty($val))
+					$strings[] = "Nobody";
+					elseif(!isset($workers[$val]))
+					continue;
+					else
+					$strings[] = $workers[$val]->getName();
+				}
+				echo implode(", ", $strings);
+				break;
 			default:
 				parent::renderCriteriaParam($param);
 				break;
@@ -2903,7 +2942,8 @@ class C4_WorkerEventView extends C4_AbstractView {
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
 			case SearchFields_WorkerEvent::WORKER_ID:
-				$criteria = new DevblocksSearchCriteria($field,$oper,$value);
+				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
+				$criteria = new DevblocksSearchCriteria($field,$oper,$worker_ids);
 				break;
 
 			case SearchFields_WorkerEvent::CREATED_DATE:

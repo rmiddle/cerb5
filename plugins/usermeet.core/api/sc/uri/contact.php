@@ -3,6 +3,7 @@ class UmScContactController extends Extension_UmScController {
 	const PARAM_REQUIRE_LOGIN = 'contact.require_login';
 	const PARAM_CAPTCHA_ENABLED = 'contact.captcha_enabled';
 	const PARAM_ALLOW_SUBJECTS = 'contact.allow_subjects';
+	const PARAM_ATTACHMENTS_MODE = 'contact.attachments_mode';
 	const PARAM_SITUATIONS = 'contact.situations';
 	
 	function isVisible() {
@@ -33,6 +34,9 @@ class UmScContactController extends Extension_UmScController {
 
         $allow_subjects = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_ALLOW_SUBJECTS, 0);
 		$tpl->assign('allow_subjects', $allow_subjects);
+
+        $attachments_mode = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_ATTACHMENTS_MODE, 0);
+		$tpl->assign('attachments_mode', $attachments_mode);
 		
     	$settings = CerberusSettings::getInstance();
 		$default_from = $settings->get(CerberusSettings::DEFAULT_REPLY_FROM);
@@ -163,6 +167,9 @@ class UmScContactController extends Extension_UmScController {
         $allow_subjects = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_ALLOW_SUBJECTS, 0);
 		$tpl->assign('allow_subjects', $allow_subjects);
 
+        $attachments_mode = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_ATTACHMENTS_MODE, 0);
+		$tpl->assign('attachments_mode', $attachments_mode);
+
         $sDispatch = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(),self::PARAM_SITUATIONS, '');
         $dispatch = !empty($sDispatch) ? unserialize($sDispatch) : array();
         $tpl->assign('dispatch', $dispatch);
@@ -193,6 +200,9 @@ class UmScContactController extends Extension_UmScController {
 
         @$iAllowSubjects = DevblocksPlatform::importGPC($_POST['allow_subjects'],'integer',0);
         DAO_CommunityToolProperty::set(UmPortalHelper::getCode(), self::PARAM_ALLOW_SUBJECTS, $iAllowSubjects);
+
+        @$iAttachmentsMode = DevblocksPlatform::importGPC($_POST['attachments_mode'],'integer',0);
+        DAO_CommunityToolProperty::set(UmPortalHelper::getCode(), self::PARAM_ATTACHMENTS_MODE, $iAttachmentsMode);
 
 		// Contact Form
         $settings = CerberusSettings::getInstance();
@@ -237,6 +247,11 @@ class UmScContactController extends Extension_UmScController {
 			if(!empty($hash) && is_array($dispatch))
 			foreach($dispatch as $k => $v) {
 				if($hash==md5($k)) {
+					// If we were editing something we sorted, swap keys
+					if(!empty($sEditReason) && md5($k)==$sEditReason) {
+						unset($dispatch[$k]);
+						$k = $sReason;
+					}
 					$sorted[$k] = $v;
 					break;
 				}
@@ -245,24 +260,21 @@ class UmScContactController extends Extension_UmScController {
 		
 		$dispatch = $sorted;
 
-        // Nuke a record we're replacing or any checked boxes
-		// will be MD5
+        // Nuke any checked boxes
         if(is_array($dispatch))
         foreach($dispatch as $d_reason => $d_params) {
-        	if(!empty($sEditReason) && md5($d_reason)==$sEditReason) {
-        		unset($dispatch[$d_reason]);
-        	} elseif(!empty($arDeleteSituations) && false !== array_search(md5($d_reason),$arDeleteSituations)) {
+        	if(!empty($arDeleteSituations) && false !== array_search(md5($d_reason), $arDeleteSituations)) {
         		unset($dispatch[$d_reason]);
         	}
         }
-        
+		
        	// If we have new data, add it
-        if(!empty($sReason) && !empty($sTo) && false === array_search(md5($sReason),$arDeleteSituations)) {
+        if(!empty($sReason) && !empty($sTo) && false === array_search(md5($sReason), $arDeleteSituations)) {
 			$dispatch[$sReason] = array(
 				'to' => $sTo,
 				'followups' => array()
 			);
-			
+					
 			$followups =& $dispatch[$sReason]['followups'];
 			
 			if(!empty($aFollowup))
@@ -355,6 +367,7 @@ class UmScContactController extends Extension_UmScController {
 		}
 		
 		$umsession = UmPortalHelper::getSession();
+		$active_user = $umsession->getProperty('sc_login', null);
 		$fingerprint = UmPortalHelper::getFingerprint();
 
         $settings = CerberusSettings::getInstance();
@@ -446,7 +459,9 @@ class UmScContactController extends Extension_UmScController {
 		$message->body = 'IP: ' . $fingerprint['ip'] . "\r\n\r\n" . $sContent . $fieldContent;
 
 		// Attachments
-		
+        $attachments_mode = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_ATTACHMENTS_MODE, 0);
+
+		if(0==$attachments_mode || (1==$attachments_mode && !empty($active_user)))
 		if(is_array($_FILES) && !empty($_FILES))
 		foreach($_FILES as $name => $files) {
 			// field[]
@@ -482,7 +497,9 @@ class UmScContactController extends Extension_UmScController {
 						break;
 					
 					case Model_CustomField::TYPE_NUMBER:
-						@$value = intval($aFollowUpA[$iIdx]);
+						@$value = $aFollowUpA[$iIdx];
+						if(!is_numeric($value) || 0 == strlen($value))
+							$value = null;
 						break;
 						
 					case Model_CustomField::TYPE_DATE:

@@ -55,9 +55,10 @@ class UmScRegisterController extends Extension_UmScController {
 			
 			if(!empty($email) && null != ($addy = DAO_Address::lookupAddress($email, false))) {
 				$fields = array(
-					DAO_AddressAuth::CONFIRM => $code
+					DAO_Address::IS_REGISTERED => 0,
+					DAO_Address::PASS => $code,
 				);
-				DAO_AddressAuth::update($addy->id, $fields);
+				DAO_Address::update($addy->id, $fields);
 				
 			} else {
 				$tpl->assign('register_error', sprintf("'%s' is not a registered e-mail address.",$email));
@@ -66,9 +67,8 @@ class UmScRegisterController extends Extension_UmScController {
 			}
 			
 			$message = $mail_service->createMessage();
-			$message->setTo($email);
-			$send_from = new Swift_Address($from, $from_personal);
-			$message->setFrom($send_from);
+			$message->addTo($email);
+			$message->setFrom(array($from => $from_personal));
 			$message->setSubject("Did you forget your support password?");
 			$message->setBody(sprintf("This is a message to confirm your 'forgot password' request at:\r\n".
 				"%s\r\n".
@@ -85,9 +85,12 @@ class UmScRegisterController extends Extension_UmScController {
 				$url->write('c=register&a=forgot2',true),
 				$from_personal
 			));
-			$message->headers->set('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
 			
-			$mailer->send($message,$email,$send_from);
+			$headers = $message->getHeaders();
+			
+			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+			
+			$result = $mailer->send($message);
 		}
 		catch (Exception $e) {
 			$tpl->assign('register_error', 'Fatal error encountered while sending forgot password confirmation code.');
@@ -109,14 +112,14 @@ class UmScRegisterController extends Extension_UmScController {
 		
 		if(!empty($email) && !empty($pass) && !empty($code)) {
 			if(null != ($addy = DAO_Address::lookupAddress($email, false))
-				&& null != ($auth = DAO_AddressAuth::get($addy->id))
-				&& !empty($auth) 
-				&& !empty($auth->confirm) 
-				&& 0 == strcasecmp($code,$auth->confirm)) {
+				&& !$addy->is_registered 
+				&& !empty($addy->pass) 
+				&& 0 == strcasecmp($code,$addy->pass)) {
 					$fields = array(
-						DAO_AddressAuth::PASS => md5($pass)
+						DAO_Address::IS_REGISTERED => 1,
+						DAO_Address::PASS => md5($pass),
 					);
-					DAO_AddressAuth::update($addy->id, $fields);
+					DAO_Address::update($addy->id, $fields);
 				
 			} else {
 				$tpl->assign('register_error', sprintf("The confirmation code you entered does not match our records.  Try again."));
@@ -147,19 +150,19 @@ class UmScRegisterController extends Extension_UmScController {
 		$code = CerberusApplication::generatePassword(8);
 		
 		if(!empty($email) && null != ($addy = DAO_Address::lookupAddress($email, true))) {
-			$auth = DAO_AddressAuth::get($addy->id);
 			
 			// Already registered?
-			if(!empty($auth) && !empty($auth->pass)) {
+			if($addy->is_registered) {
 				$tpl->assign('register_error', sprintf("'%s' is already registered.",$email));
 				DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('portal',UmPortalHelper::getCode(),'register')));
 				return;
 			}
 			
 			$fields = array(
-				DAO_AddressAuth::CONFIRM => $code
+				DAO_Address::IS_REGISTERED => 0,
+				DAO_Address::PASS => $code
 			);
-			DAO_AddressAuth::update($addy->id, $fields);
+			DAO_Address::update($addy->id, $fields);
 			
 		} else {
 			$tpl->assign('register_error', sprintf("'%s' is an invalid e-mail address.",$email));
@@ -169,8 +172,7 @@ class UmScRegisterController extends Extension_UmScController {
 		
 		$message = $mail_service->createMessage();
 		$message->setTo($email);
-		$send_from = new Swift_Address($from, $from_personal);
-		$message->setFrom($send_from);
+		$message->setFrom(array($from => $from_personal));
 		$message->setSubject("Confirming your support e-mail address");
 		$message->setBody(sprintf("This is a message to confirm your recent registration request at:\r\n".
 			"%s\r\n".
@@ -187,9 +189,12 @@ class UmScRegisterController extends Extension_UmScController {
 			$url->write('c=register&a=confirm',true),
 			$from_personal
 		));
-		$message->headers->set('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
 		
-		$mailer->send($message,$email,$send_from);
+		$headers = $message->getHeaders();
+		
+		$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+		
+		$result = $mailer->send($message);
 		
 		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('portal',UmPortalHelper::getCode(),'register','confirm')));
 	}
@@ -206,14 +211,14 @@ class UmScRegisterController extends Extension_UmScController {
 		
 		if(!empty($email) && !empty($pass) && !empty($code)) {
 			if(null != ($addy = DAO_Address::lookupAddress($email, false))
-				&& null != ($auth = DAO_AddressAuth::get($addy->id))
-				&& !empty($auth) 
-				&& !empty($auth->confirm) 
-				&& 0 == strcasecmp($code,$auth->confirm)) {
+				&& !$addy->is_registered 
+				&& !empty($addy->pass) 
+				&& 0 == strcasecmp($code,$addy->pass)) {
 					$fields = array(
-						DAO_AddressAuth::PASS => md5($pass)
+						DAO_Address::IS_REGISTERED => 1,
+						DAO_Address::PASS => md5($pass)
 					);
-					DAO_AddressAuth::update($addy->id, $fields);
+					DAO_Address::update($addy->id, $fields);
 				
 			} else {
 				$tpl->assign('register_error', sprintf("The confirmation code you entered does not match our records.  Try again."));

@@ -2,7 +2,8 @@
 .htaccess
 .settings/*
 *~
-git-create-branch.sh
+*.orig
+git-create-branch-github.sh
+git-create-branch-origin.sh
 framework.config.php
 .project
-

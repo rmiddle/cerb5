@@ -218,7 +218,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		// Display series support (inherited paging from Display)
 		@$view_id = array_shift($stack);
 		if(!empty($view_id)) {
-			$view = C4_AbstractViewLoader::getView('',$view_id);
+			$view = C4_AbstractViewLoader::getView($view_id);
 
 			// Restrict to the active worker's groups
 			$active_worker = CerberusApplication::getActiveWorker();
@@ -1032,12 +1032,6 @@ class ChDisplayPage extends CerberusPageExtension {
 			DAO_Message::TICKET_ID => $new_ticket_id
 		));
 
-		//[mdf] [CHD-979] The ticket id is also in the message_header table, so update those too
-		$message_headers = DAO_MessageHeader::getAll($orig_message->id);
-		foreach($message_headers as $hk => $hv) {
-		    DAO_MessageHeader::create($orig_message->id, $new_ticket_id, $hk, $hv);
-		}
-
 		// Reindex the original ticket (last wrote, etc.)
 		$last_message = end($messages); /* @var CerberusMessage $last_message */
 
@@ -1099,25 +1093,25 @@ class ChDisplayPage extends CerberusPageExtension {
 
 		// [TODO] Sanitize scope preference
 
-		// View
-		$view = C4_AbstractViewLoader::getView('','contact_history');
+    // Defaults
+    $defaults = new C4_AbstractViewModel();
+    $defaults->class_name = 'C4_TicketView';
+    $defaults->id = 'contact_history';
+    $defaults->name = $translate->_('addy_book.history.view.title');
+    $defaults->view_columns = array(
+			SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
+			SearchFields_Ticket::TICKET_CREATED_DATE,
+			SearchFields_Ticket::TICKET_TEAM_ID,
+			SearchFields_Ticket::TICKET_CATEGORY_ID,
+		);
+    $defaults->params = array(
+		);
+    $defaults->renderLimit = 10;
+    $defaults->renderSortBy = SearchFields_Ticket::TICKET_CREATED_DATE;
+    $defaults->renderSortAsc = false;
 
-		if(null == $view) {
-			$view = new C4_TicketView();
-			$view->id = 'contact_history';
-			$view->name = $translate->_('addy_book.history.view.title');
-			$view->view_columns = array(
-				SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
-				SearchFields_Ticket::TICKET_CREATED_DATE,
-				SearchFields_Ticket::TICKET_TEAM_ID,
-				SearchFields_Ticket::TICKET_CATEGORY_ID,
-			);
-			$view->params = array(
-			);
-			$view->renderLimit = 10;
-			$view->renderSortBy = SearchFields_Ticket::TICKET_CREATED_DATE;
-			$view->renderSortAsc = false;
-		}
+    // View
+    $view = C4_AbstractViewLoader::getView('contact_history', $defaults);
 
 		// Sanitize scope options
 		if('org'==$scope) {
@@ -1194,16 +1188,19 @@ class ChDisplayPage extends CerberusPageExtension {
 		$ticket = DAO_Ticket::getTicket($ticket_id);
 		$tpl->assign('ticket', $ticket);
 
-		$view = C4_AbstractViewLoader::getView('C4_TaskView', 'ticket_tasks');
-		$view->id = 'ticket_tasks';
-		$view->name = $translate->_('tasks.ticket.tab.view');
-		$view->view_columns = array(
+    $defaults = new C4_AbstractViewModel();
+    $defaults->class_name = 'C4_TaskView';
+    $defaults->id = 'ticket_tasks';
+    $defaults->name = $translate->_('tasks.ticket.tab.view');
+    $defaults->view_columns = array(
 			SearchFields_Task::SOURCE_EXTENSION,
 			SearchFields_Task::DUE_DATE,
 			SearchFields_Task::WORKER_ID,
       SearchFields_Task::IS_COMPLETED,
       SearchFields_Task::COMPLETED_DATE,
 		);
+
+		$view = C4_AbstractViewLoader::getView('ticket_tasks', $defaults);
 		$view->params = array(
 			SearchFields_Task::SOURCE_EXTENSION => new DevblocksSearchCriteria(SearchFields_Task::SOURCE_EXTENSION,'=','cerberusweb.tasks.ticket'),
 			SearchFields_Task::SOURCE_ID => new DevblocksSearchCriteria(SearchFields_Task::SOURCE_ID,'=',$ticket_id),

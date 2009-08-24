@@ -74,7 +74,7 @@ class ChHomePage extends CerberusPageExtension {
 		$visit->set(CerberusVisit::KEY_HOME_SELECTED_TAB, 'events');
 		
 		// My Events
-		$myEventsView = C4_AbstractViewLoader::getView('', self::VIEW_MY_EVENTS);
+		$myEventsView = C4_AbstractViewLoader::getView(self::VIEW_MY_EVENTS);
 		
 		$title = vsprintf($translate->_('home.my_notifications.view.title'), $active_worker->getName());
 		
@@ -280,7 +280,9 @@ class ChHomePage extends CerberusPageExtension {
 				array(
 					DAO_WorkerEvent::IS_READ => 1,
 				), 
-				sprintf("%s IN (%s)",
+				sprintf("%s = %d AND %s IN (%s)",
+					DAO_WorkerEvent::WORKER_ID,
+					$worker->id,
 					DAO_WorkerEvent::ID,
 					implode(',', $row_ids)
 				)
@@ -289,7 +291,7 @@ class ChHomePage extends CerberusPageExtension {
 			DAO_WorkerEvent::clearCountCache($worker->id);
 		}
 		
-		$myEventsView = C4_AbstractViewLoader::getView('', $view_id);
+		$myEventsView = C4_AbstractViewLoader::getView($view_id);
 		$myEventsView->render();
 	}
 	
@@ -332,7 +334,7 @@ class ChHomePage extends CerberusPageExtension {
 			if(is_array($lists) && !empty($lists))
 			foreach($lists as $list) { /* @var $list Model_WorkerWorkspaceList */
 				$view_id = 'cust_'.$list->id;
-				if(null == ($view = C4_AbstractViewLoader::getView('',$view_id))) {
+				if(null == ($view = C4_AbstractViewLoader::getView($view_id))) {
 					$list_view = $list->list_view; /* @var $list_view Model_WorkerWorkspaceListView */
 					
 					// Make sure we can find the workspace source (plugin not disabled)
@@ -437,7 +439,7 @@ class ChHomePage extends CerberusPageExtension {
 					$list_view->title = $names[$idx];
 				
 					// Save the view in the session
-					$view = C4_AbstractViewLoader::getView('', 'cust_'.$id);
+					$view = C4_AbstractViewLoader::getView('cust_'.$id);
 					$view->name = $list_view->title;
 					C4_AbstractViewLoader::setView('cust_'.$id, $view);
 				}
