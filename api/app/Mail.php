@@ -193,23 +193,26 @@ class CerberusMail {
 				if(!empty($bcc) && null != ($bccList = DevblocksPlatform::parseCsvString(str_replace(';',',',$bcc)))) {
 					$email->setBcc($bccList);
 				}
+
         // ######################
         //Answernet Demo Account
         if($team_id == 751) {
           $answernet_body = '<html><body><img src="http://static.answernet.com/answernet_logo.jpg"><br>'.$content.'</body></html>';
-          $email->attach(new Swift_Message_Part(nl2br($answernet_body), 'text/html', '8bit', LANG_CHARSET_CODE));
+          //Add alternative parts with addPart()
+          $message->addPart(nl2br($answernet_body), 'text/html');
         }
         // Metlife - First Person
         if($team_id == 756) {
           $answernet_body = '<html><body>'.$content.'<br><br><a href="https://www.myfirstperson.com"><img src="http://files.myfirstperson.com/FP_banner.gif" style="border-style: none"/></a><br></body></html>';
-          $email->attach(new Swift_Message_Part(nl2br($answernet_body), 'text/html', '8bit', LANG_CHARSET_CODE));
+          //Add alternative parts with addPart()
+          $message->addPart(nl2br($answernet_body), 'text/html');
         }
         // Metlife - iDesign
         if($team_id == 782) {
           $answernet_body = '<html><body>'.$content.'<br><br><a href="http://www.idesignmarketing.com"><img src="http://files.myfirstperson.com/iDesign_banner.gif" style="border-style: none"/></a><br></body></html>';
-          $email->attach(new Swift_Message_Part(nl2br($answernet_body), 'text/html', '8bit', LANG_CHARSET_CODE));
+          //Add alternative parts with addPart()
+          $message->addPart(nl2br($answernet_body), 'text/html');
         }
-				// [TODO] These attachments should probably save to the DB
 
 				$email->setFrom(array($from => $personal));
 				$email->setSubject($subject_mailed);
@@ -612,25 +615,28 @@ class CerberusMail {
 
       // Body
       $mail->setBody($content);
+
       // ######################
       // No need to grab the ticket info for $ticket since it is grabbed eailer.
       // team_id is install spefic.
       //Answernet Demo Account
       if($ticket->team_id == 751) {
         $answernet_body = '<html><body><img src="http://static.answernet.com/answernet_logo.jpg"><br>'.$content.'</body></html>';
-        $mail->attach(new Swift_Message_Part(nl2br($answernet_body), 'text/html', 'base64', $message->encoding));
+        //Add alternative parts with addPart()
+        $message->addPart(nl2br($answernet_body), 'text/html');
       }
       // Metlife - First Person
       if($ticket->team_id == 756) {
         $answernet_body = '<html><body>'.$content.'<br><br><a href="https://www.myfirstperson.com"><img src="http://files.myfirstperson.com/FP_banner.gif" style="border-style: none"/></a><br></body></html>';
-        $mail->attach(new Swift_Message_Part(nl2br($answernet_body), 'text/html', 'base64', $message->encoding));
+        //Add alternative parts with addPart()
+        $message->addPart(nl2br($answernet_body), 'text/html');
       }
       // Metlife - iDesign
       if($ticket->team_id == 782) {
         $answernet_body = '<html><body>'.$content.'<br><br><a href="http://www.idesignmarketing.com"><img src="http://files.myfirstperson.com/iDesign_banner.gif" style="border-style: none"/></a><br></body></html>';
-        $mail->attach(new Swift_Message_Part(nl2br($answernet_body), 'text/html', 'base64', $message->encoding));
+        //Add alternative parts with addPart()
+        $message->addPart(nl2br($answernet_body), 'text/html');
       }
-
 
       // Mime Attachments
       if (is_array($files) && !empty($files)) {
@@ -873,6 +879,7 @@ class CerberusMail {
 			$headers->addTextHeader('X-CerberusRedirect','1');
 
 			$mail->setBody($message->body);
+
       // ######################
       $ticket_id = $message->ticket_id;
       $ticket = DAO_Ticket::getTicket($ticket_id);
@@ -880,17 +887,20 @@ class CerberusMail {
       //Answernet Demo Account
       if($ticket->team_id == 751) {
         $answernet_body = '<html><body><img src="http://static.answernet.com/answernet_logo.jpg"><br>' . $message->body . $message.ticket_id . $prtic . 'line 878\n' . '</body></html>';
-        $mail->attach(new Swift_Message_Part(nl2br($answernet_body), 'text/html', 'base64', $message->encoding));
+        //Add alternative parts with addPart()
+        $message->addPart(nl2br($answernet_body), 'text/html');
       }
       // Metlife - First Person
       if($ticket->team_id == 756) {
         $answernet_body = '<html><body>' . $message->body.'<br><br><a href="https://www.myfirstperson.com"><img src="http://files.myfirstperson.com/FP_banner.gif" style="border-style: none"/></a><br></body></html>';
-        $mail->attach(new Swift_Message_Part(nl2br($answernet_body), 'text/html', 'base64', $message->encoding));
+        //Add alternative parts with addPart()
+        $message->addPart(nl2br($answernet_body), 'text/html');
       }
       // Metlife - iDesign
       if($ticket->team_id == 782) {
         $answernet_body = '<html><body>' . $message->body.'<br><br><a href="http://www.idesignmarketing.com"><img src="http://files.myfirstperson.com/iDesign_banner.gif" style="border-style: none"/></a><br></body></html>';
-        $mail->attach(new Swift_Message_Part(nl2br($answernet_body), 'text/html', 'base64', $message->encoding));
+        //Add alternative parts with addPart()
+        $message->addPart(nl2br($answernet_body), 'text/html');
       }
 
       // Files
