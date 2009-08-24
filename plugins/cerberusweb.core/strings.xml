@@ -520,7 +520,10 @@
 			<tuv xml:lang="en_US"><seg># Nonspam</seg></tuv>
 		</tu>
 		<tu tuid='address.is_banned'>
-			<tuv xml:lang="en_US"><seg>Banned</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Is Banned</seg></tuv>
+		</tu>
+		<tu tuid='address.is_registered'>
+			<tuv xml:lang="en_US"><seg>Is Registered</seg></tuv>
 		</tu>
 		<tu tuid='address.last_name'>
 			<tuv xml:lang="en_US"><seg>Last Name</seg></tuv>
@@ -1054,6 +1057,12 @@
 		</tu>
 		<tu tuid='mail.log_message'>
 			<tuv xml:lang="en_US"><seg>Open Ticket</seg></tuv>
+		</tu>
+		<tu tuid='mail.log_message.requesters'>
+			<tuv xml:lang="en_US"><seg>Requester(s)</seg></tuv>
+		</tu>
+		<tu tuid='mail.log_message.send_to_requesters'>
+			<tuv xml:lang="en_US"><seg>Send a copy of this message to the requesters.</seg></tuv>
 		</tu>
 		<tu tuid='mail.merge'>
 			<tuv xml:lang="en_US"><seg>Merge</seg></tuv>
