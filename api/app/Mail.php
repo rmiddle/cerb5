@@ -209,19 +209,19 @@ class CerberusMail {
         if($team_id == 751) {
           $answernet_body = '<html><body><img src="http://static.answernet.com/answernet_logo.jpg"><br>'.$content.'</body></html>';
           //Add alternative parts with addPart()
-          $message->addPart(nl2br($answernet_body), 'text/html');
+          $email->addPart(nl2br($answernet_body), 'text/html');
         }
         // Metlife - First Person
         if($team_id == 756) {
           $answernet_body = '<html><body>'.$content.'<br><br><a href="https://www.myfirstperson.com"><img src="http://files.myfirstperson.com/FP_banner.gif" style="border-style: none"/></a><br></body></html>';
           //Add alternative parts with addPart()
-          $message->addPart(nl2br($answernet_body), 'text/html');
+          $email->addPart(nl2br($answernet_body), 'text/html');
         }
         // Metlife - iDesign
         if($team_id == 782) {
           $answernet_body = '<html><body>'.$content.'<br><br><a href="http://www.idesignmarketing.com"><img src="http://files.myfirstperson.com/iDesign_banner.gif" style="border-style: none"/></a><br></body></html>';
           //Add alternative parts with addPart()
-          $message->addPart(nl2br($answernet_body), 'text/html');
+          $email->addPart(nl2br($answernet_body), 'text/html');
         }
 
         // Mime Attachments
@@ -623,19 +623,19 @@ class CerberusMail {
       if($ticket->team_id == 751) {
         $answernet_body = '<html><body><img src="http://static.answernet.com/answernet_logo.jpg"><br>'.$content.'</body></html>';
         //Add alternative parts with addPart()
-        $message->addPart(nl2br($answernet_body), 'text/html');
+        $mail->addPart(nl2br($answernet_body), 'text/html');
       }
       // Metlife - First Person
       if($ticket->team_id == 756) {
         $answernet_body = '<html><body>'.$content.'<br><br><a href="https://www.myfirstperson.com"><img src="http://files.myfirstperson.com/FP_banner.gif" style="border-style: none"/></a><br></body></html>';
         //Add alternative parts with addPart()
-        $message->addPart(nl2br($answernet_body), 'text/html');
+        $mail->addPart(nl2br($answernet_body), 'text/html');
       }
       // Metlife - iDesign
       if($ticket->team_id == 782) {
         $answernet_body = '<html><body>'.$content.'<br><br><a href="http://www.idesignmarketing.com"><img src="http://files.myfirstperson.com/iDesign_banner.gif" style="border-style: none"/></a><br></body></html>';
         //Add alternative parts with addPart()
-        $message->addPart(nl2br($answernet_body), 'text/html');
+        $mail->addPart(nl2br($answernet_body), 'text/html');
       }
 
       // Mime Attachments
@@ -888,19 +888,19 @@ class CerberusMail {
       if($ticket->team_id == 751) {
         $answernet_body = '<html><body><img src="http://static.answernet.com/answernet_logo.jpg"><br>' . $message->body . $message.ticket_id . $prtic . 'line 878\n' . '</body></html>';
         //Add alternative parts with addPart()
-        $message->addPart(nl2br($answernet_body), 'text/html');
+        $mail->addPart(nl2br($answernet_body), 'text/html');
       }
       // Metlife - First Person
       if($ticket->team_id == 756) {
         $answernet_body = '<html><body>' . $message->body.'<br><br><a href="https://www.myfirstperson.com"><img src="http://files.myfirstperson.com/FP_banner.gif" style="border-style: none"/></a><br></body></html>';
         //Add alternative parts with addPart()
-        $message->addPart(nl2br($answernet_body), 'text/html');
+        $mail->addPart(nl2br($answernet_body), 'text/html');
       }
       // Metlife - iDesign
       if($ticket->team_id == 782) {
         $answernet_body = '<html><body>' . $message->body.'<br><br><a href="http://www.idesignmarketing.com"><img src="http://files.myfirstperson.com/iDesign_banner.gif" style="border-style: none"/></a><br></body></html>';
         //Add alternative parts with addPart()
-        $message->addPart(nl2br($answernet_body), 'text/html');
+        $mail->addPart(nl2br($answernet_body), 'text/html');
       }
 
       // Files
