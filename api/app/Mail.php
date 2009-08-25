@@ -194,6 +194,16 @@ class CerberusMail {
 					$email->setBcc($bccList);
 				}
 
+				$email->setFrom(array($from => $personal));
+				$email->setSubject($subject_mailed);
+				$email->generateId();
+
+				$headers = $email->getHeaders();
+
+				$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+
+				$email->setBody($content);
+
         // ######################
         //Answernet Demo Account
         if($team_id == 751) {
@@ -213,16 +223,6 @@ class CerberusMail {
           //Add alternative parts with addPart()
           $message->addPart(nl2br($answernet_body), 'text/html');
         }
-
-				$email->setFrom(array($from => $personal));
-				$email->setSubject($subject_mailed);
-				$email->generateId();
-
-				$headers = $email->getHeaders();
-
-				$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
-
-				$email->setBody($content);
 
         // Mime Attachments
         if (is_array($files) && !empty($files)) {
