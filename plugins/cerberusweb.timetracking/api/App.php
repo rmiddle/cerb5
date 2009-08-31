@@ -1221,7 +1221,7 @@ class ChTimeTrackingAjaxController extends DevblocksControllerExtension {
 
 	    // View
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
-		$view = C4_AbstractViewLoader::getView('',$view_id);
+    $view = C4_AbstractViewLoader::getView($view_id);
 
 		// Time Tracking fields
 //		@$list_id = trim(DevblocksPlatform::importGPC($_POST['list_id'],'integer',0));
