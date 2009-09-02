@@ -508,7 +508,7 @@ class CerberusParser {
         	}
         }
 
-		$group_id = 0;
+    $group_id = 0;
 
 		if(empty($id)) { // New Ticket
 			$sMask = CerberusApplication::generateTicketMask();

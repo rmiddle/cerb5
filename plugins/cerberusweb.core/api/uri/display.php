@@ -1214,6 +1214,7 @@ class ChDisplayPage extends CerberusPageExtension {
 
 	// Ajax
 	function showTemplatesPanelAction() {
+    @$active_worker = CerberusApplication::getActiveWorker();
 		@$txt_name = DevblocksPlatform::importGPC($_REQUEST['txt_name'],'string','');
 		@$reply_id = DevblocksPlatform::importGPC($_REQUEST['reply_id'],'integer');
 		@$type = DevblocksPlatform::importGPC($_REQUEST['type'],'integer',0);
@@ -1228,22 +1229,33 @@ class ChDisplayPage extends CerberusPageExtension {
 		$folders = DAO_MailTemplate::getFolders($type);
 		$tpl->assign('folders', $folders);
 
+
+    if (count($membership = $active_worker->getMemberships()) > 0) {
+      foreach ($membership as $mem1) { $group_list[] = $mem1->team_id; }  unset($mem1);
+    }
+    $group_list_text = implode(',',$group_list);
+
 		$where = null;
 		if(empty($folder)) {
-			$where = sprintf("%s = %d",
+      $where = sprintf("%s = %d AND %s IN (%s,0) ",
 				DAO_MailTemplate::TEMPLATE_TYPE,
-				$type
+				$type,
+        DAO_MailTemplate::TEAM_ID,
+        $group_list_text
 			);
 		}
-
 		$templates = DAO_MailTemplate::getWhere($where);
 		$tpl->assign('templates', $templates);
+
+    @$allowed_group_list = $active_worker->getMemberships();
+    $tpl->assign('allowed_group_list', $allowed_group_list);
 
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/rpc/email_templates/templates_panel.tpl');
 	}
 
 	// Ajax
 	function showTemplateEditPanelAction() {
+    @$active_worker = CerberusApplication::getActiveWorker();
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer');
 //		@$txt_name = DevblocksPlatform::importGPC($_REQUEST['txt_name'],'string','');
 		@$reply_id = DevblocksPlatform::importGPC($_REQUEST['reply_id'],'integer');
@@ -1255,6 +1267,12 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('reply_id', $reply_id);
 //		$tpl->assign('txt_name', $txt_name);
 		$tpl->assign('type', $type);
+
+    $groups = DAO_Group::getAll();
+    $tpl->assign('groups', $groups);
+
+    @$allowed_group_list = $active_worker->getMemberships();
+    $tpl->assign('allowed_group_list', $allowed_group_list);
 
 		$folders = DAO_MailTemplate::getFolders($type);
 		$tpl->assign('folders', $folders);
@@ -1273,6 +1291,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		@$folder = DevblocksPlatform::importGPC($_REQUEST['folder'],'string','');
 		@$folder_new = DevblocksPlatform::importGPC($_REQUEST['folder_new'],'string','');
 		@$content = DevblocksPlatform::importGPC($_REQUEST['template'],'string','');
+    @$group_limit = DevblocksPlatform::importGPC($_REQUEST['group_id'],'integer',0);
 		@$type = DevblocksPlatform::importGPC($_REQUEST['type'],'integer',0);
 		@$delete = DevblocksPlatform::importGPC($_REQUEST['do_delete'],'integer',0);
 
@@ -1286,6 +1305,7 @@ class ChDisplayPage extends CerberusPageExtension {
 				DAO_MailTemplate::CONTENT => $content,
 				DAO_MailTemplate::TEMPLATE_TYPE => $type,
 				DAO_MailTemplate::OWNER_ID => $worker->id,
+        DAO_MailTemplate::TEAM_ID => $group_limit,
 			);
 
 			if(empty($id)) { // new

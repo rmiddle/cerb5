@@ -956,6 +956,9 @@
 		<tu tuid='display.reply.email_templates'>
 			<tuv xml:lang="en_US"><seg>E-mail Templates</seg></tuv>
 		</tu>
+    <tu tuid='display.reply.email_templates.limit_group'>
+      <tuv xml:lang="en_US"><seg>Limit to Group: </seg></tuv>
+    </tu>
 		<tu tuid='display.reply.forward.banner'>
 			<tuv xml:lang="en_US"><seg>---- Forwarded message ----</seg></tuv>
 		</tu>
