@@ -204,26 +204,6 @@ class CerberusMail {
 
 				$email->setBody($content);
 
-        // ######################
-        //Answernet Demo Account
-        if($team_id == 751) {
-          $answernet_body = '<html><body><img src="http://static.answernet.com/answernet_logo.jpg"><br>'.$content.'</body></html>';
-          //Add alternative parts with addPart()
-          $email->addPart(nl2br($answernet_body), 'text/html');
-        }
-        // Metlife - First Person
-        if($team_id == 756) {
-          $answernet_body = '<html><body>'.$content.'<br><br><a href="https://www.myfirstperson.com"><img src="http://files.myfirstperson.com/FP_banner.gif" style="border-style: none"/></a><br></body></html>';
-          //Add alternative parts with addPart()
-          $email->addPart(nl2br($answernet_body), 'text/html');
-        }
-        // Metlife - iDesign
-        if($team_id == 782) {
-          $answernet_body = '<html><body>'.$content.'<br><br><a href="http://www.idesignmarketing.com"><img src="http://files.myfirstperson.com/iDesign_banner.gif" style="border-style: none"/></a><br></body></html>';
-          //Add alternative parts with addPart()
-          $email->addPart(nl2br($answernet_body), 'text/html');
-        }
-
         // Mime Attachments
         if (is_array($files) && !empty($files)) {
           foreach ($files['tmp_name'] as $idx => $file) {
@@ -616,28 +596,6 @@ class CerberusMail {
       // Body
       $mail->setBody($content);
 
-      // ######################
-      // No need to grab the ticket info for $ticket since it is grabbed eailer.
-      // team_id is install spefic.
-      //Answernet Demo Account
-      if($ticket->team_id == 751) {
-        $answernet_body = '<html><body><img src="http://static.answernet.com/answernet_logo.jpg"><br>'.$content.'</body></html>';
-        //Add alternative parts with addPart()
-        $mail->addPart(nl2br($answernet_body), 'text/html');
-      }
-      // Metlife - First Person
-      if($ticket->team_id == 756) {
-        $answernet_body = '<html><body>'.$content.'<br><br><a href="https://www.myfirstperson.com"><img src="http://files.myfirstperson.com/FP_banner.gif" style="border-style: none"/></a><br></body></html>';
-        //Add alternative parts with addPart()
-        $mail->addPart(nl2br($answernet_body), 'text/html');
-      }
-      // Metlife - iDesign
-      if($ticket->team_id == 782) {
-        $answernet_body = '<html><body>'.$content.'<br><br><a href="http://www.idesignmarketing.com"><img src="http://files.myfirstperson.com/iDesign_banner.gif" style="border-style: none"/></a><br></body></html>';
-        //Add alternative parts with addPart()
-        $mail->addPart(nl2br($answernet_body), 'text/html');
-      }
-
       // Mime Attachments
       if (is_array($files) && !empty($files)) {
         foreach ($files['tmp_name'] as $idx => $file) {
@@ -879,29 +837,6 @@ class CerberusMail {
 			$headers->addTextHeader('X-CerberusRedirect','1');
 
 			$mail->setBody($message->body);
-
-      // ######################
-      $ticket_id = $message->ticket_id;
-      $ticket = DAO_Ticket::getTicket($ticket_id);
-      // No need to grab the ticket info for $ticket since it is grabbed eailer.
-      //Answernet Demo Account
-      if($ticket->team_id == 751) {
-        $answernet_body = '<html><body><img src="http://static.answernet.com/answernet_logo.jpg"><br>' . $message->body . $message.ticket_id . $prtic . 'line 878\n' . '</body></html>';
-        //Add alternative parts with addPart()
-        $mail->addPart(nl2br($answernet_body), 'text/html');
-      }
-      // Metlife - First Person
-      if($ticket->team_id == 756) {
-        $answernet_body = '<html><body>' . $message->body.'<br><br><a href="https://www.myfirstperson.com"><img src="http://files.myfirstperson.com/FP_banner.gif" style="border-style: none"/></a><br></body></html>';
-        //Add alternative parts with addPart()
-        $mail->addPart(nl2br($answernet_body), 'text/html');
-      }
-      // Metlife - iDesign
-      if($ticket->team_id == 782) {
-        $answernet_body = '<html><body>' . $message->body.'<br><br><a href="http://www.idesignmarketing.com"><img src="http://files.myfirstperson.com/iDesign_banner.gif" style="border-style: none"/></a><br></body></html>';
-        //Add alternative parts with addPart()
-        $mail->addPart(nl2br($answernet_body), 'text/html');
-      }
 
       // Files
       if(is_array($message->files))
