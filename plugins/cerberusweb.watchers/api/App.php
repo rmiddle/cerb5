@@ -469,7 +469,10 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 				if(!file_exists($attachment_path . $attachment->filepath))
 					continue;
 
-				$mime_attachments[] = Swift_Attachment::fromPath($attachment_path . $attachment->filepath)->setFile($attachment->display_name);
+				$attach = Swift_Attachment::fromPath($attachment_path . $attachment->filepath);
+				if(!empty($attachment->display_name))
+					$attach->setFilename($attachment->display_name);
+				$mime_attachments[] = $attach;
 			}
 
 	    	// Send copies
@@ -493,11 +496,11 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 
 					$hdrs = $mail->getHeaders();
 
-					if(false !== (@$msgid = $headers['message-id'])) {
+					if(null !== (@$msgid = $headers['message-id'])) {
 						$hdrs->addTextHeader('Message-Id',$msgid);
 					}
 
-					if(false !== (@$in_reply_to = $headers['in-reply-to'])) {
+					if(null !== (@$in_reply_to = $headers['in-reply-to'])) {
 					    $hdrs->addTextHeader('References', $in_reply_to);
 					    $hdrs->addTextHeader('In-Reply-To', $in_reply_to);
 					}
@@ -519,14 +522,16 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 			}
 		}
 		catch(Exception $e) {
-			$fields = array(
-				DAO_MessageNote::MESSAGE_ID => $message_id,
-				DAO_MessageNote::CREATED => time(),
-				DAO_MessageNote::WORKER_ID => 0,
-				DAO_MessageNote::CONTENT => 'Exception thrown while sending watcher email: ' . $e->getMessage(),
-				DAO_MessageNote::TYPE => Model_MessageNote::TYPE_ERROR,
-			);
-			DAO_MessageNote::create($fields);
+			if(!empty($message_id)) {
+				$fields = array(
+					DAO_MessageNote::MESSAGE_ID => $message_id,
+					DAO_MessageNote::CREATED => time(),
+					DAO_MessageNote::WORKER_ID => 0,
+					DAO_MessageNote::CONTENT => 'Exception thrown while sending watcher email: ' . $e->getMessage(),
+					DAO_MessageNote::TYPE => Model_MessageNote::TYPE_ERROR,
+				);
+				DAO_MessageNote::create($fields);
+			}
 		}
     }
 };
@@ -1256,6 +1261,9 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 		if(!is_array($ids)) $ids = array($ids);
 		$db = DevblocksPlatform::getDatabaseService();
 
+		if(empty($ids))
+			return;
+		
 		$ids_list = implode(',', $ids);
 
 		$db->Execute(sprintf("DELETE FROM watcher_mail_filter WHERE id IN (%s)", $ids_list));
@@ -1728,9 +1736,9 @@ class Model_WatcherMailFilter {
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : '';
 									$oper = isset($rule['oper']) ? $rule['oper'] : "=";
 
-									if($oper == "=" && @preg_match(DevblocksPlatform::strToRegExp($value), $field_val))
+									if($oper == "=" && @preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
 										$passed++;
-									elseif($oper == "!=" && @!preg_match(DevblocksPlatform::strToRegExp($value), $field_val))
+									elseif($oper == "!=" && @!preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
 										$passed++;
 									break;
 								case 'N': // number

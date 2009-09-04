@@ -52,8 +52,8 @@
  * @author Jeff Standen <jeff@webgroupmedia.com> [JAS]
  */
 
-if(version_compare(PHP_VERSION, "5.1.4", "<"))
-	die("Cerberus Helpdesk 4.x requires PHP 5.1.4 or later.");
+if(version_compare(PHP_VERSION, "5.2", "<"))
+	die("Cerberus Helpdesk 4.x requires PHP 5.2 or later.");
 
 @set_time_limit(3600);
 require('../framework.config.php');
@@ -186,7 +186,7 @@ switch($step) {
 		$fails = 0;
 		
 		// PHP Version
-		if(version_compare(PHP_VERSION,"5.1.4") >=0) {
+		if(version_compare(PHP_VERSION,"5.2") >=0) {
 			$results['php_version'] = PHP_VERSION;
 		} else {
 			$results['php_version'] = false;
@@ -595,8 +595,9 @@ switch($step) {
 					'enc' => $smtp_enc,
 				));
 				
-				$mailer->connect();
-				$mailer->disconnect();
+				$transport = $mailer->getTransport();
+				$transport->start();
+				$transport->stop();
 				
 				if(!empty($smtp_host))
 					$settings->set(CerberusSettings::SMTP_HOST, $smtp_host);

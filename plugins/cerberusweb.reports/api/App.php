@@ -88,7 +88,6 @@ class ChReportCustomFieldUsage extends Extension_Report {
 		if(null == ($table = DAO_CustomFieldValue::getValueTableName($field_id)))
 			return;
 
-
 		$sql = sprintf("SELECT field_value, count(field_value) AS hits ".
 			"FROM %s ".
 			"WHERE source_extension = %s ".

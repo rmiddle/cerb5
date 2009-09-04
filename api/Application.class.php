@@ -48,7 +48,7 @@
  * 		and Joe Geck.
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 931);
+define("APP_BUILD", 935);
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -180,9 +180,9 @@ class CerberusApplication extends DevblocksApplication {
 		// Requirements
 
 		// PHP Version
-		if(version_compare(PHP_VERSION,"5.1.4") >=0) {
+		if(version_compare(PHP_VERSION,"5.2") >=0) {
 		} else {
-			$errors[] = 'Cerberus Helpdesk 4.x requires PHP 5.1.4 or later. Your server PHP version is '.PHP_VERSION;
+			$errors[] = 'Cerberus Helpdesk 4.x requires PHP 5.2 or later. Your server PHP version is '.PHP_VERSION;
 		}
 
 		// File Uploads

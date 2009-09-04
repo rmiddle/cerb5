@@ -1108,6 +1108,9 @@ class DAO_WorkerEvent extends DevblocksORMHelper {
 		if(!is_array($ids)) $ids = array($ids);
 		$db = DevblocksPlatform::getDatabaseService();
 
+		if(empty($ids))
+			return;
+		
 		$ids_list = implode(',', $ids);
 
 		$db->Execute(sprintf("DELETE FROM worker_event WHERE id IN (%s)", $ids_list));
@@ -1303,6 +1306,9 @@ class DAO_ContactOrg extends C4_ORMHelper {
 		if(!is_array($ids)) $ids = array($ids);
 		$db = DevblocksPlatform::getDatabaseService();
 
+		if(empty($ids))
+			return;
+		
 		$id_list = implode(',', $ids);
 
 		// Orgs
@@ -1669,7 +1675,9 @@ class DAO_Address extends C4_ORMHelper {
 
     static function delete($ids) {
         if(!is_array($ids)) $ids = array($ids);
-        if(empty($ids)) return;
+
+		if(empty($ids))
+			return;
 
 		$db = DevblocksPlatform::getDatabaseService();
 
@@ -1776,7 +1784,7 @@ class DAO_Address extends C4_ORMHelper {
 
 		$address = null;
 
-		$email = trim(strtolower($email));
+		$email = trim(mb_convert_case($email, MB_CASE_LOWER));
 
 		$addresses = self::getWhere(sprintf("email = %s",
 			$db->qstr($email)
@@ -2376,7 +2384,9 @@ class DAO_MessageNote extends DevblocksORMHelper {
 
     static function delete($ids) {
         if(!is_array($ids)) $ids = array($ids);
-        if(empty($ids)) return;
+
+		if(empty($ids))
+			return;
 
 		$db = DevblocksPlatform::getDatabaseService();
 
@@ -4024,7 +4034,9 @@ class DAO_ViewRss extends DevblocksORMHelper {
 	}
 
 	static function delete($id) {
-		if(empty($id)) return;
+		if(empty($id))
+			return;
+		
 		$db = DevblocksPlatform::getDatabaseService();
 
 		$sql = sprintf("DELETE QUICK FROM view_rss WHERE id = %d",
@@ -4630,6 +4642,9 @@ class DAO_Bucket extends DevblocksORMHelper {
 	    if(!is_array($ids)) $ids = array($ids);
 		$db = DevblocksPlatform::getDatabaseService();
 
+		if(empty($ids))
+			return;
+		
 		/*
 		 * Notify anything that wants to know when buckets delete.
 		 */
@@ -4852,6 +4867,10 @@ class DAO_MailToGroupRule extends DevblocksORMHelper {
 
 	static function delete($ids) {
 		if(!is_array($ids)) $ids = array($ids);
+		
+		if(empty($ids))
+			return;
+		
 		$db = DevblocksPlatform::getDatabaseService();
 
 		$ids_list = implode(',', $ids);
@@ -4953,6 +4972,9 @@ class DAO_Community extends DevblocksORMHelper {
 	    if(!is_array($ids)) $ids = array($ids);
 	    $db = DevblocksPlatform::getDatabaseService();
 
+		if(empty($ids))
+			return;
+		
 	    $id_list = implode(',', $ids);
 
 	    $sql = sprintf("DELETE QUICK FROM community WHERE id IN (%s)", $id_list);
@@ -5165,6 +5187,9 @@ class DAO_WorkerWorkspaceList extends DevblocksORMHelper {
 	static function delete($ids) {
 		if(!is_array($ids)) $ids = array($ids);
 
+		if(empty($ids))
+			return;
+		
 		$db = DevblocksPlatform::getDatabaseService();
 		$ids_list = implode(',', $ids);
 
@@ -5401,6 +5426,10 @@ class DAO_Note extends DevblocksORMHelper {
 
 	static function delete($ids) {
 		if(!is_array($ids)) $ids = array($ids);
+		
+		if(empty($ids))
+			return;
+		
 		$db = DevblocksPlatform::getDatabaseService();
 
 		$ids_list = implode(',', $ids);
@@ -5558,6 +5587,9 @@ class DAO_PreParseRule extends DevblocksORMHelper {
 		if(!is_array($ids)) $ids = array($ids);
 		$db = DevblocksPlatform::getDatabaseService();
 
+		if(empty($ids))
+			return;
+		
 		$ids_list = implode(',', $ids);
 
 		$db->Execute(sprintf("DELETE QUICK FROM preparse_rule WHERE id IN (%s)", $ids_list));
@@ -5709,6 +5741,9 @@ class DAO_GroupInboxFilter extends DevblocksORMHelper {
 	    if(!is_array($ids)) $ids = array($ids);
 	    $db = DevblocksPlatform::getDatabaseService();
 
+		if(empty($ids))
+			return;
+		
 	    $id_list = implode(',', $ids);
 
 	    $sql = sprintf("DELETE QUICK FROM group_inbox_filter WHERE id IN (%s)", $id_list);
@@ -5877,6 +5912,9 @@ class DAO_MailTemplate extends DevblocksORMHelper {
 		if(!is_array($ids)) $ids = array($ids);
 		$db = DevblocksPlatform::getDatabaseService();
 
+		if(empty($ids))
+			return;
+		
 		$sql = sprintf("DELETE QUICK FROM %s WHERE id IN (%s)",
 			self::_TABLE,
 			implode(',', $ids)
@@ -6066,6 +6104,9 @@ class DAO_TicketComment extends DevblocksORMHelper {
 		if(!is_array($ids)) $ids = array($ids);
 		$db = DevblocksPlatform::getDatabaseService();
 
+		if(empty($ids))
+			return;
+		
 		$ids_list = implode(',', $ids);
 
 		$db->Execute(sprintf("DELETE QUICK FROM ticket_comment WHERE id IN (%s)", $ids_list));
@@ -6191,6 +6232,9 @@ class DAO_CustomField extends DevblocksORMHelper {
 	public static function delete($ids) {
 		if(!is_array($ids)) $ids = array($ids);
 
+		if(empty($ids))
+			return;
+		
 		$db = DevblocksPlatform::getDatabaseService();
 
 		$id_string = implode(',', $ids);
@@ -6521,7 +6565,7 @@ class DAO_CustomFieldValue extends DevblocksORMHelper {
 
 				case Model_CustomField::TYPE_NUMBER:
 				case Model_CustomField::TYPE_WORKER:
-					@$field_value = DevblocksPlatform::importGPC($_POST['field_'.$field_id],'integer',0);
+					@$field_value = DevblocksPlatform::importGPC($_POST['field_'.$field_id],'string','');
 					if(0 != strlen($field_value)) {
 						DAO_CustomFieldValue::setFieldValue($source_ext_id, $source_id, $field_id, intval($field_value));
 					} else {
@@ -6810,6 +6854,9 @@ class DAO_Task extends C4_ORMHelper {
 	static function delete($ids) {
 		if(!is_array($ids)) $ids = array($ids);
 		$db = DevblocksPlatform::getDatabaseService();
+		
+		if(empty($ids))
+			return;
 
 		$ids_list = implode(',', $ids);
 

@@ -160,6 +160,7 @@ class Model_PreParseRule {
 						break;
 
 					case 'tocc':
+						$tocc = array();
 						$destinations = DevblocksPlatform::parseCsvString($value);
 
 						// Build a list of To/Cc addresses on this message
@@ -289,12 +290,15 @@ class Model_PreParseRule {
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : '';
 									$oper = isset($rule['oper']) ? $rule['oper'] : "=";
 
-									if($oper == "=" && @preg_match(DevblocksPlatform::strToRegExp($value), $field_val))
+									if($oper == "=" && @preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
 										$passed++;
-									elseif($oper == "!=" && @!preg_match(DevblocksPlatform::strToRegExp($value), $field_val))
+									elseif($oper == "!=" && @!preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
 										$passed++;
 									break;
 								case 'N': // number
+									if(!isset($field_values[$field_id]))
+										break;
+								
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : 0;
 									$oper = isset($rule['oper']) ? $rule['oper'] : "=";
 
@@ -506,6 +510,7 @@ class Model_GroupInboxFilter {
 						break;
 
 					case 'tocc':
+						$tocc = array();
 						$destinations = DevblocksPlatform::parseCsvString($value);
 
 						// Build a list of To/Cc addresses on this message
@@ -636,22 +641,25 @@ class Model_GroupInboxFilter {
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : '';
 									$oper = isset($rule['oper']) ? $rule['oper'] : "=";
 
-									if($oper == "=" && @preg_match(DevblocksPlatform::strToRegExp($value), $field_val))
+									if($oper == "=" && @preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
 										$passed++;
-									elseif($oper == "!=" && @!preg_match(DevblocksPlatform::strToRegExp($value), $field_val))
+									elseif($oper == "!=" && @!preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
 										$passed++;
 									break;
 								case 'N': // number
-									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : 0;
+									if(!isset($field_values[$field_id]))
+										break;
+								
+									$field_val = intval($field_values[$field_id]);
 									$oper = isset($rule['oper']) ? $rule['oper'] : "=";
 
-									if($oper=="=" && intval($field_val)==intval($value))
+									if($oper=="=" && $field_val == intval($value))
 										$passed++;
-									elseif($oper=="!=" && intval($field_val)!=intval($value))
+									elseif($oper=="!=" && $field_val != intval($value))
 										$passed++;
-									elseif($oper==">" && intval($field_val) > intval($value))
+									elseif($oper==">" && $field_val > intval($value))
 										$passed++;
-									elseif($oper=="<" && intval($field_val) < intval($value))
+									elseif($oper=="<" && $field_val < intval($value))
 										$passed++;
 									break;
 								case 'E': // date
@@ -3156,6 +3164,7 @@ class Model_MailToGroupRule {
 						break;
 
 					case 'tocc':
+						$tocc = array();
 						$destinations = DevblocksPlatform::parseCsvString($value);
 
 						// Build a list of To/Cc addresses on this message
@@ -3280,12 +3289,15 @@ class Model_MailToGroupRule {
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : '';
 									$oper = isset($crit['oper']) ? $crit['oper'] : "=";
 
-									if($oper == "=" && @preg_match(DevblocksPlatform::strToRegExp($value), $field_val))
+									if($oper == "=" && @preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
 										$passed++;
-									elseif($oper == "!=" && @!preg_match(DevblocksPlatform::strToRegExp($value), $field_val))
+									elseif($oper == "!=" && @!preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
 										$passed++;
 									break;
 								case 'N': // number
+									if(!isset($field_values[$field_id]))
+										break;
+
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : 0;
 									$oper = isset($crit['oper']) ? $crit['oper'] : "=";
 

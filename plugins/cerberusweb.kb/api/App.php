@@ -687,6 +687,9 @@ class DAO_KbArticle extends DevblocksORMHelper {
 	static function delete($ids) {
 		if(!is_array($ids)) $ids = array($ids);
 		
+		if(empty($ids))
+			return;
+		
 		$db = DevblocksPlatform::getDatabaseService();
 		
 		$id_string = implode(',', $ids);
@@ -834,7 +837,8 @@ class DAO_KbArticle extends DevblocksORMHelper {
 			$select_sql.
 			$join_sql.
 			$where_sql.
-			($has_multiple_values ? 'GROUP BY kb.id ' : '').
+			//($has_multiple_values ? 'GROUP BY kb.id ' : '').
+			'GROUP BY kb.id '.
 			$sort_sql;
 		
 		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
@@ -1048,6 +1052,9 @@ class DAO_KbCategory extends DevblocksORMHelper {
 	static function delete($ids) {
 		if(!is_array($ids)) $ids = array($ids);
 		$db = DevblocksPlatform::getDatabaseService();
+		
+		if(empty($ids))
+			return;
 		
 		$ids_list = implode(',', $ids);
 		
