@@ -24,7 +24,7 @@
 			{* start table header, insert column title and link *}
 			<th nowrap="nowrap">
 				<a href="javascript:;" onclick="genericAjaxGet('view{$view->id}','c=internal&a=viewSortBy&id={$view->id}&sortBy={$header}');">{$view_fields.$header->db_label|capitalize}</a>
-			
+
 			{* add arrow if sorting by this column, finish table header tag *}
 			{if $header==$view->renderSortBy}
 				{if $view->renderSortAsc}
@@ -46,11 +46,11 @@
 	{else}
 		{assign var=tableRowBg value="tableRowAltBg"}
 	{/if}
-	
+
 		<tr class="{$tableRowBg}" id="{$rowIdPrefix}_s" onmouseover="toggleClass(this.id,'tableRowHover');toggleClass('{$rowIdPrefix}','tableRowHover');" onmouseout="toggleClass(this.id,'{$tableRowBg}');toggleClass('{$rowIdPrefix}','{$tableRowBg}');" onclick="if(getEventTarget(event)=='TD') checkAll('{$rowIdPrefix}_s');">
 			<td align="center" rowspan="1"><input type="checkbox" name="row_id[]" value="{$result.l_id}"></td>
 			<!-- <td colspan="{math equation="x" x=$smarty.foreach.headers.total}"><a href="javascript:;" class="ticketLink" style="font-size:12px;" onclick="genericAjaxPanel('c=contacts&a=showAddressPeek&email={$result.a_email|escape:'url'}&view_id={$view->id}',this,false,'500px',ajax.cbAddressPeek);"><b id="subject_{$result.a_id}_{$view->id}">{$result.a_email}</b></a></td>-->
-		<!-- 
+		<!--
 		</tr>
 		<tr class="{$tableRowBg}" id="{$rowIdPrefix}" onmouseover="toggleClass(this.id,'tableRowHover');toggleClass('{$rowIdPrefix}_s','tableRowHover');" onmouseout="toggleClass(this.id,'{$tableRowBg}');toggleClass('{$rowIdPrefix}_s','{$tableRowBg}');" onclick="if(getEventTarget(event)=='TD') checkAll('{$rowIdPrefix}_s');">
 		 -->
@@ -70,7 +70,7 @@
 					{if isset($ticket_fields.$change_field)}
 						{$ticket_fields.$change_field->db_label|capitalize}
 					{else}
-						{$change_field}&nbsp;
+						{$result.l_change_field|capitalize}&nbsp;
 					{/if}
 				</td>
 			{elseif $column=="l_change_value"}
@@ -108,7 +108,7 @@
 		{/foreach}
 		</tr>
 	{/foreach}
-	
+
 </table>
 <table cellpadding="2" cellspacing="0" border="0" width="100%" class="tableBg" id="{$view->id}_actions">
 	{if $total}
@@ -124,11 +124,11 @@
 			{math assign=nextPage equation="x+1" x=$view->renderPage}
 			{math assign=prevPage equation="x-1" x=$view->renderPage}
 			{math assign=lastPage equation="ceil(x/y)-1" x=$total y=$view->renderLimit}
-			
+
 			{* Sanity checks *}
 			{if $toRow > $total}{assign var=toRow value=$total}{/if}
 			{if $fromRow > $toRow}{assign var=fromRow value=$toRow}{/if}
-			
+
 			{if $view->renderPage > 0}
 				<a href="javascript:;" onclick="genericAjaxGet('view{$view->id}','c=internal&a=viewPage&id={$view->id}&page=0');">&lt;&lt;</a>
 				<a href="javascript:;" onclick="genericAjaxGet('view{$view->id}','c=internal&a=viewPage&id={$view->id}&page={$prevPage}');">&lt;{$translate->_('common.previous_short')|capitalize}</a>
