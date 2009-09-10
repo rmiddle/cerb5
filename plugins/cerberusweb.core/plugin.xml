@@ -160,6 +160,7 @@
 		<priv id="core.ticket.view.actions.export" label="acl.core.ticket.view.actions.export" />
 		<priv id="core.ticket.view.actions.merge" label="acl.core.ticket.view.actions.merge" />
 		<priv id="core.ticket.view.actions.pile_sort" label="acl.core.ticket.view.actions.pile_sort" />
+    <priv id="core.ticket.view.whos_online" label="acl.core.ticket.view.whos_online" />
 
 		<!-- Workspaces -->
 		<priv id="core.home.auto_refresh" label="acl.core.home.auto_refresh" />
