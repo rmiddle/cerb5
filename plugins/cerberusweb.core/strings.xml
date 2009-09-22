@@ -1540,61 +1540,61 @@ For example: *receipt*</seg></tuv>
 		</tu>
 
     <!-- My Account Generally Preferences. -->
-    <tu tuid='prefences.account.settings'>
+    <tu tuid='preferences.account.settings'>
       <tuv xml:lang="en_US"><seg>Account Settings</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.password.change'>
+    <tu tuid='preferences.account.password.change'>
       <tuv xml:lang="en_US"><seg>Change Password: </seg></tuv>
     </tu>
-    <tu tuid='prefences.account.password.new'>
+    <tu tuid='preferences.account.password.new'>
       <tuv xml:lang="en_US"><seg>New Password: </seg></tuv>
     </tu>
-    <tu tuid='prefences.account.password.verify'>
+    <tu tuid='preferences.account.password.verify'>
       <tuv xml:lang="en_US"><seg>Verify Password: </seg></tuv>
     </tu>
-    <tu tuid='prefences.account.current'>
+    <tu tuid='preferences.account.current'>
       <tuv xml:lang="en_US"><seg>current:</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.timezone'>
+    <tu tuid='preferences.account.timezone'>
       <tuv xml:lang="en_US"><seg>Timezone:</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.language'>
+    <tu tuid='preferences.account.language'>
       <tuv xml:lang="en_US"><seg>Language:</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.email'>
+    <tu tuid='preferences.account.email'>
       <tuv xml:lang="en_US"><seg>E-mail Addresses</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.email.associated'>
+    <tu tuid='preferences.account.email.associated'>
       <tuv xml:lang="en_US"><seg>These addresses will be associated with your helpdesk account.</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.email.address'>
+    <tu tuid='preferences.account.email.address'>
       <tuv xml:lang="en_US"><seg>Address</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.email.address.confirmed'>
+    <tu tuid='preferences.account.email.address.confirmed'>
       <tuv xml:lang="en_US"><seg>Confirmed</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.email.address.resend.confirm'>
+    <tu tuid='preferences.account.email.address.resend.confirm'>
       <tuv xml:lang="en_US"><seg>resend confirmation</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.email.address.add'>
+    <tu tuid='preferences.account.email.address.add'>
       <tuv xml:lang="en_US"><seg>Add e-mail address:</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.preferences'>
+    <tu tuid='preferences.account.preferences'>
       <tuv xml:lang="en_US"><seg>Preferences</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.assist'>
+    <tu tuid='preferences.account.assist'>
       <tuv xml:lang="en_US"><seg>Assist Mode:</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.keyboard.shortcuts'>
+    <tu tuid='preferences.account.keyboard.shortcuts'>
       <tuv xml:lang="en_US"><seg>Keyboard Shortcuts:</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.mail'>
+    <tu tuid='preferences.account.mail'>
       <tuv xml:lang="en_US"><seg>Mail:</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.mail.comments'>
+    <tu tuid='preferences.account.mail.comments'>
       <tuv xml:lang="en_US"><seg>Show comments in the conversation</seg></tuv>
     </tu>
-    <tu tuid='prefences.account.mail.readall'>
+    <tu tuid='preferences.account.mail.readall'>
       <tuv xml:lang="en_US"><seg>Always use 'read all' mode (expand messages and sort chronologically)</seg></tuv>
     </tu>
 
