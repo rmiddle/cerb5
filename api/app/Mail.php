@@ -547,7 +547,11 @@ class CerberusMail {
 
 				// Auto-reply just to the initial requester
 				$mail->addTo($first_address->email);
+<<<<<<< HEAD:api/app/Mail.php
 
+=======
+				
+>>>>>>> wgm/master:api/app/Mail.php
 			// Not an auto-reply
 			} else {
 				// Forwards
