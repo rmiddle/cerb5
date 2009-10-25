@@ -122,10 +122,10 @@ class Model_PreParseRule {
 //						$current_min = 5;
 
 						if(null != ($from_time = @$rule['from']))
-							list($from_hour, $from_min) = split(':', $from_time);
+							list($from_hour, $from_min) = explode(':', $from_time);
 
 						if(null != ($to_time = @$rule['to']))
-							if(list($to_hour, $to_min) = split(':', $to_time));
+							if(list($to_hour, $to_min) = explode(':', $to_time));
 
 						// Do we need to wrap around to the next day's hours?
 						if($from_hour > $to_hour) { // yes
@@ -227,7 +227,7 @@ class Model_PreParseRule {
 
 					case 'body':
 						// Line-by-line body scanning (sed-like)
-						$lines = split("[\r\n]", $message->body);
+						$lines = explode("[\r\n]", $message->body);
 						if(is_array($lines))
 						foreach($lines as $line) {
 							if(@preg_match($value, $line)) {
@@ -486,10 +486,10 @@ class Model_GroupInboxFilter {
 //						$current_min = 5;
 
 						if(null != ($from_time = @$rule['from']))
-							list($from_hour, $from_min) = split(':', $from_time);
+							list($from_hour, $from_min) = explode(':', $from_time);
 
 						if(null != ($to_time = @$rule['to']))
-							if(list($to_hour, $to_min) = split(':', $to_time));
+							if(list($to_hour, $to_min) = explode(':', $to_time));
 
 						// Do we need to wrap around to the next day's hours?
 						if($from_hour > $to_hour) { // yes
@@ -561,7 +561,7 @@ class Model_GroupInboxFilter {
 							break;
 
 						// Line-by-line body scanning (sed-like)
-						$lines = split("[\r\n]", $message_body);
+						$lines = explode("[\r\n]", $message_body);
 						if(is_array($lines))
 						foreach($lines as $line) {
 							if(@preg_match($value, $line)) {
@@ -2515,6 +2515,7 @@ class C4_TaskView extends C4_AbstractView {
 
 		$this->view_columns = array(
 			SearchFields_Task::SOURCE_EXTENSION,
+			SearchFields_Task::UPDATED_DATE,
 			SearchFields_Task::DUE_DATE,
 			SearchFields_Task::WORKER_ID,
 			);
@@ -2583,7 +2584,6 @@ class C4_TaskView extends C4_AbstractView {
 
 		switch($field) {
 			case SearchFields_Task::TITLE:
-			case SearchFields_Task::CONTENT:
 				$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/internal/views/criteria/__string.tpl');
 				break;
 
@@ -2597,6 +2597,7 @@ class C4_TaskView extends C4_AbstractView {
 				$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
 				break;
 
+			case SearchFields_Task::UPDATED_DATE:
 			case SearchFields_Task::DUE_DATE:
 			case SearchFields_Task::COMPLETED_DATE:
 				$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/internal/views/criteria/__date.tpl');
@@ -2674,7 +2675,6 @@ class C4_TaskView extends C4_AbstractView {
 	static function getColumns() {
 		$fields = self::getFields();
 		unset($fields[SearchFields_Task::ID]);
-		unset($fields[SearchFields_Task::CONTENT]);
 		unset($fields[SearchFields_Task::SOURCE_ID]);
 		return $fields;
 	}
@@ -2692,7 +2692,6 @@ class C4_TaskView extends C4_AbstractView {
 
 		switch($field) {
 			case SearchFields_Task::TITLE:
-			case SearchFields_Task::CONTENT:
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
@@ -2706,6 +2705,7 @@ class C4_TaskView extends C4_AbstractView {
 				$criteria = new DevblocksSearchCriteria($field,$oper,$sources);
 				break;
 
+			case SearchFields_Task::UPDATED_DATE:
 			case SearchFields_Task::COMPLETED_DATE:
 			case SearchFields_Task::DUE_DATE:
 				@$from = DevblocksPlatform::importGPC($_REQUEST['from'],'string','');
@@ -3376,10 +3376,10 @@ class Model_MailToGroupRule {
 //						$current_min = 5;
 
 						if(null != ($from_time = @$crit['from']))
-							list($from_hour, $from_min) = split(':', $from_time);
+							list($from_hour, $from_min) = explode(':', $from_time);
 
 						if(null != ($to_time = @$crit['to']))
-							if(list($to_hour, $to_min) = split(':', $to_time));
+							if(list($to_hour, $to_min) = explode(':', $to_time));
 
 						// Do we need to wrap around to the next day's hours?
 						if($from_hour > $to_hour) { // yes
@@ -3452,7 +3452,7 @@ class Model_MailToGroupRule {
 
 					case 'body':
 						// Line-by-line body scanning (sed-like)
-						$lines = split("[\r\n]", $message->body);
+						$lines = explode("[\r\n]", $message->body);
 						if(is_array($lines))
 						foreach($lines as $line) {
 							if(@preg_match($value, $line)) {
@@ -4167,10 +4167,10 @@ class Model_Task {
 	public $id;
 	public $title;
 	public $worker_id;
+	public $created;
 	public $due_date;
 	public $is_completed;
 	public $completed_date;
-	public $content;
 	public $source_extension;
 	public $source_id;
 };
