@@ -505,6 +505,15 @@
       <tuv xml:lang="en_US"><seg>[Tickets] Allows user to see who's Online</seg></tuv>
     </tu>
 
+		<!-- Activity -->
+		
+		<tu tuid='activity.tasks.tab.notes'>
+			<tuv xml:lang="en_US"><seg>Notes</seg></tuv>
+		</tu>
+		<tu tuid='activity.tasks.tab.properties'>
+			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
+		</tu>
+		
 		<!-- Addresses -->
 
 		<tu tuid='address.id'>

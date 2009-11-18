@@ -1060,7 +1060,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		$message = new CerberusParserMessage();
 		$message->headers['date'] = date('r'); 
-		$message->headers['to'] = 'cerberus@localhost';
+		$message->headers['to'] = $to;
 		$message->headers['subject'] = $subject;
 		$message->headers['message-id'] = CerberusApplication::generateMessageId();
 		//$message->headers['x-cerberus-portal'] = 1; 
