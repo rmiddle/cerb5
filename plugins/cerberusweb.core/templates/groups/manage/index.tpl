@@ -64,8 +64,6 @@
 				<option value="#first_name#">First Name</option>
 				<option value="#last_name#">Last Name</option>
 				<option value="#title#">Title</option>
-        <option value="#cf_asset#">Asset</option>
-        <option value="#cf_client#">Client</option>
       </optgroup>
       <optgroup label="Time Tracker">
         <option value="#total_time_worked#">Total Time Worked</option>
