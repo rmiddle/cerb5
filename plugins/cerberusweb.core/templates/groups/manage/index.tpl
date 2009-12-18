@@ -65,9 +65,6 @@
 				<option value="#last_name#">Last Name</option>
 				<option value="#title#">Title</option>
       </optgroup>
-      <optgroup label="Time Tracker">
-        <option value="#total_time_worked#">Total Time Worked</option>
-			</optgroup>
 		</select>
 
 		{if !empty($default_signature)}

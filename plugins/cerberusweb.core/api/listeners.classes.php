@@ -486,10 +486,6 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 		@$ticket_ids = $event->params['ticket_ids'];
 		@$changed_fields = $event->params['changed_fields'];
 
-   $total_time_worked = 0;
-//   $cf_client = "";
-//   $cf_asset = "";
-
 		// for anything other than setting is_closed = 1, we don't need to do anything
 		// also don't send if the ticket is being deleted
 		if((!isset($changed_fields[DAO_Ticket::IS_CLOSED]) || 1 != $changed_fields[DAO_Ticket::IS_CLOSED])
@@ -522,55 +518,12 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 						$ticket_body = $msg_first->getContent();
 					}
 
-          if (class_exists('Extension_TimeTrackingSource',true)):
-            // Adds total time worked per ticket to the token list.
-            $db = DevblocksPlatform::getDatabaseService();
-
-            $sql = "SELECT sum(tte.time_actual_mins) mins ";
-            $sql .= "FROM timetracking_entry tte ";
-            $sql .= sprintf("WHERE tte.source_id =  %d ", $ticket->id);
-            $sql .= "AND tte.source_extension_id = 'timetracking.source.ticket' ";
-            $sql .= "GROUP BY tte.source_id ";
-
-            $rs = $db->Execute($sql);
-
-            if(is_a($rs,'ADORecordSet')) {
-              $total_time_worked = intval($rs->fields['mins']);
-            }
-          endif;
-
-//          $sql = "SELECT cfs.field_value ";
-//          $sql .= "FROM custom_field_stringvalue cfs ";
-//          $sql .= sprintf("WHERE cfs.source_id =  %d ", $ticket->id);
-//          $sql .= "AND cfs.field_id = 10 ";
-
-//          $rs = $db->Execute($sql);
-
-//          if(is_a($rs,'ADORecordSet')) {
-//            $cf_client = $rs->fields['field_value'];
-//          }
-
-//          $sql = "SELECT cfs.field_value ";
-//          $sql .= "FROM custom_field_stringvalue cfs ";
-//          $sql .= sprintf("WHERE cfs.source_id =  %d ", $ticket->id);
-//          $sql .= "AND cfs.field_id = 11 ";
-
-//          $rs = $db->Execute($sql);
-//
-//          if(is_a($rs,'ADORecordSet')) {
-//            $cf_asset = $rs->fields['field_value'];
-//          }
-
           CerberusMail::sendTicketMessage(array(
             'ticket_id' => $ticket->id,
             'message_id' => $ticket->first_message_id,
             'content' => str_replace(
-//              array('#ticket_id#', '#mask#','#subject#','#timestamp#','#sender#','#sender_first#','#orig_body#'),
-//              array($ticket->id, $ticket->mask, $ticket->subject, date('r'), $ticket_sender, $ticket_sender_first, ltrim($ticket_body)),
-//              array('#ticket_id#', '#mask#','#subject#','#timestamp#','#sender#','#sender_first#','#orig_body#','#cf_asset#','#cf_client#','#total_time_worked#'),
-//              array($ticket->id, $ticket->mask, $ticket->subject, date('r'), $ticket_sender, $ticket_sender_first, ltrim($ticket_body), $cf_asset, $cf_client, $total_time_worked),
-              array('#ticket_id#', '#mask#','#subject#','#timestamp#','#sender#','#sender_first#','#orig_body#','#total_time_worked#'),
-              array($ticket->id, $ticket->mask, $ticket->subject, date('r'), $ticket_sender, $ticket_sender_first, ltrim($ticket_body), $total_time_worked),
+              array('#ticket_id#', '#mask#','#subject#','#timestamp#','#sender#','#sender_first#','#orig_body#'),
+              array($ticket->id, $ticket->mask, $ticket->subject, date('r'), $ticket_sender, $ticket_sender_first, ltrim($ticket_body)),
               $group_settings[$ticket->team_id][DAO_GroupSettings::SETTING_CLOSE_REPLY]
             ),
             'is_autoreply' => false,
