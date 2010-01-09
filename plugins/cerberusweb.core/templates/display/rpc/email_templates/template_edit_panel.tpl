@@ -57,7 +57,16 @@
 		<option value="#worker_title#">Title</option>
 	</optgroup>
 </select>
+
 <br>
+{$translate->_('display.reply.email_templates.limit_group')} 
+<select name="group_id">
+<option value="0" {if $template->team_id==$team_id}selected{/if}>{$translate->_('common.all')}</option>
+{foreach from=$allowed_group_list item=group key=team_id}
+        <option value="{$team_id}" {if $template->team_id==$team_id}selected{/if}>{$groups[$team_id]->name}</option>
+{/foreach}
+</select>
+</form>
 <br>
 
 <button type="button" onclick="saveGenericAjaxPanel('replyTemplateEditForm',true,ajax.onSaveReplyTemplate);"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/document_ok.gif{/devblocks_url}" align="top"> {$translate->_('common.save_changes')|capitalize}</button>
