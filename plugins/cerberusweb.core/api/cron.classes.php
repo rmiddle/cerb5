@@ -135,7 +135,9 @@ class ParseCron extends CerberusCronPageExtension {
 		$logger->info("[Parser] Parsed! (".sprintf("%d",($time*1000))." ms) " .
 			(!empty($ticket_id) ? ("(Ticket ID: ".$ticket_id.")") : ("(Local Delivery Rejected.)")));
 
-		@unlink($full_filename);
+		If ($ticket_id != NULL) {
+                        @unlink($full_filename);
+                }
 		mailparse_msg_free($mime);
 
 		//		flush();
