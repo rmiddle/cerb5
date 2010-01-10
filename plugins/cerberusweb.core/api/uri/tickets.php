@@ -300,12 +300,14 @@ class ChTicketsPage extends CerberusPageExtension {
 		);
 		
 		// ====== Who's Online
-		$whos_online = DAO_Worker::getAllOnline();
-		if(!empty($whos_online)) {
-			$tpl->assign('whos_online', $whos_online);
-			$tpl->assign('whos_online_count', count($whos_online));
+		@$active_worker = CerberusApplication::getActiveWorker();
+		if($active_worker->hasPriv('core.ticket.view.whos_online')) {
+			$whos_online = DAO_Worker::getAllOnline();
+			if(!empty($whos_online)) {
+				$tpl->assign('whos_online', $whos_online);
+				$tpl->assign('whos_online_count', count($whos_online));
+			}
 		}
-		
         $tpl->display('file:' . $this->_TPL_PATH . 'tickets/workflow/index.tpl');
 	}
 	
@@ -481,12 +483,14 @@ class ChTicketsPage extends CerberusPageExtension {
 		);
 		
 		// ====== Who's Online
-		$whos_online = DAO_Worker::getAllOnline();
-		if(!empty($whos_online)) {
-			$tpl->assign('whos_online', $whos_online);
-			$tpl->assign('whos_online_count', count($whos_online));
+		@$active_worker = CerberusApplication::getActiveWorker();
+		if($active_worker->hasPriv('core.ticket.view.whos_online')) {
+			$whos_online = DAO_Worker::getAllOnline();
+			if(!empty($whos_online)) {
+				$tpl->assign('whos_online', $whos_online);
+				$tpl->assign('whos_online_count', count($whos_online));
+			}
 		}
-		
         $tpl->display('file:' . $this->_TPL_PATH . 'tickets/overview/index.tpl');		
 	}
 	
