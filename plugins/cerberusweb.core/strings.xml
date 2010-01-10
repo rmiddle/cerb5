@@ -1617,6 +1617,18 @@ For example: *receipt*</seg></tuv>
 	    <tu tuid='preferences.account.keyboard.shortcuts'>
 			<tuv xml:lang="en_US"><seg>Keyboard Shortcuts:</seg></tuv>
 	    </tu>
+		<tu tuid='preferences.account.message.status'>
+			<tuv xml:lang="en_US"><seg>Default Message Status:</seg></tuv>
+		</tu>
+		<tu tuid='preferences.account.message.status.reply'>
+			<tuv xml:lang="en_US"><seg>In Replies:</seg></tuv>
+		</tu>
+		<tu tuid='preferences.account.message.status.open'>
+			<tuv xml:lang="en_US"><seg>In Open Ticket:</seg></tuv>
+		</tu>
+		<tu tuid='preferences.account.message.status.send'>
+			<tuv xml:lang="en_US"><seg>In Send Mail:</seg></tuv>
+		</tu>
 	    <tu tuid='preferences.account.mail'>
 			<tuv xml:lang="en_US"><seg>Mail:</seg></tuv>
 	    </tu>

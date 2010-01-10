@@ -575,7 +575,10 @@ class ChDisplayPage extends CerberusPageExtension {
 				));
 			}
 
-			// Signatures
+                        $reply_status_default_reply = intval(DAO_WorkerPref::get($worker->id,'reply_status_default_reply', 1));
+                        $tpl->assign('reply_status_default_reply', $reply_status_default_reply);
+
+                        // Signatures
 			if(!empty($ticket_team) && !empty($ticket_team->signature)) {
 	            $signature = $ticket_team->signature;
 			} else {

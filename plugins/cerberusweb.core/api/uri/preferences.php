@@ -137,6 +137,15 @@ class ChPreferencesPage extends CerberusPageExtension {
 		$keyboard_shortcuts = intval(DAO_WorkerPref::get($worker->id, 'keyboard_shortcuts', 1));
 		$tpl->assign('keyboard_shortcuts', $keyboard_shortcuts);
 
+                $reply_status_default_reply = intval(DAO_WorkerPref::get($worker->id, 'reply_status_default_reply', 1));
+                $tpl->assign('reply_status_default_reply', $reply_status_default_reply);
+
+                $reply_status_default_open = intval(DAO_WorkerPref::get($worker->id, 'reply_status_default_open', 1));
+                $tpl->assign('reply_status_default_open', $reply_status_default_open);
+
+                $reply_status_default_send = intval(DAO_WorkerPref::get($worker->id, 'reply_status_default_send', 1));
+                $tpl->assign('reply_status_default_send', $reply_status_default_send);
+
 		$mail_inline_comments = DAO_WorkerPref::get($worker->id,'mail_inline_comments',1);
 		$tpl->assign('mail_inline_comments', $mail_inline_comments);
 		
@@ -215,7 +224,16 @@ class ChPreferencesPage extends CerberusPageExtension {
 		@$keyboard_shortcuts = DevblocksPlatform::importGPC($_REQUEST['keyboard_shortcuts'],'integer',0);
 		DAO_WorkerPref::set($worker->id, 'keyboard_shortcuts', $keyboard_shortcuts);
 
-		@$mail_inline_comments = DevblocksPlatform::importGPC($_REQUEST['mail_inline_comments'],'integer',0);
+		@$reply_status_default_reply = DevblocksPlatform::importGPC($_REQUEST['reply_status_default_reply'],'integer',0);
+		DAO_WorkerPref::set($worker->id, 'reply_status_default_reply', $reply_status_default_reply);
+
+		@$reply_status_default_open = DevblocksPlatform::importGPC($_REQUEST['reply_status_default_open'],'integer',0);
+		DAO_WorkerPref::set($worker->id, 'reply_status_default_open', $reply_status_default_open);
+
+		@$reply_status_default_send = DevblocksPlatform::importGPC($_REQUEST['reply_status_default_send'],'integer',0);
+		DAO_WorkerPref::set($worker->id, 'reply_status_default_send', $reply_status_default_send);
+
+                @$mail_inline_comments = DevblocksPlatform::importGPC($_REQUEST['mail_inline_comments'],'integer',0);
 		DAO_WorkerPref::set($worker->id, 'mail_inline_comments', $mail_inline_comments);
 		
 		@$mail_always_show_all = DevblocksPlatform::importGPC($_REQUEST['mail_always_show_all'],'integer',0);

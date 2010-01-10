@@ -79,6 +79,27 @@
 <label><input type="checkbox" name="keyboard_shortcuts" value="1" {if $keyboard_shortcuts eq 1}checked{/if}> {$translate->_('common.enabled')|capitalize}</label><br>
 <br>
 
+<b>{$translate->_('preferences.account.message.status')|capitalize}</b><br>
+
+{$translate->_('preferences.account.message.status.reply')|capitalize}
+<label><input type="radio" name="reply_status_default_reply" value="0" {if $reply_status_default_reply eq 0}checked{/if}> {$translate->_('status.open')|capitalize}</label>
+<label><input type="radio" name="reply_status_default_reply" value="1" {if $reply_status_default_reply eq 1}checked{/if}> {$translate->_('status.waiting')|capitalize}</label>
+<label><input type="radio" name="reply_status_default_reply" value="2" {if $reply_status_default_reply eq 2}checked{/if}> {$translate->_('status.closed')|capitalize}</label>
+<br>
+
+{$translate->_('preferences.account.message.status.open')|capitalize}
+<label><input type="radio" name="reply_status_default_open" value="0" {if $reply_status_default_open eq 0}checked{/if}> {$translate->_('status.open')|capitalize}</label>
+<label><input type="radio" name="reply_status_default_open" value="1" {if $reply_status_default_open eq 1}checked{/if}> {$translate->_('status.waiting')|capitalize}</label>
+<label><input type="radio" name="reply_status_default_open" value="2" {if $reply_status_default_open eq 2}checked{/if}> {$translate->_('status.closed')|capitalize}</label>
+<br>
+
+{$translate->_('preferences.account.message.status.send')|capitalize}
+<label><input type="radio" name="reply_status_default_send" value="0" {if $reply_status_default_send eq 0}checked{/if}> {$translate->_('status.open')|capitalize}</label>
+<label><input type="radio" name="reply_status_default_send" value="1" {if $reply_status_default_send eq 1}checked{/if}> {$translate->_('status.waiting')|capitalize}</label>
+<label><input type="radio" name="reply_status_default_send" value="2" {if $reply_status_default_send eq 2}checked{/if}> {$translate->_('status.closed')|capitalize}</label>
+<br>
+<br>
+
 <b>{$translate->_('preferences.account.mail')|capitalize}</b><br>
 <label><input type="checkbox" name="mail_inline_comments" value="1" {if $mail_inline_comments}checked{/if}> {$translate->_('preferences.account.mail.comments')}</label><br>
 <label><input type="checkbox" name="mail_always_show_all" value="1" {if $mail_always_show_all}checked{/if}> {$translate->_('preferences.account.mail.readall')}</label><br>

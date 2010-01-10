@@ -78,6 +78,9 @@ class ChTicketsPage extends CerberusPageExtension {
 					$visit->set('compose.last_ticket',null); // clear
 				}
 				
+				$reply_status_default_send = intval(DAO_WorkerPref::get($active_worker->id,'reply_status_default_send', 1));
+				$tpl->assign('reply_status_default_send', $reply_status_default_send);
+
 				$tpl->display('file:' . $this->_TPL_PATH . 'tickets/compose/index.tpl');
 				break;
 				
@@ -116,6 +119,9 @@ class ChTicketsPage extends CerberusPageExtension {
 					$visit->set('compose.last_ticket',null); // clear
 				}
 				
+				$reply_status_default_open = intval(DAO_WorkerPref::get($active_worker->id,'reply_status_default_open', 1));
+				$tpl->assign('reply_status_default_open', $reply_status_default_open);
+
 				$tpl->display('file:' . $this->_TPL_PATH . 'tickets/create/index.tpl');
 				break;
 				
