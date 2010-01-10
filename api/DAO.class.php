@@ -5916,13 +5916,14 @@ class DAO_MailTemplate extends DevblocksORMHelper {
 	const TEMPLATE_TYPE = 'template_type';
 	const OWNER_ID = 'owner_id';
 	const CONTENT = 'content';
-	
+        const TEAM_ID = 'team_id';
+        
 	public static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		$id = $db->GenID('generic_seq');
 		
 		$sql = sprintf("INSERT INTO %s (id,title,description,folder,template_type,owner_id,content) ".
-			"VALUES (%d,'','','',0,0,'')",
+			"VALUES (%d,'','','',0,0,'',0)",
 			self::_TABLE,
 			$id
 		);
@@ -5993,7 +5994,7 @@ class DAO_MailTemplate extends DevblocksORMHelper {
 	public function getWhere($where=null) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$sql = sprintf("SELECT id,title,description,folder,template_type,owner_id,content ".
+		$sql = sprintf("SELECT id,title,description,folder,template_type,owner_id,content,team_id ".
 			"FROM %s ".
 			(!empty($where) ? ("WHERE $where ") : " ").
 			" ORDER BY folder, title ",
@@ -6032,6 +6033,7 @@ class DAO_MailTemplate extends DevblocksORMHelper {
 			$object->template_type = intval($rs->fields['template_type']);
 			$object->owner_id = intval($rs->fields['owner_id']);
 			$object->content = $rs->fields['content'];
+                        $object->team_id = intval($rs->fields['team_id']);
 			$objects[$object->id] = $object;
 			$rs->MoveNext();
 		}
