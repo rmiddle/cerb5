@@ -1245,6 +1245,9 @@ class ChDisplayPage extends CerberusPageExtension {
 		$templates = DAO_MailTemplate::getWhere($where);
 		$tpl->assign('templates', $templates);
 		
+		@$allowed_group_list = $active_worker->getMemberships();
+		$tpl->assign('allowed_group_list', $allowed_group_list);
+
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/rpc/email_templates/templates_panel.tpl');
 	}
 	
@@ -1286,6 +1289,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		@$folder = DevblocksPlatform::importGPC($_REQUEST['folder'],'string','');
 		@$folder_new = DevblocksPlatform::importGPC($_REQUEST['folder_new'],'string','');
 		@$content = DevblocksPlatform::importGPC($_REQUEST['template'],'string','');
+		@$group_limit = DevblocksPlatform::importGPC($_REQUEST['group_id'],'integer',0);
 		@$type = DevblocksPlatform::importGPC($_REQUEST['type'],'integer',0);
 		@$delete = DevblocksPlatform::importGPC($_REQUEST['do_delete'],'integer',0);
 		
