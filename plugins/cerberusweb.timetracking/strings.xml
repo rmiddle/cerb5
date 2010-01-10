@@ -92,7 +92,7 @@
 			<tuv xml:lang="en_US"><seg>Note:</seg></tuv>
 		</tu>
 		<tu tuid='timetracking.ui.entry_panel.note_hint'>
-			<tuv xml:lang="en_US"><seg>(description of work performed) (255 Character Limit)</seg></tuv>
+			<tuv xml:lang="en_US"><seg>(description of work performed)</seg></tuv>
 		</tu>
 		<tu tuid='timetracking.ui.entry_panel.reference'>
 			<tuv xml:lang="en_US"><seg>Reference:</seg></tuv>

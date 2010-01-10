@@ -63,18 +63,18 @@ class ParseCron extends CerberusCronPageExtension {
 
 	function run() {
 		$logger = DevblocksPlatform::getConsoleLog();
-
+		
 		$logger->info("[Parser] Starting Parser Task");
-
+		
 		if (!extension_loaded("imap")) die("IMAP Extension not loaded!");
 		@ini_set('memory_limit','64M');
 
 		$timeout = ini_get('max_execution_time');
 		$runtime = microtime(true);
-
+		 
 		// Allow runtime overloads (by host, etc.)
 		@$gpc_parse_max = DevblocksPlatform::importGPC($_REQUEST['parse_max'],'integer');
-
+		
 		$total = !empty($gpc_parse_max) ? $gpc_parse_max : $this->getParam('max_messages', 500);
 
 		$mailDir = APP_MAIL_PATH . 'new' . DIRECTORY_SEPARATOR;
@@ -89,7 +89,7 @@ class ParseCron extends CerberusCronPageExtension {
 			}
 
 			$files = $this->scanDirMessages($subdir);
-
+			 
 			foreach($files as $file) {
 				$filePart = basename($file);
 				$parseFile = APP_MAIL_PATH . 'fail' . DIRECTORY_SEPARATOR . $filePart;
@@ -100,16 +100,16 @@ class ParseCron extends CerberusCronPageExtension {
 			}
 			if($total <= 0) break;
 		}
-
+	  
 		unset($files);
 		unset($subdirs);
-
+	  
 		$logger->info("[Parser] Total Runtime: ".((microtime(true)-$runtime)*1000)." ms");
 	}
 
 	function _parseFile($full_filename) {
 		$logger = DevblocksPlatform::getConsoleLog();
-
+		
 		$fileparts = pathinfo($full_filename);
 		$logger->info("[Parser] Reading ".$fileparts['basename']."...");
 
@@ -131,7 +131,7 @@ class ParseCron extends CerberusCronPageExtension {
 		$time = microtime(true);
 		$ticket_id = CerberusParser::parseMessage($message);
 		$time = microtime(true) - $time;
-
+		
 		$logger->info("[Parser] Parsed! (".sprintf("%d",($time*1000))." ms) " .
 			(!empty($ticket_id) ? ("(Ticket ID: ".$ticket_id.")") : ("(Local Delivery Rejected.)")));
 
@@ -167,9 +167,9 @@ class ParseCron extends CerberusCronPageExtension {
 class MaintCron extends CerberusCronPageExtension {
 	function run() {
 		$logger = DevblocksPlatform::getConsoleLog();
-
+		
 		$logger->info("[Maint] Starting Maintenance Task");
-
+		
 		@ini_set('memory_limit','64M');
 
 		$db = DevblocksPlatform::getDatabaseService();
@@ -184,7 +184,7 @@ class MaintCron extends CerberusCronPageExtension {
 			$purge_waitsecs
 		);
 		$db->Execute($sql);
-
+		
 		$logger->info("[Maint] Purged " . $db->Affected_Rows() . " ticket records.");
 
 		// Give plugins a chance to run maintenance (nuke NULL rows, etc.)
@@ -195,14 +195,14 @@ class MaintCron extends CerberusCronPageExtension {
                 array()
             )
 	    );
-
+		
 		// Nuke orphaned words from the Bayes index
 		// [TODO] Make this configurable from job
 		$sql = "DELETE FROM bayes_words WHERE nonspam + spam < 2"; // only 1 occurrence
 		$db->Execute($sql);
 
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' obscure spam words.');
-
+		
 		// [mdf] Remove any empty directories inside storage/mail/new
 		$mailDir = APP_MAIL_PATH . 'new' . DIRECTORY_SEPARATOR;
 		$subdirs = glob($mailDir . '*', GLOB_ONLYDIR);
@@ -214,9 +214,9 @@ class MaintCron extends CerberusCronPageExtension {
 				}
 			}
 		}
-
+		
 		$logger->info('[Maint] Cleaned up mail directories.');
-
+	  
 		// [JAS] Remove any empty directories inside storage/import/new
 		$importNewDir = APP_STORAGE_PATH . '/import/new' . DIRECTORY_SEPARATOR;
 		$subdirs = glob($importNewDir . '*', GLOB_ONLYDIR);
@@ -228,7 +228,7 @@ class MaintCron extends CerberusCronPageExtension {
 				}
 			}
 		}
-
+		
 		$logger->info('[Maint] Cleaned up import directories.');
 	}
 
@@ -280,15 +280,15 @@ class HeartbeatCron extends CerberusCronPageExtension {
 class ImportCron extends CerberusCronPageExtension {
 	function run() {
 		$logger = DevblocksPlatform::getConsoleLog();
-
+		
 		$logger->info("[Importer] Starting Import Task");
-
+		
 		@set_time_limit(0); // Unlimited (if possible)
 		@ini_set('memory_limit','128M');
-
+		 
 		$logger->info("[Importer] Overloaded memory_limit to: " . ini_get('memory_limit'));
 		$logger->info("[Importer] Overloaded max_execution_time to: " . ini_get('max_execution_time'));
-
+		
 		$importNewDir = APP_STORAGE_PATH . '/import/new/';
 		$importFailDir = APP_STORAGE_PATH . '/import/fail/';
 
@@ -317,7 +317,7 @@ class ImportCron extends CerberusCronPageExtension {
 			}
 
 			$files = $this->scanDirMessages($subdir);
-
+			 
 			foreach($files as $file) {
 				// If we can't nuke the file, there's no sense in trying to import it
 				if(!is_writeable($file))
@@ -331,42 +331,42 @@ class ImportCron extends CerberusCronPageExtension {
 
 				$dest_file = $move_to_dir . basename($file);
 				@rename($file, $dest_file);
-				$file = $dest_file;
-
+				$file = $dest_file;				
+				
 				// Parse the XML
 				if(!@$xml_root = simplexml_load_file($file)) { /* @var $xml_root SimpleXMLElement */
 					$logger->err("[Importer] Error parsing XML file: " . $file);
 					continue;
 				}
-
+				
 				if(empty($xml_root)) {
 					$logger->err("[Importer] XML root element doesn't exist in: " . $file);
 					continue;
 				}
-
+				
 				$object_type = $xml_root->getName();
 
 				$file_part = basename($file);
-
+				
 				$logger->info("[Importer] Reading ".$file_part." ... ($object_type)");
 
 				if($this->_handleImport($object_type, $xml_root)) { // Success
 					@unlink($file);
 				}
-
+				 
 				if(--$limit <= 0)
 				break;
 			}
-
+				
 			if($limit <= 0)
 			break;
 		}
-
+	  
 		unset($files);
 		unset($subdirs);
 
 		$logger->info("[Importer] Total Runtime: ".((microtime(true)-$runtime)*1000)." ms");
-
+		
 		@imap_errors();
 	}
 
@@ -395,7 +395,7 @@ class ImportCron extends CerberusCronPageExtension {
 		 		break;
 		 }
 	}
-
+	
 	/* _handleImportKbArticle */
 	private function _getCategoryChildByName($list, $node, $name) {
 		if(is_array($node))
@@ -403,14 +403,14 @@ class ImportCron extends CerberusCronPageExtension {
 			if(isset($list[$child_id]) && 0 == strcasecmp($list[$child_id]->name,$name))
 				return $child_id;
 		}
-
+		
 		return NULL;
 	}
-
+	
 	private function _handleImportKbArticle($xml) {
 		static $categoryList = NULL;
 		static $categoryMap = NULL;
-
+		
 		$title = (string) $xml->title;
 		$created = intval((string) $xml->created_date);
 		$content_b64 = (string) $xml->content;
@@ -424,19 +424,19 @@ class ImportCron extends CerberusCronPageExtension {
 			$categoryList = DAO_KbCategory::getWhere();
 			$categoryMap = DAO_KbCategory::getTreeMap();
 		}
-
+		
 		// Handle multiple <categories> elements
 		$categoryIds = array();
 		foreach($xml->categories as $eCategories) {
 			$pid = 0;
 			$ptr =& $categoryMap[$pid];
 			$categoryId = 0;
-
+			
 			foreach($eCategories->category as $eCategory) {
 				$catName = (string) $eCategory;
-
+				
 	//			echo "Looking for '", $catName, "' under $pid ...<br>";
-
+				
 				if(NULL == ($categoryId = $this->_getCategoryChildByName($categoryList, $ptr, $catName))) {
 					$fields = array(
 						DAO_KbCategory::NAME => $catName,
@@ -444,32 +444,32 @@ class ImportCron extends CerberusCronPageExtension {
 					);
 					$categoryId = DAO_KbCategory::create($fields);
 	//				echo " - Not found, inserted as $categoryId<br>";
-
+					
 					$categoryList[$categoryId] = DAO_KbCategory::get($categoryId);
-
+					
 					if(!isset($categoryMap[$pid]))
 						$categoryMap[$pid] = array();
-
-					$categoryMap[$pid][$categoryId] = 0;
+						
+					$categoryMap[$pid][$categoryId] = 0; 
 					$categoryMap[$categoryId] = array();
 					$categoryIds[] = $categoryId;
-
+					
 				} else {
 					$categoryIds[] = $categoryId;
 	//				echo " - Found at $categoryId !<br>";
-
+					
 				}
-
+				
 				$pid = $categoryId;
 				$ptr =& $categoryMap[$categoryId];
 			}
 		}
-
+		
 		// Decode content
 		$content = base64_decode($content_b64);
 
 		// [TODO] Dupe check?  (title in category)
-
+		
 		$fields = array(
 			DAO_KbArticle::TITLE => $title,
 			DAO_KbArticle::UPDATED => $created,
@@ -483,10 +483,10 @@ class ImportCron extends CerberusCronPageExtension {
 			DAO_KbArticle::setCategories($articleId, $categoryIds, false);
 			return true;
 		}
-
+		
 		return false;
 	}
-
+	
 	// [TODO] Move to an extension
 	private function _handleImportTicket($xml) {
 		$settings = CerberusSettings::getInstance();
@@ -496,17 +496,17 @@ class ImportCron extends CerberusCronPageExtension {
 		static $email_to_worker_id = null;
 		static $group_name_to_id = null;
 		static $bucket_name_to_id = null;
-
+		
 		// Hash Workers so we can ID their incoming tickets
 		if(null == $email_to_worker_id) {
 			$email_to_worker_id = array();
-
+			
 			if(is_array($workers))
 			foreach($workers as $worker) { /* @var $worker CerberusWorker */
 				$email_to_worker_id[strtolower($worker->email)] = intval($worker->id);
 			}
 		}
-
+		
 		// Hash Group names
 		if(null == $group_name_to_id) {
 			$groups = DAO_Group::getAll();
@@ -517,7 +517,7 @@ class ImportCron extends CerberusCronPageExtension {
 				$group_name_to_id[strtolower($group->name)] = intval($group->id);
 			}
 		}
-
+		
 		// Hash Bucket names
 		if(null == $bucket_name_to_id) {
 			$buckets = DAO_Bucket::getAll();
@@ -530,7 +530,7 @@ class ImportCron extends CerberusCronPageExtension {
 				$bucket_to_id[$hash] = intval($bucket->id);
 			}
 		}
-
+		
 		$sMask = (string) $xml->mask;
 		$sSubject = substr((string) $xml->subject,0,255);
 		$sGroup = (string) $xml->group;
@@ -539,83 +539,83 @@ class ImportCron extends CerberusCronPageExtension {
 		$iUpdatedDate = (integer) $xml->updated_date;
 		$isWaiting = (integer) $xml->is_waiting;
 		$isClosed = (integer) $xml->is_closed;
-
+		
 		if(empty($sMask)) {
 			$sMask = CerberusApplication::generateTicketMask();
 		}
-
+		
 		// Find the destination Group + Bucket (or create them)
 		if(empty($sGroup)) {
 			$iDestGroupId = 0;
-
+			
 			if(null != ($iDestGroup = DAO_Group::getDefaultGroup()))
 				$iDestGroupId = $iDestGroup->id;
-
+			
 		} elseif(null == ($iDestGroupId = @$group_name_to_id[strtolower($sGroup)])) {
 			$iDestGroupId = DAO_Group::createTeam(array(
-				DAO_Group::TEAM_NAME => $sGroup,
+				DAO_Group::TEAM_NAME => $sGroup,				
 			));
-
+			
 			// Give all superusers manager access to this new group
 			if(is_array($workers))
 			foreach($workers as $worker) {
 				if($worker->is_superuser)
 					DAO_Group::setTeamMember($iDestGroupId,$worker->id,true);
 			}
-
+			
 			// Rehash
 			DAO_Group::getAll(true);
 			$group_name_to_id[strtolower($sGroup)] = $iDestGroupId;
 		}
-
+		
 		if(empty($sBucket)) {
 			$iDestBucketId = 0; // Inbox
-
+			
 		} elseif(null == ($iDestBucketId = @$bucket_name_to_id[md5($iDestGroupId.strtolower($sBucket))])) {
 			$iDestBucketId = DAO_Bucket::create($sBucket, $iDestGroupId);
-
+			
 			// Rehash
 			DAO_Bucket::getAll(true);
 			$bucket_name_to_id[strtolower($sBucket)] = $iDestBucketId;
 		}
-
+			
 		// Xpath the first and last "from" out of "/ticket/messages/message/headers/from"
 		$aMessageNodes = $xml->xpath("/ticket/messages/message");
 		$iNumMessages = count($aMessageNodes);
-
+		
 		@$eFirstMessage = reset($aMessageNodes);
-
+		
 		if(is_null($eFirstMessage)) {
 			$logger->warn('[Importer] Ticket ' . $sMask . " doesn't have any messages.  Skipping.");
 			return false;
 		}
-
+		
 		if(is_null($eFirstMessage->headers) || is_null($eFirstMessage->headers->from)) {
 			$logger->warn('[Importer] Ticket ' . $sMask . " first message doesn't provide a sender address.");
 			return false;
 		}
 
 		$sFirstWrote = self::_parseRfcAddressList($eFirstMessage->headers->from, true);
-
+		
 		if(null == ($firstWroteInst = CerberusApplication::hashLookupAddress($sFirstWrote, true))) {
 			$logger->warn('[Importer] Ticket ' . $sMask . " - Invalid sender adddress: " . $sFirstWrote);
 			return false;
 		}
-
+		
 		$eLastMessage = end($aMessageNodes);
-
+		
 		if(is_null($eLastMessage)) {
 			$logger->warn('[Importer] Ticket ' . $sMask . " doesn't have any messages.  Skipping.");
 			return false;
 		}
-
+		
 		if(is_null($eLastMessage->headers) || is_null($eLastMessage->headers->from)) {
 			$logger->warn('[Importer] Ticket ' . $sMask . " last message doesn't provide a sender address.");
 			return false;
 		}
-
+		
 		$sLastWrote = self::_parseRfcAddressList($eLastMessage->headers->from, true);
-
+		
 		if(null == ($lastWroteInst = CerberusApplication::hashLookupAddress($sLastWrote, true))) {
 			$logger->warn('[Importer] Ticket ' . $sMask . ' last message has an invalid sender address: ' . $sLastWrote);
 			return false;
@@ -632,22 +632,22 @@ class ImportCron extends CerberusCronPageExtension {
 				$iLastWorkerId = 0;
 			}
 		}
-
+		
 		// Dupe check by ticket mask
 		if(null != DAO_Ticket::getTicketByMask($sMask)) {
 			$logger->warn("[Importer] Ticket mask '" . $sMask . "' already exists.  Making it unique.");
-
+			
 			$uniqueness = 1;
 			$origMask = $sMask;
-
-			// Append new uniqueness to the ticket mask:  LLL-NNNNN-NNN-1, LLL-NNNNN-NNN-2, ...
+			
+			// Append new uniqueness to the ticket mask:  LLL-NNNNN-NNN-1, LLL-NNNNN-NNN-2, ... 
 			do {
-				$sMask = $origMask . '-' . ++$uniqueness;
+				$sMask = $origMask . '-' . ++$uniqueness;				
 			} while(null != DAO_Ticket::getTicketIdByMask($sMask));
-
+			
 			$logger->info("[Importer] The unique mask for '".$origMask."' is now '" . $sMask . "'");
 		}
-
+		
 		// Create ticket
 		$fields = array(
 			DAO_Ticket::MASK => $sMask,
@@ -667,21 +667,21 @@ class ImportCron extends CerberusCronPageExtension {
 
 //		echo "Ticket: ",$ticket_id,"<BR>";
 //		print_r($fields);
-
+		
 		// Create requesters
 		if(!is_null($xml->requesters))
 		foreach($xml->requesters->address as $eAddress) { /* @var $eAddress SimpleXMLElement */
 			$sRequesterAddy = (string) $eAddress; // [TODO] RFC822
-
+			
 			// Insert requesters
 			if(null == ($requesterAddyInst = CerberusApplication::hashLookupAddress($sRequesterAddy, true))) {
 				$logger->warn('[Importer] Ticket ' . $sMask . ' - Ignoring malformed requester: ' . $sRequesterAddy);
-				continue;
+				continue;				
 			}
-
+			
 			DAO_Ticket::createRequester($requesterAddyInst->id, $ticket_id);
 		}
-
+		
 		// Create messages
 		$is_first = true;
 		if(!is_null($xml->messages))
@@ -690,14 +690,14 @@ class ImportCron extends CerberusCronPageExtension {
 
 			$sMsgFrom = (string) $eHeaders->from;
 			$sMsgDate = (string) $eHeaders->date;
-
+			
 			$sMsgFrom = self::_parseRfcAddressList($sMsgFrom, true);
-
+			
 			if(NULL == $sMsgFrom) {
 				$logger->warn('[Importer] Ticket ' . $sMask . ' - Invalid message sender: ' . $sMsgFrom . ' (skipping)');
 				continue;
 			}
-
+			
 			if(null == ($msgFromInst = CerberusApplication::hashLookupAddress($sMsgFrom, true))) {
 				$logger->warn('[Importer] Ticket ' . $sMask . ' - Invalid message sender: ' . $sMsgFrom . ' (skipping)');
 				continue;
@@ -705,7 +705,7 @@ class ImportCron extends CerberusCronPageExtension {
 
 			@$msgWorkerId = intval($email_to_worker_id[strtolower($msgFromInst->email)]);
 //			$logger->info('Checking if '.$msgFromInst->email.' is a worker');
-
+			
 	        $fields = array(
 	            DAO_Message::TICKET_ID => $ticket_id,
 	            DAO_Message::CREATED_DATE => strtotime($sMsgDate),
@@ -714,13 +714,13 @@ class ImportCron extends CerberusCronPageExtension {
 	            DAO_Message::WORKER_ID => !empty($msgWorkerId) ? $msgWorkerId : 0,
 	        );
 			$email_id = DAO_Message::create($fields);
-
+			
 			// First thread
 			if($is_first) {
 				DAO_Ticket::updateTicket($ticket_id,array(
 					DAO_Ticket::FIRST_MESSAGE_ID => $email_id
 				));
-
+				
 				$is_first = false;
 			}
 
@@ -731,14 +731,14 @@ class ImportCron extends CerberusCronPageExtension {
 				$sMimeType = (string) $eAttachment->mimetype;
 				$sFileSize = (integer) $eAttachment->size;
 				$sFileContentB64 = (string) $eAttachment->content;
-
+				
 				// [TODO] This could be a little smarter about detecting extensions
 				if(empty($sMimeType))
 					$sMimeType = "application/octet-stream";
-
+				
 				$sFileContent = base64_decode($sFileContentB64);
 				unset($sFileContentB64);
-
+				
 				$fields = array(
 					DAO_Attachment::MESSAGE_ID => $email_id,
 					DAO_Attachment::DISPLAY_NAME => $sFileName,
@@ -747,30 +747,30 @@ class ImportCron extends CerberusCronPageExtension {
 					DAO_Attachment::MIME_TYPE => $sMimeType,
 				);
 				$file_id = DAO_Attachment::create($fields);
-
+				
 				// Write file to disk using ID (Model)
 				$file_path = Model_Attachment::saveToFile($file_id, $sFileContent);
 				unset($sFileContent);
-
+				
 				// Update attachment table
 				DAO_Attachment::update($file_id, array(
 					DAO_Attachment::FILEPATH => $file_path
 				));
 			}
-
+			
 			// Create message content
 			$sMessageContentB64 = (string) $eMessage->content;
 			$sMessageContent = base64_decode($sMessageContentB64);
-
+			
 			// Content-type specific handling
 			if(isset($eMessage->content['content-type'])) { // do we have a content-type?
 				if(strtolower($eMessage->content['content-type']) == 'html') { // html?
 					// Force to plaintext part
 					$sMessageContent = CerberusApplication::stripHTML($sMessageContent);
 				}
-			}
+			}				
 			unset($sMessageContentB64);
-
+			
 			DAO_MessageContent::create($email_id, $sMessageContent);
 			unset($sMessageContent);
 
@@ -779,21 +779,21 @@ class ImportCron extends CerberusCronPageExtension {
 			    DAO_MessageHeader::create($email_id, $eHeader->getName(), (string) $eHeader);
 			}
 		}
-
+		
 		// Create comments
 		if(!is_null($xml->comments))
 		foreach($xml->comments->comment as $eComment) { /* @var $eMessage SimpleXMLElement */
 			$iCommentDate = (integer) $eComment->created_date;
 			$sCommentAuthor = (string) $eComment->author; // [TODO] Address Hash Lookup
-
+			
 			$sCommentTextB64 = (string) $eComment->content;
 			$sCommentText = base64_decode($sCommentTextB64);
 			unset($sCommentTextB64);
-
+			
 			$commentAuthorInst = CerberusApplication::hashLookupAddress($sCommentAuthor, true);
-
+			
 			// [TODO] Sanity checking
-
+			
 			$fields = array(
 				DAO_TicketComment::TICKET_ID => intval($ticket_id),
 				DAO_TicketComment::CREATED => intval($iCommentDate),
@@ -801,22 +801,22 @@ class ImportCron extends CerberusCronPageExtension {
 				DAO_TicketComment::COMMENT => $sCommentText,
 			);
 			$comment_id = DAO_TicketComment::create($fields);
-
+			
 			unset($sCommentText);
 		}
-
+		
 		$logger->info('[Importer] Imported ticket #'.$ticket_id);
-
+		
 		return true;
 	}
-
+	
 	private function _parseRfcAddressList($addressStr, $only_one) {
 			// Need to parse the 'From' header as RFC-2822: "name" <user@domain.com>
 			@$rfcAddressList = imap_rfc822_parse_adrlist($addressStr, 'host');
-
+			
 			if(!is_array($rfcAddressList) || empty($rfcAddressList))
 				return NULL;
-
+			
 
 			$addresses = array();
 			foreach($rfcAddressList as $rfcAddress) {
@@ -825,11 +825,11 @@ class ImportCron extends CerberusCronPageExtension {
 				}
 				$addresses[] =  trim(strtolower($rfcAddress->mailbox.'@'.$rfcAddress->host));
 			}
-
+			
 			if(empty($addresses)) {
 				return NULL;
 			}
-
+			
 			$result = ($only_one) ? $addresses[0] : $addresses;
 			return $result;
 	}
@@ -843,30 +843,30 @@ class ImportCron extends CerberusCronPageExtension {
 		$sEmail = (string) $xml->email;
 		$sPassword = (string) $xml->password;
 		$isSuperuser = (integer) $xml->is_superuser;
-
+		
 		// Dupe check worker email
 		if(null != ($worker_id = DAO_Worker::lookupAgentEmail($sEmail))) {
 			$logger->info('[Importer] Avoiding creating duplicate worker #'.$worker_id.' ('.$sEmail.')');
 			return true;
 		}
-
+		
 		$worker_id = DAO_Worker::create($sEmail, CerberusApplication::generatePassword(8), $sFirstName, $sLastName, '');
-
+		
 		DAO_Worker::updateAgent($worker_id,array(
 			DAO_Worker::PASSWORD => $sPassword, // pre-MD5'd
 			DAO_Worker::IS_SUPERUSER => intval($isSuperuser),
 		));
-
+		
 		// Address to Worker
 		DAO_AddressToWorker::assign($sEmail, $worker_id);
 		DAO_AddressToWorker::update($sEmail,array(
 			DAO_AddressToWorker::IS_CONFIRMED => 1
 		));
-
+		
 		$logger->info('[Importer] Imported worker #'.$worker_id.' ('.$sEmail.')');
-
+		
 		DAO_Worker::clearCache();
-
+		
 		return true;
 	}
 
@@ -882,13 +882,13 @@ class ImportCron extends CerberusCronPageExtension {
 		$sCountry = (string) $xml->country;
 		$sPhone = (string) $xml->phone;
 		$sWebsite = (string) $xml->website;
-
+		
 		// Dupe check org
 		if(null != ($org_id = DAO_ContactOrg::lookup($sName))) {
 			$logger->info('[Importer] Avoiding creating duplicate org #'.$org_id.' ('.$sName.')');
 			return true;
 		}
-
+		
 		$fields = array(
 			DAO_ContactOrg::NAME => $sName,
 			DAO_ContactOrg::STREET => $sStreet,
@@ -900,9 +900,9 @@ class ImportCron extends CerberusCronPageExtension {
 			DAO_ContactOrg::WEBSITE => $sWebsite,
 		);
 		$org_id = DAO_ContactOrg::create($fields);
-
+		
 		$logger->info('[Importer] Imported org #'.$org_id.' ('.$sName.')');
-
+		
 		return true;
 	}
 
@@ -915,7 +915,7 @@ class ImportCron extends CerberusCronPageExtension {
 		$sEmail = (string) $xml->email;
 		$sPassword = (string) $xml->password;
 		$sOrganization = (string) $xml->organization;
-
+		
 		// Dupe check org
 		if(null != ($address = DAO_Address::lookupAddress($sEmail))) {
 			$logger->info('[Importer] Avoiding creating duplicate contact #'.$address->id.' ('.$sEmail.')');
@@ -923,7 +923,7 @@ class ImportCron extends CerberusCronPageExtension {
 			// [TODO] Still associate password if local blank?
 			return true;
 		}
-
+		
 		$fields = array(
 			DAO_Address::FIRST_NAME => $sFirstName,
 			DAO_Address::LAST_NAME => $sLastName,
@@ -935,9 +935,9 @@ class ImportCron extends CerberusCronPageExtension {
 			$fields[DAO_Address::IS_REGISTERED] = 1;
 			$fields[DAO_Address::PASS] = $sPassword;
 		}
-
-    $address_id = DAO_Address::create($fields);
-
+		
+		$address_id = DAO_Address::create($fields);
+		
 		// Associate with organization
 		if(!empty($sOrganization)) {
 			if(null != ($org_id = DAO_ContactOrg::lookup($sOrganization, true))) {
@@ -946,12 +946,12 @@ class ImportCron extends CerberusCronPageExtension {
 				));
 			}
 		}
-
+		
 		$logger->info('[Importer] Imported contact #'.$address_id.' ('.$sEmail.')');
-
+		
 		return true;
 	}
-
+	
 	// [TODO] Move to an extension
 	private function _handleImportComment($xml) {
 		$mask = (string) $xml->mask;
@@ -977,11 +977,11 @@ class ImportCron extends CerberusCronPageExtension {
 				DAO_TicketComment::COMMENT => $note,
 				DAO_TicketComment::ADDRESS_ID => $author_address->id,
 			);
-
+			
 			if(null !== ($comment_id = DAO_TicketComment::create($fields)))
 				return true;
 		}
-
+		
 		return false;
 	}
 
@@ -1010,9 +1010,9 @@ class ImportCron extends CerberusCronPageExtension {
 class Pop3Cron extends CerberusCronPageExtension {
 	function run() {
 		$logger = DevblocksPlatform::getConsoleLog();
-
+		
 		$logger->info("[POP3] Starting POP3 Task");
-
+		
 		if (!extension_loaded("imap")) die("IMAP Extension not loaded!");
 		@set_time_limit(0); // Unlimited (if possible)
 		@ini_set('memory_limit','64M');
@@ -1020,12 +1020,12 @@ class Pop3Cron extends CerberusCronPageExtension {
 		$accounts = DAO_Mail::getPop3Accounts(); /* @var $accounts CerberusPop3Account[] */
 
 		$timeout = ini_get('max_execution_time');
-
+		
 		// Allow runtime overloads (by host, etc.)
 		@$gpc_pop3_max = DevblocksPlatform::importGPC($_REQUEST['pop3_max'],'integer');
-
+		
 		$max_downloads = !empty($gpc_pop3_max) ? $gpc_pop3_max : $this->getParam('max_messages', (($timeout) ? 20 : 50));
-
+		
 		// [JAS]: Make sure our output directory is writeable
 		if(!is_writable(APP_MAIL_PATH . 'new' . DIRECTORY_SEPARATOR)) {
 			$logger->err("[POP3] The mail storage directory is not writeable.  Skipping POP3 download.");
@@ -1037,7 +1037,7 @@ class Pop3Cron extends CerberusCronPageExtension {
 			continue;
 
 			$logger->info('[POP3] Account being parsed is '. $account->nickname);
-
+			 
 			switch($account->protocol) {
 				default:
 				case 'pop3': // 110
@@ -1046,14 +1046,14 @@ class Pop3Cron extends CerberusCronPageExtension {
 					$account->port
 					);
 					break;
-
+					 
 				case 'pop3-ssl': // 995
 					$connect = sprintf("{%s:%d/pop3/ssl/novalidate-cert}INBOX",
 					$account->host,
 					$account->port
 					);
 					break;
-
+					 
 				case 'imap': // 143
 					$connect = sprintf("{%s:%d/notls}INBOX",
 					$account->host,
@@ -1070,20 +1070,20 @@ class Pop3Cron extends CerberusCronPageExtension {
 			}
 
 			$runtime = microtime(true);
-
+			 
 			if(false === ($mailbox = @imap_open($connect,
 			!empty($account->username)?$account->username:"",
 			!empty($account->password)?$account->password:""))) {
 				$logger->err("[POP3] Failed with error: ".imap_last_error());
 				continue;
 			}
-
+			 
 			$messages = array();
 			$check = imap_check($mailbox);
-
+			 
 			// [TODO] Make this an account setting?
 			$total = min($max_downloads,$check->Nmsgs);
-
+			 
 			$logger->info('[POP3] Init time: '.((microtime(true)-$runtime)*1000)," ms");
 
 			$runtime = microtime(true);
@@ -1094,11 +1094,11 @@ class Pop3Cron extends CerberusCronPageExtension {
 				 * threshold then use the attachment parser (imap_fetchstructure) to toss
 				 * non-plaintext until the message fits.
 				 */
-
+				 
 				$msgno = $i;
-
+				 
 				$time = microtime(true);
-
+				 
 				$headers = imap_fetchheader($mailbox, $msgno);
 				$body = imap_body($mailbox, $msgno);
 
@@ -1113,7 +1113,6 @@ class Pop3Cron extends CerberusCronPageExtension {
 				$fp = fopen($filename,'w');
 
 				if($fp) {
-          fwrite($fp,"X-downloaded-from: $account->nickname\r\n");
 					fwrite($fp,$headers,strlen($headers));
 					fwrite($fp,"\r\n\r\n");
 					fwrite($fp,$body,strlen($body));
@@ -1132,15 +1131,15 @@ class Pop3Cron extends CerberusCronPageExtension {
 
 				$time = microtime(true) - $time;
 				$logger->info("[POP3] Downloaded message ".$msgno." (".sprintf("%d",($time*1000))." ms)");
-
+				
 				imap_delete($mailbox, $msgno);
 				continue;
 			}
-
+			 
 			imap_expunge($mailbox);
 			imap_close($mailbox);
 			imap_errors();
-
+			 
 			$logger->info("[POP3] Total Runtime: ".((microtime(true)-$runtime)*1000)." ms");
 		}
 	}

@@ -21,7 +21,7 @@
 		<tu tuid='core.menu.research'>
 			<tuv xml:lang="en_US"><seg>research</seg></tuv>
 		</tu>
-
+		
 		<tu tuid='display.tab.comments'>
 			<tuv xml:lang="en_US"><seg>Comments (%s)</seg></tuv>
 		</tu>
@@ -206,7 +206,7 @@
 		</tu>
 		<tu tuid='common.months'>
 			<tuv xml:lang="en_US"><seg>months</seg></tuv>
-		</tu>
+		</tu>		
 		<tu tuid='common.more'>
 			<tuv xml:lang="en_US"><seg>More</seg></tuv>
 		</tu>
@@ -230,16 +230,16 @@
 		</tu>
 		<tu tuid='common.optional'>
 			<tuv xml:lang="en_US"><seg>optional</seg></tuv>
-		</tu>
+		</tu>		
 		<tu tuid='common.options'>
 			<tuv xml:lang="en_US"><seg>Options</seg></tuv>
 		</tu>
 		<tu tuid='common.or'>
 			<tuv xml:lang="en_US"><seg>or</seg></tuv>
-		</tu>
+		</tu>		
 		<tu tuid='common.order'>
 			<tuv xml:lang="en_US"><seg>order</seg></tuv>
-		</tu>
+		</tu>		
 		<tu tuid='common.languages'>
 			<tuv xml:lang="en_US"><seg>Languages</seg></tuv>
 		</tu>
@@ -380,7 +380,7 @@
 		</tu>
 
 		<!-- ACL -->
-
+		
 			<!-- Address Book -->
 		<tu tuid='acl.core.addybook'>
 			<tuv xml:lang="en_US"><seg>[Address Book] Can browse the address book</seg></tuv>
@@ -453,7 +453,7 @@
 		<tu tuid='acl.core.research'>
 			<tuv xml:lang="en_US"><seg>[Research] Can browse research resources</seg></tuv>
 		</tu>
-
+		
 			<!-- RSS -->
 		<tu tuid='acl.core.rss'>
 			<tuv xml:lang="en_US"><seg>[RSS] Can export lists as RSS feeds</seg></tuv>
@@ -472,7 +472,7 @@
 		<tu tuid='acl.core.tasks.view.actions.export'>
 			<tuv xml:lang="en_US"><seg>[Tasks] Can export task lists to CSV/XML</seg></tuv>
 		</tu>
-
+		
 			<!-- Tickets -->
 		<tu tuid='acl.core.ticket.actions.assign'>
 			<tuv xml:lang="en_US"><seg>[Tickets] Can assign tickets to other workers</seg></tuv>
@@ -501,9 +501,6 @@
 		<tu tuid='acl.core.ticket.view.actions.pile_sort'>
 			<tuv xml:lang="en_US"><seg>[Tickets] Can use the pile sorter on lists</seg></tuv>
 		</tu>
-    <tu tuid='acl.core.ticket.view.whos_online'>
-      <tuv xml:lang="en_US"><seg>[Tickets] Allows user to see who's Online</seg></tuv>
-    </tu>
 
 		<!-- Activity -->
 		
@@ -515,7 +512,7 @@
 		</tu>
 		
 		<!-- Addresses -->
-
+		
 		<tu tuid='address.id'>
 			<tuv xml:lang="en_US"><seg>ID</seg></tuv>
 		</tu>
@@ -545,7 +542,7 @@
 		</tu>
 
 		<!-- Address Book -->
-
+		
 		<tu tuid='addy_book.address.add'>
 			<tuv xml:lang="en_US"><seg>Add Contact</seg></tuv>
 		</tu>
@@ -632,7 +629,7 @@
 		</tu>
 
 		<!-- Attachment -->
-
+		
 		<tu tuid='attachment.id'>
 			<tuv xml:lang="en_US"><seg>Attachment ID</seg></tuv>
 		</tu>
@@ -653,7 +650,7 @@
 		</tu>
 
 		<!-- Configuration -->
-
+		
 		<tu tuid='config.mail.pop3.error_hostname'>
 			<tuv xml:lang="en_US"><seg>Error: No hostname provided.</seg></tuv>
 		</tu>
@@ -663,7 +660,7 @@
 		<tu tuid='config.mail.smtp.failed'>
 			<tuv xml:lang="en_US"><seg>SMTP Connection Failed:</seg></tuv>
 		</tu>
-
+		
 
 		<!-- Contact orgs -->
 		<tu tuid='contact_org.city'>
@@ -772,7 +769,7 @@
 		<tu tuid='files.not_found'>
 			<tuv xml:lang="en_US"><seg>File not found.</seg></tuv>
 		</tu>
-
+		
 		<!-- Header -->
 
 		<tu tuid='header.config'>
@@ -873,7 +870,7 @@
 		</tu>
 
 		<!-- Home -->
-
+		
 		<tu tuid='home.my_notifications.view.title'>
 			<tuv xml:lang="en_US"><seg>Notifications for %s</seg></tuv>
 		</tu>
@@ -906,13 +903,13 @@
 		</tu>
 
 		<!-- Display Ticket -->
-
+		
 		<tu tuid='display.invalid_ticket'>
 			<tuv xml:lang="en_US"><seg>Invalid Ticket!</seg></tuv>
 		</tu>
-
+		
 		<!-- Display: Conversation -->
-
+		
 		<tu tuid='display.convo.attachments_label'>
 			<tuv xml:lang="en_US"><seg>Attachments:</seg></tuv>
 		</tu>
@@ -937,22 +934,22 @@
 		<tu tuid='display.convo.unknown_format'>
 			<tuv xml:lang="en_US"><seg>Unknown Format</seg></tuv>
 		</tu>
-
+		
 		<tu tuid='display.button.read_all'>
 			<tuv xml:lang="en_US"><seg>Read All</seg></tuv>
 		</tu>
 		<tu tuid='display.button.split_ticket'>
 			<tuv xml:lang="en_US"><seg>Split Ticket</seg></tuv>
 		</tu>
-
-
+		
+		
 		<tu tuid='display.listnav.active_list'>
 			<tuv xml:lang="en_US"><seg>Active list:</seg></tuv>
 		</tu>
 		<tu tuid='display.listnav.showing_of_total'>
 			<tuv xml:lang="en_US"><seg>(%s of %s)</seg></tuv>
 		</tu>
-
+		
 		<tu tuid='display.reply.attachments_add'>
 			<tuv xml:lang="en_US"><seg>Add attachments:</seg></tuv>
 		</tu>
@@ -968,12 +965,9 @@
 		<tu tuid='display.reply.email_templates'>
 			<tuv xml:lang="en_US"><seg>E-mail Templates</seg></tuv>
 		</tu>
-    <tu tuid='display.reply.email_templates.limit_group'>
-      <tuv xml:lang="en_US"><seg>Limit to Group: </seg></tuv>
-    </tu>
 		<tu tuid='display.reply.forward.banner'>
 			<tuv xml:lang="en_US"><seg>---- Forwarded message ----</seg></tuv>
-		</tu>
+		</tu>		
 		<tu tuid='display.reply.insert_sig'>
 			<tuv xml:lang="en_US"><seg>Insert Signature</seg></tuv>
 		</tu>
@@ -1010,19 +1004,19 @@
 		<tu tuid='display.reply.next.resume_eg'>
 			<tuv xml:lang="en_US"><seg>(e.g. "Friday", "7 days", "Tomorrow 11:15AM", "Dec 31")</seg></tuv>
 		</tu>
-
+		
 		<tu tuid='display.reply.reply_banner'>
 			<tuv xml:lang="en_US"><seg>On %s, %s wrote:</seg></tuv>
 		</tu>
 		<tu tuid='display.reply.warn_assigned'>
 			<tuv xml:lang="en_US"><seg>Warning: You are replying to a ticket assigned to %s</seg></tuv>
 		</tu>
-
+		
 		<tu tuid='display.shortcut.close'>
-			<tuv xml:lang="en_US"><seg>Close this ticket (C) (Disabled)</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Close this ticket (C)</seg></tuv>
 		</tu>
 		<tu tuid='display.shortcut.delete'>
-			<tuv xml:lang="en_US"><seg>Delete this ticket (X) (Disabled)</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Delete this ticket (X)</seg></tuv>
 		</tu>
 		<tu tuid='display.shortcut.print'>
 			<tuv xml:lang="en_US"><seg>Print this ticket (P)</seg></tuv>
@@ -1034,7 +1028,7 @@
 			<tuv xml:lang="en_US"><seg>Reload this ticket</seg></tuv>
 		</tu>
 		<tu tuid='display.shortcut.spam'>
-			<tuv xml:lang="en_US"><seg>Report this ticket as spam (S) (Disabled)</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Report this ticket as spam (S)</seg></tuv>
 		</tu>
 		<tu tuid='display.shortcut.surrender'>
 			<tuv xml:lang="en_US"><seg>Unassign this ticket from yourself (U)</seg></tuv>
@@ -1061,9 +1055,9 @@
 		<tu tuid='display.ui.sticky_note'>
 			<tuv xml:lang="en_US"><seg>Sticky Note</seg></tuv>
 		</tu>
-
+		
 		<!-- Mail -->
-
+		
 		<tu tuid='mail.inbound'>
 			<tuv xml:lang="en_US"><seg>Inbound</seg></tuv>
 		</tu>
@@ -1088,7 +1082,7 @@
 		<tu tuid='mail.not_waiting'>
 			<tuv xml:lang="en_US"><seg>Not Waiting</seg></tuv>
 		</tu>
-
+		
 		<tu tuid='mail.overview'>
 			<tuv xml:lang="en_US"><seg>Overview</seg></tuv>
 		</tu>
@@ -1113,7 +1107,7 @@
 		<tu tuid='mail.overview.waiting.title'>
 			<tuv xml:lang="en_US"><seg>[Waiting] %s</seg></tuv>
 		</tu>
-
+		
 		<tu tuid='mail.outbound'>
 			<tuv xml:lang="en_US"><seg>Outbound</seg></tuv>
 		</tu>
@@ -1129,7 +1123,7 @@
 		<tu tuid='mail.take'>
 			<tuv xml:lang="en_US"><seg>Take</seg></tuv>
 		</tu>
-
+		
 		<tu tuid='mail.view.add_filter'>
 			<tuv xml:lang="en_US"><seg>-add filter-</seg></tuv>
 		</tu>
@@ -1140,7 +1134,7 @@
 		<tu tuid='mail.workflow'>
 			<tuv xml:lang="en_US"><seg>Workflow</seg></tuv>
 		</tu>
-
+		
 		<tu tuid='mail.workspaces.create'>
 			<tuv xml:lang="en_US"><seg>Click here to create your first workspace.</seg></tuv>
 		</tu>
@@ -1159,7 +1153,7 @@
 		<tu tuid='mail.workspaces.workspace'>
 			<tuv xml:lang="en_US"><seg>Workspace</seg></tuv>
 		</tu>
-
+		
 		<!-- Message -->
 
 		<tu tuid='message.header.bcc'>
@@ -1180,7 +1174,7 @@
 		<tu tuid='message.header.to'>
 			<tuv xml:lang="en_US"><seg>To</seg></tuv>
 		</tu>
-
+		
 		<tu tuid='message.content'>
 			<tuv xml:lang="en_US"><seg>Message Content</seg></tuv>
 		</tu>
@@ -1223,7 +1217,7 @@ If you did not request this, do not click the link above.  The request will expi
 		<tu tuid='research.tab.links'>
 			<tuv xml:lang="en_US"><seg>Links</seg></tuv>
 		</tu>
-
+		
 		<!-- RSS -->
 
 		<tu tuid='rss.bad_feed'>
@@ -1231,7 +1225,7 @@ If you did not request this, do not click the link above.  The request will expi
 		</tu>
 
 		<!-- Signin -->
-
+		
 		<tu tuid='signin.forgot.mail.subject'>
 			<tuv xml:lang="en_US"><seg>Confirm helpdesk password recovery.</seg></tuv>
 		</tu>
@@ -1305,17 +1299,17 @@ login &lt;ftp
 		</tu>
 		<tu tuid='search.operator'>
 			<tuv xml:lang="en_US"><seg>operator</seg></tuv>
-		</tu>
+		</tu>		
 		<tu tuid='search.string.examples'>
 			<tuv xml:lang="en_US"><seg>Use an asterisk (*) for wildcards.
 For example: *receipt*</seg></tuv>
-		</tu>
+		</tu>		
 		<tu tuid='search.value'>
 			<tuv xml:lang="en_US"><seg>value</seg></tuv>
-		</tu>
+		</tu>		
 		<tu tuid='search.values'>
 			<tuv xml:lang="en_US"><seg>values</seg></tuv>
-		</tu>
+		</tu>		
 
 		<!-- Statuses -->
 
@@ -1349,7 +1343,7 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='tasks.ticket.tab.view'>
 			<tuv xml:lang="en_US"><seg>Ticket Tasks</seg></tuv>
 		</tu>
-
+		
 		<!-- Groups -->
 		<tu tuid='group.manager'>
 			<tuv xml:lang="en_US"><seg>manager</seg></tuv>
@@ -1357,7 +1351,7 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='group.member'>
 			<tuv xml:lang="en_US"><seg>member</seg></tuv>
 		</tu>
-
+		
 		<!-- Task -->
 
 		<tu tuid='task.completed_date'>
@@ -1387,7 +1381,7 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='task.worker_id'>
 			<tuv xml:lang="en_US"><seg>Worker</seg></tuv>
 		</tu>
-
+		
 		<tu tuid='task.status.active'>
 			<tuv xml:lang="en_US"><seg>Active</seg></tuv>
 		</tu>
@@ -1507,8 +1501,8 @@ For example: *receipt*</seg></tuv>
 		</tu>
 		<tu tuid='views.jump_to_actions'>
 			<tuv xml:lang="en_US"><seg>jump to actions</seg></tuv>
-		</tu>
-
+		</tu>	
+		
 		<!-- Whos Online -->
 
 		<tu tuid='whos_online.heading'>
@@ -1556,7 +1550,7 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='worker_event.worker_id'>
 			<tuv xml:lang="en_US"><seg>Worker</seg></tuv>
 		</tu>
-
+		
 		<!-- Workflow -->
 
 		<tu tuid='workflow.assigned'>
@@ -1633,6 +1627,6 @@ For example: *receipt*</seg></tuv>
 
 	</body>
 </tmx>
-<!--
-
+<!-- 
+	
 -->

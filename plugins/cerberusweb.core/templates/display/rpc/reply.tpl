@@ -18,7 +18,7 @@
 					</td>
 				</tr>
 				{/if}
-
+				
 				{if $is_forward}
 					<tr>
 						<td width="1%" nowrap="nowrap"><b>{$translate->_('message.header.to')|capitalize}: </b></td>
@@ -36,29 +36,29 @@
 							{/foreach}
 							</span>
 							(<a href="javascript:;" onclick="genericAjaxPanel('c=display&a=showRequestersPanel&msg_id={$message->id}&ticket_id={$ticket->id}',this,false);" style="color:rgb(00,120,0);">{$translate->_('common.edit')|lower}</a>)
-							<!--
+							<!-- 
 							<input type="text" size="45" name="to" value="" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;">
-							-->
+							-->					
 						</td>
 					</tr>
 				{/if}
-
+				
 				<tr>
 					<td width="1%" nowrap="nowrap">{$translate->_('message.header.cc')|capitalize}: </td>
 					<td width="99%" align="left">
-						<input type="text" size="45" id="replyForm_cc" name="cc" value="" style="width:50%;border:1px solid rgb(180,180,180);padding:2px;">
+						<input type="text" size="45" id="replyForm_cc" name="cc" value="" style="width:50%;border:1px solid rgb(180,180,180);padding:2px;">					
 					</td>
 				</tr>
 				<tr>
 					<td width="1%" nowrap="nowrap">{$translate->_('message.header.bcc')|capitalize}: </td>
 					<td width="99%" align="left">
-						<input type="text" size="45" id="replyForm_bcc" name="bcc" value="" style="width:50%;border:1px solid rgb(180,180,180);padding:2px;">
+						<input type="text" size="45" id="replyForm_bcc" name="bcc" value="" style="width:50%;border:1px solid rgb(180,180,180);padding:2px;">					
 					</td>
 				</tr>
 				<tr>
 					<td width="1%" nowrap="nowrap">{$translate->_('message.header.subject')|capitalize}: </td>
 					<td width="99%" align="left">
-						<input type="text" size="45" id="replyForm_subject" name="subject" value="{if $is_forward}Fwd: {/if}{$ticket->subject|escape}" style="width:50%;border:1px solid rgb(180,180,180);padding:2px;">
+						<input type="text" size="45" id="replyForm_subject" name="subject" value="{if $is_forward}Fwd: {/if}{$ticket->subject|escape}" style="width:50%;border:1px solid rgb(180,180,180);padding:2px;">					
 					</td>
 				</tr>
 			</table>
@@ -132,7 +132,7 @@
 				<td style="padding-left:5px;">
 					<H2>{$translate->_('display.convo.attachments_label')|capitalize}</H2>
 					{'display.reply.attachments_limit'|devblocks_translate:$upload_max_filesize}<br>
-
+					
 					{if $is_forward && !empty($forward_attachments)}
 						<br>
 						<b>{$translate->_('display.reply.attachments_forward')|capitalize}</b><br>
@@ -141,8 +141,8 @@
 						{/foreach}
 						<br>
 					{/if}
-
-					<b>{$translate->_('display.reply.attachments_add')}</b>
+					
+					<b>{$translate->_('display.reply.attachments_add')}</b> 
 					(<a href="javascript:;" onclick="appendFileInput('displayReplyAttachments','attachment[]');">{$translate->_('display.reply.attachments_more')|lower}</a>)
 					(<a href="javascript:;" onclick="clearDiv('displayReplyAttachments');appendFileInput('displayReplyAttachments','attachment[]');">{$translate->_('common.clear')|lower}</a>)
 					<br>
@@ -150,7 +150,7 @@
 						<tr>
 							<td width="100%" valign="top">
 								<div id="displayReplyAttachments">
-									<input type="file" name="attachment[]" size="45"></input><br>
+									<input type="file" name="attachment[]" size="45"></input><br> 
 								</div>
 							</td>
 						</tr>
@@ -172,19 +172,19 @@
 					<table cellpadding="2" cellspacing="0" border="0">
 						<tr>
 							<td nowrap="nowrap" valign="top" colspan="2">
-								<label><input type="radio" name="closed" value="0" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','none');" {if !$ticket->is_closed}checked{/if}>{$translate->_('status.open')|capitalize}</label>
-								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','block');">{$translate->_('status.waiting')|capitalize}</label>
+								<label><input type="radio" name="closed" value="0" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','none');">{$translate->_('status.open')|capitalize}</label>
+								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','block');" {if !$ticket->is_closed}checked{/if}>{$translate->_('status.waiting')|capitalize}</label>
 								{if $active_worker->hasPriv('core.ticket.actions.close') || ($ticket->is_closed && !$ticket->is_deleted)}<label><input type="radio" name="closed" value="1" onclick="toggleDiv('replyOpen{$message->id}','none');toggleDiv('replyClosed{$message->id}','block');" {if $ticket->is_closed}checked{/if}>{$translate->_('status.closed')|capitalize}</label>{/if}
 								<br>
 								<br>
-
-						      	<div id="replyClosed{$message->id}" style="display:none;margin-left:10px;">
-						      	<b>{$translate->_('display.reply.next.resume')}</b> {$translate->_('display.reply.next.resume_eg')}<br>
+								
+						      	<div id="replyClosed{$message->id}" style="display:block;margin-left:10px;">
+						      	<b>{$translate->_('display.reply.next.resume')}</b> {$translate->_('display.reply.next.resume_eg')}<br> 
 						      	<input type="text" name="ticket_reopen" size="55" value="{if !empty($ticket->due_date)}{$ticket->due_date|devblocks_date}{/if}"><br>
 						      	{$translate->_('display.reply.next.resume_blank')}<br>
 						      	<br>
 						      	</div>
-
+		
 								<div style="margin-left:10px;">
 								<b>{$translate->_('display.reply.next.handle_reply')}</b><br>
 						      	<select name="next_worker_id" onchange="toggleDiv('replySurrender{$message->id}',this.selectedIndex?'block':'none');">
@@ -202,17 +202,17 @@
 						      	{/if}
 						      	</div>
 						      	<br>
-
+						      	
 						      	<div id="replySurrender{$message->id}" style="display:{if $ticket->next_worker_id}block{else}none{/if};margin-left:10px;">
-									<b>{$translate->_('display.reply.next.handle_reply_after')}</b> {$translate->_('display.reply.next.handle_reply_after_eg')}<br>
+									<b>{$translate->_('display.reply.next.handle_reply_after')}</b> {$translate->_('display.reply.next.handle_reply_after_eg')}<br>  
 							      	<input type="text" name="unlock_date" size="32" maxlength="255" value="">
 							      	<button type="button" onclick="this.form.unlock_date.value='+2 hours';">{$translate->_('display.reply.next.handle_reply_after_2hrs')}</button>
 							      	<br>
 							      	<br>
 							    </div>
-
+		
 								{if $active_worker->hasPriv('core.ticket.actions.move')}
-								<b>{$translate->_('display.reply.next.move')}</b><br>
+								<b>{$translate->_('display.reply.next.move')}</b><br>  
 						      	<select name="bucket_id">
 						      		<option value="">-- {$translate->_('display.reply.next.move.no_thanks')|lower} --</option>
 						      		{if empty($ticket->category_id)}{assign var=t_or_c value="t"}{else}{assign var=t_or_c value="c"}{/if}
@@ -234,10 +234,10 @@
 						      	</select><br>
 						      	<br>
 						      	{/if}
-
+						      	
 								<div id="replyOpen{$message->id}" style="display:{if $ticket->is_closed}none{else}block{/if};">
 						      	</div>
-
+		
 							</td>
 						</tr>
 					</table>

@@ -38,8 +38,7 @@
 <br>
 
 <b>{$translate->_('timetracking.ui.entry_panel.note')}</b> {$translate->_('timetracking.ui.entry_panel.note_hint')}<br>
-<TEXTAREA name="notes" ROWS=4 style="width:98%;" >{$model->notes|escape}</TEXTAREA>
-<br>
+<input type="text" name="notes" size="45" maxlength="255" style="width:98%;" value="{$model->notes|escape}"><br>
 <br>
 
 <b>{$translate->_('timetracking.ui.entry_panel.debit_time_client')}</b> {$translate->_('timetracking.ui.entry_panel.debit_time_client_hint')}<br>

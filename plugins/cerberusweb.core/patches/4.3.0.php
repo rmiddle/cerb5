@@ -16,7 +16,7 @@
 ***********************************************************************/
 
 $db = DevblocksPlatform::getDatabaseService();
-$datadict = NewDataDictionary($db,'mysql'); /* @var $datadict ADODB2_mysql */ // ,'mysql'
+$datadict = NewDataDictionary($db,'mysql'); /* @var $datadict ADODB2_mysql */ // ,'mysql' 
 
 $tables = $datadict->MetaTables();
 $tables = array_flip($tables);
@@ -41,7 +41,7 @@ $indexes = $datadict->MetaIndexes('address',false);
 if(!isset($columns['IS_REGISTERED'])) {
 	$sql = $datadict->AddColumnSQL('address',"is_registered I1 DEFAULT 0 NOTNULL");
 	$datadict->ExecuteSQLArray($sql);
-
+	
 	$sql = $datadict->CreateIndexSQL('is_registered','address','is_registered');
 	$datadict->ExecuteSQLArray($sql);
 }
@@ -57,38 +57,23 @@ if(!isset($columns['PASS'])) {
 if(isset($tables['address_auth'])) {
 	$sql = "SELECT address_id, pass FROM address_auth WHERE pass != ''";
 	$rs = $db->Execute($sql);
-
+	
 	// Loop through 'address_auth' records and inject them into 'address'
 	while(!$rs->EOF) {
 		$address_id = $rs->fields['address_id'];
 		$pass = $rs->fields['pass'];
-
+		
 		$db->Execute(sprintf("UPDATE address SET is_registered=1, pass=%s WHERE id = %d",
 			$db->qstr($pass),
 			$address_id
 		));
-
+		
 		$rs->MoveNext();
 	}
-
+	
 	// Drop 'address_auth'
 	$sql = $datadict->DropTableSQL('address_auth');
 	$datadict->ExecuteSQLArray($sql);
 }
-
-// ===========================================================================
-// Add the mail_template.team_id to mail_template so we can limit the display of templates based on group ownwership
-
-$columns = $datadict->MetaColumns('mail_template');
-$indexes = $datadict->MetaIndexes('mail_template',false);
-
-if(!isset($columns['team_id'])) {
-  $sql = $datadict->AddColumnSQL('mail_template', 'team_id I4 DEFAULT 0 NOTNULL');
-  $datadict->ExecuteSQLArray($sql);
-
-  $sql = $datadict->CreateIndexSQL('team_id','mail_template','team_id');
-  $datadict->ExecuteSQLArray($sql);
-}
-
 
 return TRUE;

@@ -11,7 +11,7 @@
 	<h2>Mail-to-Group Routing</h2>
 	<br>
 
-	<b>Which group inbox should receive any unrouted new mail?</b><br>
+	<b>Which group inbox should receive any unrouted new mail?</b><br> 
 	<select name="default_group_id">
 		<option value="0">-- None (Bounce) --
 	{if !empty($groups)}
@@ -21,7 +21,7 @@
 	{/if}
 	</select><br>
 	<br>
-
+	
 	{if !empty($rules)}
 	<table cellspacing="2" cellpadding="2">
 		<tr>
@@ -44,7 +44,7 @@
 					<a href="javascript:;" onclick="genericAjaxPanel('c=config&a=showMailRoutingRulePanel&id={$rule_id}',null,false,'550px');" style="color:rgb(0,120,0);font-weight:bold;">{$rule->name|escape}</a>
 					{if $rule->is_stackable}<span style="font-size:90%;padding-left:5px;color:rgb(0,120,0);">(Stackable)</span>{/if}
 					<br>
-
+					
 					{foreach from=$rule->criteria item=crit key=crit_key}
 						{if $crit_key=='tocc'}
 							To/Cc = <b>{$crit.value}</b><br>
@@ -57,7 +57,7 @@
 						{elseif $crit_key=='body'}
 							Body = <b>{$crit.value}</b><br>
 						{elseif $crit_key=='dayofweek'}
-							Day of Week is
+							Day of Week is 
 								{foreach from=$crit item=day name=timeofday}
 								<b>{$day}</b>{if !$smarty.foreach.timeofday.last} or {/if}
 								{/foreach}
@@ -65,17 +65,17 @@
 						{elseif $crit_key=='timeofday'}
 							{assign var=from_time value=$crit.from|explode:':'}
 							{assign var=to_time value=$crit.to|explode:':'}
-							Time of Day
-								<i>between</i>
-								<b>{$from_time.0|string_format:"%d"}:{$from_time.1|string_format:"%02d"}</b>
-								<i>and</i>
-								<b>{$to_time.0|string_format:"%d"}:{$to_time.1|string_format:"%02d"}</b>
+							Time of Day 
+								<i>between</i> 
+								<b>{$from_time.0|string_format:"%d"}:{$from_time.1|string_format:"%02d"}</b> 
+								<i>and</i> 
+								<b>{$to_time.0|string_format:"%d"}:{$to_time.1|string_format:"%02d"}</b> 
 								<br>
 						{elseif 0==strcasecmp('cf_',substr($crit_key,0,3))}
-							{include file="$core_tpl/internal/custom_fields/filters/render_criteria_list.tpl"}
+							{include file="$core_tpl/internal/custom_fields/filters/render_criteria_list.tpl"}					
 						{/if}
 					{/foreach}
-
+					
 					<blockquote style="margin:2px;margin-left:20px;font-size:95%;color:rgb(100,100,100);">
 						{foreach from=$rule->actions item=action key=action_key}
 							{if $action_key=="status"}
@@ -84,7 +84,7 @@
 								{assign var=g_id value=$action.group_id}
 								{assign var=b_id value=$action.bucket_id}
 								{if isset($groups.$g_id) && (0==$b_id || isset($buckets.$b_id))}
-									Move to
+									Move to 
 									<b>{$groups.$g_id->name}</b>:
 									<b>{if 0==$b_id}Inbox{else}{$buckets.$b_id->name}{/if}</b>
 								{/if}
@@ -110,7 +110,7 @@
 			</tr>
 		{/foreach}
 	</table>
-	<br>
+	<br>	
 	{/if}
 
 	<button type="submit"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/check.gif{/devblocks_url}" align="top"> {$translate->_('common.save_changes')|capitalize}</button>

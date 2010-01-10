@@ -41,7 +41,7 @@
 			<label><input type="checkbox" id="chkRuleTimeOfDay" name="rules[]" value="timeofday" {if !is_null($crit_timeofday)}checked="checked"{/if}> Time of Day:</label>
 		</td>
 		<td valign="top">
-			<i>from</i>
+			<i>from</i> 
 			<select name="timeofday_from">
 				{section start=0 loop=24 name=hr}
 				{section start=0 step=30 loop=60 name=min}
@@ -54,7 +54,7 @@
 				{/section}
 				{/section}
 			</select>
-			 <i>to</i>
+			 <i>to</i> 
 			<select name="timeofday_to">
 				{section start=0 loop=24 name=hr}
 				{section start=0 step=30 loop=60 name=min}
@@ -158,7 +158,7 @@
 	<tr>
 		<td valign="top">
 			<input type="checkbox" name="rules[]" value="header{$smarty.section.headers.iteration}" id="chkRuleHeader{$smarty.section.headers.iteration}" {if !is_null($crit_headerx)}checked="checked"{/if}>
-			<input type="text" name="{$headerx}" value="{$crit_headerx.header|escape}" size="16" onchange="document.getElementById('chkRuleHeader{$smarty.section.headers.iteration}').checked=((0==this.value.length)?false:true);">:
+			<input type="text" name="{$headerx}" value="{$crit_headerx.header|escape}" size="16" onchange="document.getElementById('chkRuleHeader{$smarty.section.headers.iteration}').checked=((0==this.value.length)?false:true);">: 
 		</td>
 		<td valign="top">
 			<input type="text" name="value_{$headerx}" value="{$crit_headerx.value|escape}" size="45">
@@ -178,7 +178,7 @@
 {assign var=ext_crit value=$filter->criteria.$extid}
 <label><input type="checkbox" name="rules[]" value="{$extid}" {if !is_null($ext_crit)}checked="checked"{/if} onclick="toggleDiv('crit_{$extid}',(this.checked?'block':'none'));"> <b>{$filter_criteria_ext->manifest->name}</b></label><br>
 <blockquote style="margin:0px 0px 5px 10px;display:{if !is_null($ext_crit)}block{else}none{/if};" id="crit_{$extid}">
-  {if method_exists($filter_criteria_ext,'renderConfig')}{$filter_criteria_ext->renderConfig($filter)}{/if}
+	{if method_exists($filter_criteria_ext,'renderConfig')}{$filter_criteria_ext->renderConfig($filter)}{/if}
 </blockquote>
 {/foreach}
 {/if}
@@ -192,7 +192,7 @@
 {assign var=ext_act value=$filter->actions.$extid}
 <label><input type="checkbox" name="do[]" value="{$extid}" {if !is_null($ext_act)}checked="checked"{/if} onclick="toggleDiv('do_{$extid}',(this.checked?'block':'none'));"> {$filter_action_ext->manifest->name}</label><br>
 <blockquote style="margin:0px 0px 5px 10px;display:{if !is_null($ext_act)}block{else}none{/if};" id="do_{$extid}">
-  {if method_exists($filter_action_ext,'renderConfig')}{$filter_action_ext->renderConfig($filter)}{/if}
+	{if method_exists($filter_action_ext,'renderConfig')}{$filter_action_ext->renderConfig($filter)}{/if}
 </blockquote>
 {/foreach}
 {/if}
@@ -207,29 +207,29 @@
 	<tr>
 		<td valign="top">
 			{assign var=act_nothing value=$filter->actions.nothing}
-			<label><input type="radio" name="do_stop" value="nothing" {if !is_null($act_nothing)}checked="checked"{/if}>
+			<label><input type="radio" name="do_stop" value="nothing" {if !is_null($act_nothing)}checked="checked"{/if}> 
 			Continue delivery</label>
 		</td>
 	</tr>
 	<tr>
 		<td valign="top">
 			{assign var=act_blackhole value=$filter->actions.blackhole}
-			<label><input type="radio" name="do_stop" value="blackhole" {if !is_null($act_blackhole)}checked="checked"{/if}>
+			<label><input type="radio" name="do_stop" value="blackhole" {if !is_null($act_blackhole)}checked="checked"{/if}> 
 			Blackhole the message</label>
 		</td>
 	</tr>
 	<tr>
 		<td valign="top">
 			{assign var=act_redirect value=$filter->actions.redirect}
-			<label><input type="radio" name="do_stop" value="redirect" {if !is_null($act_redirect)}checked="checked"{/if}>
-			Redirect to e-mail:</label>
+			<label><input type="radio" name="do_stop" value="redirect" {if !is_null($act_redirect)}checked="checked"{/if}> 
+			Redirect to e-mail:</label> 
 			<input type="text" name="do_redirect" size="45" value="{$act_redirect.to|escape}" style="width:300;">
 		</td>
 	</tr>
 	<tr>
 		<td valign="top">
 			{assign var=act_bounce value=$filter->actions.bounce}
-			<label><input type="radio" name="do_stop" value="bounce" {if !is_null($act_bounce)}checked="checked"{/if}>
+			<label><input type="radio" name="do_stop" value="bounce" {if !is_null($act_bounce)}checked="checked"{/if}> 
 			Bounce with message:</label>
 			<div style="margin-left:30px;"><textarea rows="8" cols="80" name="do_bounce" style="width:95%;">{$act_bounce.message|escape}</textarea></div>
 		</td>

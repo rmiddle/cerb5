@@ -204,7 +204,7 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 							)
 						);
 						break;
-
+						
 					case 'lists':
 						$tour = array(
 	                        'title' => 'My Workspaces',
@@ -214,7 +214,7 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 							)
 						);
 						break;
-
+						
 					case 'search':
 						$tour = array(
 	                        'title' => 'Searching Tickets',
@@ -231,7 +231,7 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
     	                    'body' => '',
 						);
 						break;
-
+						
 					case 'create':
 						$tour = array(
 	                        'title' => 'Log Ticket',
@@ -240,7 +240,7 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 						break;
 				}
 				break;
-
+				
 			case 'contacts':
 				switch(array_shift($path)) {
 					default:
@@ -253,7 +253,7 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 							)
 						);
 						break;
-
+						
 					case 'addresses':
 						$tour = array(
 	                        'title' => 'Addresses',
@@ -262,7 +262,7 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 							)
 						);
 						break;
-
+						
 					case 'import':
 						$tour = array(
 	                        'title' => 'Importing Orgs and Addresses',
@@ -273,7 +273,7 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 						break;
 				}
 				break;
-
+				
 			case 'kb':
 				$tour = array(
 	                'title' => 'Knowledgebase',
@@ -282,7 +282,7 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 					)
 				);
 				break;
-
+				
 			case 'tasks':
 				$tour = array(
 	                'title' => 'Tasks',
@@ -291,7 +291,7 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 					)
 				);
 				break;
-
+				
 			case 'community':
 				$tour = array(
 	                'title' => 'Communities',
@@ -300,7 +300,7 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 					)
 				);
 				break;
-
+				
 		}
 
 		if(!empty($tour))
@@ -322,7 +322,7 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
             case 'ticket.property.pre_change':
 				$this->_workerAssigned($event);
             	break;
-
+			
 			case 'ticket.property.post_change':
 				$this->_handleTicketMoved($event);
 				$this->_handleTicketClosed($event);
@@ -331,7 +331,7 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 			case 'cron.heartbeat':
 				$this->_handleCronHeartbeat($event);
 				break;
-
+				
 			case 'cron.maint':
 				$this->_handleCronMaint($event);
 				break;
@@ -341,10 +341,10 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
     private function _workerAssigned($event) {
     	@$ticket_ids = $event->params['ticket_ids'];
     	@$changed_fields = $event->params['changed_fields'];
-
+    	
     	if(empty($ticket_ids) || empty($changed_fields))
     		return;
-
+    		
     	@$next_worker_id = $changed_fields[DAO_Ticket::NEXT_WORKER_ID];
 
     	// Make sure a next worker was assigned
@@ -352,20 +352,20 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
     		return;
 
     	@$active_worker = CerberusApplication::getActiveWorker();
-
+    		
     	// Make sure we're not assigning work to ourselves, if so then bail
     	if(null != $active_worker && $active_worker->id == $next_worker_id) {
     		return;
     	}
-
+    	
     	$tickets = DAO_Ticket::getTickets($ticket_ids);
-
+    	
 		// Write a notification (if not assigned to ourselves)
 		$url_writer = DevblocksPlatform::getUrlService();
 		foreach($ticket_ids as $ticket_id) {
 			if(null == ($ticket = $tickets[$ticket_id])) /* @var $ticket CerberusTicket */
 				continue;
-
+				
 			$fields = array(
 				DAO_WorkerEvent::CREATED_DATE => time(),
 				DAO_WorkerEvent::WORKER_ID => $next_worker_id,
@@ -377,7 +377,7 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 			DAO_WorkerEvent::create($fields);
 		}
     }
-
+	
 	private function _handleCronMaint($event) {
 		DAO_Address::maint();
 		DAO_Group::maint();
@@ -385,7 +385,7 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 		DAO_Message::maint();
 		DAO_Worker::maint();
 	}
-
+	
 	private function _handleCronHeartbeat($event) {
 		// Re-open any conversations past their reopen date
 		$fields = array(
@@ -404,9 +404,9 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 		);
 		DAO_Ticket::updateWhere($fields, $where);
 
-		// Close any 'waiting' tickets past their group max wait time
+		// Close any 'waiting' tickets past their group max wait time 
 		// [TODO]
-
+		
 		// Surrender any tickets past their unlock date
 		$fields = array(
 			DAO_Ticket::NEXT_WORKER_ID => 0,
@@ -440,11 +440,11 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 			foreach($ticket_ids as $ticket_id) {
 				// Run the new inbox filters
 				$matches = CerberusApplication::runGroupRouting($team_id, $ticket_id);
-
+				
 				// If we matched no rules, we're stuck in the destination inbox.
 				if(empty($matches)) {
 					$final_moves[] = $ticket_id;
-
+					
 				} else {
 					// If more inbox rules want to move this ticket don't consider this finished
 					if(is_array($matches))
@@ -455,17 +455,17 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 					}
 				}
 			}
-
+			
 		// Anything dropping into a non-inbox bucket is done chain-moving
 		} elseif(!empty($ticket_ids) && !empty($team_id) && !empty($bucket_id)) {
 			$final_moves = $ticket_ids;
-
+			
 		}
 
 		// Did we have any tickets finish chain-moving?
 		if(!empty($final_moves)) {
 
-			// Trigger an inbound event for all moves
+			// Trigger an inbound event for all moves			
 			if(is_array($final_moves))
 			foreach($final_moves as $ticket_id) {
 				// Inbound Reply Event
@@ -481,7 +481,7 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 			}
 		}
 	}
-
+	
 	private function _handleTicketClosed($event) {
 		@$ticket_ids = $event->params['ticket_ids'];
 		@$changed_fields = $event->params['changed_fields'];
@@ -491,18 +491,18 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 		if((!isset($changed_fields[DAO_Ticket::IS_CLOSED]) || 1 != $changed_fields[DAO_Ticket::IS_CLOSED])
 		|| (isset($changed_fields[DAO_Ticket::IS_DELETED]) && 1 == $changed_fields[DAO_Ticket::IS_DELETED]))
 			return;
-
+			
 		$group_settings = DAO_GroupSettings::getSettings();
-
+			
 		if(!empty($ticket_ids)) {
 			$tickets = DAO_Ticket::getTickets($ticket_ids);
-
+			
 			foreach($tickets as $ticket) { /* @var $ticket CerberusTicket */
 				if(!isset($group_settings[$ticket->team_id][DAO_GroupSettings::SETTING_CLOSE_REPLY_ENABLED]))
 					continue;
 				if(1 == $ticket->is_deleted)
 					continue;
-
+				
 				if($group_settings[$ticket->team_id][DAO_GroupSettings::SETTING_CLOSE_REPLY_ENABLED]
 				&& !empty($group_settings[$ticket->team_id][DAO_GroupSettings::SETTING_CLOSE_REPLY])) {
 					if(null != ($msg_first = DAO_Ticket::getMessage($ticket->first_message_id))) {
@@ -513,25 +513,25 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 							$ticket_sender = $sender_first->email;
 							$ticket_sender_first = $sender_first->first_name;
 						}
-
+						
 						// First body
 						$ticket_body = $msg_first->getContent();
 					}
-
-          CerberusMail::sendTicketMessage(array(
-            'ticket_id' => $ticket->id,
-            'message_id' => $ticket->first_message_id,
-            'content' => str_replace(
-              array('#ticket_id#', '#mask#','#subject#','#timestamp#','#sender#','#sender_first#','#orig_body#'),
-              array($ticket->id, $ticket->mask, $ticket->subject, date('r'), $ticket_sender, $ticket_sender_first, ltrim($ticket_body)),
-              $group_settings[$ticket->team_id][DAO_GroupSettings::SETTING_CLOSE_REPLY]
-            ),
-            'is_autoreply' => false,
-            'dont_keep_copy' => true
-          ));
-        }
-      }
-    }
-
+					
+					CerberusMail::sendTicketMessage(array(
+						'ticket_id' => $ticket->id,
+						'message_id' => $ticket->first_message_id,
+						'content' => str_replace(
+							array('#ticket_id#', '#mask#','#subject#','#timestamp#','#sender#','#sender_first#','#orig_body#'),
+							array($ticket->id, $ticket->mask, $ticket->subject, date('r'), $ticket_sender, $ticket_sender_first, ltrim($ticket_body)),
+							$group_settings[$ticket->team_id][DAO_GroupSettings::SETTING_CLOSE_REPLY]
+						),
+						'is_autoreply' => false,
+						'dont_keep_copy' => true
+					));
+				}
+			}
+		}
+		
 	}
 };

@@ -45,7 +45,7 @@
 			</table>
 		</td>
 	</tr>
-
+	
 	<tr>
 		<td>
 		<button type="button" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id='+selectValue(this.form.to),{literal}function(o){insertAtCursor(document.getElementById('content'),o.responseText);}{/literal});"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/document_edit.gif{/devblocks_url}" align="top"> Insert Signature</button>
@@ -57,13 +57,14 @@
 			{/foreach}
 		{/if}
 		<br>
-
+		
 		<div id="logTicketToolbarOptions"></div>
-
-		<textarea name="content" id="content" rows="15" cols="80" class="reply" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;"></textarea>
+		
+		<textarea name="content" id="content" rows="15" cols="80" class="reply" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;"></textarea><br>
+		<label><input type="checkbox" name="send_to_requesters" value="1"> {'mail.log_message.send_to_requesters'|devblocks_translate}</label>
 		</td>
 	</tr>
-
+				
 	<tr>
 		<td>
 			<div id="replyAttachments{$message->id}" style="display:block;margin:5px;padding:5px;background-color:rgb(240,240,240);">
@@ -73,8 +74,8 @@
 				<td style="padding-left:5px;">
 					<H2>{$translate->_('display.convo.attachments_label')|capitalize}</H2>
 					{'display.reply.attachments_limit'|devblocks_translate:$upload_max_filesize}<br>
-
-					<b>{$translate->_('display.reply.attachments_add')}</b>
+					
+					<b>{$translate->_('display.reply.attachments_add')}</b> 
 					(<a href="javascript:;" onclick="appendFileInput('displayReplyAttachments','attachment[]');">{$translate->_('display.reply.attachments_more')|lower}</a>)
 					(<a href="javascript:;" onclick="clearDiv('displayReplyAttachments');appendFileInput('displayReplyAttachments','attachment[]');">{$translate->_('common.clear')|lower}</a>)
 					<br>
@@ -82,7 +83,7 @@
 						<tr>
 							<td width="100%" valign="top">
 								<div id="displayReplyAttachments">
-									<input type="file" name="attachment[]" size="45"></input><br>
+									<input type="file" name="attachment[]" size="45"></input><br> 
 								</div>
 							</td>
 						</tr>
@@ -93,7 +94,7 @@
 			</div>
 		</td>
 	</tr>
-
+				
 	<tr>
 		<td>
 		<div style="background-color:rgb(240,240,240);margin:5px;padding:5px;">
@@ -105,19 +106,19 @@
 					<table cellpadding="2" cellspacing="0" border="0">
 						<tr>
 							<td nowrap="nowrap" valign="top" colspan="2">
-								<label><input type="radio" name="closed" value="0" onclick="toggleDiv('ticketClosed','none');" checked>{$translate->_('status.open')|capitalize}</label>
-								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('ticketClosed','block');">{$translate->_('status.waiting')|capitalize}</label>
+								<label><input type="radio" name="closed" value="0" onclick="toggleDiv('ticketClosed','none');">{$translate->_('status.open')|capitalize}</label>
+								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('ticketClosed','block');" checked>{$translate->_('status.waiting')|capitalize}</label>
 								{if $active_worker->hasPriv('core.ticket.actions.close')}<label><input type="radio" name="closed" value="1" onclick="toggleDiv('ticketClosed','block');">{$translate->_('status.closed')|capitalize}</label>{/if}
 								<br>
 								<br>
-
+		
 								<div id="ticketClosed" style="display:block;margin-left:10px;">
-								<b>{$translate->_('display.reply.next.resume')}</b> {$translate->_('display.reply.next.resume_eg')}<br>
+								<b>{$translate->_('display.reply.next.resume')}</b> {$translate->_('display.reply.next.resume_eg')}<br> 
 								<input type="text" name="ticket_reopen" size="55" value=""><br>
 								{$translate->_('display.reply.next.resume_blank')}<br>
 								<br>
 								</div>
-
+		
 								<b>{$translate->_('display.reply.next.handle_reply')}</b><br>
 						      	<select name="next_worker_id" onchange="toggleDiv('replySurrender{$message->id}',this.selectedIndex?'block':'none');">
 						      		<option value="0" selected="selected">{$translate->_('common.anybody')|capitalize}
@@ -134,17 +135,17 @@
 						      	{/if}
 						      	<br>
 						      	<br>
-
+						      	
 						      	<div id="replySurrender{$message->id}" style="display:none;margin-left:10px;">
-									<b>{$translate->_('display.reply.next.handle_reply_after')}</b> {$translate->_('display.reply.next.handle_reply_after_eg')}<br>
+									<b>{$translate->_('display.reply.next.handle_reply_after')}</b> {$translate->_('display.reply.next.handle_reply_after_eg')}<br>  
 							      	<input type="text" name="unlock_date" size="32" maxlength="255" value="">
 							      	<button type="button" onclick="this.form.unlock_date.value='+2 hours';">{$translate->_('display.reply.next.handle_reply_after_2hrs')}</button>
 							      	<br>
 							      	<br>
 							    </div>
-
+		
 								{if $active_worker->hasPriv('core.ticket.actions.move')}
-								<b>{$translate->_('display.reply.next.move')}</b><br>
+								<b>{$translate->_('display.reply.next.move')}</b><br>  
 						      	<select name="bucket_id">
 						      		<option value="">-- {$translate->_('display.reply.next.move.no_thanks')|lower} --</option>
 						      		<optgroup label="{$translate->_('common.inboxes')|capitalize}">
@@ -165,7 +166,7 @@
 						      	</select><br>
 						      	<br>
 								{/if}
-
+						      	
 							</td>
 						</tr>
 					</table>
@@ -175,7 +176,7 @@
 		</div>
 		</td>
 	</tr>
-
+	
 	<tr>
 		<td>
 			<br>

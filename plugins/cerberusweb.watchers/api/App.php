@@ -1,10 +1,10 @@
 <?php
 class ChWatchersConfigTab extends Extension_ConfigTab {
 	const ID = 'watchers.config.tab';
-
+	
 	function showTab() {
 		$settings = CerberusSettings::getInstance();
-
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$core_tplpath = dirname(dirname(dirname(__FILE__))) . '/cerberusweb.core/templates/';
@@ -12,29 +12,29 @@ class ChWatchersConfigTab extends Extension_ConfigTab {
 		$tpl->cache_lifetime = "0";
 
 		$tpl->assign('response_uri', 'config/watchers');
-
-    $defaults = new C4_AbstractViewModel();
-    $defaults->class_name = 'C4_WatcherView';
-    $defaults->id = C4_WatcherView::DEFAULT_ID;
-    $defaults->renderSortBy = SearchFields_WatcherMailFilter::POS;
-    $defaults->renderSortAsc = 0;
-
+		
+		$defaults = new C4_AbstractViewModel();
+		$defaults->class_name = 'C4_WatcherView';
+		$defaults->id = C4_WatcherView::DEFAULT_ID;
+		$defaults->renderSortBy = SearchFields_WatcherMailFilter::POS;
+		$defaults->renderSortAsc = 0;
+		
 		$view = C4_AbstractViewLoader::getView(C4_WatcherView::DEFAULT_ID, $defaults);
-
+		
 		$tpl->assign('view', $view);
 		$tpl->assign('view_fields', C4_WatcherView::getFields());
 		$tpl->assign('view_searchable_fields', C4_WatcherView::getSearchFields());
-
+		
 		$tpl->display('file:' . $tpl_path . 'config/watchers/index.tpl');
 	}
-
+	
 	function saveTab() {
 		@$plugin_id = DevblocksPlatform::importGPC($_REQUEST['plugin_id'],'string');
 
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('config','watchers')));
 		exit;
 	}
-
+	
 };
 
 class ChWatchersEventListener extends DevblocksEventListenerExtension {
@@ -50,7 +50,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
             case 'bucket.delete':
 				$this->_bucketDeleted($event);
             	break;
-
+            	
             case 'group.delete':
 				$this->_groupDeleted($event);
             	break;
@@ -58,19 +58,19 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
             case 'ticket.property.pre_change':
 				$this->_workerAssigned($event);
             	break;
-
+				
 			case 'ticket.comment.create':
 				$this->_newTicketComment($event);
 				break;
-
+				
             case 'ticket.reply.inbound':
 				$this->_sendForwards($event, true);
             	break;
-
+            	
             case 'ticket.reply.outbound':
 				$this->_sendForwards($event, false);
             	break;
-
+            	
             case 'worker.delete':
 				$this->_workerDeleted($event);
             	break;
@@ -80,31 +80,31 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 	private function _getMailingListFromMatches($matches) {
 		$workers = DAO_Worker::getAllActive();
 		$helpdesk_senders = CerberusApplication::getHelpdeskSenders();
-
+		
 		$notify_emails = array();
-
+		
 		if(is_array($matches))
 		foreach($matches as $filter) {
 			if(!$filter instanceof Model_WatcherMailFilter)
 				continue;
-
+			
 			// If the worker no longer exists or is disabled
 			if(!isset($workers[$filter->worker_id]))
 				continue;
-
+				
 			if(isset($filter->actions['email']['to']) && is_array($filter->actions['email']['to']))
 			foreach($filter->actions['email']['to'] as $addy) {
 				$addy = strtolower($addy);
-
+				
 				// Don't allow a worker to usurp a helpdesk address
 				if(isset($helpdesk_senders[$addy]))
 					continue;
-
+				
 				if(!isset($notify_emails[$addy]))
 					$notify_emails[$addy] = $addy;
 			}
 		}
-
+		
 		return $notify_emails;
 	}
 
@@ -130,26 +130,26 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 		@$ticket_id = $event->params['ticket_id'];
 		@$address_id = $event->params['address_id'];
 		@$comment = $event->params['comment'];
-
+    	
     	if(empty($ticket_id) || empty($address_id) || empty($comment))
     		return;
-
+    		
 		// Resolve the address ID
 		if(null == ($address = DAO_Address::get($address_id)))
 			return;
-
+			
 		// Try to associate the author with a worker
 		if(null == ($worker_addy = DAO_AddressToWorker::getByAddress($address->email)))
 			return;
-
+				
 		if(null == ($worker = DAO_Worker::getAgent($worker_addy->worker_id)))
 			return;
-
+			
 		$url_writer = DevblocksPlatform::getUrlService();
 
 		$mail_service = DevblocksPlatform::getMailService();
 		$mailer = null; // lazy load
-
+    		
     	$settings = CerberusSettings::getInstance();
 		$default_from = $settings->get(CerberusSettings::DEFAULT_REPLY_FROM, '');
 		$default_personal = $settings->get(CerberusSettings::DEFAULT_REPLY_PERSONAL, '');
@@ -163,14 +163,14 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 			'ticket_comment'
 		)))
 			return;
-
+		
 		// Remove any matches from the author
 		if(is_array($matches))
 		foreach($matches as $idx => $filter) {
 			if($filter->worker_id == $worker_addy->worker_id)
 				unset($matches[$idx]);
 		}
-
+		
 		// (Action) Send Notification
 
 		$this->_sendNotifications(
@@ -178,44 +178,44 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 			$url_writer->write('c=display&mask=' . $ticket->mask, true, false),
 			sprintf("[Ticket] %s", $ticket->subject)
 		);
-
+		
 		// (Action) Forward E-mail:
-
+		
 		// Sanitize and combine all the destination addresses
 		$notify_emails = $this->_getMailingListFromMatches($matches);
-
+		
 		if(empty($notify_emails))
 			return;
-
+			
 		if(null == (@$last_message = end($ticket->getMessages()))) { /* @var $last_message CerberusMessage */
 			continue;
 		}
-
+		
 		if(null == (@$last_headers = $last_message->getHeaders()))
 			continue;
-
+			
 		$reply_to = $default_from;
 		$reply_personal = $default_personal;
-
+			
 		// See if we need a group-specific reply-to
 		if(!empty($ticket->team_id)) {
 			@$group_from = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_FROM);
 			if(!empty($group_from))
 				$reply_to = $group_from;
-
+				
 			@$group_personal = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_PERSONAL);
 			if(!empty($group_personal))
 				$reply_personal = $group_personal;
 		}
-
+		
 		if(is_array($notify_emails))
 		foreach($notify_emails as $send_to) {
 	    	try {
 	    		if(null == $mailer)
 					$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
-
+				
 		 		// Create the message
-
+					
 				$mail = $mail_service->createMessage();
 				$mail->setTo(array($send_to));
 				$mail->setFrom(array($reply_to => $reply_personal));
@@ -224,29 +224,29 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 					$ticket->mask,
 					$ticket->subject
 				));
-
+			
 				$headers = $mail->getHeaders();
-
+			
 				if(false !== (@$in_reply_to = $last_headers['in-reply-to'])) {
 				    $headers->addTextHeader('References', $in_reply_to);
 				    $headers->addTextHeader('In-Reply-To', $in_reply_to);
 				}
-
+				
 				// Build the body
 				$comment_text = sprintf("%s (%s) comments:\r\n%s\r\n",
 					$worker->getName(),
 					$address->email,
 					$comment
 				);
-
+				
 				$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
 				$headers->addTextHeader('Precedence','List');
 				$headers->addTextHeader('Auto-Submitted','auto-generated');
-
+				
 				$mail->setBody($comment_text);
-
+			
 				$result = $mailer->send($mail);
-
+				
 	    	} catch(Exception $e) {
 	    		//
 			}
@@ -256,10 +256,10 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
     private function _workerAssigned($event) {
     	@$ticket_ids = $event->params['ticket_ids'];
     	@$changed_fields = $event->params['changed_fields'];
-
+    	
     	if(empty($ticket_ids) || empty($changed_fields))
     		return;
-
+    		
     	@$next_worker_id = $changed_fields[DAO_Ticket::NEXT_WORKER_ID];
 
     	// Make sure a next worker was assigned
@@ -267,17 +267,17 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
     		return;
 
     	@$active_worker = CerberusApplication::getActiveWorker();
-
+    		
     	// Make sure we're not assigning work to ourselves, if so then bail
     	if(null != $active_worker && $active_worker->id == $next_worker_id) {
     		return;
     	}
 
     	$url_writer = DevblocksPlatform::getUrlService();
-
+    	
 		$mail_service = DevblocksPlatform::getMailService();
 		$mailer = null; // lazy load
-
+    		
     	$settings = CerberusSettings::getInstance();
 		$default_from = $settings->get(CerberusSettings::DEFAULT_REPLY_FROM, '');
 		$default_personal = $settings->get(CerberusSettings::DEFAULT_REPLY_PERSONAL, '');
@@ -288,7 +288,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 			// If the next worker value didn't change, skip
 			if($ticket->next_worker_id == $next_worker_id)
 				continue;
-
+			
 			// Find all our matching filters
 			if(empty($ticket) || false == ($matches = Model_WatcherMailFilter::getMatches(
 				$ticket,
@@ -309,37 +309,37 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 
 			// Sanitize and combine all the destination addresses
 			$notify_emails = $this->_getMailingListFromMatches($matches);
-
+			
 			if(empty($notify_emails))
 				return;
-
+				
 			if(null == (@$last_message = end($ticket->getMessages()))) { /* @var $last_message CerberusMessage */
 				continue;
 			}
-
+			
 			if(null == (@$last_headers = $last_message->getHeaders()))
 				continue;
-
+				
 			$reply_to = $default_from;
 			$reply_personal = $default_personal;
-
+				
 			// See if we need a group-specific reply-to
 			if(!empty($ticket->team_id)) {
 				@$group_from = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_FROM);
 				if(!empty($group_from))
 					$reply_to = $group_from;
-
+					
 				@$group_personal = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_PERSONAL);
 				if(!empty($group_personal))
 					$reply_personal = $group_personal;
 			}
-
+			
 			if(is_array($notify_emails))
 			foreach($notify_emails as $send_to) {
 		    	try {
 		    		if(null == $mailer)
 						$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
-
+					
 			 		// Create the message
 
 					$mail = $mail_service->createMessage();
@@ -350,50 +350,50 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 						$ticket->mask,
 						$ticket->subject
 					));
-
+				
 					$headers = $mail->getHeaders();
-
+				
 					if(false !== (@$in_reply_to = $last_headers['in-reply-to'])) {
 					    $headers->addTextHeader('References', $in_reply_to);
 					    $headers->addTextHeader('In-Reply-To', $in_reply_to);
 					}
-
+					
 					$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
 					$headers->addTextHeader('Precedence','List');
 					$headers->addTextHeader('Auto-Submitted','auto-generated');
-
-					$mail->setBody($last_message->getContent());
-
+					
+					$mail->setBody($last_message->getContent());					
+				
 					$result = $mailer->send($mail);
-
+					
 		    	} catch(Exception $e) {
 		    		//
 				}
 			}
 		}
     }
-
+    
     private function _workerDeleted($event) {
     	@$worker_ids = $event->params['worker_ids'];
     	DAO_WatcherMailFilter::deleteByWorkerIds($worker_ids);
     }
-
+    
     private function _bucketDeleted($event) {
     	@$bucket_ids = $event->params['bucket_ids'];
     	DAO_WatcherMailFilter::deleteByBucketIds($bucket_ids);
     }
-
+    
     private function _groupDeleted($event) {
     	@$group_ids = $event->params['group_ids'];
     	DAO_WatcherMailFilter::deleteByGroupIds($group_ids);
     }
-
+    
     private function _sendForwards($event, $is_inbound) {
         @$ticket_id = $event->params['ticket_id'];
         @$send_worker_id = $event->params['worker_id'];
-
+    	
 		$url_writer = DevblocksPlatform::getUrlService();
-
+		
 		$ticket = DAO_Ticket::getTicket($ticket_id);
 
 		// Find all our matching filters
@@ -402,61 +402,61 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 			($is_inbound ? 'mail_incoming' : 'mail_outgoing')
 		)))
 			return;
-
+		
 		// (Action) Send Notification
-
+		
 		$this->_sendNotifications(
 			$matches,
 			$url_writer->write('c=display&mask=' . $ticket->mask, true, false),
 			sprintf("[Ticket] %s", $ticket->subject)
 		);
-
+		
 		// (Action) Forward Email To:
-
+		
 		// Sanitize and combine all the destination addresses
 		$notify_emails = $this->_getMailingListFromMatches($matches);
-
+		
 		if(empty($notify_emails))
 			return;
-
+		
 		// [TODO] This could be more efficient
 		$messages = DAO_Ticket::getMessagesByTicket($ticket_id);
 		$message = end($messages); // last message
 		unset($messages);
 		$headers = $message->getHeaders();
-
+			
 		// The whole flipping Swift section needs wrapped to catch exceptions
 		try {
 			$settings = CerberusSettings::getInstance();
 			$reply_to = $settings->get(CerberusSettings::DEFAULT_REPLY_FROM, '');
-
+			
 			// See if we need a group-specific reply-to
 			if(!empty($ticket->team_id)) {
 				@$group_from = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_FROM, '');
 				if(!empty($group_from))
 					$reply_to = $group_from;
 			}
-
+			
 			$sender = DAO_Address::get($message->address_id);
-
+	
 			$sender_email = strtolower($sender->email);
 			$sender_split = explode('@', $sender_email);
-
+	
 			if(!is_array($sender_split) || count($sender_split) != 2)
 				return;
-
+	
 			// If return-path is blank
 			if(isset($headers['return-path']) && $headers['return-path'] == '<>')
 				return;
-
+				
 			// Ignore bounces
 			if($sender_split[0]=="postmaster" || $sender_split[0] == "mailer-daemon")
 				return;
-
+			
 			// Ignore autoresponses autoresponses
 			if(isset($headers['auto-submitted']) && $headers['auto-submitted'] != 'no')
 				return;
-
+				
 			// Attachments
 			$attachments = $message->getAttachments();
 			$mime_attachments = array();
@@ -464,25 +464,25 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 			foreach($attachments as $attachment) {
 				if(0 == strcasecmp($attachment->display_name,'original_message.html'))
 					continue;
-
+					
 				$attachment_path = APP_STORAGE_PATH . '/attachments/'; // [TODO] This is highly redundant in the codebase
 				if(!file_exists($attachment_path . $attachment->filepath))
 					continue;
-
+				
 				$attach = Swift_Attachment::fromPath($attachment_path . $attachment->filepath);
 				if(!empty($attachment->display_name))
 					$attach->setFilename($attachment->display_name);
 				$mime_attachments[] = $attach;
 			}
-
+	    	
 	    	// Send copies
 			if(is_array($notify_emails) && !empty($notify_emails)) {
 				$mail_service = DevblocksPlatform::getMailService();
 				$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
-
+				
 				foreach($notify_emails as $to) {
 					// Proxy the message
-
+					
 					$mail = $mail_service->createMessage(); /* @var $mail Swift_Message */
 					$mail->setTo(array($to));
 					$mail->setFrom(array($sender->email));
@@ -495,28 +495,28 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 					));
 
 					$hdrs = $mail->getHeaders();
-
+					
 					if(null !== (@$msgid = $headers['message-id'])) {
 						$hdrs->addTextHeader('Message-Id',$msgid);
 					}
-
+					
 					if(null !== (@$in_reply_to = $headers['in-reply-to'])) {
 					    $hdrs->addTextHeader('References', $in_reply_to);
 					    $hdrs->addTextHeader('In-Reply-To', $in_reply_to);
 					}
-
+					
 					$hdrs->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
 					$hdrs->addTextHeader('Precedence','List');
 					$hdrs->addTextHeader('Auto-Submitted','auto-generated');
-
+					
 					$mail->setBody($message->getContent());
-
+	
 					// Send message attachments with watcher
 					if(is_array($mime_attachments))
 					foreach($mime_attachments as $mime_attachment) {
 						$mail->attach($mime_attachment);
 					}
-
+				
 					$result = $mailer->send($mail);
 				}
 			}
@@ -537,26 +537,26 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 };
 
 class ChWatchersPreferences extends Extension_PreferenceTab {
-	private $_TPL_PATH = null;
-
+	private $_TPL_PATH = null; 
+	
     function __construct($manifest) {
         parent::__construct($manifest);
         $this->_TPL_PATH = dirname(dirname(__FILE__)).'/templates/';
     }
-
+	
 	// Ajax
 	function showTab() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 		$tpl->cache_lifetime = "0";
-
+		
 		$worker = CerberusApplication::getActiveWorker();
-
+		
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
-
+		
 		$tpl->assign('response_uri', 'preferences/watchers');
-
+		
 		if(null == ($view = C4_AbstractViewLoader::getView('prefs.watchers'))) {
 			$view = new C4_WatcherView();
 			$view->id = 'prefs.watchers';
@@ -566,21 +566,21 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 			$view->params = array(
 				SearchFields_WatcherMailFilter::WORKER_ID => new DevblocksSearchCriteria(SearchFields_WatcherMailFilter::WORKER_ID,'eq',$worker->id),
 			);
-
+			
 			C4_AbstractViewLoader::setView($view->id, $view);
 		}
-
+		
 		$tpl->assign('view', $view);
 		$tpl->assign('view_fields', C4_WatcherView::getFields());
 		$tpl->assign('view_searchable_fields', C4_WatcherView::getSearchFields());
-
+		
 		$tpl->display('file:' . $this->_TPL_PATH . 'preferences/watchers.tpl');
 	}
-
+    
 	// Post
 	function saveTab() {
 	}
-
+	
 	// Ajax
 	function showWatcherBulkPanelAction() {
 		@$id_csv = DevblocksPlatform::importGPC($_REQUEST['ids']);
@@ -595,15 +595,15 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 	        $ids = DevblocksPlatform::parseCsvString($id_csv);
 	        $tpl->assign('ids', implode(',', $ids));
 	    }
-
+		
 		// Custom Fields
 //		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_TimeEntry::ID);
 //		$tpl->assign('custom_fields', $custom_fields);
-
+		
 		$tpl->cache_lifetime = "0";
 		$tpl->display('file:' . $path . 'preferences/bulk.tpl');
 	}
-
+	
 	// Ajax
 	function doWatcherBulkPanelAction() {
 		// Checked rows
@@ -612,43 +612,43 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 
 		// Filter: whole list or check
 	    @$filter = DevblocksPlatform::importGPC($_REQUEST['filter'],'string','');
-
+	    
 	    // View
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
 		$view = C4_AbstractViewLoader::getView($view_id);
-
+		
 		// Watcher fields
 		@$status = trim(DevblocksPlatform::importGPC($_POST['do_status'],'string',''));
 
 		$do = array();
-
+		
 		// Do: ...
 		if(0 != strlen($status))
 			$do['status'] = intval($status);
-
+			
 		// Do: Custom fields
 		//$do = DAO_CustomFieldValue::handleBulkPost($do);
-
+			
 		$view->doBulkUpdate($filter, $do, $ids);
-
+		
 		$view->render();
 		return;
 	}
-
+	
 	// Ajax
 	function showWatcherPanelAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
-
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 
 		$active_worker = CerberusApplication::getActiveWorker();
-
+		
 		if(null != ($filter = DAO_WatcherMailFilter::get($id))) {
 			$tpl->assign('filter', $filter);
 		}
-
+		
 		$groups = DAO_Group::getAll();
 		$tpl->assign('groups', $groups);
 
@@ -657,14 +657,14 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 
 		$group_buckets = DAO_Bucket::getTeams();
 		$tpl->assign('group_buckets', $group_buckets);
-
+		
 		$memberships = $active_worker->getMemberships();
 		$tpl->assign('memberships', $memberships);
-
+		
 		if(null == (@$worker_id = $filter->worker_id)) {
 			$worker_id = $active_worker->id;
 		}
-
+		
 		$addresses = DAO_AddressToWorker::getByWorker($worker_id);
 		$tpl->assign('addresses', $addresses);
 
@@ -678,19 +678,19 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 		// Custom Fields: Address
 		$address_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Address::ID);
 		$tpl->assign('address_fields', $address_fields);
-
+		
 		// Custom Fields: Orgs
 		$org_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
 		$tpl->assign('org_fields', $org_fields);
-
+		
 		$tpl->display('file:' . $this->_TPL_PATH . 'preferences/peek.tpl');
 	}
-
+	
 	function saveWatcherPanelAction() {
    		$translate = DevblocksPlatform::getTranslationService();
-
+   		
    		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
-
+   		
 	    @$active_worker = CerberusApplication::getActiveWorker();
 //	    if(!$active_worker->is_superuser)
 //	    	return;
@@ -701,28 +701,28 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 		@$worker_id = DevblocksPlatform::importGPC($_POST['worker_id'],'integer',0);
 		@$rules = DevblocksPlatform::importGPC($_POST['rules'],'array',array());
 		@$do = DevblocksPlatform::importGPC($_POST['do'],'array',array());
-
+		
 		if(empty($name))
 			$name = $translate->_('Watcher Filter');
-
+		
 		$criterion = array();
 		$actions = array();
-
+		
 		// Custom fields
 		$custom_fields = DAO_CustomField::getAll();
-
+		
 		// Criteria
 		if(is_array($rules))
 		foreach($rules as $rule) {
 			$rule = DevblocksPlatform::strAlphaNumDash($rule);
 			@$value = DevblocksPlatform::importGPC($_POST['value_'.$rule],'string','');
-
+			
 			// [JAS]: Allow empty $value (null/blank checking)
-
+			
 			$criteria = array(
 				'value' => $value,
 			);
-
+			
 			// Any special rule handling
 			switch($rule) {
 				case 'dayofweek':
@@ -755,18 +755,18 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 					@$groups = DevblocksPlatform::importGPC($_REQUEST['value_groups'],'array',array());
 					if(is_array($groups) && !empty($groups)) {
 						$criteria['groups'] = array();
-
+						
 						foreach($groups as $group_id) {
 							@$all = DevblocksPlatform::importGPC($_REQUEST['value_group'.$group_id.'_all'],'integer',0);
-
+							
 							// Did we only want to watch specific buckets in this group?
 							$bucket_ids = array();
 							if(!$all)
 								@$bucket_ids = DevblocksPlatform::importGPC($_REQUEST['value_group'.$group_id.'_buckets'],'array',array());
-
+							
 							// Add to criteria (key=group id, val=array of bucket ids)
 							$criteria['groups'][$group_id] = $bucket_ids;
-						}
+						}					
 					}
 					unset($criteria['value']);
 					break;
@@ -792,12 +792,12 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 					// Custom fields
 					if("cf_" == substr($rule,0,3)) {
 						$field_id = intval(substr($rule,3));
-
+						
 						if(!isset($custom_fields[$field_id]))
 							continue;
 
 						// [TODO] Operators
-
+							
 						switch($custom_fields[$field_id]->type) {
 							case 'S': // string
 							case 'T': // clob
@@ -811,13 +811,13 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 							case 'W': // worker
 								@$in_array = DevblocksPlatform::importGPC($_REQUEST['value_cf_'.$field_id],'array',array());
 								$out_array = array();
-
+								
 								// Hash key on the option for quick lookup later
 								if(is_array($in_array))
 								foreach($in_array as $k => $v) {
 									$out_array[$v] = $v;
 								}
-
+								
 								$criteria['value'] = $out_array;
 								break;
 							case 'E': // date
@@ -836,22 +836,22 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 								$criteria['value'] = intval($value);
 								break;
 						}
-
+						
 					} else {
 						continue;
 					}
-
+					
 					break;
 			}
-
+			
 			$criterion[$rule] = $criteria;
 		}
-
+		
 		// Actions
 		if(is_array($do))
 		foreach($do as $act) {
 			$action = array();
-
+			
 			switch($act) {
 				// Forward a copy to...
 				case 'email':
@@ -862,7 +862,7 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 						);
 					}
 					break;
-
+					
 				// Watcher notification
 				case 'notify':
 					//@$emails = DevblocksPlatform::importGPC($_REQUEST['do_email'],'array',array());
@@ -873,7 +873,7 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 					//}
 					break;
 			}
-
+			
 			$actions[$act] = $action;
 		}
 
@@ -889,29 +889,29 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
    		if(empty($id)) {
    			$fields[DAO_WatcherMailFilter::POS] = 0;
 	   		$id = DAO_WatcherMailFilter::create($fields);
-
+	   		
 	   	// Update
    		} else {
    			DAO_WatcherMailFilter::update($id, $fields);
    		}
-
+   		
 		exit;
    		//DevblocksPlatform::redirect(new DevblocksHttpResponse(array('preferences','watchers')));
 	}
-
+	
 	function getWorkerAddressesAction() {
    		@$worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);
-
+	
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 
 		$addresses = DAO_AddressToWorker::getByWorker($worker_id);
 		$tpl->assign('addresses', $addresses);
-
+		
 		$tpl->display('file:' . $this->_TPL_PATH . 'preferences/worker_addresses.tpl');
 	}
-
+	
 };
 
 class C4_WatcherView extends C4_AbstractView {
@@ -942,13 +942,13 @@ class C4_WatcherView extends C4_AbstractView {
 			$this->renderSortBy,
 			$this->renderSortAsc
 		);
-
+		
 		return $objects;
 	}
 
 	function render() {
 		$this->_sanitize();
-
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
@@ -956,7 +956,7 @@ class C4_WatcherView extends C4_AbstractView {
 		// Workers
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
-
+		
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.watchers/templates/config/watchers/view.tpl');
@@ -1011,7 +1011,7 @@ class C4_WatcherView extends C4_AbstractView {
 				}
 				echo implode(", ", $strings);
 				break;
-
+			
 			default:
 				parent::renderCriteriaParam($param);
 				break;
@@ -1036,12 +1036,12 @@ class C4_WatcherView extends C4_AbstractView {
 
 	function doResetCriteria() {
 		parent::doResetCriteria();
-
+		
 		$this->params = array(
 //			SearchFields_WatcherMailFilter::LOG_DATE => new DevblocksSearchCriteria(SearchFields_WatcherMailFilter::LOG_DATE,DevblocksSearchCriteria::OPER_BETWEEN,array('-1 month','now')),
 		);
 	}
-
+	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -1082,10 +1082,10 @@ class C4_WatcherView extends C4_AbstractView {
 			$this->renderPage = 0;
 		}
 	}
-
+	
 	function doBulkUpdate($filter, $do, $ids=array()) {
 		@set_time_limit(0);
-
+	  
 		$change_fields = array();
 		$custom_fields = array();
 		$do_delete = false;
@@ -1097,7 +1097,7 @@ class C4_WatcherView extends C4_AbstractView {
 		// Make sure we have checked items if we want a checked list
 		if(0 == strcasecmp($filter,"checks") && empty($ids))
 			return;
-
+			
 		if(is_array($do))
 		foreach($do as $k => $v) {
 			switch($k) {
@@ -1130,31 +1130,31 @@ class C4_WatcherView extends C4_AbstractView {
 				true,
 				false
 			);
-
+			 
 			$ids = array_merge($ids, array_keys($objects));
-
+			 
 		} while(!empty($objects));
 
 		$batch_total = count($ids);
 		for($x=0;$x<=$batch_total;$x+=100) {
 			$batch_ids = array_slice($ids,$x,100);
-
+			
 			if($do_delete) {
 				DAO_WatcherMailFilter::delete($batch_ids);
-
+				
 			} else {
 				DAO_WatcherMailFilter::update($batch_ids, $change_fields);
 
 				// Custom Fields
 				//self::_doBulkSetCustomFields(ChCustomFieldSource_TimeEntry::ID, $custom_fields, $batch_ids);
 			}
-
+			
 			unset($batch_ids);
 		}
 
 		unset($ids);
 	}
-
+		
 };
 
 class DAO_WatcherMailFilter extends DevblocksORMHelper {
@@ -1169,38 +1169,38 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
-
+		
 		$id = $db->GenID('generic_seq');
-
+		
 		$sql = sprintf("INSERT INTO watcher_mail_filter (id,created) ".
 			"VALUES (%d,%d)",
 			$id,
 			time()
 		);
 		$db->Execute($sql);
-
+		
 		self::update($id, $fields);
-
+		
 		return $id;
 	}
-
+	
 	static function update($ids, $fields) {
 		parent::_update($ids, 'watcher_mail_filter', $fields);
 	}
-
+	
 	/**
 	 * @param string $where
 	 * @return Model_WatcherMailFilter[]
 	 */
 	static function getWhere($where=null) {
 		$db = DevblocksPlatform::getDatabaseService();
-
+		
 		$sql = "SELECT id, pos, name, created, is_disabled, worker_id, criteria_ser, actions_ser ".
 			"FROM watcher_mail_filter ".
 			(!empty($where) ? sprintf("WHERE %s ",$where) : "").
 			"ORDER BY pos DESC";
 		$rs = $db->Execute($sql);
-
+		
 		return self::_getObjectsFromResult($rs);
 	}
 
@@ -1212,20 +1212,20 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 			self::ID,
 			$id
 		));
-
+		
 		if(isset($objects[$id]))
 			return $objects[$id];
-
+		
 		return null;
 	}
-
+	
 	/**
 	 * @param ADORecordSet $rs
 	 * @return Model_WatcherMailFilter[]
 	 */
 	static private function _getObjectsFromResult($rs) {
 		$objects = array();
-
+		
 		while(!$rs->EOF) {
 			$object = new Model_WatcherMailFilter();
 			$object->id = $rs->fields['id'];
@@ -1234,7 +1234,7 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 			$object->created = $rs->fields['created'];
 			$object->is_disabled = intval($rs->fields['is_disabled']);
 			$object->worker_id = intval($rs->fields['worker_id']);
-
+			
 			if(null != (@$criteria_ser = $rs->fields['criteria_ser']))
 				if(false === (@$object->criteria = unserialize($criteria_ser)))
 					$object->criteria = array();
@@ -1242,41 +1242,41 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 			if(null != (@$actions_ser = $rs->fields['actions_ser']))
 				if(false === ($object->actions = unserialize($actions_ser)))
 					$object->actions = array();
-
+			
 			$objects[$object->id] = $object;
 			$rs->MoveNext();
 		}
-
+		
 		return $objects;
 	}
-
+	
 	public static function increment($id) {
 		$db = DevblocksPlatform::getDatabaseService();
 		$db->Execute(sprintf("UPDATE watcher_mail_filter SET pos = pos + 1 WHERE id = %d",
 			$id
 		));
 	}
-
+	
 	static function delete($ids) {
 		if(!is_array($ids)) $ids = array($ids);
 		$db = DevblocksPlatform::getDatabaseService();
-
+		
 		if(empty($ids))
 			return;
 		
 		$ids_list = implode(',', $ids);
-
+		
 		$db->Execute(sprintf("DELETE FROM watcher_mail_filter WHERE id IN (%s)", $ids_list));
-
+		
 		return true;
 	}
 
 	private static function _deleteWhere($where) {
 		if(empty($where))
 			return FALSE;
-
+			
 		$db = DevblocksPlatform::getDatabaseService();
-
+		
 		$sql = sprintf("DELETE FROM watcher_mail_filter WHERE %s", $where);
 		$db->Execute($sql);
 	}
@@ -1284,13 +1284,13 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 
 	public static function deleteByWorkerIds($ids) {
 		if(!is_array($ids)) $ids = array($ids);
-
+		
 		self::_deleteWhere(sprintf("%s IN (%s)",
 			self::WORKER_ID,
 			implode(',', $ids)
 		));
 	}
-
+	
 	public static function deleteByGroupIds($ids) {
 		if(!is_array($ids)) $ids = array($ids);
 
@@ -1299,7 +1299,7 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 		foreach($filters as $filter_id => $filter) {
 			if(!isset($filter->criteria['groups']))
 				continue;
-
+				
 			// If we're using the group being nuked...
 			$changed = false;
 			foreach($ids as $group_id) {
@@ -1308,7 +1308,7 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 					$changed = true;
 				}
 			}
-
+			
 			// If we changed the criteria of a filter, save it
 			if($changed) {
 				$fields = array(
@@ -1317,7 +1317,7 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 				DAO_WatcherMailFilter::update($filter->id, $fields);
 			}
 		}
-
+		
 		// [TODO] invalidate cache
 	}
 
@@ -1328,8 +1328,8 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 		$filters = self::getWhere();
 		foreach($filters as $filter_id => $filter) {
 			if(!isset($filter->criteria['groups']['groups']))
-				continue;
-
+				continue;	
+			
 			// If we're using the bucket being nuked...
 			$changed = false;
 			foreach($filter->criteria['groups']['groups'] as $group_id => $buckets) {
@@ -1340,7 +1340,7 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 					}
 				}
 			}
-
+			
 			if($changed) {
 				$fields = array(
 					DAO_WatcherMailFilter::CRITERIA_SER => serialize($filter->criteria),
@@ -1348,10 +1348,10 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 				DAO_WatcherMailFilter::update($filter->id, $fields);
 			}
 		}
-
+		
 		// [TODO] invalidate cache
 	}
-
+	
     /**
      * Enter description here...
      *
@@ -1366,14 +1366,14 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
     static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
 		$db = DevblocksPlatform::getDatabaseService();
 		$fields = SearchFields_WatcherMailFilter::getFields();
-
+		
 		// Sanitize
 		if(!isset($fields[$sortBy]))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields,$sortBy);
 		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
-
+		
 		$select_sql = sprintf("SELECT ".
 			"wmf.id as %s, ".
 			"wmf.pos as %s, ".
@@ -1388,8 +1388,8 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 			    SearchFields_WatcherMailFilter::IS_DISABLED,
 			    SearchFields_WatcherMailFilter::WORKER_ID
 			 );
-
-		$join_sql =
+		
+		$join_sql = 
 			"FROM watcher_mail_filter wmf "
 		;
 			// [JAS]: Dynamic table joins
@@ -1404,13 +1404,13 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 //			$select_sql,
 //			$join_sql
 //		);
-
+		
 		$where_sql = "".
 			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "");
-
+			
 		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
-
-		$sql =
+		
+		$sql = 
 			$select_sql.
 			$join_sql.
 			$where_sql.
@@ -1418,9 +1418,9 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 			$sort_sql;
 
 		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
-
+		
 		$results = array();
-
+		
 		if(is_a($rs,'ADORecordSet'))
 		while(!$rs->EOF) {
 			foreach($rs->fields as $f => $v) {
@@ -1434,16 +1434,16 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 		// [JAS]: Count all
 		$total = -1;
 		if($withCounts) {
-			$count_sql =
+			$count_sql = 
 				($has_multiple_values ? "SELECT COUNT(DISTINCT wmf.id) " : "SELECT COUNT(wmf.id) ").
 				$join_sql.
 				$where_sql;
 			$total = $db->GetOne($count_sql);
 		}
-
+		
 		return array($results,$total);
-    }
-
+    }	
+	
 };
 
 class SearchFields_WatcherMailFilter {
@@ -1454,13 +1454,13 @@ class SearchFields_WatcherMailFilter {
 	const CREATED = 'wmf_created';
 	const WORKER_ID = 'wmf_worker_id';
 	const IS_DISABLED = 'wmf_is_disabled';
-
+	
 	/**
 	 * @return DevblocksSearchField[]
 	 */
 	static function getFields() {
 		$translate = DevblocksPlatform::getTranslationService();
-
+		
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'wmf', 'id', null, ucwords($translate->_('common.id'))),
 			self::POS => new DevblocksSearchField(self::POS, 'wmf', 'pos', null, ucwords($translate->_('watcher.filter.model.hits'))),
@@ -1469,7 +1469,7 @@ class SearchFields_WatcherMailFilter {
 			self::WORKER_ID => new DevblocksSearchField(self::WORKER_ID, 'wmf', 'worker_id', null, ucwords($translate->_('common.worker'))),
 			self::IS_DISABLED => new DevblocksSearchField(self::IS_DISABLED, 'wmf', 'is_disabled', null, ucwords($translate->_('common.disabled'))),
 		);
-
+		
 		// Custom Fields
 //		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_TimeEntry::ID);
 //		if(is_array($fields))
@@ -1477,10 +1477,10 @@ class SearchFields_WatcherMailFilter {
 //			$key = 'cf_'.$field_id;
 //			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',null,$field->name);
 //		}
-
+		
 		// Sort by label (translation-conscious)
 		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
-
+		
 		return $columns;
 	}
 };
@@ -1494,13 +1494,13 @@ class Model_WatcherMailFilter {
 	public $worker_id;
 	public $criteria;
 	public $actions;
-
+	
 	/**
 	 * @return Model_WatcherMailFilter[]|false
 	 */
 	static function getMatches(CerberusTicket $ticket, $event, $only_worker_id=null) {
 		$matches = array();
-
+		
 		if(!empty($only_worker_id)) {
 			$filters = DAO_WatcherMailFilter::getWhere(sprintf("%s = %d AND %s = %d",
 				DAO_WatcherMailFilter::WORKER_ID,
@@ -1518,43 +1518,43 @@ class Model_WatcherMailFilter {
 		// [JAS]: Don't send obvious spam to watchers.
 		if($ticket->spam_score >= 0.9000)
 			return false;
-
+			
 		// Build our objects
 		$ticket_from = DAO_Address::get($ticket->last_wrote_address_id);
 		$ticket_group_id = $ticket->team_id;
-
+		
 		// [TODO] These expensive checks should only populate when needed
 		$messages = DAO_Ticket::getMessagesByTicket($ticket->id);
 		$message_headers = array();
 
 		if(empty($messages))
 			return false;
-
+		
 		if(null != (@$message_last = array_pop($messages))) { /* @var $message_last CerberusMessage */
 			$message_headers = $message_last->getHeaders();
 		}
 
 		// Clear the rest of the message manifests
 		unset($messages);
-
+		
 		$custom_fields = DAO_CustomField::getAll();
-
+		
 		// Lazy load when needed on criteria basis
 		$ticket_field_values = null;
 		$address_field_values = null;
 		$org_field_values = null;
-
+		
 		// Worker memberships (for checking permissions)
 		$workers = DAO_Worker::getAll();
 		$group_rosters = DAO_Group::getRosters();
-
+		
 		// Check filters
 		if(is_array($filters))
 		foreach($filters as $filter) { /* @var $filter Model_WatcherMailFilter */
 			$passed = 0;
 
 			// check the worker's group memberships
-			if(!isset($workers[$filter->worker_id]) // worker doesn't exist
+			if(!isset($workers[$filter->worker_id]) // worker doesn't exist 
 				|| $workers[$filter->worker_id]->is_disabled // is disabled
 				|| (!$workers[$filter->worker_id]->is_superuser  // not a superuser, and...
 					&& !isset($group_rosters[$ticket->team_id][$filter->worker_id]))) { // no membership
@@ -1564,7 +1564,7 @@ class Model_WatcherMailFilter {
 			// check criteria
 			foreach($filter->criteria as $rule_key => $rule) {
 				@$value = $rule['value'];
-
+							
 				switch($rule_key) {
 					case 'dayofweek':
 						$current_day = strftime('%w');
@@ -1572,14 +1572,14 @@ class Model_WatcherMailFilter {
 
 						// Forced to English abbrevs as indexes
 						$days = array('sun','mon','tue','wed','thu','fri','sat');
-
+						
 						// Is the current day enabled?
 						if(isset($rule[$days[$current_day]])) {
 							$passed++;
 						}
-
+							
 						break;
-
+						
 					case 'timeofday':
 						$current_hour = strftime('%H');
 						$current_min = strftime('%M');
@@ -1588,7 +1588,7 @@ class Model_WatcherMailFilter {
 
 						if(null != ($from_time = @$rule['from']))
 							list($from_hour, $from_min) = explode(':', $from_time);
-
+						
 						if(null != ($to_time = @$rule['to']))
 							if(list($to_hour, $to_min) = explode(':', $to_time));
 
@@ -1596,7 +1596,7 @@ class Model_WatcherMailFilter {
 						if($from_hour > $to_hour) { // yes
 							$to_hour += 24; // add 24 hrs to the destination (1am = 25th hour)
 						}
-
+							
 						// Are we in the right 24 hourly range?
 						if((integer)$current_hour >= $from_hour && (integer)$current_hour <= $to_hour) {
 							// If we're in the first hour, are we minutes early?
@@ -1605,22 +1605,22 @@ class Model_WatcherMailFilter {
 							// If we're in the last hour, are we minutes late?
 							if($current_hour==$to_hour && (integer)$current_min > $to_min)
 								break;
-
+								
 							$passed++;
 						}
 						break;
-
-					case 'event':
+						
+					case 'event': 
 						if(!empty($event) && is_array($rule) && isset($rule[$event]))
 							$passed++;
-						break;
-
+						break;					
+						
 					case 'groups':
 						if(null !== (@$group_buckets = $rule['groups'][$ticket->team_id]) // group is set
 							&& (empty($group_buckets) || in_array($ticket->category_id,$group_buckets)))
 								$passed++;
 						break;
-
+						
 					case 'next_worker_id':
 						// If it's an assigned event, we only care about the filter's owner
 						if(!empty($event) && 0==strcasecmp($event,'ticket_assignment')) {
@@ -1632,7 +1632,7 @@ class Model_WatcherMailFilter {
 
 						if(intval($value)==intval($ticket->next_worker_id))
 							$passed++;
-						break;
+						break;					
 
 					case 'mask':
 						$regexp_mask = DevblocksPlatform::strToRegExp($value);
@@ -1640,25 +1640,25 @@ class Model_WatcherMailFilter {
 							$passed++;
 						}
 						break;
-
+						
 					case 'from':
 						$regexp_from = DevblocksPlatform::strToRegExp($value);
 						if(@preg_match($regexp_from, $ticket_from->email)) {
 							$passed++;
 						}
 						break;
-
+						
 					case 'subject':
 						$regexp_subject = DevblocksPlatform::strToRegExp($value);
 						if(@preg_match($regexp_subject, $ticket->subject)) {
 							$passed++;
 						}
 						break;
-
+						
 					case 'body':
 						if(null == ($message_body = $message_last->getContent()))
 							break;
-
+							
 						// Line-by-line body scanning (sed-like)
 						$lines = preg_split("/[\r\n]/", $message_body);
 						if(is_array($lines))
@@ -1669,7 +1669,7 @@ class Model_WatcherMailFilter {
 							}
 						}
 						break;
-
+						
 					case 'header1':
 					case 'header2':
 					case 'header3':
@@ -1681,23 +1681,23 @@ class Model_WatcherMailFilter {
 							$passed++;
 							break;
 						}
-
+						
 						if(empty($value)) { // we're checking for null/blanks
 							if(!isset($message_headers[$header]) || empty($message_headers[$header])) {
 								$passed++;
 							}
-
+							
 						} elseif(isset($message_headers[$header]) && !empty($message_headers[$header])) {
 							$regexp_header = DevblocksPlatform::strToRegExp($value);
-
+							
 							// Flatten CRLF
 							if(@preg_match($regexp_header, str_replace(array("\r","\n"),' ',$message_headers[$header]))) {
 								$passed++;
 							}
 						}
-
+						
 						break;
-
+						
 					default: // ignore invalids
 						// Custom Fields
 						if(0==strcasecmp('cf_',substr($rule_key,0,3))) {
@@ -1726,7 +1726,7 @@ class Model_WatcherMailFilter {
 									$field_values =& $ticket_field_values;
 									break;
 							}
-
+							
 							// Type sensitive value comparisons
 							// [TODO] Operators
 							switch($field->type) {
@@ -1735,7 +1735,7 @@ class Model_WatcherMailFilter {
 								case 'U': // URL
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : '';
 									$oper = isset($rule['oper']) ? $rule['oper'] : "=";
-
+									
 									if($oper == "=" && @preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
 										$passed++;
 									elseif($oper == "!=" && @!preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
@@ -1744,7 +1744,7 @@ class Model_WatcherMailFilter {
 								case 'N': // number
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : 0;
 									$oper = isset($rule['oper']) ? $rule['oper'] : "=";
-
+									
 									if($oper=="=" && intval($field_val)==intval($value))
 										$passed++;
 									elseif($oper=="!=" && intval($field_val)!=intval($value))
@@ -1758,7 +1758,7 @@ class Model_WatcherMailFilter {
 									$field_val = isset($field_values[$field_id]) ? intval($field_values[$field_id]) : 0;
 									$from = isset($rule['from']) ? $rule['from'] : "0";
 									$to = isset($rule['to']) ? $rule['to'] : "now";
-
+									
 									if(intval(@strtotime($from)) <= $field_val && intval(@strtotime($to)) >= $field_val) {
 										$passed++;
 									}
@@ -1774,7 +1774,7 @@ class Model_WatcherMailFilter {
 								case 'W': // worker
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : array();
 									if(!is_array($value)) $value = array($value);
-
+										
 									if(is_array($field_val)) { // if multiple things set
 										foreach($field_val as $v) { // loop through possible
 											if(isset($value[$v])) { // is any possible set?
@@ -1782,13 +1782,13 @@ class Model_WatcherMailFilter {
 												break;
 											}
 										}
-
+										
 									} else { // single
 										if(isset($value[$field_val])) { // is our set field in possibles?
 											$passed++;
 											break;
 										}
-
+										
 									}
 									break;
 							}
@@ -1796,17 +1796,17 @@ class Model_WatcherMailFilter {
 						break;
 				}
 			}
-
+			
 			// If our rule matched every criteria, stop and return the filter
 			if($passed == count($filter->criteria)) {
 				DAO_WatcherMailFilter::increment($filter->id); // ++ the times we've matched
 				$matches[$filter->id] = $filter;
 			}
 		}
-
+		
 		if(!empty($matches))
 			return $matches;
-
+		
 		// No matches
 		return false;
 	}

@@ -16,32 +16,32 @@
 ***********************************************************************/
 /*
  * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- *
- * Sure, it would be so easy to just cheat and edit this file to use the
- * software without paying for it.  But we trust you anyway.  In fact, we're
- * writing this software for you!
- *
- * Quality software backed by a dedicated team takes money to develop.  We
- * don't want to be out of the office bagging groceries when you call up
- * needing a helping hand.  We'd rather spend our free time coding your
- * feature requests than mowing the neighbors' lawns for rent money.
- *
- * We've never believed in encoding our source code out of paranoia over not
- * getting paid.  We want you to have the full source code and be able to
- * make the tweaks your organization requires to get more done -- despite
- * having less of everything than you might need (time, people, money,
+ * 
+ * Sure, it would be so easy to just cheat and edit this file to use the 
+ * software without paying for it.  But we trust you anyway.  In fact, we're 
+ * writing this software for you! 
+ * 
+ * Quality software backed by a dedicated team takes money to develop.  We 
+ * don't want to be out of the office bagging groceries when you call up 
+ * needing a helping hand.  We'd rather spend our free time coding your 
+ * feature requests than mowing the neighbors' lawns for rent money. 
+ * 
+ * We've never believed in encoding our source code out of paranoia over not 
+ * getting paid.  We want you to have the full source code and be able to 
+ * make the tweaks your organization requires to get more done -- despite 
+ * having less of everything than you might need (time, people, money, 
  * energy).  We shouldn't be your bottleneck.
- *
- * We've been building our expertise with this project since January 2002.  We
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to
- * let us take over your shared e-mail headache is a worthwhile investment.
- * It will give you a sense of control over your in-box that you probably
- * haven't had since spammers found you in a game of "E-mail Address
+ * 
+ * We've been building our expertise with this project since January 2002.  We 
+ * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
+ * let us take over your shared e-mail headache is a worthwhile investment.  
+ * It will give you a sense of control over your in-box that you probably 
+ * haven't had since spammers found you in a game of "E-mail Address 
  * Battleship".  Miss. Miss. You sunk my in-box!
- *
- * A legitimate license entitles you to support, access to the developer
- * mailing list, the ability to participate in betas and the warm fuzzy
- * feeling of feeding a couple obsessed developers who want to help you get
+ * 
+ * A legitimate license entitles you to support, access to the developer 
+ * mailing list, the ability to participate in betas and the warm fuzzy 
+ * feeling of feeding a couple obsessed developers who want to help you get 
  * more done than 'the other guy'.
  *
  * - Jeff Standen, Mike Fogg, Brenan Cavish, Darren Sugita, Dan Hildebrandt
@@ -50,26 +50,26 @@
  */
 
 class UmPortalHelper {
-	static private $_code = null;
-
+	static private $_code = null; 
+	
 	public static function getCode() {
 		return self::$_code;
-	}
-
+	}	
+	
 	public static function setCode($code) {
 		self::$_code = $code;
 	}
-
+	
 	/**
 	 * @return Model_CommunitySession
 	 */
 	public static function getSession() {
 		$fingerprint = self::getFingerprint();
-
+		
 		$session_id = md5($fingerprint['ip'] . self::getCode() . $fingerprint['local_sessid']);
 		return DAO_CommunitySession::get($session_id);
 	}
-
+	
 	public static function getFingerprint() {
 		$sFingerPrint = DevblocksPlatform::importGPC($_COOKIE['GroupLoginPassport'],'string','');
 		$fingerprint = null;
@@ -82,14 +82,14 @@ class UmPortalHelper {
 
 class UmPortalController extends DevblocksControllerExtension {
     const ID = 'usermeet.controller.portal';
-
+    
 	function __construct($manifest) {
 		parent::__construct($manifest);
 	}
-
+		
 	/**
-	 * @param DevblocksHttpRequest $request
-	 * @return DevblocksHttpResponse $response
+	 * @param DevblocksHttpRequest $request 
+	 * @return DevblocksHttpResponse $response 
 	 */
 	function handleRequest(DevblocksHttpRequest $request) {
 		$stack = $request->path;
@@ -109,7 +109,7 @@ class UmPortalController extends DevblocksControllerExtension {
             die("Tool not found.");
         }
 	}
-
+	
 	/**
 	 * @param DevblocksHttpResponse $response
 	 */
@@ -121,7 +121,7 @@ class UmPortalController extends DevblocksControllerExtension {
 		// Globals for Community Tool template scope
 		$translate = DevblocksPlatform::getTranslationService();
 		$tpl->assign('translate', $translate);
-
+		
 		array_shift($stack); // portal
 		$code = array_shift($stack); // xxxxxxxx
 
@@ -135,12 +135,12 @@ class UmPortalController extends DevblocksControllerExtension {
             die("Tool not found.");
         }
 	}
-
+	
 };
 
 class UmConfigCommunitiesTab extends Extension_ConfigTab {
 	const ID = 'usermeet.config.tab.communities';
-
+	
 	function showTab() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl_path = dirname(__FILE__) . '/templates/';
@@ -154,7 +154,7 @@ class UmConfigCommunitiesTab extends Extension_ConfigTab {
 	    // Tool Manifests
 	    $tools = DevblocksPlatform::getExtensions('usermeet.tool', false, true);
 	    $tpl->assign('tool_manifests', $tools);
-
+	    
 	    // Tool Instances
 	    $community_tools = array();
 	    $instances = DAO_CommunityTool::getList();
@@ -162,17 +162,17 @@ class UmConfigCommunitiesTab extends Extension_ConfigTab {
 	    	// Only tools with valid plugins
 	    	if(!isset($tools[$tool->extension_id]))
 				continue;
-
+			
 	        if(!isset($community_tools[$tool->community_id]))
 				$community_tools[$tool->community_id] = array();
-
+				
 	        $community_tools[$tool->community_id][$tool->code] = $tool;
 	    }
 	    $tpl->assign('community_tools', $community_tools);
-
+	    
 		$tpl->display('file:' . $tpl_path . 'community/config/tab/index.tpl');
 	}
-
+	
 	function getCommunityAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
 
@@ -180,24 +180,24 @@ class UmConfigCommunitiesTab extends Extension_ConfigTab {
 		$tpl->cache_lifetime = "0";
 		$tpl_path = dirname(__FILE__) . '/templates/';
 		$tpl->assign('path', $tpl_path);
-
+		
 		if(!empty($id)) {
 			$community = DAO_Community::get($id);
 			$tpl->assign('community', $community);
 		}
-
+		
 	    // Tool Manifests
 	    $tools = DevblocksPlatform::getExtensions('usermeet.tool', false, true);
 	    $tpl->assign('tool_manifests', $tools);
-
+		
 		$tpl->display('file:' . $tpl_path . 'community/config/tab/community_config.tpl');
 	}
-
+	
 	function saveCommunityAction() {
 		// [TODO] Privs
 		@$id = DevblocksPlatform::importGPC($_POST['id'],'integer',0);
-		@$name = DevblocksPlatform::importGPC($_POST['name'],'string','New Community');
-		@$delete = DevblocksPlatform::importGPC($_POST['do_delete'],'integer',0);
+		@$name = DevblocksPlatform::importGPC($_POST['name'],'string','New Community');	
+		@$delete = DevblocksPlatform::importGPC($_POST['do_delete'],'integer',0);	
 
 	    @$add_tool_id = DevblocksPlatform::importGPC($_POST['add_tool_id'],'string');
 
@@ -205,22 +205,22 @@ class UmConfigCommunitiesTab extends Extension_ConfigTab {
 			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','communities')));
 			return;
 		}
-
+	    
 		if(!empty($delete)) {
 			DAO_Community::delete($id);
-
+			
 		} else {
 		    $fields = array(
 		        DAO_Community::NAME => (!empty($name) ? $name : "New Community"),
 		    );
-
+			
 			if(empty($id)) { // Create
 			    $id = DAO_Community::create($fields);
-
+				
 			} else { // Edit || Delete
 			    DAO_Community::update($id,$fields);
 			}
-
+			
 			if(!empty($add_tool_id) && !empty($id)) {
 			    $fields = array(
 			        DAO_CommunityTool::COMMUNITY_ID => $id,
@@ -228,34 +228,34 @@ class UmConfigCommunitiesTab extends Extension_ConfigTab {
 			    );
 			    $tool_id = DAO_CommunityTool::create($fields);
 			}
-
+			
 		}
-
+		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('config','communities')));
 	}
-
+	
 	// [TODO] This really doesn't belong on the tab here
 	function getContactSituationAction() {
 		@$portal = DevblocksPlatform::importGPC($_REQUEST['portal'],'string','');
-
+		
 		UmPortalHelper::setCode($portal);
-
+		
 		$module = DevblocksPlatform::getExtension('sc.controller.contact',true,true);
 		$module->getSituation();
 	}
-
+	
 	function getCommunityToolAction() {
 		$worker = CerberusApplication::getActiveWorker();
 		if(!$worker || !$worker->is_superuser) {
 			echo "Access denied.";
 			return;
 		}
-
+		
 		@$portal = DevblocksPlatform::importGPC($_REQUEST['portal'],'string','');
 		@$is_submitted = DevblocksPlatform::importGPC($_POST['is_submitted'],'integer',0);
-
+		
 		UmPortalHelper::setCode($portal);
-
+		
 		if(!empty($is_submitted))
 			$is_submitted = time();
 
@@ -263,10 +263,10 @@ class UmConfigCommunitiesTab extends Extension_ConfigTab {
 		$tpl->cache_lifetime = "0";
 		$tpl_path = dirname(__FILE__) . '/templates/';
 		$tpl->assign('path', $tpl_path);
-
+	
 		$tpl->assign('portal', $portal);
 		$tpl->assign('is_submitted', $is_submitted);
-
+		
 		if(null != ($instance = DAO_CommunityTool::getByCode($portal))) {
 			$tpl->assign('instance', $instance);
 			$manifest = DevblocksPlatform::getExtension($instance->extension_id, false, true);
@@ -274,19 +274,19 @@ class UmConfigCommunitiesTab extends Extension_ConfigTab {
         		$tpl->assign('tool', $tool);
             }
 		}
-
+        
         // Community Record
         $community_id = $instance->community_id;
         $community = DAO_Community::get($community_id);
         $tpl->assign('community', $community);
-
+		
         // Install
         $url_writer = DevblocksPlatform::getUrlService();
         $url = $url_writer->write('c=portal&a='.$portal,true);
         $url_parts = parse_url($url);
-
+        
         $host = $url_parts['host'];
-        @$port = $_SERVER['SERVER_PORT'];
+        @$port = $_SERVER['SERVER_PORT']; 
 		$base = substr(DEVBLOCKS_WEBPATH,0,-1); // consume trailing
         $path = substr($url_parts['path'],strlen(DEVBLOCKS_WEBPATH)-1); // consume trailing slash
 
@@ -294,23 +294,23 @@ class UmConfigCommunitiesTab extends Extension_ConfigTab {
         if($parts[1]=='index.php') // 0 is null from /part1/part2 paths.
         	unset($parts[1]);
         $path = implode('/', $parts);
-
+        
 		$tpl->assign('host', $host);
 		$tpl->assign('is_ssl', ($url_writer->isSSL() ? 1 : 0));
 		$tpl->assign('port', $port);
 		$tpl->assign('base', $base);
 		$tpl->assign('path', $path);
-
+        
 		$tpl->display('file:' . $tpl_path . 'community/config/tab/tool_config.tpl');
 	}
-
+	
 	function saveCommunityToolAction() {
 		@$code = DevblocksPlatform::importGPC($_POST['portal'],'string');
 		@$name = DevblocksPlatform::importGPC($_POST['portal_name'],'string','');
         @$iDelete = DevblocksPlatform::importGPC($_POST['do_delete'],'integer',0);
-
+		
 		UmPortalHelper::setCode($code);
-
+		
 		if(DEMO_MODE) {
 			if($iDelete) {
 				DevblocksPlatform::redirect(new DevblocksHttpResponse(array('config','communities')));
@@ -327,22 +327,22 @@ class UmConfigCommunitiesTab extends Extension_ConfigTab {
 				DAO_CommunityTool::delete($tool->id);
 				DevblocksPlatform::redirect(new DevblocksHttpResponse(array('config','communities')));
 				return;
-
+				
 			} else {
 				$manifest = DevblocksPlatform::getExtension($instance->extension_id, false, true);
 	            $tool = $manifest->createInstance(); /* @var $tool Extension_UsermeetTool */
-
+				
 				// Update the tool name if it has changed
 				if(0 != strcmp($instance->name,$name))
 					DAO_CommunityTool::update($instance->id, array(
 						DAO_CommunityTool::NAME => $name
 					));
-
+				
 				// Defer the rest to tool instances and extensions
 				$tool->saveConfiguration();
 			}
 		}
-
+		
 		self::getCommunityToolAction();
 	}
 };

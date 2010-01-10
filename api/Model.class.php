@@ -58,7 +58,7 @@ class Model_PreParseRule {
 	public $pos;
 	public $is_sticky = 0;
 	public $sticky_order = 0;
-
+	
 	/**
 	 * Returns a Model_PreParserRule on a match, or NULL
 	 *
@@ -77,20 +77,20 @@ class Model_PreParseRule {
 
 		// From address
 		$fromInst = CerberusParser::getAddressFromHeaders($headers);
-
+		
 		// Stackable
 		$matches = array();
-
+		
 		// Custom fields
 		$custom_fields = DAO_CustomField::getAll();
-
+		
 		// Criteria extensions
 		$filter_criteria_exts = DevblocksPlatform::getExtensions('cerberusweb.mail_filter.criteria', false);
-
+		
 		// Lazy load when needed on criteria basis
 		$address_field_values = null;
 		$org_field_values = null;
-
+		
 		// check filters
 		if(is_array($filters))
 		foreach($filters as $filter) {
@@ -99,7 +99,7 @@ class Model_PreParseRule {
 			// check criteria
 			foreach($filter->criteria as $rule_key => $rule) {
 				@$value = $rule['value'];
-
+							
 				switch($rule_key) {
 					case 'dayofweek':
 						$current_day = strftime('%w');
@@ -107,14 +107,14 @@ class Model_PreParseRule {
 
 						// Forced to English abbrevs as indexes
 						$days = array('sun','mon','tue','wed','thu','fri','sat');
-
+						
 						// Is the current day enabled?
 						if(isset($rule[$days[$current_day]])) {
 							$passed++;
 						}
-
+							
 						break;
-
+						
 					case 'timeofday':
 						$current_hour = strftime('%H');
 						$current_min = strftime('%M');
@@ -123,7 +123,7 @@ class Model_PreParseRule {
 
 						if(null != ($from_time = @$rule['from']))
 							list($from_hour, $from_min) = explode(':', $from_time);
-
+						
 						if(null != ($to_time = @$rule['to']))
 							if(list($to_hour, $to_min) = explode(':', $to_time));
 
@@ -131,7 +131,7 @@ class Model_PreParseRule {
 						if($from_hour > $to_hour) { // yes
 							$to_hour += 24; // add 24 hrs to the destination (1am = 25th hour)
 						}
-
+							
 						// Are we in the right 24 hourly range?
 						if((integer)$current_hour >= $from_hour && (integer)$current_hour <= $to_hour) {
 							// If we're in the first hour, are we minutes early?
@@ -140,25 +140,25 @@ class Model_PreParseRule {
 							// If we're in the last hour, are we minutes late?
 							if($current_hour==$to_hour && (integer)$current_min > $to_min)
 								break;
-
+								
 							$passed++;
 						}
 
-						break;
+						break;					
 
 					case 'type':
-						if(($is_new && 0 == strcasecmp($value,'new'))
+						if(($is_new && 0 == strcasecmp($value,'new')) 
 							|| (!$is_new && 0 == strcasecmp($value,'reply')))
-								$passed++;
+								$passed++; 
 						break;
-
+						
 					case 'from':
 						$regexp_from = DevblocksPlatform::strToRegExp($value);
 						if(preg_match($regexp_from, $fromInst->email)) {
 							$passed++;
 						}
 						break;
-
+						
 					case 'tocc':
 						$tocc = array();
 						$destinations = DevblocksPlatform::parseCsvString($value);
@@ -166,7 +166,7 @@ class Model_PreParseRule {
 						// Build a list of To/Cc addresses on this message
 						@$to_list = imap_rfc822_parse_adrlist($headers['to'],'localhost');
 						@$cc_list = imap_rfc822_parse_adrlist($headers['cc'],'localhost');
-
+						
 						if(is_array($to_list))
 						foreach($to_list as $addy) {
 							$tocc[] = $addy->mailbox . '@' . $addy->host;
@@ -175,13 +175,13 @@ class Model_PreParseRule {
 						foreach($cc_list as $addy) {
 							$tocc[] = $addy->mailbox . '@' . $addy->host;
 						}
-
+						
 						$dest_flag = false; // bail out when true
 						if(is_array($destinations) && is_array($tocc))
 						foreach($destinations as $dest) {
 							if($dest_flag) break;
 							$regexp_dest = DevblocksPlatform::strToRegExp($dest);
-
+							
 							foreach($tocc as $addy) {
 								if(@preg_match($regexp_dest, $addy)) {
 									$passed++;
@@ -191,7 +191,7 @@ class Model_PreParseRule {
 							}
 						}
 						break;
-
+						
 					case 'header1':
 					case 'header2':
 					case 'header3':
@@ -203,10 +203,10 @@ class Model_PreParseRule {
 							if(!isset($headers[$header]) || empty($headers[$header])) {
 								$passed++;
 							}
-
+							
 						} elseif(isset($headers[$header]) && !empty($headers[$header])) {
 							$regexp_header = DevblocksPlatform::strToRegExp($value);
-
+							
 							// handle arrays like Received: and (broken)Content-Type headers  (farking spammers)
 							if(is_array($headers[$header])) {
 								foreach($headers[$header] as $array_header) {
@@ -219,12 +219,12 @@ class Model_PreParseRule {
 								// Flatten CRLF
 								if(preg_match($regexp_header, str_replace(array("\r","\n"),' ',$headers[$header]))) {
 									$passed++;
-								}
+								}								
 							}
 						}
-
+						
 						break;
-
+						
 					case 'body':
 						// Line-by-line body scanning (sed-like)
 						$lines = preg_split("/[\r\n]/", $message->body);
@@ -236,14 +236,14 @@ class Model_PreParseRule {
 							}
 						}
 						break;
-
+						
 					case 'body_encoding':
 						$regexp_bodyenc = DevblocksPlatform::strToRegExp($value);
 
 						if(preg_match($regexp_bodyenc, $message->body_encoding))
 							$passed++;
 						break;
-
+						
 					case 'attachment':
 						$regexp_file = DevblocksPlatform::strToRegExp($value);
 
@@ -255,7 +255,7 @@ class Model_PreParseRule {
 							}
 						}
 						break;
-
+						
 					default: // ignore invalids
 						// Custom Fields
 						if(0==strcasecmp('cf_',substr($rule_key,0,3))) {
@@ -279,7 +279,7 @@ class Model_PreParseRule {
 									$field_values =& $org_field_values;
 									break;
 							}
-
+							
 							// Type sensitive value comparisons
 							// [TODO] Operators
 							// [TODO] Highly redundant
@@ -289,7 +289,7 @@ class Model_PreParseRule {
 								case 'U': // URL
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : '';
 									$oper = isset($rule['oper']) ? $rule['oper'] : "=";
-
+									
 									if($oper == "=" && @preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
 										$passed++;
 									elseif($oper == "!=" && @!preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
@@ -301,7 +301,7 @@ class Model_PreParseRule {
 								
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : 0;
 									$oper = isset($rule['oper']) ? $rule['oper'] : "=";
-
+									
 									if($oper=="=" && intval($field_val)==intval($value))
 										$passed++;
 									elseif($oper=="!=" && intval($field_val)!=intval($value))
@@ -315,7 +315,7 @@ class Model_PreParseRule {
 									$field_val = isset($field_values[$field_id]) ? intval($field_values[$field_id]) : 0;
 									$from = isset($rule['from']) ? $rule['from'] : "0";
 									$to = isset($rule['to']) ? $rule['to'] : "now";
-
+									
 									if(intval(@strtotime($from)) <= $field_val && intval(@strtotime($to)) >= $field_val) {
 										$passed++;
 									}
@@ -331,7 +331,7 @@ class Model_PreParseRule {
 								case 'W': // worker
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : array();
 									if(!is_array($value)) $value = array($value);
-
+										
 									if(is_array($field_val)) { // if multiple things set
 										foreach($field_val as $v) { // loop through possible
 											if(isset($value[$v])) { // is any possible set?
@@ -339,17 +339,17 @@ class Model_PreParseRule {
 												break;
 											}
 										}
-
+										
 									} else { // single
 										if(isset($value[$field_val])) { // is our set field in possibles?
 											$passed++;
 											break;
 										}
-
+										
 									}
 									break;
 							}
-
+						
 						} elseif(isset($filter_criteria_exts[$rule_key])) { // criteria extensions
 							try {
 								$crit_ext = $filter_criteria_exts[$rule_key]->createInstance();
@@ -357,23 +357,23 @@ class Model_PreParseRule {
 									$passed++;
 									break;
 								}
-
+								
 							} catch(Exception $e) {
 								// Oops!
 								//print_r($e);
 							}
-
+							
 						}
-
+						
 						break;
 				}
 			}
-
+			
 			// If our rule matched every criteria, stop and return the filter
 			if($passed == count($filter->criteria)) {
 				DAO_PreParseRule::increment($filter->id); // ++ the times we've matched
 				$matches[] = $filter;
-
+				
 				// Check our actions and see if we should bail out early
 				if(isset($filter->actions) && !empty($filter->actions))
 				foreach($filter->actions as $action_key => $action) {
@@ -388,10 +388,10 @@ class Model_PreParseRule {
 				}
 			}
 		}
-
+		
 		return $matches;
 	}
-
+	
 }
 
 class Model_GroupInboxFilter {
@@ -404,13 +404,13 @@ class Model_GroupInboxFilter {
 	public $is_sticky = 0;
 	public $sticky_order = 0;
 	public $is_stackable = 0;
-
+	
 	/**
 	 * @return Model_GroupInboxFilter|false
 	 */
 	static function getMatches($group_id, $ticket_id, $only_rule_id=0) {
 		$matches = array();
-
+		
 		if(empty($group_id))
 			return false;
 
@@ -425,32 +425,32 @@ class Model_GroupInboxFilter {
 		// Check the ticket
 		if(null === ($ticket = DAO_Ticket::getTicket($ticket_id)))
 			return false;
-
+			
 		// Build our objects
 		$ticket_from = DAO_Address::get($ticket->last_wrote_address_id);
 		$ticket_group_id = $ticket->team_id;
-
+		
 		// [TODO] These expensive checks should only populate when needed
 		$messages = DAO_Ticket::getMessagesByTicket($ticket_id);
 		$message_headers = array();
 
 		if(empty($messages))
 			return false;
-
+		
 		if(null != (@$message_last = array_pop($messages))) { /* @var $message_last CerberusMessage */
 			$message_headers = $message_last->getHeaders();
 		}
 
 		// Clear the rest of the message manifests
 		unset($messages);
-
+		
 		$custom_fields = DAO_CustomField::getAll();
-
+		
 		// Lazy load when needed on criteria basis
 		$ticket_field_values = null;
 		$address_field_values = null;
 		$org_field_values = null;
-
+		
 		// Check filters
 		if(is_array($filters))
 		foreach($filters as $filter) { /* @var $filter Model_GroupInboxFilter */
@@ -458,12 +458,12 @@ class Model_GroupInboxFilter {
 
 			// Skip filters with no criteria
 			if(!is_array($filter->criteria) || empty($filter->criteria))
-				continue;
+				continue; 
 
 			// check criteria
 			foreach($filter->criteria as $rule_key => $rule) {
 				@$value = $rule['value'];
-
+							
 				switch($rule_key) {
 					case 'dayofweek':
 						$current_day = strftime('%w');
@@ -471,14 +471,14 @@ class Model_GroupInboxFilter {
 
 						// Forced to English abbrevs as indexes
 						$days = array('sun','mon','tue','wed','thu','fri','sat');
-
+						
 						// Is the current day enabled?
 						if(isset($rule[$days[$current_day]])) {
 							$passed++;
 						}
-
+							
 						break;
-
+						
 					case 'timeofday':
 						$current_hour = strftime('%H');
 						$current_min = strftime('%M');
@@ -487,7 +487,7 @@ class Model_GroupInboxFilter {
 
 						if(null != ($from_time = @$rule['from']))
 							list($from_hour, $from_min) = explode(':', $from_time);
-
+						
 						if(null != ($to_time = @$rule['to']))
 							if(list($to_hour, $to_min) = explode(':', $to_time));
 
@@ -495,7 +495,7 @@ class Model_GroupInboxFilter {
 						if($from_hour > $to_hour) { // yes
 							$to_hour += 24; // add 24 hrs to the destination (1am = 25th hour)
 						}
-
+							
 						// Are we in the right 24 hourly range?
 						if((integer)$current_hour >= $from_hour && (integer)$current_hour <= $to_hour) {
 							// If we're in the first hour, are we minutes early?
@@ -504,11 +504,11 @@ class Model_GroupInboxFilter {
 							// If we're in the last hour, are we minutes late?
 							if($current_hour==$to_hour && (integer)$current_min > $to_min)
 								break;
-
+								
 							$passed++;
 						}
-						break;
-
+						break;						
+						
 					case 'tocc':
 						$tocc = array();
 						$destinations = DevblocksPlatform::parseCsvString($value);
@@ -516,7 +516,7 @@ class Model_GroupInboxFilter {
 						// Build a list of To/Cc addresses on this message
 						@$to_list = imap_rfc822_parse_adrlist($message_headers['to'],'localhost');
 						@$cc_list = imap_rfc822_parse_adrlist($message_headers['cc'],'localhost');
-
+						
 						if(is_array($to_list))
 						foreach($to_list as $addy) {
 							$tocc[] = $addy->mailbox . '@' . $addy->host;
@@ -525,13 +525,13 @@ class Model_GroupInboxFilter {
 						foreach($cc_list as $addy) {
 							$tocc[] = $addy->mailbox . '@' . $addy->host;
 						}
-
+						
 						$dest_flag = false; // bail out when true
 						if(is_array($destinations) && is_array($tocc))
 						foreach($destinations as $dest) {
 							if($dest_flag) break;
 							$regexp_dest = DevblocksPlatform::strToRegExp($dest);
-
+							
 							foreach($tocc as $addy) {
 								if(@preg_match($regexp_dest, $addy)) {
 									$passed++;
@@ -541,25 +541,25 @@ class Model_GroupInboxFilter {
 							}
 						}
 						break;
-
+						
 					case 'from':
 						$regexp_from = DevblocksPlatform::strToRegExp($value);
 						if(@preg_match($regexp_from, $ticket_from->email)) {
 							$passed++;
 						}
 						break;
-
+						
 					case 'subject':
 						$regexp_subject = DevblocksPlatform::strToRegExp($value);
 						if(@preg_match($regexp_subject, $ticket->subject)) {
 							$passed++;
 						}
 						break;
-
+						
 					case 'body':
 						if(null == ($message_body = $message_last->getContent()))
 							break;
-
+							
 						// Line-by-line body scanning (sed-like)
 						$lines = preg_split("/[\r\n]/", $message_body);
 						if(is_array($lines))
@@ -570,7 +570,7 @@ class Model_GroupInboxFilter {
 							}
 						}
 						break;
-
+						
 					case 'header1':
 					case 'header2':
 					case 'header3':
@@ -582,23 +582,23 @@ class Model_GroupInboxFilter {
 							$passed++;
 							break;
 						}
-
+						
 						if(empty($value)) { // we're checking for null/blanks
 							if(!isset($message_headers[$header]) || empty($message_headers[$header])) {
 								$passed++;
 							}
-
+							
 						} elseif(isset($message_headers[$header]) && !empty($message_headers[$header])) {
 							$regexp_header = DevblocksPlatform::strToRegExp($value);
-
+							
 							// Flatten CRLF
 							if(@preg_match($regexp_header, str_replace(array("\r","\n"),' ',$message_headers[$header]))) {
 								$passed++;
 							}
 						}
-
+						
 						break;
-
+						
 					default: // ignore invalids
 						// Custom Fields
 						if(0==strcasecmp('cf_',substr($rule_key,0,3))) {
@@ -627,11 +627,11 @@ class Model_GroupInboxFilter {
 									$field_values =& $ticket_field_values;
 									break;
 							}
-
+							
 							// No values, default.
 //							if(!isset($field_values[$field_id]))
 //								continue;
-
+							
 							// Type sensitive value comparisons
 							// [TODO] Operators
 							switch($field->type) {
@@ -640,7 +640,7 @@ class Model_GroupInboxFilter {
 								case 'U': // URL
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : '';
 									$oper = isset($rule['oper']) ? $rule['oper'] : "=";
-
+									
 									if($oper == "=" && @preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
 										$passed++;
 									elseif($oper == "!=" && @!preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
@@ -652,7 +652,7 @@ class Model_GroupInboxFilter {
 								
 									$field_val = intval($field_values[$field_id]);
 									$oper = isset($rule['oper']) ? $rule['oper'] : "=";
-
+									
 									if($oper=="=" && $field_val == intval($value))
 										$passed++;
 									elseif($oper=="!=" && $field_val != intval($value))
@@ -666,7 +666,7 @@ class Model_GroupInboxFilter {
 									$field_val = isset($field_values[$field_id]) ? intval($field_values[$field_id]) : 0;
 									$from = isset($rule['from']) ? $rule['from'] : "0";
 									$to = isset($rule['to']) ? $rule['to'] : "now";
-
+									
 									if(intval(@strtotime($from)) <= $field_val && intval(@strtotime($to)) >= $field_val) {
 										$passed++;
 									}
@@ -682,7 +682,7 @@ class Model_GroupInboxFilter {
 								case 'W': // worker
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : array();
 									if(!is_array($value)) $value = array($value);
-
+										
 									if(is_array($field_val)) { // if multiple things set
 										foreach($field_val as $v) { // loop through possible
 											if(isset($value[$v])) { // is any possible set?
@@ -690,13 +690,13 @@ class Model_GroupInboxFilter {
 												break;
 											}
 										}
-
+										
 									} else { // single
 										if(isset($value[$field_val])) { // is our set field in possibles?
 											$passed++;
 											break;
 										}
-
+										
 									}
 									break;
 							}
@@ -704,26 +704,26 @@ class Model_GroupInboxFilter {
 						break;
 				}
 			}
-
+			
 			// If our rule matched every criteria, stop and return the filter
 			if($passed == count($filter->criteria)) {
 				DAO_GroupInboxFilter::increment($filter->id); // ++ the times we've matched
 				$matches[$filter->id] = $filter;
-
+				
 				// If we're not stackable anymore, bail out.
 				if(!$filter->is_stackable)
 					return $matches;
 			}
 		}
-
+		
 		// If last rule was still stackable...
 		if(!empty($matches))
 			return $matches;
-
+		
 		// No matches
 		return false;
 	}
-
+	
 	/**
 	 * @param integer[] $ticket_ids
 	 */
@@ -735,7 +735,7 @@ class Model_GroupInboxFilter {
 		$buckets = DAO_Bucket::getAll();
 		$workers = DAO_Worker::getAll();
 		$custom_fields = DAO_CustomField::getAll();
-
+		
 		// actions
 		if(is_array($this->actions))
 		foreach($this->actions as $action => $params) {
@@ -767,7 +767,7 @@ class Model_GroupInboxFilter {
 						}
 					}
 					break;
-
+					
 				case 'spam':
 					if(isset($params['is_spam'])) {
 						if(intval($params['is_spam'])) {
@@ -784,7 +784,7 @@ class Model_GroupInboxFilter {
 					// Custom fields
 					if(substr($action,0,3)=="cf_") {
 						$field_id = intval(substr($action,3));
-
+						
 						if(!isset($custom_fields[$field_id]) || !isset($params['value']))
 							break;
 
@@ -797,7 +797,7 @@ class Model_GroupInboxFilter {
 		if(!empty($ticket_ids)) {
 			if(!empty($fields))
 				DAO_Ticket::updateTicket($ticket_ids, $fields);
-
+			
 			// Custom Fields
 			C4_AbstractView::_doBulkSetCustomFields(ChCustomFieldSource_Ticket::ID, $field_values, $ticket_ids);
 		}
@@ -833,7 +833,7 @@ abstract class C4_AbstractView {
 	protected function _renderCriteriaCustomField($tpl, $field_id) {
 		$field = DAO_CustomField::get($field_id);
 		$tpl_path = DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/';
-
+		
 		switch($field->type) {
 			case Model_CustomField::TYPE_DROPDOWN:
 			case Model_CustomField::TYPE_MULTI_PICKLIST:
@@ -859,7 +859,7 @@ abstract class C4_AbstractView {
 				break;
 		}
 	}
-
+	
 	/**
 	 * Enter description here...
 	 *
@@ -876,9 +876,9 @@ abstract class C4_AbstractView {
 		$field = DAO_CustomField::get($field_id);
 		@$oper = DevblocksPlatform::importGPC($_POST['oper'],'string','');
 		@$value = DevblocksPlatform::importGPC($_POST['value'],'string','');
-
+		
 		$criteria = null;
-
+		
 		switch($field->type) {
 			case Model_CustomField::TYPE_DROPDOWN:
 			case Model_CustomField::TYPE_MULTI_PICKLIST:
@@ -899,16 +899,16 @@ abstract class C4_AbstractView {
 			case Model_CustomField::TYPE_DATE:
 				@$from = DevblocksPlatform::importGPC($_REQUEST['from'],'string','');
 				@$to = DevblocksPlatform::importGPC($_REQUEST['to'],'string','');
-
+	
 				if(empty($from)) $from = 0;
 				if(empty($to)) $to = 'today';
-
+	
 				$criteria = new DevblocksSearchCriteria($token,$oper,array($from,$to));
 				break;
 			case Model_CustomField::TYPE_WORKER:
 				@$oper = DevblocksPlatform::importGPC($_REQUEST['oper'],'string','eq');
 				@$worker_ids = DevblocksPlatform::importGPC($_POST['worker_id'],'array',array());
-
+				
 				$criteria = new DevblocksSearchCriteria($token,$oper,$worker_ids);
 				break;
 			default: // TYPE_SINGLE_LINE || TYPE_MULTI_LINE
@@ -919,12 +919,12 @@ abstract class C4_AbstractView {
 				$criteria = new DevblocksSearchCriteria($token,$oper,$value);
 				break;
 		}
-
+		
 		return $criteria;
 	}
-
+	
 	/**
-	 * This method automatically fixes any cached strange options, like
+	 * This method automatically fixes any cached strange options, like 
 	 * deleted custom fields.
 	 *
 	 */
@@ -932,13 +932,13 @@ abstract class C4_AbstractView {
 		$fields = $this->getColumns();
 		$custom_fields = DAO_CustomField::getAll();
 		$needs_save = false;
-
+		
 		// Parameter sanity check
 		if(is_array($this->params))
 		foreach($this->params as $pidx => $null) {
 			if(substr($pidx,0,3)!="cf_")
 				continue;
-
+				
 			if(0 != ($cf_id = intval(substr($pidx,3)))) {
 				// Make sure our custom fields still exist
 				if(!isset($custom_fields[$cf_id])) {
@@ -947,7 +947,7 @@ abstract class C4_AbstractView {
 				}
 			}
 		}
-
+		
 		// View column sanity check
 		if(is_array($this->view_columns))
 		foreach($this->view_columns as $cidx => $c) {
@@ -968,7 +968,7 @@ abstract class C4_AbstractView {
 				}
 			}
 		}
-
+		
 		// Sort by sanity check
 		if(substr($this->renderSortBy,0,3)=="cf_") {
 			if(0 != ($cf_id = intval(substr($this->renderSortBy,3)))) {
@@ -978,12 +978,12 @@ abstract class C4_AbstractView {
 				}
 			}
     	}
-
+    	
     	if($needs_save) {
     		C4_AbstractViewLoader::setView($this->id, $this);
     	}
 	}
-
+	
 	function renderCriteriaParam($param) {
 		$field = $param->field;
 		$vals = $param->value;
@@ -995,18 +995,18 @@ abstract class C4_AbstractView {
 		if('cf_'==substr($field,0,3)) {
 			$field_id = intval(substr($field,3));
 			$custom_fields = DAO_CustomField::getAll();
-
+			
 			switch($custom_fields[$field_id]->type) {
 				case Model_CustomField::TYPE_WORKER:
 					$workers = DAO_worker::getAll();
 					foreach($vals as $idx => $worker_id) {
 						if(isset($workers[$worker_id]))
-							$vals[$idx] = $workers[$worker_id]->getName();
+							$vals[$idx] = $workers[$worker_id]->getName(); 
 					}
 					break;
 			}
 		}
-
+		
 		echo implode(', ', $vals);
 	}
 
@@ -1080,17 +1080,17 @@ abstract class C4_AbstractView {
 		$this->params = array();
 		$this->renderPage = 0;
 	}
-
+	
 	public static function _doBulkSetCustomFields($source_extension,$custom_fields, $ids) {
 		$fields = DAO_CustomField::getAll();
-
+		
 		if(!empty($custom_fields))
 		foreach($custom_fields as $cf_id => $params) {
 			if(!is_array($params) || !isset($params['value']))
 				continue;
-
+				
 			$cf_val = $params['value'];
-
+			
 			// Data massaging
 			switch($fields[$cf_id]->type) {
 				case Model_CustomField::TYPE_DATE:
@@ -1103,13 +1103,13 @@ abstract class C4_AbstractView {
 			}
 
 			// If multi-selection types, handle delta changes
-			if(Model_CustomField::TYPE_MULTI_PICKLIST==$fields[$cf_id]->type
+			if(Model_CustomField::TYPE_MULTI_PICKLIST==$fields[$cf_id]->type 
 				|| Model_CustomField::TYPE_MULTI_CHECKBOX==$fields[$cf_id]->type) {
 				if(is_array($cf_val))
 				foreach($cf_val as $val) {
 					$op = substr($val,0,1);
 					$val = substr($val,1);
-
+				
 					if(is_array($ids))
 					foreach($ids as $id) {
 						if($op=='+')
@@ -1118,7 +1118,7 @@ abstract class C4_AbstractView {
 							DAO_CustomFieldValue::unsetFieldValue($source_extension,$id,$cf_id,$val);
 					}
 				}
-
+					
 			// Otherwise, set/unset as a single field
 			} else {
 				if(is_array($ids))
@@ -1184,18 +1184,18 @@ class C4_AbstractViewLoader {
 		$active_worker = CerberusApplication::getActiveWorker();
 		if(is_null(self::$views)) self::_init();
 
-    if(self::exists($view_label)) {
-      $model = self::$views[$view_label];
-      return self::unserializeAbstractView($model);
-
-    } else {
-      // See if the worker has their own saved prefs
-      @$prefs = unserialize(DAO_WorkerPref::get($active_worker->id, 'view'.$view_label));
+		if(self::exists($view_label)) {
+			$model = self::$views[$view_label];
+			return self::unserializeAbstractView($model);
+			
+		} else {
+			// See if the worker has their own saved prefs
+			@$prefs = unserialize(DAO_WorkerPref::get($active_worker->id, 'view'.$view_label));
 
 			// If no worker prefsd, check if we're passed defaults
 			if((empty($prefs) || !$prefs instanceof C4_AbstractViewModel) && !empty($defaults))
 				$prefs = $defaults;
-
+			
 			// Create a default view if it doesn't exist
 			if(!empty($prefs) && $prefs instanceof C4_AbstractViewModel) {
 				if(!empty($prefs->class_name) || class_exists($prefs->class_name)) {
@@ -1213,7 +1213,7 @@ class C4_AbstractViewLoader {
 					return $view;
 				}
 			}
-
+			
 		}
 
 		return null;
@@ -1236,7 +1236,7 @@ class C4_AbstractViewLoader {
 		unset(self::$views[$view_label]);
 		self::_save();
 	}
-
+	
 	static private function _save() {
 		// persist
 		$visit = CerberusApplication::getVisit();
@@ -1249,7 +1249,7 @@ class C4_AbstractViewLoader {
 		}
 
 		$model = new C4_AbstractViewModel();
-
+			
 		$model->class_name = get_class($view);
 
 		$model->id = $view->id;
@@ -1268,12 +1268,12 @@ class C4_AbstractViewLoader {
 	static function unserializeAbstractView(C4_AbstractViewModel $model) {
 		if(!class_exists($model->class_name, true))
 			return null;
-
+		
 		if(null == ($inst = new $model->class_name))
 			return null;
 
 		/* @var $inst C4_AbstractView */
-
+			
 		$inst->id = $model->id;
 		$inst->name = $model->name;
 		$inst->view_columns = $model->view_columns;
@@ -1302,7 +1302,7 @@ class Model_Address {
 	public $last_autoreply;
 
 	function Model_Address() {}
-
+	
 	function getName() {
 		return sprintf("%s%s%s",
 			$this->first_name,
@@ -1353,7 +1353,7 @@ class C4_TicketView extends C4_AbstractView {
 
 	function render() {
 		$this->_sanitize();
-
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id', $this->id);
 		$view_path = DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/tickets/';
@@ -1364,9 +1364,9 @@ class C4_TicketView extends C4_AbstractView {
 
 		$results = self::getData();
 		$tpl->assign('results', $results);
-
+		
 		@$ids = array_keys($results[0]);
-
+		
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
 
@@ -1381,7 +1381,7 @@ class C4_TicketView extends C4_AbstractView {
 
 		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Ticket::ID);
 		$tpl->assign('custom_fields', $custom_fields);
-
+		
 		// Undo?
 		$last_action = C4_TicketView::getLastAction($this->id);
 		$tpl->assign('last_action', $last_action);
@@ -1390,7 +1390,7 @@ class C4_TicketView extends C4_AbstractView {
 		}
 
 		$tpl->assign('timestamp_now', time());
-
+		
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . $view_path . 'ticket_view.tpl');
@@ -1399,14 +1399,14 @@ class C4_TicketView extends C4_AbstractView {
 	function doResetCriteria() {
 		$active_worker = CerberusApplication::getActiveWorker(); /* @var $active_worker CerberusWorker */
 		$active_worker_memberships = $active_worker->getMemberships();
-
+		
 		$this->params = array(
 			SearchFields_Ticket::TICKET_CLOSED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',0),
 			SearchFields_Ticket::TICKET_TEAM_ID => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'in',array_keys($active_worker_memberships)), // censor
 		);
 		$this->renderPage = 0;
 	}
-
+	
 	function renderCriteria($field) {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id', $this->id);
@@ -1428,28 +1428,28 @@ class C4_TicketView extends C4_AbstractView {
 			case SearchFields_Ticket::TICKET_MESSAGE_CONTENT:
 				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__fulltext.tpl');
 				break;
-
+				
 			case SearchFields_Ticket::TICKET_FIRST_WROTE_SPAM:
 			case SearchFields_Ticket::TICKET_FIRST_WROTE_NONSPAM:
 				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__number.tpl');
 				break;
-
+					
 			case SearchFields_Ticket::TICKET_WAITING:
 			case SearchFields_Ticket::TICKET_DELETED:
 			case SearchFields_Ticket::TICKET_CLOSED:
 				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__bool.tpl');
 				break;
-
+					
 			case SearchFields_Ticket::TICKET_CREATED_DATE:
 			case SearchFields_Ticket::TICKET_UPDATED_DATE:
 			case SearchFields_Ticket::TICKET_DUE_DATE:
 				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__date.tpl');
 				break;
-
+					
 			case SearchFields_Ticket::TICKET_SPAM_TRAINING:
 				$tpl->display('file:' . $tpl_path . 'tickets/search/criteria/ticket_spam_training.tpl');
 				break;
-
+				
 			case SearchFields_Ticket::TICKET_SPAM_SCORE:
 				$tpl->display('file:' . $tpl_path . 'tickets/search/criteria/ticket_spam_score.tpl');
 				break;
@@ -1464,7 +1464,7 @@ class C4_TicketView extends C4_AbstractView {
 				$tpl->assign('workers', $workers);
 				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__worker.tpl');
 				break;
-
+					
 			case SearchFields_Ticket::TICKET_TEAM_ID:
 				$teams = DAO_Group::getAll();
 				$tpl->assign('teams', $teams);
@@ -1519,7 +1519,7 @@ class C4_TicketView extends C4_AbstractView {
 				}
 				echo implode(", ", $strings);
 				break;
-
+					
 			case SearchFields_Ticket::TICKET_CATEGORY_ID:
 				$buckets = DAO_Bucket::getAll();
 				$strings = array();
@@ -1624,14 +1624,14 @@ class C4_TicketView extends C4_AbstractView {
 			case SearchFields_Ticket::TICKET_MESSAGE_CONTENT:
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
-
+				
 			case SearchFields_Ticket::TICKET_WAITING:
 			case SearchFields_Ticket::TICKET_DELETED:
 			case SearchFields_Ticket::TICKET_CLOSED:
 				@$bool = DevblocksPlatform::importGPC($_REQUEST['bool'],'integer',1);
 				$criteria = new DevblocksSearchCriteria($field,$oper,$bool);
 				break;
-
+				
 			case SearchFields_Ticket::TICKET_FIRST_WROTE_SPAM:
 			case SearchFields_Ticket::TICKET_FIRST_WROTE_NONSPAM:
 				$criteria = new DevblocksSearchCriteria($field,$oper,$value);
@@ -1645,7 +1645,7 @@ class C4_TicketView extends C4_AbstractView {
 
 				if(empty($from) || (!is_numeric($from) && @false === strtotime(str_replace('.','-',$from))))
 					$from = 0;
-
+					
 				if(empty($to) || (!is_numeric($to) && @false === strtotime(str_replace('.','-',$to))))
 					$to = 'now';
 
@@ -1684,7 +1684,7 @@ class C4_TicketView extends C4_AbstractView {
 				$this->params[SearchFields_Ticket::TICKET_CATEGORY_ID] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CATEGORY_ID,$oper,$bucket_ids);
 
 				break;
-
+				
 			default:
 				// Custom Fields
 				if(substr($field,0,3)=='cf_') {
@@ -1707,14 +1707,14 @@ class C4_TicketView extends C4_AbstractView {
 	 */
 	function doBulkUpdate($filter, $filter_param, $data, $do, $ticket_ids=array()) {
 		@set_time_limit(600);
-
+	  
 		// Make sure we have checked items if we want a checked list
 		if(0 == strcasecmp($filter,"checks") && empty($ticket_ids))
 			return;
-
+		
 		$rule = new Model_GroupInboxFilter();
 		$rule->actions = $do;
-
+	  
 		$params = $this->params;
 
 		if(empty($filter)) {
@@ -1730,7 +1730,7 @@ class C4_TicketView extends C4_AbstractView {
 				foreach($data as $v) {
 					$new_params = array();
 					$do_header = null;
-
+		    
 					switch($filter) {
 						case 'subject':
 							$new_params = array(
@@ -1770,12 +1770,12 @@ class C4_TicketView extends C4_AbstractView {
 								true,
 								false
 							);
-
+							 
 							$ticket_ids = array_merge($ticket_ids, array_keys($tickets));
-
+							 
 						} while(!empty($tickets));
 					}
-
+			   
 					$batch_total = count($ticket_ids);
 					for($x=0;$x<=$batch_total;$x+=200) {
 						$batch_ids = array_slice($ticket_ids,$x,200);
@@ -1794,7 +1794,7 @@ class C4_TicketView extends C4_AbstractView {
 		$active_worker = CerberusApplication::getActiveWorker();
 		$memberships = $active_worker->getMemberships();
 		$translate = DevblocksPlatform::getTranslationService();
-
+		
 		$view = new C4_TicketView();
 		$view->id = CerberusApplication::VIEW_SEARCH;
 		$view->name = $translate->_('common.search_results');
@@ -1820,7 +1820,7 @@ class C4_TicketView extends C4_AbstractView {
 	static public function setLastAction($view_id, Model_TicketViewLastAction $last_action=null) {
 		$visit = CerberusApplication::getVisit(); /* @var $visit CerberusVisit */
 		$view_last_actions = $visit->get(CerberusVisit::KEY_VIEW_LAST_ACTION,array());
-
+	  
 		if(!is_null($last_action) && !empty($last_action->ticket_ids)) {
 			$view_last_actions[$view_id] = $last_action;
 		} else {
@@ -1828,7 +1828,7 @@ class C4_TicketView extends C4_AbstractView {
 				unset($view_last_actions[$view_id]);
 			}
 		}
-
+	  
 		$visit->set(CerberusVisit::KEY_VIEW_LAST_ACTION,$view_last_actions);
 	}
 
@@ -1854,7 +1854,7 @@ class C4_AddressView extends C4_AbstractView {
 
 	function __construct() {
 		$translate = DevblocksPlatform::getTranslationService();
-
+		
 		$this->id = self::DEFAULT_ID;
 		$this->name = $translate->_('addy_book.tab.addresses');
 		$this->renderLimit = 10;
@@ -1869,7 +1869,7 @@ class C4_AddressView extends C4_AbstractView {
 			SearchFields_Address::NUM_NONSPAM,
 			SearchFields_Address::NUM_SPAM,
 		);
-
+		
 		$this->params = array(
 			SearchFields_Address::IS_REGISTERED => new DevblocksSearchCriteria(SearchFields_Address::IS_REGISTERED,'=',1),
 		);
@@ -1889,15 +1889,15 @@ class C4_AddressView extends C4_AbstractView {
 
 	function render() {
 		$this->_sanitize();
-
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id', $this->id);
-
+		
 		$tpl->assign('view', $this);
 
 		$address_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Address::ID);
 		$tpl->assign('custom_fields', $address_fields);
-
+		
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/contacts/addresses/address_view.tpl');
@@ -1908,7 +1908,7 @@ class C4_AddressView extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 
 		$tpl_path = DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/';
-
+		
 		switch($field) {
 			case SearchFields_Address::EMAIL:
 			case SearchFields_Address::FIRST_NAME:
@@ -1966,12 +1966,12 @@ class C4_AddressView extends C4_AbstractView {
 
 	function doResetCriteria() {
 		parent::doResetCriteria();
-
+		
 		$this->params = array(
 			SearchFields_Address::IS_REGISTERED => new DevblocksSearchCriteria(SearchFields_Address::IS_REGISTERED,'=',1),
 		);
 	}
-
+	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -1991,7 +1991,7 @@ class C4_AddressView extends C4_AbstractView {
 			case SearchFields_Address::NUM_NONSPAM:
 				$criteria = new DevblocksSearchCriteria($field,$oper,$value);
 				break;
-
+				
 			case SearchFields_Address::IS_BANNED:
 				@$bool = DevblocksPlatform::importGPC($_REQUEST['bool'],'integer',1);
 				$criteria = new DevblocksSearchCriteria($field,$oper,$bool);
@@ -2016,7 +2016,7 @@ class C4_AddressView extends C4_AbstractView {
 
 	function doBulkUpdate($filter, $do, $ids=array()) {
 		@set_time_limit(600); // [TODO] Temp!
-
+	  
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -2027,7 +2027,7 @@ class C4_AddressView extends C4_AbstractView {
 		// Make sure we have checked items if we want a checked list
 		if(0 == strcasecmp($filter,"checks") && empty($ids))
 			return;
-
+			
 		if(is_array($do))
 		foreach($do as $k => $v) {
 			switch($k) {
@@ -2044,7 +2044,7 @@ class C4_AddressView extends C4_AbstractView {
 					}
 			}
 		}
-
+		
 		$pg = 0;
 
 		if(empty($ids))
@@ -2058,19 +2058,19 @@ class C4_AddressView extends C4_AbstractView {
 				true,
 				false
 			);
-
+			 
 			$ids = array_merge($ids, array_keys($objects));
-
+			 
 		} while(!empty($objects));
 
 		$batch_total = count($ids);
 		for($x=0;$x<=$batch_total;$x+=100) {
 			$batch_ids = array_slice($ids,$x,100);
 			DAO_Address::update($batch_ids, $change_fields);
-
+			
 			// Custom Fields
 			self::_doBulkSetCustomFields(ChCustomFieldSource_Address::ID, $custom_fields, $batch_ids);
-
+			
 			unset($batch_ids);
 		}
 
@@ -2096,7 +2096,7 @@ class C4_AttachmentView extends C4_AbstractView {
 			SearchFields_Attachment::ADDRESS_EMAIL,
 			SearchFields_Attachment::TICKET_MASK,
 		);
-
+		
 //		$this->params = array(
 //			SearchFields_Address::NUM_NONSPAM => new DevblocksSearchCriteria(SearchFields_Address::NUM_NONSPAM,'>',0),
 //		);
@@ -2115,7 +2115,7 @@ class C4_AttachmentView extends C4_AbstractView {
 
 	function render() {
 		$this->_sanitize();
-
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
@@ -2185,12 +2185,12 @@ class C4_AttachmentView extends C4_AbstractView {
 
 	function doResetCriteria() {
 		parent::doResetCriteria();
-
+		
 //		$this->params = array(
 //			SearchFields_Address::NUM_NONSPAM => new DevblocksSearchCriteria(SearchFields_Address::NUM_NONSPAM,'>',0),
 //		);
 	}
-
+	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -2214,7 +2214,7 @@ class C4_AttachmentView extends C4_AbstractView {
 			case SearchFields_Attachment::FILE_SIZE:
 				$criteria = new DevblocksSearchCriteria($field,$oper,$value);
 				break;
-
+				
 			case SearchFields_Attachment::MESSAGE_CREATED_DATE:
 				@$from = DevblocksPlatform::importGPC($_REQUEST['from'],'string','');
 				@$to = DevblocksPlatform::importGPC($_REQUEST['to'],'string','');
@@ -2224,7 +2224,7 @@ class C4_AttachmentView extends C4_AbstractView {
 
 				$criteria = new DevblocksSearchCriteria($field,$oper,array($from,$to));
 				break;
-
+				
 			case SearchFields_Attachment::MESSAGE_IS_OUTGOING:
 				@$bool = DevblocksPlatform::importGPC($_REQUEST['bool'],'integer',1);
 				$criteria = new DevblocksSearchCriteria($field,$oper,$bool);
@@ -2236,10 +2236,10 @@ class C4_AttachmentView extends C4_AbstractView {
 			$this->renderPage = 0;
 		}
 	}
-
+		
 	function doBulkUpdate($filter, $do, $ids=array()) {
 		@set_time_limit(0);
-
+	  
 		$change_fields = array();
 		$deleted = false;
 
@@ -2250,7 +2250,7 @@ class C4_AttachmentView extends C4_AbstractView {
 		// Make sure we have checked items if we want a checked list
 		if(0 == strcasecmp($filter,"checks") && empty($ids))
 			return;
-
+			
 		if(is_array($do))
 		foreach($do as $k => $v) {
 			switch($k) {
@@ -2275,24 +2275,24 @@ class C4_AttachmentView extends C4_AbstractView {
 				false
 			);
 			$ids = array_merge($ids, array_keys($objects));
-
+			 
 		} while(!empty($objects));
 
 		$batch_total = count($ids);
 		for($x=0;$x<=$batch_total;$x+=100) {
 			$batch_ids = array_slice($ids,$x,100);
-
-			if(!$deleted) {
+			
+			if(!$deleted) { 
 				DAO_Attachment::update($batch_ids, $change_fields);
 			} else {
 				DAO_Attachment::delete($batch_ids);
 			}
-
+			
 			unset($batch_ids);
 		}
 
 		unset($ids);
-	}
+	}			
 
 };
 
@@ -2301,7 +2301,7 @@ class C4_ContactOrgView extends C4_AbstractView {
 
 	function __construct() {
 		$translate = DevblocksPlatform::getTranslationService();
-
+		
 		$this->id = self::DEFAULT_ID;
 		$this->name = $translate->_('addy_book.tab.organizations');
 		$this->renderSortBy = 'c_name';
@@ -2329,7 +2329,7 @@ class C4_ContactOrgView extends C4_AbstractView {
 
 	function render() {
 		$this->_sanitize();
-
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('core_tpl', DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/');
 		$tpl->assign('id', $this->id);
@@ -2337,7 +2337,7 @@ class C4_ContactOrgView extends C4_AbstractView {
 
 		$org_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
 		$tpl->assign('custom_fields', $org_fields);
-
+		
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/contacts/orgs/contact_view.tpl');
@@ -2438,10 +2438,10 @@ class C4_ContactOrgView extends C4_AbstractView {
 			$this->renderPage = 0;
 		}
 	}
-
+	
 	function doBulkUpdate($filter, $do, $ids=array()) {
 		@set_time_limit(0);
-
+	  
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -2452,7 +2452,7 @@ class C4_ContactOrgView extends C4_AbstractView {
 		// Make sure we have checked items if we want a checked list
 		if(0 == strcasecmp($filter,"checks") && empty($ids))
 			return;
-
+			
 		if(is_array($do))
 		foreach($do as $k => $v) {
 			switch($k) {
@@ -2481,9 +2481,9 @@ class C4_ContactOrgView extends C4_AbstractView {
 				true,
 				false
 			);
-
+			 
 			$ids = array_merge($ids, array_keys($objects));
-
+			 
 		} while(!empty($objects));
 
 		$batch_total = count($ids);
@@ -2499,7 +2499,7 @@ class C4_ContactOrgView extends C4_AbstractView {
 
 		unset($ids);
 	}
-
+		
 };
 
 class C4_TaskView extends C4_AbstractView {
@@ -2519,7 +2519,7 @@ class C4_TaskView extends C4_AbstractView {
 			SearchFields_Task::DUE_DATE,
 			SearchFields_Task::WORKER_ID,
 			);
-
+		
 		$this->params = array(
 			SearchFields_Task::IS_COMPLETED => new DevblocksSearchCriteria(SearchFields_Task::IS_COMPLETED,'=',0),
 		);
@@ -2539,7 +2539,7 @@ class C4_TaskView extends C4_AbstractView {
 
 	function render() {
 		$this->_sanitize();
-
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
@@ -2554,24 +2554,24 @@ class C4_TaskView extends C4_AbstractView {
 		$tpl->assign('results', $results);
 
 //		$source_renderers = DevblocksPlatform::getExtensions('cerberusweb.task.source', true);
-
+		
 		// Make a list of unique source_extension and load their renderers
 		$source_extensions = array();
 		if(is_array($results) && isset($results[0]))
 		foreach($results[0] as $rows) {
 			$source_extension = $rows[SearchFields_Task::SOURCE_EXTENSION];
-			if(!isset($source_extensions[$source_extension])
+			if(!isset($source_extensions[$source_extension]) 
 				&& !empty($source_extension)
 				&& null != ($mft = DevblocksPlatform::getExtension($source_extension))) {
 				$source_extensions[$source_extension] = $mft->createInstance();
-			}
+			} 
 		}
 		$tpl->assign('source_renderers', $source_extensions);
-
+		
 		// Custom fields
 		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Task::ID);
 		$tpl->assign('custom_fields', $custom_fields);
-
+		
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/tasks/view.tpl');
@@ -2581,32 +2581,32 @@ class C4_TaskView extends C4_AbstractView {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl_path = DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/';
 		$tpl->assign('id', $this->id);
-
+		
 		switch($field) {
 			case SearchFields_Task::TITLE:
 				$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/internal/views/criteria/__string.tpl');
 				break;
-
+				
 			case SearchFields_Task::SOURCE_EXTENSION:
 				$source_renderers = DevblocksPlatform::getExtensions('cerberusweb.task.source', true);
 				$tpl->assign('sources', $source_renderers);
 				$tpl->display('file:' . $tpl_path . 'tasks/criteria/source.tpl');
 				break;
-
+				
 			case SearchFields_Task::IS_COMPLETED:
 				$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
 				break;
-
+				
 			case SearchFields_Task::UPDATED_DATE:
 			case SearchFields_Task::DUE_DATE:
 			case SearchFields_Task::COMPLETED_DATE:
 				$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/internal/views/criteria/__date.tpl');
 				break;
-
+				
 			case SearchFields_Task::WORKER_ID:
 				$workers = DAO_Worker::getAll();
 				$tpl->assign('workers', $workers);
-
+				
 				$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/internal/views/criteria/__worker.tpl');
 				break;
 
@@ -2641,11 +2641,11 @@ class C4_TaskView extends C4_AbstractView {
 				}
 				echo implode(", ", $strings);
 				break;
-
+				
 			case SearchFields_Task::SOURCE_EXTENSION:
-				$sources = $ext = DevblocksPlatform::getExtensions('cerberusweb.task.source', true);
+				$sources = $ext = DevblocksPlatform::getExtensions('cerberusweb.task.source', true);			
 				$strings = array();
-
+				
 				foreach($values as $val) {
 					if(!isset($sources[$val]))
 						continue;
@@ -2654,7 +2654,7 @@ class C4_TaskView extends C4_AbstractView {
 				}
 				echo implode(", ", $strings);
 				break;
-
+			
 			default:
 				parent::renderCriteriaParam($param);
 				break;
@@ -2681,12 +2681,12 @@ class C4_TaskView extends C4_AbstractView {
 
 	function doResetCriteria() {
 		parent::doResetCriteria();
-
+		
 		$this->params = array(
 			SearchFields_Task::IS_COMPLETED => new DevblocksSearchCriteria(SearchFields_Task::IS_COMPLETED,'=',0)
 		);
 	}
-
+	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -2699,12 +2699,12 @@ class C4_TaskView extends C4_AbstractView {
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
-
+				
 			case SearchFields_Task::SOURCE_EXTENSION:
 				@$sources = DevblocksPlatform::importGPC($_REQUEST['sources'],'array',array());
 				$criteria = new DevblocksSearchCriteria($field,$oper,$sources);
 				break;
-
+				
 			case SearchFields_Task::UPDATED_DATE:
 			case SearchFields_Task::COMPLETED_DATE:
 			case SearchFields_Task::DUE_DATE:
@@ -2721,12 +2721,12 @@ class C4_TaskView extends C4_AbstractView {
 				@$bool = DevblocksPlatform::importGPC($_REQUEST['bool'],'integer',1);
 				$criteria = new DevblocksSearchCriteria($field,$oper,$bool);
 				break;
-
+				
 			case SearchFields_Task::WORKER_ID:
 				@$worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
 				$criteria = new DevblocksSearchCriteria($field,$oper,$worker_id);
 				break;
-
+				
 			default:
 				// Custom Fields
 				if(substr($field,0,3)=='cf_') {
@@ -2740,10 +2740,10 @@ class C4_TaskView extends C4_AbstractView {
 			$this->renderPage = 0;
 		}
 	}
-
+	
 	function doBulkUpdate($filter, $do, $ids=array()) {
 		@set_time_limit(600); // [TODO] Temp!
-
+	  
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -2754,7 +2754,7 @@ class C4_TaskView extends C4_AbstractView {
 		// Make sure we have checked items if we want a checked list
 		if(0 == strcasecmp($filter,"checks") && empty($ids))
 			return;
-
+			
 		if(is_array($do))
 		foreach($do as $k => $v) {
 			switch($k) {
@@ -2781,7 +2781,7 @@ class C4_TaskView extends C4_AbstractView {
 					}
 			}
 		}
-
+		
 		$pg = 0;
 
 		if(empty($ids))
@@ -2795,24 +2795,24 @@ class C4_TaskView extends C4_AbstractView {
 				true,
 				false
 			);
-
+			 
 			$ids = array_merge($ids, array_keys($objects));
-
+			 
 		} while(!empty($objects));
 
 		$batch_total = count($ids);
 		for($x=0;$x<=$batch_total;$x+=100) {
 			$batch_ids = array_slice($ids,$x,100);
 			DAO_Task::update($batch_ids, $change_fields);
-
+			
 			// Custom Fields
 			self::_doBulkSetCustomFields(ChCustomFieldSource_Task::ID, $custom_fields, $batch_ids);
-
+			
 			unset($batch_ids);
 		}
 
 		unset($ids);
-	}
+	}	
 };
 
 class C4_WorkerView extends C4_AbstractView {
@@ -3059,7 +3059,7 @@ class C4_WorkerEventView extends C4_AbstractView {
 			SearchFields_WorkerEvent::CONTENT,
 			SearchFields_WorkerEvent::CREATED_DATE,
 		);
-
+		
 		$this->doResetCriteria();
 	}
 
@@ -3076,14 +3076,14 @@ class C4_WorkerEventView extends C4_AbstractView {
 
 	function render() {
 		$this->_sanitize();
-
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
-
+		
 		$tpl->cache_lifetime = "0";
 		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . DEVBLOCKS_PLUGIN_PATH . 'cerberusweb.core/templates/home/tabs/my_events/view.tpl');
@@ -3164,12 +3164,12 @@ class C4_WorkerEventView extends C4_AbstractView {
 
 	function doResetCriteria() {
 		parent::doResetCriteria();
-
+		
 //		$this->params = array(
 //			SearchFields_WorkerEvent::NUM_NONSPAM => new DevblocksSearchCriteria(SearchFields_WorkerEvent::NUM_NONSPAM,'>',0),
 //		);
 	}
-
+	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -3188,7 +3188,7 @@ class C4_WorkerEventView extends C4_AbstractView {
 				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
 				$criteria = new DevblocksSearchCriteria($field,$oper,$worker_ids);
 				break;
-
+				
 			case SearchFields_WorkerEvent::CREATED_DATE:
 				@$from = DevblocksPlatform::importGPC($_REQUEST['from'],'string','');
 				@$to = DevblocksPlatform::importGPC($_REQUEST['to'],'string','');
@@ -3198,7 +3198,7 @@ class C4_WorkerEventView extends C4_AbstractView {
 
 				$criteria = new DevblocksSearchCriteria($field,$oper,array($from,$to));
 				break;
-
+				
 			case SearchFields_WorkerEvent::IS_READ:
 				@$bool = DevblocksPlatform::importGPC($_REQUEST['bool'],'integer',1);
 				$criteria = new DevblocksSearchCriteria($field,$oper,$bool);
@@ -3213,7 +3213,7 @@ class C4_WorkerEventView extends C4_AbstractView {
 
 //	function doBulkUpdate($filter, $do, $ids=array()) {
 //		@set_time_limit(600); // [TODO] Temp!
-//
+//	  
 //		$change_fields = array();
 //
 //		if(empty($do))
@@ -3240,9 +3240,9 @@ class C4_WorkerEventView extends C4_AbstractView {
 //			true,
 //			false
 //			);
-//
+//			 
 //			$ids = array_merge($ids, array_keys($objects));
-//
+//			 
 //		} while(!empty($objects));
 //
 //		$batch_total = count($ids);
@@ -3302,21 +3302,21 @@ class Model_Activity {
 	public function toString(CerberusWorker $worker=null) {
 		if(null == $worker)
 			return;
-
+			
 		$translate = DevblocksPlatform::getTranslationService();
 		$params = $this->params;
 
 		// Prepend the worker name to the activity's param list
 		array_unshift($params, sprintf("<b>%s</b>%s",
 			$worker->getName(),
-			(!empty($worker->title)
-				? (' (' . $worker->title . ')')
+			(!empty($worker->title) 
+				? (' (' . $worker->title . ')') 
 				: ''
 			)
 		));
-
+		
 		return vsprintf(
-			$translate->_($this->translation_code),
+			$translate->_($this->translation_code), 
 			$params
 		);
 	}
@@ -3331,20 +3331,20 @@ class Model_MailToGroupRule {
 	public $actions = array();
 	public $is_sticky = 0;
 	public $sticky_order = 0;
-
+	
 	static function getMatches(Model_Address $fromAddress, CerberusParserMessage $message) {
 //		print_r($fromAddress);
 //		print_r($message);
-
+		
 		$matches = array();
 		$rules = DAO_MailToGroupRule::getWhere();
 		$message_headers = $message->headers;
 		$custom_fields = DAO_CustomField::getAll();
-
+		
 		// Lazy load when needed on criteria basis
 		$address_field_values = null;
 		$org_field_values = null;
-
+		
 		// Check filters
 		if(is_array($rules))
 		foreach($rules as $rule) { /* @var $rule Model_MailToGroupRule */
@@ -3353,7 +3353,7 @@ class Model_MailToGroupRule {
 			// check criteria
 			foreach($rule->criteria as $crit_key => $crit) {
 				@$value = $crit['value'];
-
+							
 				switch($crit_key) {
 					case 'dayofweek':
 						$current_day = strftime('%w');
@@ -3361,14 +3361,14 @@ class Model_MailToGroupRule {
 
 						// Forced to English abbrevs as indexes
 						$days = array('sun','mon','tue','wed','thu','fri','sat');
-
+						
 						// Is the current day enabled?
 						if(isset($crit[$days[$current_day]])) {
 							$passed++;
 						}
-
+							
 						break;
-
+						
 					case 'timeofday':
 						$current_hour = strftime('%H');
 						$current_min = strftime('%M');
@@ -3377,7 +3377,7 @@ class Model_MailToGroupRule {
 
 						if(null != ($from_time = @$crit['from']))
 							list($from_hour, $from_min) = explode(':', $from_time);
-
+						
 						if(null != ($to_time = @$crit['to']))
 							if(list($to_hour, $to_min) = explode(':', $to_time));
 
@@ -3385,7 +3385,7 @@ class Model_MailToGroupRule {
 						if($from_hour > $to_hour) { // yes
 							$to_hour += 24; // add 24 hrs to the destination (1am = 25th hour)
 						}
-
+							
 						// Are we in the right 24 hourly range?
 						if((integer)$current_hour >= $from_hour && (integer)$current_hour <= $to_hour) {
 							// If we're in the first hour, are we minutes early?
@@ -3394,12 +3394,12 @@ class Model_MailToGroupRule {
 							// If we're in the last hour, are we minutes late?
 							if($current_hour==$to_hour && (integer)$current_min > $to_min)
 								break;
-
+								
 							$passed++;
 						}
 
-						break;
-
+						break;					
+					
 					case 'tocc':
 						$tocc = array();
 						$destinations = DevblocksPlatform::parseCsvString($value);
@@ -3407,7 +3407,7 @@ class Model_MailToGroupRule {
 						// Build a list of To/Cc addresses on this message
 						@$to_list = imap_rfc822_parse_adrlist($message_headers['to'],'localhost');
 						@$cc_list = imap_rfc822_parse_adrlist($message_headers['cc'],'localhost');
-
+						
 						if(is_array($to_list))
 						foreach($to_list as $addy) {
 							$tocc[] = $addy->mailbox . '@' . $addy->host;
@@ -3416,13 +3416,13 @@ class Model_MailToGroupRule {
 						foreach($cc_list as $addy) {
 							$tocc[] = $addy->mailbox . '@' . $addy->host;
 						}
-
+						
 						$dest_flag = false; // bail out when true
 						if(is_array($destinations) && is_array($tocc))
 						foreach($destinations as $dest) {
 							if($dest_flag) break;
 							$regexp_dest = DevblocksPlatform::strToRegExp($dest);
-
+							
 							foreach($tocc as $addy) {
 								if(@preg_match($regexp_dest, $addy)) {
 									$passed++;
@@ -3432,14 +3432,14 @@ class Model_MailToGroupRule {
 							}
 						}
 						break;
-
+						
 					case 'from':
 						$regexp_from = DevblocksPlatform::strToRegExp($value);
 						if(@preg_match($regexp_from, $fromAddress->email)) {
 							$passed++;
 						}
 						break;
-
+						
 					case 'subject':
 						// [TODO] Decode if necessary
 						@$subject = $message_headers['subject'];
@@ -3461,7 +3461,7 @@ class Model_MailToGroupRule {
 							}
 						}
 						break;
-
+						
 					case 'header1':
 					case 'header2':
 					case 'header3':
@@ -3473,23 +3473,23 @@ class Model_MailToGroupRule {
 							$passed++;
 							break;
 						}
-
+						
 						if(empty($value)) { // we're checking for null/blanks
 							if(!isset($message_headers[$header]) || empty($message_headers[$header])) {
 								$passed++;
 							}
-
+							
 						} elseif(isset($message_headers[$header]) && !empty($message_headers[$header])) {
 							$regexp_header = DevblocksPlatform::strToRegExp($value);
-
+							
 							// Flatten CRLF
 							if(@preg_match($regexp_header, str_replace(array("\r","\n"),' ',$message_headers[$header]))) {
 								$passed++;
 							}
 						}
-
+						
 						break;
-
+						
 					default: // ignore invalids
 						// Custom Fields
 						if(0==strcasecmp('cf_',substr($crit_key,0,3))) {
@@ -3513,11 +3513,11 @@ class Model_MailToGroupRule {
 									$field_values =& $org_field_values;
 									break;
 							}
-
+							
 							// No values, default.
 							if(!isset($field_values[$field_id]))
 								continue;
-
+							
 							// Type sensitive value comparisons
 							switch($field->type) {
 								case 'S': // string
@@ -3525,7 +3525,7 @@ class Model_MailToGroupRule {
 								case 'U': // URL
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : '';
 									$oper = isset($crit['oper']) ? $crit['oper'] : "=";
-
+									
 									if($oper == "=" && @preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
 										$passed++;
 									elseif($oper == "!=" && @!preg_match(DevblocksPlatform::strToRegExp($value, true), $field_val))
@@ -3537,7 +3537,7 @@ class Model_MailToGroupRule {
 
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : 0;
 									$oper = isset($crit['oper']) ? $crit['oper'] : "=";
-
+									
 									if($oper=="=" && intval($field_val)==intval($value))
 										$passed++;
 									elseif($oper=="!=" && intval($field_val)!=intval($value))
@@ -3551,7 +3551,7 @@ class Model_MailToGroupRule {
 									$field_val = isset($field_values[$field_id]) ? intval($field_values[$field_id]) : 0;
 									$from = isset($crit['from']) ? $crit['from'] : "0";
 									$to = isset($crit['to']) ? $crit['to'] : "now";
-
+									
 									if(intval(@strtotime($from)) <= $field_val && intval(@strtotime($to)) >= $field_val) {
 										$passed++;
 									}
@@ -3567,7 +3567,7 @@ class Model_MailToGroupRule {
 								case 'W': // worker
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : array();
 									if(!is_array($value)) $value = array($value);
-
+										
 									if(is_array($field_val)) { // if multiple things set
 										foreach($field_val as $v) { // loop through possible
 											if(isset($value[$v])) { // is any possible set?
@@ -3575,13 +3575,13 @@ class Model_MailToGroupRule {
 												break;
 											}
 										}
-
+										
 									} else { // single
 										if(isset($value[$field_val])) { // is our set field in possibles?
 											$passed++;
 											break;
 										}
-
+										
 									}
 									break;
 							}
@@ -3589,32 +3589,32 @@ class Model_MailToGroupRule {
 						break;
 				}
 			}
-
+			
 			// If our rule matched every criteria, stop and return the filter
 			if($passed == count($rule->criteria)) {
 				DAO_MailToGroupRule::increment($rule->id); // ++ the times we've matched
 				$matches[$rule->id] = $rule;
-
+				
 				// Bail out if this rule had a move action
 				if(isset($rule->actions['move']))
 					return $matches;
 			}
 		}
-
+		
 		// If we're at the end of rules and didn't bail out yet
 		if(!empty($matches))
 			return $matches;
-
+		
 		// No matches
 		return NULL;
 	}
-
+	
 	/**
 	 * @param integer[] $ticket_ids
 	 */
 	function run($ticket_ids) {
 		if(!is_array($ticket_ids)) $ticket_ids = array($ticket_ids);
-
+		
 		$fields = array();
 		$field_values = array();
 
@@ -3622,7 +3622,7 @@ class Model_MailToGroupRule {
 		$buckets = DAO_Bucket::getAll();
 //		$workers = DAO_Worker::getAll();
 		$custom_fields = DAO_CustomField::getAll();
-
+		
 		// actions
 		if(is_array($this->actions))
 		foreach($this->actions as $action => $params) {
@@ -3654,7 +3654,7 @@ class Model_MailToGroupRule {
 						}
 					}
 					break;
-
+					
 //				case 'spam':
 //					if(isset($params['is_spam'])) {
 //						if(intval($params['is_spam'])) {
@@ -3671,7 +3671,7 @@ class Model_MailToGroupRule {
 					// Custom fields
 					if(substr($action,0,3)=="cf_") {
 						$field_id = intval(substr($action,3));
-
+						
 						if(!isset($custom_fields[$field_id]) || !isset($params['value']))
 							break;
 
@@ -3684,12 +3684,12 @@ class Model_MailToGroupRule {
 		if(!empty($ticket_ids)) {
 			if(!empty($fields))
 				DAO_Ticket::updateTicket($ticket_ids, $fields);
-
+			
 			// Custom Fields
 			C4_AbstractView::_doBulkSetCustomFields(ChCustomFieldSource_Ticket::ID, $field_values, $ticket_ids);
 		}
 	}
-
+	
 };
 
 class CerberusVisit extends DevblocksVisit {
@@ -3712,7 +3712,7 @@ class CerberusVisit extends DevblocksVisit {
 	public function getWorker() {
 		return $this->worker;
 	}
-
+	
 	public function setWorker(CerberusWorker $worker=null) {
 		$this->worker = $worker;
 	}
@@ -3743,32 +3743,32 @@ class CerberusWorker {
 	 * @return Model_TeamMember[]
 	 */
 	function getMemberships() {
-		return DAO_Worker::getWorkerGroups($this->id);
+		return DAO_Worker::getWorkerGroups($this->id); 
 	}
 
 	function hasPriv($priv_id) {
 		// We don't need to do much work if we're a superuser
 		if($this->is_superuser)
 			return true;
-
+		
 		$settings = CerberusSettings::getInstance();
 		$acl_enabled = $settings->get(CerberusSettings::ACL_ENABLED);
-
+			
 		// ACL is a paid feature (please respect the licensing and support the project!)
 		$license = CerberusLicense::getInstance();
 		if(!$acl_enabled || !isset($license['serial']) || isset($license['a']))
 			return ("core.config"==substr($priv_id,0,11)) ? false : true;
-
+			
 		// Check the aggregated worker privs from roles
 		$acl = DAO_WorkerRole::getACL();
 		$privs_by_worker = $acl[DAO_WorkerRole::CACHE_KEY_PRIVS_BY_WORKER];
-
+		
 		if(!empty($priv_id) && isset($privs_by_worker[$this->id][$priv_id]))
 			return true;
-
+			
 		return false;
 	}
-
+	
 	function isTeamManager($team_id) {
 		@$memberships = $this->getMemberships();
 		$teams = DAO_Group::getAll();
@@ -3795,8 +3795,8 @@ class CerberusWorker {
 		}
 		return true;
 	}
-
-	function getName($reverse=true) {
+	
+	function getName($reverse=false) {
 		if(!$reverse) {
 			$name = sprintf("%s%s%s",
 				$this->first_name,
@@ -3810,10 +3810,10 @@ class CerberusWorker {
 				$this->first_name
 			);
 		}
-
+		
 		return $name;
 	}
-
+	
 };
 
 class Model_WorkerRole {
@@ -3966,7 +3966,7 @@ class Model_MessageNote {
 
 class Model_Note {
 	const EXTENSION_ID = 'cerberusweb.note';
-
+	
 	public $id;
 	public $source_extension_id;
 	public $source_id;
@@ -3988,29 +3988,29 @@ class Model_Attachment {
 		if (!empty($this->filepath))
 		return file_get_contents($file_path.$this->filepath,false);
 	}
-
+	
 	public function getFileSize() {
 		$file_path = APP_STORAGE_PATH . '/attachments/';
 		if (!empty($this->filepath))
 		return filesize($file_path.$this->filepath);
 	}
-
+	
 	public static function saveToFile($file_id, $contents) {
 		$attachment_path = APP_STORAGE_PATH . '/attachments/';
-
+		
 	    // Make file attachments use buckets so we have a max per directory
 		$attachment_bucket = sprintf("%03d/",
 			mt_rand(1,100)
 		);
 		$attachment_file = $file_id;
-
+		
 		if(!file_exists($attachment_path.$attachment_bucket)) {
 			@mkdir($attachment_path.$attachment_bucket, 0770, true);
 			// [TODO] Needs error checking
 		}
-
+		
 		file_put_contents($attachment_path.$attachment_bucket.$attachment_file, $contents);
-
+		
 		return $attachment_bucket.$attachment_file;
 	}
 };
@@ -4057,7 +4057,7 @@ class Model_MailTemplate {
 	const TYPE_REPLY = 2;
 	const TYPE_CREATE = 3;
 //	const TYPE_CLOSE = 4;
-
+	
 	public $id = 0;
 	public $title = '';
 	public $description = '';
@@ -4074,21 +4074,21 @@ class Model_MailTemplate {
 
 		$replace[] = '#timestamp#';
 		$with[] = date('r');
-
+		
 		if(!empty($message_id)) {
 			$message = DAO_Ticket::getMessage($message_id);
 			$ticket = DAO_Ticket::getTicket($message->ticket_id);
 			$sender = DAO_Address::get($message->address_id);
 			$sender_org = DAO_ContactOrg::get($sender->contact_org_id);
-
+			
 			$replace[] = '#sender_first_name#';
 			$replace[] = '#sender_last_name#';
 			$replace[] = '#sender_org#';
-
+	
 			$with[] = $sender->first_name;
 			$with[] = $sender->last_name;
 			$with[] = (!empty($sender_org)?$sender_org->name:"");
-
+			
 			$replace[] = '#ticket_id#';
 			$replace[] = '#ticket_mask#';
 			$replace[] = '#ticket_subject#';
@@ -4097,14 +4097,14 @@ class Model_MailTemplate {
 			$with[] = $ticket->mask;
 			$with[] = $ticket->subject;
 		}
-
+			
 		if(null != ($active_worker = CerberusApplication::getActiveWorker())) {
 			$worker = DAO_Worker::getAgent($active_worker->id); // most recent info (not session)
-
+			
 			$replace[] = '#worker_first_name#';
 			$replace[] = '#worker_last_name#';
 			$replace[] = '#worker_title#';
-
+	
 			$with[] = $worker->first_name;
 			$with[] = $worker->last_name;
 			$with[] = $worker->title;
@@ -4120,7 +4120,7 @@ class Model_TicketComment {
 	public $address_id;
 	public $created;
 	public $comment;
-
+	
 	public function getAddress() {
 		return DAO_Address::get($this->address_id);
 	}
@@ -4137,7 +4137,7 @@ class Model_CustomField {
 	const TYPE_URL = 'U';
 	const TYPE_WORKER = 'W';
 	const TYPE_MULTI_CHECKBOX = 'X';
-
+	
 	public $id = 0;
 	public $name = '';
 	public $type = '';
@@ -4145,7 +4145,7 @@ class Model_CustomField {
 	public $source_extension = '';
 	public $pos = 0;
 	public $options = array();
-
+	
 	static function getTypes() {
 		return array(
 			self::TYPE_SINGLE_LINE => 'Text: Single Line',
