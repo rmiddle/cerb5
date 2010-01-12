@@ -1,18 +1,22 @@
-Branch breakout
+Allow plugins to provide translation strings for Audit Log events
 
-Master - The master branch this should be close to or the Same as WGM current master.  
+Well working on a plugin to add additional audit log events into my system I found myself running into a problem. It seems that when you display the field change_fields inside the audit log you run it though a simple translation system using the fields from the ticket database. This works well unless you are tiring to display information that does not have a field connected to a ticket like a comment or time tracking event or anything else a plug-in designer might think of using. Then that is where the fun begins. As it stands right now it tacks on a "t_" in front of the field then displays it. That "t_" make things really bad inside the display and really limits what a plug-in can do with the audit log. It would be really nice if the plugin could simple run the field un altered though the translation system as plug-in designers can add translatable strings in to the audit log making the audit log much more usable as being part of a tool kit. You ask how major of a change in the code do I need to do to get this added abilty. The answer is just 1 line of code.
 
-Jira/chd-xxxx - Branches starting with Jira cantained the required patches to complete the Jira issue with the same number.  URL: http://www.wgmdev.com/jira/browse/CHD-XXXX
+diff --git a/plugins/cerberusweb.auditlog/templates/display/log/log_view.tpl b/plugins/cerberusweb.auditlog/templates/display/log/log_view.tpl
+index 4967468..b41edc5 100644
+--- a/plugins/cerberusweb.auditlog/templates/display/log/log_view.tpl
++++ b/plugins/cerberusweb.auditlog/templates/display/log/log_view.tpl
+@@ -70,7 +70,7 @@
+  {if isset($ticket_fields.$change_field)}
+  {$ticket_fields.$change_field->db_label|capitalize}
+  {else}
+- {$change_field}&nbsp;
++ {$translate->_($result.l_change_field)}
+  {/if}
+  </td>
+  {elseif $column=="l_change_value"}
 
-fix/ - This is the branch that contains all my fixes in one place.  If you are looking for all the features I have added into the system this is the branch you want.
-
-dev/XXX - Features not yet complete.  These are in various level of completion.
-
-X_X_X - Example 4_2_3 That would be version 4.2.3.  That would be the same as the master branch when WGM released 4.2.3
-
-X_X_X/fix/ - My fixes all in one place for the Version in question.
-
-X_X_X/jira/ - Jira fixes for the Version in question.
 
 Thanks
 Robert
+
