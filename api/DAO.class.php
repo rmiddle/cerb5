@@ -4460,6 +4460,7 @@ class DAO_GroupSettings {
     const SETTING_CLOSE_REPLY = 'close_reply';
     const SETTING_CLOSE_REPLY_ENABLED = 'close_reply_enabled';
     const SETTING_INBOX_IS_ASSIGNABLE = 'inbox_is_assignable';
+    const SETTING_TICKET_REPLY_STATUS = 'ticket_reply_status';
     
 	static function set($group_id, $key, $value) {
 		$db = DevblocksPlatform::getDatabaseService();
