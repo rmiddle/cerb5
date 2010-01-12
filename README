@@ -1,18 +1,24 @@
-Branch breakout
+Add the abilty to filter based on inbox downloaded from.
 
-Master - The master branch this should be close to or the Same as WGM current master.  
+Not that hard.  Only really requires a 1 line change.
 
-Jira/chd-xxxx - Branches starting with Jira cantained the required patches to complete the Jira issue with the same number.  URL: http://www.wgmdev.com/jira/browse/CHD-XXXX
+ For what it's worth, the code we used is here:
 
-fix/ - This is the branch that contains all my fixes in one place.  If you are looking for all the features I have added into the system this is the branch you want.
+** in 4.2 -- /var/www/html/cerb4/plugins/cerberusweb.core/api/cron.classes.php
+on Line 1111
 
-dev/XXX - Features not yet complete.  These are in various level of completion.
+We inserted
+fwrite($fp,"\r\nDownloaded-From: $account->nickname");
 
-X_X_X - Example 4_2_3 That would be version 4.2.3.  That would be the same as the master branch when WGM released 4.2.3
+So, the section it's in now looks like this.
+Lines 1110-1115:
 
-X_X_X/fix/ - My fixes all in one place for the Version in question.
+if($fp) {
+fwrite($fp,"Downloaded-From: $account->nickname\r\n");
+fwrite($fp,$headers,strlen($headers));
+fwrite($fp,"\r\n\r\n");
+fwrite($fp,$body,strlen($body));
+@fclose($fp);
+}
 
-X_X_X/jira/ - Jira fixes for the Version in question.
-
-Thanks
-Robert
+Of course this should probably be turned into a regular header and handled with the rest of the list, but that's how it's working now.
