@@ -16,13 +16,13 @@ class ChUpdateController extends DevblocksControllerExtension {
 	    array_shift($stack); // update
 
 	    $cache = DevblocksPlatform::getCacheService(); /* @var $cache _DevblocksCacheManager */
-		$settings = CerberusSettings::getInstance();
+		$settings = DevblocksPlatform::getPluginSettingsService();
 	    
 	    switch(array_shift($stack)) {
 	    	case 'locked':
 	    		if(!DevblocksPlatform::versionConsistencyCheck()) {
 	    			$url = DevblocksPlatform::getUrlService();
-	    			echo "<h1>Cerberus Helpdesk 4.x</h1>";
+	    			echo "<h1>Cerberus Helpdesk 5.x</h1>";
 	    			echo "The helpdesk is currently waiting for an administrator to finish upgrading. ".
 	    				"Please wait a few minutes and then ". 
 		    			sprintf("<a href='%s'>try again</a>.<br><br>",
@@ -40,7 +40,7 @@ class ChUpdateController extends DevblocksControllerExtension {
 			    $path = APP_TEMP_PATH . DIRECTORY_SEPARATOR;
 				$file = $path . 'c4update_lock';	    		
 				
-			    $authorized_ips_str = $settings->get(CerberusSettings::AUTHORIZED_IPS);
+			    $authorized_ips_str = $settings->get('cerberusweb.core',CerberusSettings::AUTHORIZED_IPS);
 			    $authorized_ips = DevblocksPlatform::parseCrlfString($authorized_ips_str);
 			    
 		   	    $authorized_ip_defaults = DevblocksPlatform::parseCsvString(AUTHORIZED_IPS_DEFAULTS);
