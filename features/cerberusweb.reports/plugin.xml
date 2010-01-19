@@ -1,0 +1,365 @@
+<!DOCTYPE plugin SYSTEM "../../libs/devblocks/plugin.dtd">
+<plugin>
+	<id>cerberusweb.reports</id>
+	<name>[Cerb5] Reports</name>
+	<description>Pluggable reporting area with default reports on various metrics.  This adds a Reports menu and several plugin hooks for creating new reports.</description>
+	<author>WebGroup Media, LLC.</author>
+	<revision>0</revision>
+	<link>http://wiki.cerb4.com/wiki/New_Changes#Interactive_Reports</link>
+
+	<!-- Exported Classes -->
+	
+	<class_loader>
+		<file path="api/App.php">
+			<class name="Extension_Report" />
+			<class name="Extension_ReportGroup" />
+		</file>
+	</class_loader>
+
+	<acl>
+		<!-- Report Groups -->
+		<priv id="reports.group.custom_fields" label="acl.reports.group.custom_fields" />
+		<priv id="reports.group.groups" label="acl.reports.group.groups" />
+		<priv id="reports.group.orgs" label="acl.reports.group.orgs" />
+		<priv id="reports.group.spam" label="acl.reports.group.spam" />
+		<priv id="reports.group.tickets" label="acl.reports.group.tickets" />
+		<priv id="reports.group.workers" label="acl.reports.group.workers" />
+	</acl>
+		
+	<extensions>
+
+		<!-- Translations -->
+		
+		<extension point="devblocks.i18n.strings">
+			<id>reports.translations</id>
+			<name>Reports Strings</name>
+			<class>
+				<file>api/Plugin.php</file>
+				<name>ChReportsTranslations</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+
+	<!-- Page Extensions -->
+	
+	<extension point="cerberusweb.page">
+		<id>reports.page</id>
+		<name>Reports Page</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportsPage</name>
+		</class>
+		<params>
+			<param key="uri" value="reports" />
+			<param key="menutitle" value="reports.menu.reports" />
+		</params>
+	</extension>
+	
+	<!-- Report Groups -->
+	
+	<extension point="cerberusweb.report.group">
+		<id>report.group.custom_fields</id>
+		<name>Custom Field Reports</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportGroupCustomFields</name>
+		</class>
+		<params>
+			<param key="group_name" value="reports.ui.group.custom_fields" />
+			<param key="acl" value="reports.group.custom_fields" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report.group">
+		<id>report.group.groups</id>
+		<name>Group Reports</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportGroupGroups</name>
+		</class>
+		<params>
+			<param key="group_name" value="reports.ui.group.group" />
+			<param key="acl" value="reports.group.groups" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report.group">
+		<id>report.group.orgs</id>
+		<name>Org Reports</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportGroupOrgs</name>
+		</class>
+		<params>
+			<param key="group_name" value="reports.ui.group.org" />
+			<param key="acl" value="reports.group.orgs" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report.group">
+		<id>report.group.spam</id>
+		<name>Spam Reports</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportGroupSpam</name>
+		</class>
+		<params>
+			<param key="group_name" value="reports.ui.group.spam" />
+			<param key="acl" value="reports.group.spam" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report.group">
+		<id>report.group.tickets</id>
+		<name>Ticket Reports</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportGroupTickets</name>
+		</class>
+		<params>
+			<param key="group_name" value="reports.ui.group.ticket" />
+			<param key="acl" value="reports.group.tickets" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report.group">
+		<id>report.group.workers</id>
+		<name>Worker Reports</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportGroupWorkers</name>
+		</class>
+		<params>
+			<param key="group_name" value="reports.ui.group.worker" />
+			<param key="acl" value="reports.group.workers" />
+		</params>
+	</extension>
+
+	<!-- Reports -->
+
+	<extension point="cerberusweb.report">
+		<id>report.custom_fields.usage</id>
+		<name>Custom Field Usage Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportCustomFieldUsage</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.custom_fields.usage" />
+			<param key="report_group" value="report.group.custom_fields" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report">
+		<id>report.tickets.new_tickets</id>
+		<name>Created Tickets By Group Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportNewTickets</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.ticket.new_tickets" />
+			<param key="report_group" value="report.group.tickets" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report">
+		<id>report.tickets.spam_words</id>
+		<name>Spam Word Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportSpamWords</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.spam.words" />
+			<param key="report_group" value="report.group.spam" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report">
+		<id>report.tickets.spam_addys</id>
+		<name>Spam Addy Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportSpamAddys</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.spam.senders" />
+			<param key="report_group" value="report.group.spam" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report">
+		<id>report.tickets.spam_domains</id>
+		<name>Spam Domains Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportSpamDomains</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.spam.domains" />
+			<param key="report_group" value="report.group.spam" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report">
+		<id>report.tickets.worker_replies</id>
+		<name>Worker Replies Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportWorkerReplies</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.worker.worker_replies" />
+			<param key="report_group" value="report.group.workers" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report">
+		<id>report.workers.roster</id>
+		<name>Group Roster Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportGroupRoster</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.group.roster" />
+			<param key="report_group" value="report.group.groups" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report">
+		<id>report.workers.averageresponsetime</id>
+		<name>Average Response Time Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportAverageResponseTime</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.worker.response_time" />
+			<param key="report_group" value="report.group.workers" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report">
+		<id>report.groups.group_replies</id>
+		<name>Group Replies Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportGroupReplies</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.group.replies" />
+			<param key="report_group" value="report.group.groups" />
+		</params>
+	</extension>
+
+	<extension point="cerberusweb.report">
+		<id>report.tickets.open_tickets</id>
+		<name>Open Tickets Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportOpenTickets</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.ticket.open_tickets" />
+			<param key="report_group" value="report.group.tickets" />
+		</params>
+	</extension>		
+	
+	<extension point="cerberusweb.report">
+		<id>report.tickets.closed_tickets</id>
+		<name>Closed Tickets Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportClosedTickets</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.ticket.closed" />
+			<param key="report_group" value="report.group.tickets" />
+		</params>
+	</extension>
+			
+	<extension point="cerberusweb.report">
+		<id>report.orgs.shared_sender_domains</id>
+		<name>Top 100 Shared Sender Domains Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportOrgSharedEmailDomains</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.org.shared_sender_domains" />
+			<param key="report_group" value="report.group.orgs" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report">
+		<id>report.tickets.top_contacts</id>
+		<name>Top Created Tickets By Contact Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportTopTicketsByContact</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.ticket.top_contacts" />
+			<param key="report_group" value="report.group.tickets" />
+		</params>
+	</extension>
+	
+
+	<extension point="cerberusweb.report">
+		<id>report.workers.worker_history</id>
+		<name>Worker History Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportWorkerHistory</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.worker.worker_history" />
+			<param key="report_group" value="report.group.workers" />
+		</params>
+	</extension>		
+	
+	<extension point="cerberusweb.report">
+		<id>report.tickets.waiting_tickets</id>
+		<name>Waiting Tickets By Group Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportWaitingTickets</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.ticket.waiting_tickets" />
+			<param key="report_group" value="report.group.tickets" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report">
+		<id>report.tickets.oldest_open_tickets</id>
+		<name>Oldest Open Tickets By Group Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportOldestOpenTickets</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.ticket.oldest_open" />
+			<param key="report_group" value="report.group.tickets" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report">
+		<id>report.workers.ticket_assignment</id>
+		<name>Ticket Assignment Report</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportTicketAssignment</name>
+		</class>
+		<params>
+			<param key="report_name" value="reports.ui.worker.ticket_assignment" />
+			<param key="report_group" value="report.group.workers" />
+		</params>
+	</extension>
+	
+	</extensions>
+	
+</plugin>

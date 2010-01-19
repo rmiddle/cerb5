@@ -1,0 +1,187 @@
+<!DOCTYPE plugin SYSTEM "../../libs/devblocks/plugin.dtd">
+<plugin>
+	<id>cerberusweb.crm</id>
+	<name>[Cerb5] Opportunity Tracking (Experimental)</name>
+	<description>Create opportunities (sales leads) linked to e-mail addresses. Opportunity records can be created from the Activity menu or while reading tickets.</description>
+	<author>WebGroup Media, LLC.</author>
+	<revision>0</revision>
+	<link>http://www.cerberusweb.com/</link>
+	
+	<!-- Exported Classes -->
+	
+	<class_loader>
+		<file path="api/App.php">
+			<class name="C4_CrmOpportunityView" />
+			<class name="DAO_CrmOpportunity" />
+		</file>
+	</class_loader>
+	
+	<acl>
+		<priv id="crm.opp.actions.create" label="acl.crm.opp.actions.create" />
+		<priv id="crm.opp.actions.import" label="acl.crm.opp.actions.import" />
+		<priv id="crm.opp.actions.update_nobody" label="acl.crm.opp.actions.update_nobody" />
+		<priv id="crm.opp.actions.update_all" label="acl.crm.opp.actions.update_all" />
+		<priv id="crm.opp.view.actions.export" label="acl.crm.opp.view.actions.export" />
+	</acl>
+	
+	<extensions>
+	
+		<!-- Patch Containers -->
+		
+		<extension point="devblocks.patch.container">
+			<id>crm.patches</id>
+			<name>CRM Patches</name>
+			<class>
+				<file>api/Patch.php</file>
+				<name>CrmPatchContainer</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+
+		<!-- Event Listeners -->
+		
+		<extension point="devblocks.listener.event">
+			<id>crm.listeners.core</id>
+			<name>CRM Listener</name>
+			<class>
+				<file>api/App.php</file>
+				<name>CrmEventListener</name>
+			</class>
+			<params>
+				<param key="events">
+					<value>
+						<data key="cron.maint" />						
+					</value>
+				</param>
+			</params>
+		</extension>
+
+		<!-- Translations -->
+		
+		<extension point="devblocks.i18n.strings">
+			<id>crm.translations</id>
+			<name>CRM Strings</name>
+			<class>
+				<file>api/Plugin.php</file>
+				<name>CrmTranslations</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+		
+		<!-- Activity Tabs -->
+		
+		<extension point="cerberusweb.activity.tab">
+			<id>crm.activity.tab.opps</id>
+			<name>Opportunities Tab</name>
+			<class>
+				<file>api/App.php</file>
+				<name>CrmOppsActivityTab</name>
+			</class>
+			<params>
+				<param key="uri" value="opps" />
+				<param key="title" value="crm.tab.title" />
+			</params>
+		</extension>
+		
+		<!-- Pages -->
+		
+		<extension point="cerberusweb.page">
+			<id>crm.page.crm</id>
+			<name>CRM Page</name>
+			<class>
+				<file>api/App.php</file>
+				<name>CrmPage</name>
+			</class>
+			<params>
+				<param key="uri" value="crm" />
+				<param key="menutitle" value="" />
+			</params>
+		</extension>
+
+		<!-- Custom Field Sources -->
+		
+		<extension point="cerberusweb.fields.source">
+			<id>crm.fields.source.opportunity</id>
+			<name>Opportunity</name>
+			<class>
+				<file>api/App.php</file>
+				<name>CrmCustomFieldSource_Opportunity</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+
+		<!-- Workspace Sources -->
+		
+		<extension point="cerberusweb.workspace.source">
+			<id>crm.workspace.source.opportunity</id>
+			<name>Opportunities</name>
+			<class>
+				<file>api/App.php</file>
+				<name>CrmWorkspaceSource_Opportunity</name>
+			</class>
+			<params>
+				<param key="view_class" value="C4_CrmOpportunityView" />
+			</params>
+		</extension>
+
+		<!-- Notes Sources -->
+		
+		<extension point="cerberusweb.notes.source">
+			<id>crm.notes.source.opportunity</id>
+			<name>Opportunity</name>
+			<class>
+				<file>api/App.php</file>
+				<name>CrmNotesSource_Opportunity</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+
+		<!-- Task Sources -->
+		
+		<extension point="cerberusweb.task.source">
+			<id>cerberusweb.tasks.opp</id>
+			<name>Opportunity Task</name>
+			<class>
+				<file>api/App.php</file>
+				<name>CrmTaskSource_Opp</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+		
+		<!-- Org Tabs -->
+		
+		<extension point="cerberusweb.org.tab">
+			<id>crm.opp.tab.org</id>
+			<name>Opportunity Tab</name>
+			<class>
+				<file>api/App.php</file>
+				<name>CrmOrgOppTab</name>
+			</class>
+			<params>
+				<param key="uri" value="opps" />
+				<param key="title" value="crm.tab.title" />
+			</params>
+		</extension>
+		
+		<!-- Ticket Tabs -->
+		
+		<extension point="cerberusweb.ticket.tab">
+			<id>crm.opp.tab.ticket</id>
+			<name>Opportunity Tab</name>
+			<class>
+				<file>api/App.php</file>
+				<name>CrmTicketOppTab</name>
+			</class>
+			<params>
+				<param key="uri" value="opps" />
+				<param key="title" value="crm.tab.title" />
+			</params>
+		</extension>
+		
+	</extensions>
+</plugin>
