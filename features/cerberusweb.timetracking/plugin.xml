@@ -1,0 +1,311 @@
+<!DOCTYPE plugin SYSTEM "../../libs/devblocks/plugin.dtd">
+<plugin>
+	<id>cerberusweb.timetracking</id>
+	<name>[Cerb5] Time Tracking</name>
+	<description>Track time spent on various helpdesk activities (replying to tickets, etc).  This adds a Track Time button to Display Ticket and Organizations, and a Time Tracking tab to the Activity page.</description>
+	<author>WebGroup Media, LLC.</author>
+	<revision>0</revision>
+	<link>http://wiki.cerb4.com/wiki/</link>
+	
+	<!-- Exported Classes -->
+	
+	<class_loader>
+		<file path="api/App.php">
+			<class name="C4_TimeTrackingEntryView" />
+		</file>
+	</class_loader>
+	
+	<acl>
+		<priv id="timetracking.actions.create" label="acl.timetracking.actions.create" />
+		<priv id="timetracking.actions.update_all" label="acl.timetracking.actions.update_all" />
+		<priv id="timetracking.report.group.time" label="acl.timetracking.report.group.time" />
+		<priv id="timetracking.view.actions.export" label="acl.timetracking.view.actions.export" />
+	</acl>
+	
+	<extensions>
+	
+		<!-- Patch Containers -->
+		
+		<extension point="devblocks.patch.container">
+			<id>timetracking.patches</id>
+			<name>Time Tracking Patches</name>
+			<class>
+				<file>api/Patch.php</file>
+				<name>ChTimeTrackingPatchContainer</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+	
+		<!-- Translations -->
+		
+		<extension point="devblocks.i18n.strings">
+			<id>timetracking.translations</id>
+			<name>Time Tracking Strings</name>
+			<class>
+				<file>api/Plugin.php</file>
+				<name>ChTimeTrackingTranslations</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+	
+		<!-- Http Listeners -->
+		
+		<!-- 
+		<extension point="devblocks.listener.http">
+			<id>simulator.listeners.tour</id>
+			<name>Simulator Tour</name>
+			<class>
+				<file>listeners.classes.php</file>
+				<name>ChSimulatorTour</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+		 -->
+	
+		<!-- Event Listeners -->
+
+		<extension point="devblocks.listener.event">
+			<id>timetracking.listener.core</id>
+			<name>Time Tracking Listener</name>
+			<class>
+				<file>api/App.php</file>
+				<name>ChTimeTrackingEventListener</name>
+			</class>
+			<params>
+				<param key="events">
+					<value>
+						<data key="ticket.merge" />
+					</value>
+				</param>
+			</params>
+		</extension>
+
+		<!-- Time Tracking Sources -->
+		
+		<extension point="timetracking.source">
+			<id>timetracking.source.ticket</id>
+			<name>Ticket</name>
+			<class>
+				<file>api/App.php</file>
+				<name>ChTimeTrackingTicketSource</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+
+		<!-- Workspace Sources -->
+		
+		<extension point="cerberusweb.workspace.source">
+			<id>timetracking.workspace.source.time_entry</id>
+			<name>Time Tracking Entries</name>
+			<class>
+				<file>api/App.php</file>
+				<name>ChWorkspaceSource_TimeEntry</name>
+			</class>
+			<params>
+				<param key="view_class" value="C4_TimeTrackingEntryView" />
+			</params>
+		</extension>
+
+		<!-- Renderers Render -->	
+		
+		<extension point="cerberusweb.renderer.prebody">
+			<id>timetracking.renderer.prebody</id>
+			<name>Time Tracking Pre-body Renderer</name>
+			<class>
+				<file>api/App.php</file>
+				<name>ChTimeTrackingPreBodyRenderer</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+	
+		<!-- Ticket Display Toolbar -->	
+		
+		<extension point="cerberusweb.ticket.toolbaritem">
+			<id>timetracking.ticket.toolbaritem.timer</id>
+			<name>Time Tracking Ticket Toolbar Timer</name>
+			<class>
+				<file>api/App.php</file>
+				<name>ChTimeTrackingTicketToolbarTimer</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+	
+		<!-- Ticket Reply Toolbar -->
+			
+		<extension point="cerberusweb.reply.toolbaritem">
+			<id>timetracking.reply.toolbaritem.timer</id>
+			<name>Time Tracking Reply Toolbar Timer</name>
+			<class>
+				<file>api/App.php</file>
+				<name>ChTimeTrackingReplyToolbarTimer</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+	
+		<!-- Log Mail Toolbar -->
+		<!-- 
+		<extension point="cerberusweb.mail.log.toolbaritem">
+			<id>timetracking.logmail.toolbaritem.timer</id>
+			<name>Time Tracking Log Mail Toolbar Timer</name>
+			<class>
+				<file>api/App.php</file>
+				<name>ChTimeTrackingLogMailToolbarTimer</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+		-->
+	
+		<!-- Send Mail Toolbar -->
+		<!-- 
+		<extension point="cerberusweb.mail.send.toolbaritem">
+			<id>timetracking.sendmail.toolbaritem.timer</id>
+			<name>Time Tracking Send Mail Toolbar Timer</name>
+			<class>
+				<file>api/App.php</file>
+				<name>ChTimeTrackingSendMailToolbarTimer</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+	 	-->
+	 
+		<!-- Activity Tabs -->
+		
+		<extension point="cerberusweb.activity.tab">
+			<id>timetracking.activity.tab</id>
+			<name>TimeTracking Tab</name>
+			<class>
+				<file>api/App.php</file>
+				<name>TimeTrackingActivityTab</name>
+			</class>
+			<params>
+				<param key="uri" value="timetracking" />
+				<param key="title" value="timetracking.activity.tab" />
+			</params>
+		</extension>
+	
+		<!-- Config Tabs -->
+		
+		<extension point="cerberusweb.config.tab">
+			<id>timetracking.config.tab.activities</id>
+			<name>Categories Tab</name>
+			<class>
+				<file>api/App.php</file>
+				<name>ChTimeTrackingConfigActivityTab</name>
+			</class>
+			<params>
+				<param key="uri" value="timetracking.activities" />
+				<param key="title" value="Time Tracking" />
+			</params>
+		</extension>
+		
+		<!-- Controllers -->
+		
+ 		<extension point="devblocks.controller">
+			<id>timetracking.controller.ajax</id>
+			<name>Time Tracking Ajax Controller</name>
+			<class>
+				<file>api/App.php</file>
+				<name>ChTimeTrackingAjaxController</name>
+			</class>
+			<params>
+				<param key="uri" value="timetracking" />
+			</params>
+		</extension>
+		 
+		<!-- Custom Field Source -->
+		 
+		<extension point="cerberusweb.fields.source">
+			<id>timetracking.fields.source.time_entry</id>
+			<name>Time Tracking</name>
+			<class>
+				<file>api/App.php</file>
+				<name>ChCustomFieldSource_TimeEntry</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+		 
+		<!-- Tabs -->
+		 
+		<!--
+		<extension point="cerberusweb.ticket.tab">
+			<id>timetracking.tab.ticket</id>
+			<name>Time Tracking Tab</name>
+			<class>
+				<file>api/App.php</file>
+				<name>ChTimeTrackingTab</name>
+			</class>
+			<params>
+				<param key="uri" value="timetracking" />
+				<param key="title" value="Time Tracking" />
+			</params>
+		</extension>
+		 -->
+		 
+	<!-- Report Groups -->
+	
+	<extension point="cerberusweb.report.group">
+		<id>report.group.timetracking</id>
+		<name>Time Tracking Reports</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportGroupTimeTracking</name>
+		</class>
+		<params>
+			<param key="group_name" value="timetracking.ui.reports" />
+			<param key="acl" value="timetracking.report.group.time" />
+		</params>
+	</extension>		 
+
+	<!-- Reports -->
+
+	<extension point="cerberusweb.report">
+		<id>report.timetracking.timespentworker</id>
+		<name>Time Spent Per Worker</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportTimeSpentWorker</name>
+		</class>
+		<params>
+			<param key="report_name" value="timetracking.ui.reports.time_spent_worker" />
+			<param key="report_group" value="report.group.timetracking" />
+		</params>
+	</extension>
+
+	<extension point="cerberusweb.report">
+		<id>report.timetracking.timespentorg</id>
+		<name>Time Spent Per Organization</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportTimeSpentOrg</name>
+		</class>
+		<params>
+			<param key="report_name" value="timetracking.ui.reports.time_spent_org" />
+			<param key="report_group" value="report.group.timetracking" />
+		</params>
+	</extension>
+	
+	<extension point="cerberusweb.report">
+		<id>report.timetracking.timespentactivity</id>
+		<name>Time Spent Per Activity</name>
+		<class>
+			<file>api/App.php</file>
+			<name>ChReportTimeSpentActivity</name>
+		</class>
+		<params>
+			<param key="report_name" value="timetracking.ui.reports.time_spent_activity" />
+			<param key="report_group" value="report.group.timetracking" />
+		</params>
+	</extension>
+	
+	</extensions>
+</plugin>
