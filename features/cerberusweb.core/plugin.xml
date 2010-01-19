@@ -1,0 +1,795 @@
+<!DOCTYPE plugin SYSTEM "../../libs/devblocks/plugin.dtd">
+<plugin>
+	<id>cerberusweb.core</id>
+	<name>[Cerb5] Core</name>
+	<description>The core functionality of Cerberus Helpdesk.</description>
+	<author>WebGroup Media, LLC.</author>
+	<revision>0</revision>
+	<link>http://wiki.cerb4.com/wiki/New_Changes</link>
+	
+	<!-- Plugin Dependencies -->
+	
+	<!-- 
+	<requires>
+		<plugin id="plugin.core.id" version=">= 1.0" />
+	</requires>
+	 -->
+
+	<!-- Declared Extension Points -->
+
+	<!-- 
+	<extension_points>
+		<point id=""></point>
+	</extension_points>
+	-->
+
+	<!-- Controller Routing -->
+
+	<uri_routing>
+		<uri name="tickets" controller="core.controller.page" />
+	</uri_routing>
+	
+	<!-- Exported Classes -->
+	
+	<class_loader>
+		<file path="api/plugin.classes.php">
+			<class name="ChCustomFieldSource_Address" />
+			<class name="ChCustomFieldSource_Org" />
+			<class name="ChCustomFieldSource_Task" />
+			<class name="ChCustomFieldSource_Ticket" />
+			<class name="ChCustomFieldSource_Worker" />
+			<class name="ChNotesSource_Org" />
+			<class name="ChNotesSource_Task" />
+			<class name="ChPageController" />
+			<class name="ChRssSource_Notification" />
+			<class name="ChRssSource_Task" />
+			<class name="ChRssSource_Ticket" />
+			<class name="ChTaskSource_Org" />
+			<class name="ChTaskSource_Ticket" />
+			<class name="ChWorkspaceSource_Address" />
+			<class name="ChWorkspaceSource_Org" />
+			<class name="ChWorkspaceSource_Task" />
+			<class name="ChWorkspaceSource_Ticket" />
+			<class name="ChWorkspaceSource_Worker" />
+		</file>
+	</class_loader>
+	
+	<!-- Event Points -->
+
+	<event_points>
+		<event id="address.peek.saved">
+			<name>Address Peek Saved</name>
+			<param key="address_id" />
+			<param key="changed_fields" />
+		</event>
+		<event id="bucket.delete">
+			<name>Bucket Delete</name>
+			<param key="bucket_ids" />
+		</event>
+		<event id="cron.heartbeat">
+			<name>Heartbeat</name>
+		</event>
+		<event id="cron.maint">
+			<name>Maintenance</name>
+		</event>
+		<event id="group.delete">
+			<name>Group Delete</name>
+			<param key="group_ids" />
+		</event>
+		<event id="ticket.comment.create">
+			<name>Ticket Comment</name>
+			<param key="comment_id" />
+			<param key="ticket_id" />
+			<param key="address_id" />
+			<param key="comment" />
+		</event>
+		<event id="ticket.merge">
+			<name>Ticket Merge</name>
+			<param key="new_ticket_id" />
+			<param key="old_ticket_ids" />
+		</event>
+		<event id="ticket.property.pre_change">
+			<name>Ticket Property Pre-Change</name>
+			<param key="ticket_ids" />
+			<param key="changed_fields" />
+		</event>
+		<event id="ticket.property.post_change">
+			<name>Ticket Property Post-Change</name>
+			<param key="ticket_ids" />
+			<param key="changed_fields" />
+		</event>
+		<event id="ticket.reply.inbound">
+			<name>Ticket Inbound Reply</name>
+			<param key="ticket_id" />
+		</event>
+		<event id="ticket.reply.outbound">
+			<name>Ticket Outbound Reply</name>
+			<param key="ticket_id" />
+			<param key="worker_id" />
+		</event>
+		<event id="worker.delete">
+			<name>Worker Delete</name>
+			<param key="worker_ids" />
+		</event>
+	</event_points>
+
+	<!-- Permissions -->
+
+	<acl>
+		<!-- Addy Book -->
+		<priv id="core.addybook" label="acl.core.addybook" />
+		<priv id="core.addybook.actions.import" label="acl.core.addybook.actions.import" />
+		<priv id="core.addybook.addy.actions.update" label="acl.core.addybook.addy.actions.update" />
+		<priv id="core.addybook.addy.view.actions.export" label="acl.core.addybook.addy.view.actions.export" />
+		<priv id="core.addybook.org.actions.update" label="acl.core.addybook.org.actions.update" />
+		<priv id="core.addybook.org.actions.delete" label="acl.core.addybook.org.actions.delete" />
+		<priv id="core.addybook.org.view.actions.export" label="acl.core.addybook.org.view.actions.export" />
+
+		<!-- Display Ticket -->
+		<priv id="core.display.actions.attachments.download" label="acl.core.display.actions.attachments.download" />
+		<priv id="core.display.actions.comment" label="acl.core.display.actions.comment" />
+		<priv id="core.display.actions.forward" label="acl.core.display.actions.forward" />
+		<priv id="core.display.actions.note" label="acl.core.display.actions.note" />
+		<priv id="core.display.actions.reply" label="acl.core.display.actions.reply" />
+		<priv id="core.display.actions.split" label="acl.core.display.actions.split" />
+
+		<!-- Mail page -->
+		<priv id="core.mail.actions.auto_refresh" label="acl.core.mail.actions.auto_refresh" />
+		<priv id="core.mail.log_ticket" label="acl.core.mail.log_ticket" />
+		<priv id="core.mail.overview" label="acl.core.mail.overview" />
+		<priv id="core.mail.search" label="acl.core.mail.search" />
+		<priv id="core.mail.send" label="acl.core.mail.send" />
+
+		<!-- Research -->
+		<priv id="core.research" label="acl.core.research" />
+
+		<!-- RSS -->
+		<priv id="core.rss" label="acl.core.rss" />
+
+		<!-- Tasks -->
+		<priv id="core.tasks.actions.create" label="acl.core.tasks.actions.create" />
+		<priv id="core.tasks.actions.update_nobody" label="acl.core.tasks.actions.update_nobody" />
+		<priv id="core.tasks.actions.update_all" label="acl.core.tasks.actions.update_all" />
+		<priv id="core.tasks.view.actions.export" label="acl.core.tasks.view.actions.export" />
+		
+		<!-- Tickets -->
+		<priv id="core.ticket.actions.assign" label="acl.core.ticket.actions.assign" />
+		<priv id="core.ticket.actions.close" label="acl.core.ticket.actions.close" />
+		<priv id="core.ticket.actions.delete" label="acl.core.ticket.actions.delete" />
+		<priv id="core.ticket.actions.move" label="acl.core.ticket.actions.move" />
+		<priv id="core.ticket.actions.spam" label="acl.core.ticket.actions.spam" />
+		<priv id="core.ticket.view.actions.bulk_update" label="acl.core.ticket.view.actions.bulk_update" />
+		<priv id="core.ticket.view.actions.export" label="acl.core.ticket.view.actions.export" />
+		<priv id="core.ticket.view.actions.merge" label="acl.core.ticket.view.actions.merge" />
+		<priv id="core.ticket.view.actions.pile_sort" label="acl.core.ticket.view.actions.pile_sort" />
+
+		<!-- Workspaces -->
+		<priv id="core.home.auto_refresh" label="acl.core.home.auto_refresh" />
+		<priv id="core.home.workspaces" label="acl.core.home.workspaces" />
+		
+	</acl>
+
+	<!-- Extensions -->
+
+	<extensions>
+
+		<!-- Event Listeners -->
+		
+		<extension point="devblocks.listener.event">
+			<id>cerberusweb.listeners.event</id>
+			<name>Cerberus Helpdesk Event Listener</name>
+			<class>
+				<file>api/listeners.classes.php</file>
+				<name>ChCoreEventListener</name>
+			</class>
+			<params>
+				<!-- Global Event Listener -->
+			</params>
+		</extension>
+ 
+		<!-- Controllers -->
+		
+		<extension point="devblocks.controller">
+			<id>core.controller.rss</id>
+			<name>RSS Controller</name>
+			<class>
+				<file>api/uri/rss.php</file>
+				<name>ChRssController</name>
+			</class>
+			<params>
+				<param key="uri" value="rss" />
+			</params>
+		</extension>
+
+		<extension point="devblocks.controller">
+			<id>core.controller.internal</id>
+			<name>Internal Controller</name>
+			<class>
+				<file>api/uri/internal.php</file>
+				<name>ChInternalController</name>
+			</class>
+			<params>
+				<param key="uri" value="internal" />
+			</params>
+		</extension>
+
+		<extension point="devblocks.controller">
+			<id>core.controller.print</id>
+			<name>Print Controller</name>
+			<class>
+				<file>api/uri/print.php</file>
+				<name>ChPrintController</name>
+			</class>
+			<params>
+				<param key="uri" value="print" />
+			</params>
+		</extension>
+
+		<extension point="devblocks.controller">
+			<id>core.controller.debug</id>
+			<name>Debug Controller</name>
+			<class>
+				<file>api/uri/debug.php</file>
+				<name>ChDebugController</name>
+			</class>
+			<params>
+				<param key="uri" value="debug" />
+			</params>
+		</extension>
+
+		<extension point="devblocks.controller">
+			<id>core.controller.files</id>
+			<name>Files Controller</name>
+			<class>
+				<file>api/uri/files.php</file>
+				<name>ChFilesController</name>
+			</class>
+			<params>
+				<param key="uri" value="files" />
+			</params>
+		</extension>
+
+		<extension point="devblocks.controller">
+			<id>core.controller.cron</id>
+			<name>Scheduled Tasks (Cron) Controller</name>
+			<class>
+				<file>api/uri/cron.php</file>
+				<name>ChCronController</name>
+			</class>
+			<params>
+				<param key="uri" value="cron" />
+			</params>
+		</extension>
+
+		<extension point="devblocks.controller">
+			<id>core.controller.page</id>
+			<name>Cerberus Helpdesk Controller</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChPageController</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+
+		<extension point="devblocks.controller">
+			<id>core.controller.notification</id>
+			<name>Notification Controller</name>
+			<class>
+				<file>classes.php</file>
+				<name>ChNotificationController</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+
+		<!-- Translations -->
+		
+		<extension point="devblocks.i18n.strings">
+			<id>core.translations</id>
+			<name>Cerberus Helpdesk Strings</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChTranslations</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+
+		<!-- Patch Containers -->
+		
+		<extension point="devblocks.patch.container">
+			<id>core.patches</id>
+			<name>Cerberus Helpdesk Patches</name>
+			<class>
+				<file>api/patch.classes.php</file>
+				<name>ChCorePatchContainer</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+	
+		<!-- Http Listeners -->
+		
+		<extension point="devblocks.listener.http">
+			<id>core.listeners.tour</id>
+			<name>Core Helpdesk Tour</name>
+			<class>
+				<file>api/listeners.classes.php</file>
+				<name>ChCoreTour</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+	
+		<!-- Pages -->
+
+		<extension point="cerberusweb.page">
+			<id>core.page.welcome</id>
+			<name>Welcome Page</name>
+			<class>
+				<file>api/uri/welcome.php</file>
+				<name>ChWelcomePage</name>
+			</class>
+			<params>
+				<param key="uri" value="welcome" />
+				<param key="menutitle" value="" />
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.page">
+			<id>core.page.home</id>
+			<name>Home Page</name>
+			<class>
+				<file>api/uri/home.php</file>
+				<name>ChHomePage</name>
+			</class>
+			<params>
+				<param key="uri" value="home" />
+				<param key="menutitle" value="core.menu.home" />
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.page">
+			<id>core.page.tickets</id>
+			<name>Mail Page</name>
+			<class>
+				<file>api/uri/tickets.php</file>
+				<name>ChTicketsPage</name>
+			</class>
+			<params>
+				<param key="uri" value="tickets" />
+				<param key="menutitle" value="core.menu.mail" />
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.page">
+			<id>core.page.activity</id>
+			<name>Activity Page</name>
+			<class>
+				<file>api/uri/activity.php</file>
+				<name>ChActivityPage</name>
+			</class>
+			<params>
+				<param key="uri" value="activity" />
+				<param key="menutitle" value="core.menu.activity" />
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.page">
+			<id>core.page.research</id>
+			<name>Research Page</name>
+			<class>
+				<file>api/uri/research.php</file>
+				<name>ChResearchPage</name>
+			</class>
+			<params>
+				<param key="uri" value="research" />
+				<param key="menutitle" value="core.menu.research" />
+				<param key="acl" value="core.research" />
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.page">
+			<id>core.page.tasks</id>
+			<name>Tasks Page</name>
+			<class>
+				<file>api/uri/tasks.php</file>
+				<name>ChTasksPage</name>
+			</class>
+			<params>
+				<param key="uri" value="tasks" />
+				<param key="menutitle" value="" />
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.page">
+			<id>core.page.groups</id>
+			<name>Groups Page</name>
+			<class>
+				<file>api/uri/groups.php</file>
+				<name>ChGroupsPage</name>
+			</class>
+			<params>
+				<param key="uri" value="groups" />
+				<param key="menutitle" value="" />
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.page">
+			<id>core.page.contacts</id>
+			<name>Contacts Page</name>
+			<class>
+				<file>api/uri/contacts.php</file>
+				<name>ChContactsPage</name>
+			</class>
+			<params>
+				<param key="uri" value="contacts" />
+				<param key="menutitle" value="core.menu.address_book" />
+				<param key="acl" value="core.addybook" />
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.page">
+			<id>core.page.display</id>
+			<name>Display Ticket Page</name>
+			<class>
+				<file>api/uri/display.php</file>
+				<name>ChDisplayPage</name>
+			</class>
+			<params>
+				<param key="uri" value="display" />
+				<param key="menutitle" value="" />
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.page">
+			<id>core.page.signin</id>
+			<name>Signin Page</name>
+			<class>
+				<file>api/uri/login.php</file>
+				<name>ChSignInPage</name>
+			</class>
+			<params>
+				<param key="uri" value="login" />
+				<param key="menutitle" value="" />
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.page">
+			<id>core.page.configuration</id>
+			<name>Configuration Page</name>
+			<class>
+				<file>api/uri/config.php</file>
+				<name>ChConfigurationPage</name>
+			</class>
+			<params>
+				<param key="uri" value="config" />
+				<param key="menutitle" value="" />
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.page">
+			<id>core.page.preferences</id>
+			<name>Preferences Page</name>
+			<class>
+				<file>api/uri/preferences.php</file>
+				<name>ChPreferencesPage</name>
+			</class>
+			<params>
+				<param key="uri" value="preferences" />
+			</params>
+		</extension>
+		
+		<!-- Activity Tabs -->
+		
+		<extension point="cerberusweb.activity.tab">
+			<id>core.activity.tab.tasks</id>
+			<name>Tasks Tab</name>
+			<class>
+				<file>api/uri/tasks.php</file>
+				<name>ChTasksActivityTab</name>
+			</class>
+			<params>
+				<param key="uri" value="tasks" />
+				<param key="title" value="activity.tab.tasks" />
+			</params>
+		</extension>
+		
+		<!--  Login Extensions -->
+
+		<extension point="cerberusweb.login">
+			<id>login.default</id>
+			<name>Default Login Module</name>
+			<class>
+				<file>api/login.classes.php</file>
+				<name>DefaultLoginModule</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.login">
+			<id>login.ldap</id>
+			<name>LDAP Login Module</name>
+			<class>
+				<file>api/login.classes.php</file>
+				<name>LDAPLoginModule</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+		 
+		<!-- Cron Extensions -->
+		
+		<extension point="cerberusweb.cron">
+			<id>cron.pop3</id>
+			<name>POP3 / IMAP E-Mail Importing</name>
+			<class>
+				<file>api/cron.classes.php</file>
+				<name>Pop3Cron</name>
+			</class>
+			<params>
+			</params>
+		</extension>		
+		
+		<extension point="cerberusweb.cron">
+			<id>cron.parser</id>
+			<name>Inbound E-Mail Processing</name>
+			<class>
+				<file>api/cron.classes.php</file>
+				<name>ParseCron</name>
+			</class>
+			<params>
+			</params>
+		</extension>		
+		
+		<extension point="cerberusweb.cron">
+			<id>cron.maint</id>
+			<name>Maintenance</name>
+			<class>
+				<file>api/cron.classes.php</file>
+				<name>MaintCron</name>
+			</class>
+			<params>
+			</params>
+		</extension>		
+		
+		<extension point="cerberusweb.cron">
+			<id>cron.heartbeat</id>
+			<name>Heartbeat</name>
+			<class>
+				<file>api/cron.classes.php</file>
+				<name>HeartbeatCron</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+		
+		<extension point="cerberusweb.cron">
+			<id>cron.import</id>
+			<name>Background Importing and Synchronization</name>
+			<class>
+				<file>api/cron.classes.php</file>
+				<name>ImportCron</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+		
+		<!-- Custom Field Sources -->
+		
+		<extension point="cerberusweb.fields.source">
+			<id>cerberusweb.fields.source.address</id>
+			<name>Address</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChCustomFieldSource_Address</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+				
+		<extension point="cerberusweb.fields.source">
+			<id>cerberusweb.fields.source.org</id>
+			<name>Organization</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChCustomFieldSource_Org</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+				
+		<extension point="cerberusweb.fields.source">
+			<id>cerberusweb.fields.source.task</id>
+			<name>Task</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChCustomFieldSource_Task</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+				
+		<extension point="cerberusweb.fields.source">
+			<id>cerberusweb.fields.source.ticket</id>
+			<name>Ticket</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChCustomFieldSource_Ticket</name>
+			</class>
+			<params>
+			</params>
+		</extension>		
+		
+		<extension point="cerberusweb.fields.source">
+			<id>cerberusweb.fields.source.worker</id>
+			<name>Worker</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChCustomFieldSource_Worker</name>
+			</class>
+			<params>
+			</params>
+		</extension>		
+		
+		<!-- Notes Sources -->
+		
+		<extension point="cerberusweb.notes.source">
+			<id>cerberusweb.notes.source.org</id>
+			<name>Organization</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChNotesSource_Org</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.notes.source">
+			<id>cerberusweb.notes.source.task</id>
+			<name>Task</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChNotesSource_Task</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+		
+		<!-- Workspace Sources -->
+		
+		<extension point="cerberusweb.workspace.source">
+			<id>core.workspace.source.address</id>
+			<name>Addresses</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChWorkspaceSource_Address</name>
+			</class>
+			<params>
+				<param key="view_class" value="C4_AddressView" />
+			</params>
+		</extension>
+
+		<extension point="cerberusweb.workspace.source">
+			<id>core.workspace.source.notifications</id>
+			<name>Notifications</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChWorkspaceSource_Notification</name>
+			</class>
+			<params>
+				<param key="view_class" value="C4_WorkerEventView" />
+			</params>
+		</extension>
+		
+		<extension point="cerberusweb.workspace.source">
+			<id>core.workspace.source.org</id>
+			<name>Organizations</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChWorkspaceSource_Org</name>
+			</class>
+			<params>
+				<param key="view_class" value="C4_ContactOrgView" />
+			</params>
+		</extension>
+		
+		<extension point="cerberusweb.workspace.source">
+			<id>core.workspace.source.task</id>
+			<name>Tasks</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChWorkspaceSource_Task</name>
+			</class>
+			<params>
+				<param key="view_class" value="C4_TaskView" />
+			</params>
+		</extension>
+		
+		<extension point="cerberusweb.workspace.source">
+			<id>core.workspace.source.ticket</id>
+			<name>Tickets</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChWorkspaceSource_Ticket</name>
+			</class>
+			<params>
+				<param key="view_class" value="C4_TicketView" />
+			</params>
+		</extension>
+		
+		<extension point="cerberusweb.workspace.source">
+			<id>core.workspace.source.worker</id>
+			<name>Workers</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChWorkspaceSource_Worker</name>
+			</class>
+			<params>
+				<param key="view_class" value="C4_WorkerView" />
+			</params>
+		</extension>
+		
+		<!-- RSS Sources -->
+		
+		<extension point="cerberusweb.rss.source">
+			<id>core.rss.source.notification</id>
+			<name>Notifications RSS</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChRssSource_Notification</name>
+			</class>
+			<params>
+			</params>
+		</extension>		
+		
+		<extension point="cerberusweb.rss.source">
+			<id>core.rss.source.task</id>
+			<name>Tasks RSS</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChRssSource_Task</name>
+			</class>
+			<params>
+			</params>
+		</extension>		
+		
+		<extension point="cerberusweb.rss.source">
+			<id>core.rss.source.ticket</id>
+			<name>Tickets RSS</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChRssSource_Ticket</name>
+			</class>
+			<params>
+			</params>
+		</extension>		
+		
+		<!-- Task Sources -->
+		
+		<extension point="cerberusweb.task.source">
+			<id>cerberusweb.tasks.org</id>
+			<name>Organization Task</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChTaskSource_Org</name>
+			</class>
+			<params>
+			</params>
+		</extension>		
+		
+		<extension point="cerberusweb.task.source">
+			<id>cerberusweb.tasks.ticket</id>
+			<name>Ticket Task</name>
+			<class>
+				<file>api/plugin.classes.php</file>
+				<name>ChTaskSource_Ticket</name>
+			</class>
+			<params>
+			</params>
+		</extension>		
+		
+	</extensions>
+</plugin>
