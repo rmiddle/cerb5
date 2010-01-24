@@ -7,7 +7,7 @@
 <div class="success">Message created! &nbsp; &nbsp; <a href="{devblocks_url}c=display&mask={$last_ticket_mask}{/devblocks_url}" style="font-weight:normal;color:rgb(80,80,80);">View the message</a></div>
 {/if}
 {if !empty($no_to_in_ticket)}
-<div class="error">Message failed to send! You must enter a requester(s) email address</div>
+<div class="error">{$translate->_('display.error.create')}</div>
 {/if}
 
 <div class="block">
