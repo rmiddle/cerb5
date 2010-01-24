@@ -78,6 +78,13 @@ class ChTicketsPage extends CerberusPageExtension {
 					$visit->set('compose.last_ticket',null); // clear
 				}
 				
+				// If failed to send because there was no to field.
+				if($visit->exists('compose.no_to_in_ticket')) {
+					$no_to_in_ticket = $visit->get('compose.no_to_in_ticket');
+					$tpl->assign('no_to_in_ticket', $no_to_in_ticket);
+					$visit->set('compose.no_to_in_ticket',null); // clear
+				}
+				
 				// Groups (for custom fields)
 				$groups = DAO_Group::getAll();
 				$tpl->assign('groups', $groups);
@@ -124,6 +131,13 @@ class ChTicketsPage extends CerberusPageExtension {
 					$visit->set('compose.last_ticket',null); // clear
 				}
 				
+				// If failed to send because there was no to field.
+				if($visit->exists('compose.no_to_in_ticket')) {
+					$no_to_in_ticket = $visit->get('compose.no_to_in_ticket');
+					$tpl->assign('no_to_in_ticket', $no_to_in_ticket);
+					$visit->set('compose.no_to_in_ticket',null); // clear
+				}
+
 				// Groups (for custom fields)
 				$groups = DAO_Group::getAll();
 				$tpl->assign('groups', $groups);
@@ -985,6 +999,8 @@ class ChTicketsPage extends CerberusPageExtension {
 		}
 
 		if(empty($to)) {
+			$visit = CerberusApplication::getVisit(); /* @var CerberusVisit $visit */
+			$visit->set('compose.no_to_in_ticket', TRUE);
 			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('tickets','compose')));
 			return;
 		}
@@ -1054,6 +1070,9 @@ class ChTicketsPage extends CerberusPageExtension {
 		$fromList = imap_rfc822_parse_adrlist(rtrim($reqs,', '),'');
 		
 		if(empty($fromList) || !is_array($fromList)) {
+			$visit = CerberusApplication::getVisit(); /* @var CerberusVisit $visit */
+			$visit->set('compose.no_to_in_ticket', TRUE);
+			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('tickets','create')));
 			return; // abort with message
 		}
 		$from = array_shift($fromList);
