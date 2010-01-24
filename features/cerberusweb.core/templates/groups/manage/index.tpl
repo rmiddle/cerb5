@@ -137,6 +137,15 @@
 	</div> 
 	<br>
 	
+	<h3>{$translate->_('config.mail.message.status.reply')|capitalize} {$translate->_('config.mail.message.status')|capitalize}</h3>
+	
+	<label><input type="radio" name="ticket_reply_status" value="255" {if $ticket_reply_status eq 255}checked{/if}> {$translate->_('config.mail.message.status.default')|capitalize}</label>
+	<label><input type="radio" name="ticket_reply_status" value="0" {if $ticket_reply_status eq 0}checked{/if}> {$translate->_('status.open')|capitalize}</label>
+	<label><input type="radio" name="ticket_reply_status" value="1" {if $ticket_reply_status eq 1}checked{/if}> {$translate->_('status.waiting')|capitalize}</label>
+	<label><input type="radio" name="ticket_reply_status" value="2" {if $ticket_reply_status eq 2}checked{/if}> {$translate->_('status.closed')|capitalize}</label>
+	<br>
+	<br>
+	
 	<button type="submit"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/check.gif{/devblocks_url}" align="top"> {$translate->_('common.save_changes')|capitalize}</button>
 	
 	</div>

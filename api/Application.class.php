@@ -657,6 +657,9 @@ class CerberusLicense {
 
 class CerberusSettings {
 	const DEFAULT_REPLY_FROM = 'default_reply_from'; 
+	const DEFAULT_TICKET_REPLY_STATUS = 'default_ticket_reply_status'; 
+	const DEFAULT_TICKET_OPEN_STATUS = 'default_ticket_open_status'; 
+	const DEFAULT_TICKET_SEND_STATUS = 'default_ticket_send_status'; 
 	const DEFAULT_REPLY_PERSONAL = 'default_reply_personal'; 
 	const DEFAULT_SIGNATURE = 'default_signature'; 
 	const DEFAULT_SIGNATURE_POS = 'default_signature_pos'; 
@@ -677,6 +680,9 @@ class CerberusSettings {
 	const AUTHORIZED_IPS = 'authorized_ips';
 	const LICENSE = 'license';
 	const ACL_ENABLED = 'acl_enabled';
+		self::DEFAULT_TICKET_REPLY_STATUS => 1,
+		self::DEFAULT_TICKET_OPEN_STATUS => 1,
+		self::DEFAULT_TICKET_SEND_STATUS => 1,
 };
 
 // [TODO] This gets called a lot when it happens after the registry cache
