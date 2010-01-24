@@ -31,6 +31,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 
+		$settings = CerberusSettings::getInstance();
 		$visit = CerberusApplication::getVisit();
 		$active_worker = $visit->getWorker();
 		
@@ -85,6 +86,9 @@ class ChTicketsPage extends CerberusPageExtension {
 					$visit->set('compose.no_to_in_ticket',null); // clear
 				}
 				
+				$default_ticket_send_status = $settings->get(CerberusSettings::DEFAULT_TICKET_SEND_STATUS,1);
+				$tpl->assign('default_ticket_send_status', $default_ticket_send_status);
+				
 				// Groups (for custom fields)
 				$groups = DAO_Group::getAll();
 				$tpl->assign('groups', $groups);
@@ -130,6 +134,9 @@ class ChTicketsPage extends CerberusPageExtension {
 					$tpl->assign('last_ticket_mask', $ticket_mask);
 					$visit->set('compose.last_ticket',null); // clear
 				}
+
+				$default_ticket_open_status = $settings->get(CerberusSettings::DEFAULT_TICKET_OPEN_STATUS,1);
+				$tpl->assign('default_ticket_open_status', $default_ticket_open_status);
 				
 				// If failed to send because there was no to field.
 				if($visit->exists('compose.no_to_in_ticket')) {

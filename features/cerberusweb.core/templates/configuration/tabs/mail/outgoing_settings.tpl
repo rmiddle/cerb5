@@ -94,6 +94,27 @@
 					<br>
 					<br>
 				</div>
+				<b>{$translate->_('config.mail.message.status.reply')|capitalize} {$translate->_('config.mail.message.status')|capitalize}</b><br>
+				<label><input type="radio" name="default_ticket_reply_status" value="0" {if $default_ticket_reply_status eq 0}checked{/if}> {$translate->_('status.open')|capitalize}</label>
+				<label><input type="radio" name="default_ticket_reply_status" value="1" {if $default_ticket_reply_status eq 1}checked{/if}> {$translate->_('status.waiting')|capitalize}</label>
+				<label><input type="radio" name="default_ticket_reply_status" value="2" {if $default_ticket_reply_status eq 2}checked{/if}> {$translate->_('status.closed')|capitalize}</label>
+				<br>
+				<br>
+
+				<b>{$translate->_('config.mail.message.status.open')|capitalize} {$translate->_('config.mail.message.status')|capitalize}</b><br>
+				<label><input type="radio" name="default_ticket_open_status" value="0" {if $default_ticket_open_status eq 0}checked{/if}> {$translate->_('status.open')|capitalize}</label>
+				<label><input type="radio" name="default_ticket_open_status" value="1" {if $default_ticket_open_status eq 1}checked{/if}> {$translate->_('status.waiting')|capitalize}</label>
+				<label><input type="radio" name="default_ticket_open_status" value="2" {if $default_ticket_open_status eq 2}checked{/if}> {$translate->_('status.closed')|capitalize}</label>
+				<br>
+				<br>
+
+				<b>{$translate->_('config.mail.message.status.send')|capitalize} {$translate->_('config.mail.message.status')|capitalize}</b><br>
+				<label><input type="radio" name="default_ticket_send_status" value="0" {if $default_ticket_send_status eq 0}checked{/if}> {$translate->_('status.open')|capitalize}</label>
+				<label><input type="radio" name="default_ticket_send_status" value="1" {if $default_ticket_send_status eq 1}checked{/if}> {$translate->_('status.waiting')|capitalize}</label>
+				<label><input type="radio" name="default_ticket_send_status" value="2" {if $default_ticket_send_status eq 2}checked{/if}> {$translate->_('status.closed')|capitalize}</label>
+				<br>
+				<br>
+				<br>
 			</blockquote>
 			
 			<button type="submit"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/check.gif{/devblocks_url}" align="top"> {$translate->_('common.save_changes')|capitalize}</button>
