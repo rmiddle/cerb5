@@ -6,6 +6,9 @@
 {if !empty($last_ticket_mask)}
 <div class="success">Message sent! &nbsp; &nbsp; <a href="{devblocks_url}c=display&mask={$last_ticket_mask}{/devblocks_url}" style="font-weight:normal;color:rgb(80,80,80);">View the message</a></div>
 {/if}
+{if !empty($no_to_in_ticket)}
+<div class="error">Message failed to send! You must enter a "To:" email address</div>
+{/if}
 
 <div class="block">
 <h2>Outgoing Message</h2>
