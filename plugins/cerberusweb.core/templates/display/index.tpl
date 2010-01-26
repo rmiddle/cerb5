@@ -19,7 +19,7 @@
 					<b>{$translate->_('ticket.mask')|capitalize}:</b> {$ticket->mask} &nbsp; 
 					<b>{$translate->_('ticket.id')}:</b> {$ticket->id} &nbsp; 
 					{if isset($total_time_all) }
-						<b>Total Ticket Time Worked: </b> {$total_time_all} &nbsp; 
+						<b>Total Ticket Time Worked: </b> {$total_time_all} Mins&nbsp; 
 					{/if}
 					<br>
 					{if !empty($ticket->next_worker_id)}
