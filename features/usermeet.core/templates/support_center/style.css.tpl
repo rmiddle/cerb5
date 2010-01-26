@@ -9,7 +9,7 @@ FORM {
 }
 
 H1 {
-	font-size:16px;
+	font-size:20px;
 	font-weight:bold;
 	color: rgb(8,90,173);
 	margin-top:0px;
@@ -107,6 +107,18 @@ TABLE.sidebar BUTTON {
 	text-align:right;
 }
 
+.tableRowBg {
+	background-color: rgb(254, 254, 254);
+}
+
+.tableRowAltBg {
+	background-color: rgb(244, 244, 244);
+}
+
+.tableRowHover {
+	background-color: rgb(255, 255, 206);
+}
+
 /* Modules */
 #account {
 	border:1px solid rgb(204,204,204);
@@ -196,7 +208,6 @@ LABEL.error {
 	font-weight:bold;
 }
 
-/* Cerb4 Styles */
 DIV.error {
 	border:1px solid rgb(180,0,0);
 	background-color:rgb(255,235,235);
