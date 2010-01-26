@@ -77,7 +77,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		}
 		
 		$tpl->assign('ticket', $ticket);
-
+		
 		// TicketToolbarItem Extensions
 		$ticketToolbarItems = DevblocksPlatform::getExtensions('cerberusweb.ticket.toolbaritem', true);
 		if(!empty($ticketToolbarItems))
@@ -158,6 +158,26 @@ class ChDisplayPage extends CerberusPageExtension {
 			))
 		);
 		
+		if (class_exists('Extension_TimeTrackingSource',true)):
+			// Adds total time worked per ticket to the token list.
+			$db = DevblocksPlatform::getDatabaseService();
+
+			$sql = "SELECT sum(tte.time_actual_mins) mins ";
+			$sql .= "FROM timetracking_entry tte ";
+			$sql .= sprintf("WHERE tte.source_id =  %d ", $ticket->id);
+			$sql .= "AND tte.source_extension_id = 'timetracking.source.ticket' ";
+			$sql .= "GROUP BY tte.source_id ";
+
+			$rs = $db->Execute($sql);
+		
+			if(is_a($rs,'ADORecordSet')) {
+				$total_time_all = intval($rs->fields['mins']);			
+			} else {
+				$total_time_all = 0;			
+			}
+		endif;
+
+		$tpl->assign('total_time_all', $total_time_all);
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/index.tpl');
 	}
 	
