@@ -4,6 +4,10 @@
 <div class="error">{$register_error}</div>
 {/if}
 
+{if !empty($register_confirmation)}
+<div class="error">{$register_confirmation}</div>
+{/if}
+
 <form action="{devblocks_url}c=register{/devblocks_url}" method="post" id="registerForm">
 <input type="hidden" name="a" value="doRegisterConfirm">
 
