@@ -680,9 +680,6 @@ class CerberusSettings {
 	const AUTHORIZED_IPS = 'authorized_ips';
 	const LICENSE = 'license';
 	const ACL_ENABLED = 'acl_enabled';
-		self::DEFAULT_TICKET_REPLY_STATUS => 1,
-		self::DEFAULT_TICKET_OPEN_STATUS => 1,
-		self::DEFAULT_TICKET_SEND_STATUS => 1,
 };
 
 // [TODO] This gets called a lot when it happens after the registry cache
