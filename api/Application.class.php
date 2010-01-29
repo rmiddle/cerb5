@@ -669,6 +669,7 @@ class CerberusSettings {
 	const DEFAULT_SIGNATURE_POS = 'default_signature_pos'; 
 	const HELPDESK_TITLE = 'helpdesk_title'; 
 	const HELPDESK_LOGO_URL = 'helpdesk_logo_url'; 
+	const DISABLE_WORKER_EMAIL_TO_CUSTOMER = 'disable_worker_email_to_customer'; 
 	const SMTP_HOST = 'smtp_host'; 
 	const SMTP_AUTH_ENABLED = 'smtp_auth_enabled'; 
 	const SMTP_AUTH_USER = 'smtp_auth_user'; 
@@ -684,9 +685,6 @@ class CerberusSettings {
 	const AUTHORIZED_IPS = 'authorized_ips';
 	const LICENSE = 'license';
 	const ACL_ENABLED = 'acl_enabled';
-		self::DEFAULT_TICKET_REPLY_STATUS => 1,
-		self::DEFAULT_TICKET_OPEN_STATUS => 1,
-		self::DEFAULT_TICKET_SEND_STATUS => 1,
 };
 
 // [TODO] This gets called a lot when it happens after the registry cache
