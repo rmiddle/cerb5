@@ -497,11 +497,13 @@ class CerberusParser {
 						$i++;
 					} 				
 					
-	        		CerberusMail::sendTicketMessage(array(
+					$settings = CerberusSettings::getInstance();
+					CerberusMail::sendTicketMessage(array(
 						'message_id' => $msgid,
 						'content' => $message->body,
 						'files' => $attachment_files,
 						'agent_id' => $worker_address->worker_id,
+						'dont_send' => $settings->get(CerberusSettings::DISABLE_WORKER_EMAIL_TO_CUSTOMER,'0'),
 					));
 					
 	        		return $id;
