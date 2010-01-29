@@ -57,7 +57,8 @@
 				<br>
 				
 				<div id="configSmtpTest"></div>	
-				<button type="button" onclick="genericAjaxGet('configSmtpTest','c=config&a=getSmtpTest&host='+this.form.smtp_host.value+'&port='+encodeURIComponent(this.form.smtp_port.value)+'&enc='+encodeURIComponent(radioValue(this.form.smtp_enc))+'&smtp_user='+encodeURIComponent(this.form.smtp_auth_user.value)+'&smtp_pass='+encodeURIComponent(this.form.smtp_auth_pass.value));"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/gear.gif{/devblocks_url}" align="top"> Test SMTP</button>				
+				<button type="button" onclick="genericAjaxGet('configSmtpTest','c=config&a=getSmtpTest&host='+this.form.smtp_host.value+'&port='+encodeURIComponent(this.form.smtp_port.value)+'&enc='+encodeURIComponent(radioValue(this.form.smtp_enc))+'&smtp_user='+encodeURIComponent(this.form.smtp_auth_user.value)+'&smtp_pass='+encodeURIComponent(this.form.smtp_auth_pass.value));"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/gear.gif{/devblocks_url}" align="top"> Test SMTP</button>
+
 			</blockquote>
 			
 			<h3>Default Preferences</h3>
@@ -93,7 +94,9 @@
 					</select>
 					<br>
 					<br>
-				</div>
+					<label><input type="checkbox" name="disable_worker_email_to_customer" value="1" {if $settings->get('disable_worker_email_to_customer')}checked{/if}> {$translate->_('config.mail.smtp.disable.email.outbound')|capitalize}</label><br>
+					<br>
+			</div>
 			</blockquote>
 			
 			<button type="submit"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/check.gif{/devblocks_url}" align="top"> {$translate->_('common.save_changes')|capitalize}</button>
