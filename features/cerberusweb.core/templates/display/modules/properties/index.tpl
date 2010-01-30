@@ -24,6 +24,7 @@
 	<br>
 	</div>
 	
+	{if $active_worker->hasPriv('core.ticket.actions.take')}
 	<b>{$translate->_('display.reply.next.handle_reply')}</b><br> 
 	<select name="next_worker_id" onchange="toggleDiv('ticketPropsUnlockDate',this.selectedIndex?'block':'none');">
 		{if $active_worker->id==$ticket->next_worker_id || 0==$ticket->next_worker_id || $active_worker->hasPriv('core.ticket.actions.assign')}<option value="0" {if 0==$ticket->next_worker_id}selected{/if}>{$translate->_('common.anybody')|capitalize}{/if}
@@ -48,6 +49,7 @@
 		<br>
 		<br>
 	</div>
+	{/if}
 </blockquote>
 
 {* [TODO] Display by Group *}

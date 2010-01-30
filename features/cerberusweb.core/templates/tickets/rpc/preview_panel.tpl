@@ -43,24 +43,26 @@
 						<input type="text" name="subject" size="45" maxlength="255" value="{$ticket->subject|escape}">
 					</td>
 				</tr>
-				<tr>
-					<td width="0%" nowrap="nowrap" align="right">Next Worker: </td>
-					<td width="100%">
-						<select name="next_worker_id">
-							{if $active_worker->id==$ticket->next_worker_id || 0==$ticket->next_worker_id || $active_worker->hasPriv('core.ticket.actions.assign')}<option value="0" {if 0==$ticket->next_worker_id}selected{/if}>Anybody{/if}
-							{foreach from=$workers item=worker key=worker_id name=workers}
-								{if $worker_id==$ticket->next_worker_id || $active_worker->hasPriv('core.ticket.actions.assign')}
-								{if $worker_id==$active_worker->id}{assign var=next_worker_id_sel value=$smarty.foreach.workers.iteration}{/if}
-								<option value="{$worker_id}" {if $worker_id==$ticket->next_worker_id}selected{/if}>{$worker->getName()}
-								{/if}
-							{/foreach}
-						</select>
-					   	{if $active_worker->hasPriv('core.ticket.actions.assign') && !empty($next_worker_id_sel)}
-					   		<button type="button" onclick="this.form.next_worker_id.selectedIndex = {$next_worker_id_sel};toggleDiv('ticketPropsUnlockDate','block');">{$translate->_('common.me')|lower}</button>
-					   		<button type="button" onclick="this.form.next_worker_id.selectedIndex = 0;toggleDiv('ticketPropsUnlockDate','none');">{$translate->_('common.anybody')|lower}</button>
-					   	{/if}
-					</td>
-				</tr>
+				{if $active_worker->hasPriv('core.ticket.actions.take')}
+					<tr>
+						<td width="0%" nowrap="nowrap" align="right">Next Worker: </td>
+						<td width="100%">
+							<select name="next_worker_id">
+								{if $active_worker->id==$ticket->next_worker_id || 0==$ticket->next_worker_id || $active_worker->hasPriv('core.ticket.actions.assign')}<option value="0" {if 0==$ticket->next_worker_id}selected{/if}>Anybody{/if}
+								{foreach from=$workers item=worker key=worker_id name=workers}
+									{if $worker_id==$ticket->next_worker_id || $active_worker->hasPriv('core.ticket.actions.assign')}
+									{if $worker_id==$active_worker->id}{assign var=next_worker_id_sel value=$smarty.foreach.workers.iteration}{/if}
+									<option value="{$worker_id}" {if $worker_id==$ticket->next_worker_id}selected{/if}>{$worker->getName()}
+									{/if}
+								{/foreach}
+							</select>
+							{if $active_worker->hasPriv('core.ticket.actions.assign') && !empty($next_worker_id_sel)}
+								<button type="button" onclick="this.form.next_worker_id.selectedIndex = {$next_worker_id_sel};toggleDiv('ticketPropsUnlockDate','block');">{$translate->_('common.me')|lower}</button>
+								<button type="button" onclick="this.form.next_worker_id.selectedIndex = 0;toggleDiv('ticketPropsUnlockDate','none');">{$translate->_('common.anybody')|lower}</button>
+							{/if}
+						</td>
+					</tr>
+				{/if}
 				
 				{if $active_worker->hasPriv('core.ticket.actions.move')}
 				<tr>

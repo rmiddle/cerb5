@@ -94,7 +94,7 @@
 	</tr>
 	{/if}
 	
-	{if $active_worker->hasPriv('core.ticket.actions.assign')}
+	{if $active_worker->hasPriv('core.ticket.actions.assign') && $active_worker->hasPriv('core.ticket.actions.take')}
 	<tr>
 		<td width="0%" nowrap="nowrap">Next Worker:</td>
 		<td width="100%">
