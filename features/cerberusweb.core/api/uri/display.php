@@ -828,8 +828,8 @@ class ChDisplayPage extends CerberusPageExtension {
 			if(is_array($email_worker_ids) && !empty($email_worker_ids)) {
 				@$active_worker = CerberusApplication::getActiveWorker();
 				$settings = CerberusSettings::getInstance();
-				$default_from = $settings->get(CerberusSettings::DEFAULT_REPLY_FROM, '');
-				$default_personal = $settings->get(CerberusSettings::DEFAULT_REPLY_PERSONAL, '');
+				$default_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, '');
+				$default_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL, '');
 				// See if we need a group-specific reply-to
 				if(!empty($ticket->team_id)) {
 					@$group_from = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_FROM);
