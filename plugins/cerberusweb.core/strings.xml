@@ -439,6 +439,9 @@
 		<tu tuid='acl.core.mail.log_ticket'>
 			<tuv xml:lang="en_US"><seg>[Mail] Can open tickets on behalf of customers</seg></tuv>
 		</tu>
+		<tu tuid='acl.core.mail.workflow'>
+			<tuv xml:lang="en_US"><seg>[Mail] Can use the Workflow tab on the Mail page</seg></tuv>
+		</tu>
 		<tu tuid='acl.core.mail.overview'>
 			<tuv xml:lang="en_US"><seg>[Mail] Can use the Overview tab on the Mail page</seg></tuv>
 		</tu>

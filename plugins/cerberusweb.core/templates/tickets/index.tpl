@@ -35,11 +35,16 @@
 {literal}
 var tabView = new YAHOO.widget.TabView();
 
+{/literal}{if $active_worker->hasPriv('core.mail.workflow')}
+	{counter name=tab_idx assign=tab_idx print=false}
+	{assign var=tab_idx_overview value=$tab_idx}
+{literal}
 tabView.addTab( new YAHOO.widget.Tab({
     label: '{/literal}{$translate->_('mail.workflow')|capitalize|escape:'quotes'}{literal}',
     dataSrc: '{/literal}{devblocks_url}ajax.php?c=tickets&a=showWorkflowTab&request={$request_path|escape:'url'}{/devblocks_url}{literal}',
     cacheData: false
 }));
+{/literal}{/if}{literal}
 
 {/literal}{if $active_worker->hasPriv('core.mail.overview')}
 	{counter name=tab_idx assign=tab_idx print=false}
@@ -248,7 +253,7 @@ tabView.addListener('activeTabChange', function(e) {
 
 // Select the appropriate tab
 {assign var=tabIdx value=null}
-{counter assign=counter name="mailTabs" start=0}{if empty($selected_tab) || 'workflow'==$selected_tab}{assign var=tabIdx value=$counter}{/if}
+{if $active_worker->hasPriv('core.mail.workflow')}{counter assign=counter name="mailTabs" start=0}{if empty($selected_tab) || 'workflow'==$selected_tab}{assign var=tabIdx value=$counter}{/if}{/if}
 {if $active_worker->hasPriv('core.mail.overview')}{counter assign=counter name="mailTabs"}{if 'overview'==$selected_tab}{assign var=tabIdx value=$counter}{/if}{/if}
 {if $active_worker->hasPriv('core.mail.search')}{counter assign=counter name="mailTabs"}{if 'search'==$selected_tab}{assign var=tabIdx value=$counter}{/if}{/if}
 
