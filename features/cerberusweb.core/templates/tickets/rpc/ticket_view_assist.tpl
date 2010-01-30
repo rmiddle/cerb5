@@ -47,11 +47,13 @@ Sort biggest piles by:
 				{if $active_worker->hasPriv('core.ticket.actions.spam')}<option value="as">Report Spam</option>{/if}
 				{if $active_worker->hasPriv('core.ticket.actions.delete')}<option value="ad">Delete</option>{/if}
 			</optgroup>
-			<optgroup label="Assign" style="font-weight:bold;">
-				{foreach from=$workers item=worker key=worker_id}
-					<option value="w{$worker_id}">{$worker->getName()}</option>
-				{/foreach}
-			</optgroup>
+			{if $active_worker->hasPriv('core.ticket.actions.assign') && $active_worker->hasPriv('core.ticket.actions.take')}
+				<optgroup label="Assign" style="font-weight:bold;">
+					{foreach from=$workers item=worker key=worker_id}
+						<option value="w{$worker_id}">{$worker->getName()}</option>
+					{/foreach}
+				</optgroup>
+			{/if}
 		</select>
 		{if $active_worker->hasPriv('core.ticket.actions.close')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$hash}.value='ac';"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/folder_ok.gif{/devblocks_url}" align="top" border="0"></a>{/if}
 		{if $active_worker->hasPriv('core.ticket.actions.spam')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$hash}.value='as';"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/spam.gif{/devblocks_url}" align="top" border="0"></a>{/if}

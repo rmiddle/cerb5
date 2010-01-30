@@ -215,6 +215,7 @@
 								<br>
 								</div>
 		
+								{if $active_worker->hasPriv('core.ticket.actions.take')}
 								<b>{$translate->_('display.reply.next.handle_reply')}</b><br>
 						      	<select name="next_worker_id" onchange="toggleDiv('replySurrender{$message->id}',this.selectedIndex?'block':'none');">
 						      		<option value="0" selected="selected">{$translate->_('common.anybody')|capitalize}
@@ -239,6 +240,7 @@
 							      	<br>
 							      	<br>
 							    </div>
+								{/if}
 		
 								{if $active_worker->hasPriv('core.ticket.actions.move')}
 								<b>{$translate->_('display.reply.next.move')}</b><br>  

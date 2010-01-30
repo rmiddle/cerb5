@@ -186,6 +186,7 @@
 						      	</div>
 		
 								<div style="margin-left:10px;">
+								{if $active_worker->hasPriv('core.ticket.actions.take')}
 								<b>{$translate->_('display.reply.next.handle_reply')}</b><br>
 						      	<select name="next_worker_id" onchange="toggleDiv('replySurrender{$message->id}',this.selectedIndex?'block':'none');">
 						      		{if $active_worker->id==$ticket->next_worker_id || 0==$ticket->next_worker_id || $active_worker->hasPriv('core.ticket.actions.assign')}<option value="0" {if 0==$ticket->next_worker_id}selected{/if}>{$translate->_('common.anybody')|capitalize}{/if}
@@ -210,6 +211,7 @@
 							      	<br>
 							      	<br>
 							    </div>
+								{/if}
 		
 								{if $active_worker->hasPriv('core.ticket.actions.move')}
 								<b>{$translate->_('display.reply.next.move')}</b><br>  
@@ -256,7 +258,9 @@
 				<button type="button" onclick="this.form.cc.value=document.getElementById('replyForm_cc').value;this.form.bcc.value=document.getElementById('replyForm_bcc').value;this.form.subject.value=document.getElementById('replyForm_subject').value;this.form.submit();"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/check.gif{/devblocks_url}" align="top"> {$translate->_('display.ui.send_message')}</button>
 			{/if}
 			<button type="button" onclick="clearDiv('reply{$message->id}');"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/delete.gif{/devblocks_url}" align="top"> {$translate->_('display.ui.discard')|capitalize}</button>
-			<button type="button" onclick="clearDiv('reply{$message->id}');genericAjaxGet('','c=display&a=discardAndSurrender&ticket_id={$ticket->id}');"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/flag_white.gif{/devblocks_url}" align="top"> {$translate->_('display.ui.discard_surrender')}</button>
+			{if $active_worker->hasPriv('core.ticket.actions.take')}
+				<button type="button" onclick="clearDiv('reply{$message->id}');genericAjaxGet('','c=display&a=discardAndSurrender&ticket_id={$ticket->id}');"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/flag_white.gif{/devblocks_url}" align="top"> {$translate->_('display.ui.discard_surrender')}</button>
+			{/if}
 		</td>
 	</tr>
 </table>

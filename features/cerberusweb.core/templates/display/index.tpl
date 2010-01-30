@@ -68,8 +68,10 @@
 				{if $active_worker->hasPriv('core.ticket.actions.delete')}<button title="{$translate->_('display.shortcut.delete')}" id="btnDelete" type="button" onclick="this.form.deleted.value=1;this.form.closed.value=1;this.form.submit();"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/delete.gif{/devblocks_url}" align="top"> {$translate->_('common.delete')|capitalize}</button>{/if}
 			{/if}
 			
-			{if empty($ticket->next_worker_id)}<button id="btnTake" title="{$translate->_('display.shortcut.take')}" type="button" onclick="this.form.next_worker_id.value='{$active_worker->id}';this.form.submit();"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/hand_paper.gif{/devblocks_url}" align="top"> {$translate->_('mail.take')|capitalize}</button>{/if}
-			{if $ticket->next_worker_id == $active_worker->id}<button id="btnSurrender" title="{$translate->_('display.shortcut.surrender')}" type="button" onclick="this.form.next_worker_id.value='0';this.form.unlock_date.value='0';this.form.submit();"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/flag_white.gif{/devblocks_url}" align="top"> {$translate->_('mail.surrender')|capitalize}</button>{/if}
+			{if $active_worker->hasPriv('core.ticket.actions.take')}
+				{if empty($ticket->next_worker_id)}<button id="btnTake" title="{$translate->_('display.shortcut.take')}" type="button" onclick="this.form.next_worker_id.value='{$active_worker->id}';this.form.submit();"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/hand_paper.gif{/devblocks_url}" align="top"> {$translate->_('mail.take')|capitalize}</button>{/if}
+				{if $ticket->next_worker_id == $active_worker->id}<button id="btnSurrender" title="{$translate->_('display.shortcut.surrender')}" type="button" onclick="this.form.next_worker_id.value='0';this.form.unlock_date.value='0';this.form.submit();"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/flag_white.gif{/devblocks_url}" align="top"> {$translate->_('mail.surrender')|capitalize}</button>{/if}
+			{/if}
 			
 			{if !$expand_all}<button id="btnReadAll" title="{$translate->_('display.shortcut.read_all')}" type="button" onclick="document.location='{devblocks_url}c=display&id={$ticket->mask}&tab=conversation&opt=read_all{/devblocks_url}';"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/document.gif{/devblocks_url}" align="top"> {$translate->_('display.button.read_all')|capitalize}</button>{/if} 
 			 
@@ -114,8 +116,8 @@
 			{if !$ticket->is_closed && $active_worker->hasPriv('core.ticket.actions.close')}(<b>c</b>) {$translate->_('common.close')|lower} {/if}
 			{if !$ticket->spam_trained && $active_worker->hasPriv('core.ticket.actions.spam')}(<b>s</b>) {$translate->_('common.spam')|lower} {/if}
 			{if !$ticket->is_deleted && $active_worker->hasPriv('core.ticket.actions.delete')}(<b>x</b>) {$translate->_('common.delete')|lower} {/if}
-			{if empty($ticket->next_worker_id)}(<b>t</b>) {$translate->_('mail.take')|lower} {/if}
-			{if $ticket->next_worker_id == $active_worker->id}(<b>u</b>) {$translate->_('mail.surrender')|lower} {/if}
+			{if $active_worker->hasPriv('core.ticket.actions.take')}{if empty($ticket->next_worker_id)}(<b>t</b>) {$translate->_('mail.take')|lower} {/if}{/if}
+			{if $active_worker->hasPriv('core.ticket.actions.take')}{if $ticket->next_worker_id == $active_worker->id}(<b>u</b>) {$translate->_('mail.surrender')|lower} {/if}{/if}
 			{if !$expand_all}(<b>a</b>) {$translate->_('display.button.read_all')|lower} {/if} 
 			{if !empty($series_stats.prev)}( <b>[</b> ) {$translate->_('common.previous')|lower} {/if} 
 			{if !empty($series_stats.next)}( <b>]</b> ) {$translate->_('common.next')|lower} {/if} 
@@ -245,14 +247,18 @@ CreateKeyHandler(function doShortcuts(e) {
 			} catch(ex){}
 			break;
 		case 84:  // (T) take/assign
-			try {
-				document.getElementById('btnTake').click();
-			} catch(ex){}
+			{if $active_worker->hasPriv('core.ticket.actions.take')}
+				try {
+					document.getElementById('btnTake').click();
+				} catch(ex){}
+			{/if}
 			break;
 		case 85:  // (U) surrender/unassign
-			try {
-				document.getElementById('btnSurrender').click();
-			} catch(ex){}
+			{if $active_worker->hasPriv('core.ticket.actions.take')}
+				try {
+					document.getElementById('btnSurrender').click();
+				} catch(ex){}
+			{/if}
 			break;
 		case 88:  // (X) delete
 			try {

@@ -486,6 +486,9 @@
 		<tu tuid='acl.core.ticket.actions.delete'>
 			<tuv xml:lang="en_US"><seg>[Tickets] Can delete tickets</seg></tuv>
 		</tu>
+		<tu tuid='acl.core.ticket.actions.take'>
+			<tuv xml:lang="en_US"><seg>[Tickets] Can take tickets</seg></tuv>
+		</tu>
 		<tu tuid='acl.core.ticket.actions.move'>
 			<tuv xml:lang="en_US"><seg>[Tickets] Can move tickets</seg></tuv>
 		</tu>

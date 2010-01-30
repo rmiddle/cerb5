@@ -202,30 +202,32 @@
 								<br>
 								</div>
 		
-								<b>{$translate->_('display.reply.next.handle_reply')}</b><br>
-						      	<select name="next_worker_id" onchange="toggleDiv('replySurrender{$message->id}',this.selectedIndex?'block':'none');">
-						      		<option value="0" selected="selected">{$translate->_('common.anybody')|capitalize}
-						      		{foreach from=$workers item=worker key=worker_id name=workers}
-										{if $worker_id==$active_worker->id || $active_worker->hasPriv('core.ticket.actions.assign')}
-							      			{if $worker_id==$active_worker->id}{assign var=next_worker_id_sel value=$smarty.foreach.workers.iteration}{/if}
-							      			<option value="{$worker_id}">{$worker->getName()}
-										{/if}
-						      		{/foreach}
-						      	</select>&nbsp;
-						      	{if $active_worker->hasPriv('core.ticket.actions.assign') && !empty($next_worker_id_sel)}
-						      		<button type="button" onclick="this.form.next_worker_id.selectedIndex = {$next_worker_id_sel};toggleDiv('replySurrender{$message->id}','block');">{$translate->_('common.me')|lower}</button>
-						      		<button type="button" onclick="this.form.next_worker_id.selectedIndex = 0;toggleDiv('replySurrender{$message->id}','none');">{$translate->_('common.anybody')|lower}</button>
-						      	{/if}
-						      	<br>
-						      	<br>
-						      	
-						      	<div id="replySurrender{$message->id}" style="display:none;margin-left:10px;">
+								{if $active_worker->hasPriv('core.ticket.actions.take')}
+									<b>{$translate->_('display.reply.next.handle_reply')}</b><br>
+									<select name="next_worker_id" onchange="toggleDiv('replySurrender{$message->id}',this.selectedIndex?'block':'none');">
+										<option value="0" selected="selected">{$translate->_('common.anybody')|capitalize}
+										{foreach from=$workers item=worker key=worker_id name=workers}
+											{if $worker_id==$active_worker->id || $active_worker->hasPriv('core.ticket.actions.assign')}
+												{if $worker_id==$active_worker->id}{assign var=next_worker_id_sel value=$smarty.foreach.workers.iteration}{/if}
+												<option value="{$worker_id}">{$worker->getName()}
+											{/if}
+										{/foreach}
+									</select>&nbsp;
+									{if $active_worker->hasPriv('core.ticket.actions.assign') && !empty($next_worker_id_sel)}
+										<button type="button" onclick="this.form.next_worker_id.selectedIndex = {$next_worker_id_sel};toggleDiv('replySurrender{$message->id}','block');">{$translate->_('common.me')|lower}</button>
+										<button type="button" onclick="this.form.next_worker_id.selectedIndex = 0;toggleDiv('replySurrender{$message->id}','none');">{$translate->_('common.anybody')|lower}</button>
+									{/if}
+									<br>
+									<br>
+								{/if}
+									
+									<div id="replySurrender{$message->id}" style="display:none;margin-left:10px;">
 									<b>{$translate->_('display.reply.next.handle_reply_after')}</b> {$translate->_('display.reply.next.handle_reply_after_eg')}<br>  
-							      	<input type="text" name="unlock_date" size="32" maxlength="255" value="">
-							      	<button type="button" onclick="this.form.unlock_date.value='+2 hours';">{$translate->_('display.reply.next.handle_reply_after_2hrs')}</button>
-							      	<br>
-							      	<br>
-							    </div>
+										<input type="text" name="unlock_date" size="32" maxlength="255" value="">
+										<button type="button" onclick="this.form.unlock_date.value='+2 hours';">{$translate->_('display.reply.next.handle_reply_after_2hrs')}</button>
+										<br>
+										<br>
+									</div>
 		
 								{if $active_worker->hasPriv('core.ticket.actions.move')}
 								<b>{$translate->_('display.reply.next.move')}</b><br>  
