@@ -63,22 +63,24 @@
 			<br>
 			<br>
 
-			<b>Who should handle the follow-up?</b><br>
-	      	<select name="next_worker_id">
-	      		<option value="0" {if 0==$default_next_worker_id}selected="selected"{/if}>Anybody
-	      		{foreach from=$workers item=worker key=worker_id name=workers}
-					{if $worker_id==$active_worker->id || $active_worker->hasPriv('core.ticket.actions.assign')}
-		      			{if $worker_id==$active_worker->id}{assign var=next_worker_id_sel value=$smarty.foreach.workers.iteration}{/if}
-		      			<option value="{$worker_id}" {if $worker_id==$default_next_worker_id}selected="selected"{/if}>{$worker->getName()}
-					{/if}
-	      		{/foreach}
-	      	</select>&nbsp;
-	      	{if $active_worker->hasPriv('core.ticket.actions.assign') && !empty($next_worker_id_sel)}
-	      		<button type="button" onclick="this.form.next_worker_id.selectedIndex = {$next_worker_id_sel};">me</button>
-	      		<button type="button" onclick="this.form.next_worker_id.selectedIndex = 0;">anybody</button>
-	      	{/if}
-	      	<br>
-	      	<br>			
+			{if $active_worker->hasPriv('core.ticket.actions.take')}
+				<b>Who should handle the follow-up?</b><br>
+				<select name="next_worker_id">
+					<option value="0" {if 0==$default_next_worker_id}selected="selected"{/if}>Anybody
+					{foreach from=$workers item=worker key=worker_id name=workers}
+						{if $worker_id==$active_worker->id || $active_worker->hasPriv('core.ticket.actions.assign')}
+							{if $worker_id==$active_worker->id}{assign var=next_worker_id_sel value=$smarty.foreach.workers.iteration}{/if}
+							<option value="{$worker_id}" {if $worker_id==$default_next_worker_id}selected="selected"{/if}>{$worker->getName()}
+						{/if}
+					{/foreach}
+				</select>&nbsp;
+				{if $active_worker->hasPriv('core.ticket.actions.assign') && !empty($next_worker_id_sel)}
+					<button type="button" onclick="this.form.next_worker_id.selectedIndex = {$next_worker_id_sel};">me</button>
+					<button type="button" onclick="this.form.next_worker_id.selectedIndex = 0;">anybody</button>
+				{/if}
+				<br>
+				<br>			
+			{/if}
 		</td>
 	</tr>
 </table>

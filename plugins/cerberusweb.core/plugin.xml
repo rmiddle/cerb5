@@ -157,6 +157,7 @@
 		<priv id="core.ticket.actions.assign" label="acl.core.ticket.actions.assign" />
 		<priv id="core.ticket.actions.close" label="acl.core.ticket.actions.close" />
 		<priv id="core.ticket.actions.delete" label="acl.core.ticket.actions.delete" />
+		<priv id="core.ticket.actions.take" label="acl.core.ticket.actions.take" />
 		<priv id="core.ticket.actions.move" label="acl.core.ticket.actions.move" />
 		<priv id="core.ticket.actions.spam" label="acl.core.ticket.actions.spam" />
 		<priv id="core.ticket.view.actions.bulk_update" label="acl.core.ticket.view.actions.bulk_update" />
