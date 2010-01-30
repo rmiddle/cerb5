@@ -774,6 +774,9 @@ class ChDisplayPage extends CerberusPageExtension {
 	function saveCommentAction() {
 		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer');
 		@$comment = DevblocksPlatform::importGPC($_REQUEST['comment'],'string','');
+		$mail_service = DevblocksPlatform::getMailService();
+		$mailer = null; // lazy load
+		$translate = DevblocksPlatform::getTranslationService();
 		
 		// Worker is logged in
 		if(null === ($active_worker = CerberusApplication::getActiveWorker()))
@@ -801,20 +804,76 @@ class ChDisplayPage extends CerberusPageExtension {
 		
 		// Notifications
 		$url_writer = DevblocksPlatform::getUrlService();
-		@$notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
-		if(is_array($notify_worker_ids) && !empty($notify_worker_ids))
-		foreach($notify_worker_ids as $notify_worker_id) {
-			$fields = array(
-				DAO_WorkerEvent::CREATED_DATE => time(),
-				DAO_WorkerEvent::WORKER_ID => $notify_worker_id,
-				DAO_WorkerEvent::URL => $url_writer->write('c=display&id='.$ticket->mask,true),
-				DAO_WorkerEvent::TITLE => 'New Ticket Comment', // [TODO] Translate
-				DAO_WorkerEvent::CONTENT => sprintf("#%s: %s\n%s comments: %s", $ticket->mask, $ticket->subject, $active_worker->getName(), $comment), // [TODO] Translate
-				DAO_WorkerEvent::IS_READ => 0,
-			);
-			DAO_WorkerEvent::create($fields);
+		@$enable_notify_workers = DevblocksPlatform::importGPC($_REQUEST['enable_notify_workers'],'integer',0);
+		if ($enable_notify_workers) {
+			@$notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
+			if(is_array($notify_worker_ids) && !empty($notify_worker_ids))
+			foreach($notify_worker_ids as $notify_worker_id) {
+				$fields = array(
+					DAO_WorkerEvent::CREATED_DATE => time(),
+					DAO_WorkerEvent::WORKER_ID => $notify_worker_id,
+					DAO_WorkerEvent::URL => $url_writer->write('c=display&id='.$ticket->mask,true),
+					DAO_WorkerEvent::TITLE => $translate->_('ticket.comments.new_ticket_comment'), // [TODO] Translate
+					DAO_WorkerEvent::CONTENT => sprintf("#%s: %s\n%s %s: %s", $ticket->mask, $ticket->subject, $active_worker->getName(), $translate->_('ticket.comments.comments'), $comment), // [TODO] Translate
+					DAO_WorkerEvent::IS_READ => 0,
+				);
+				DAO_WorkerEvent::create($fields);
+			}
 		}
-		
+		// Email Notifications
+		@$enable_email_workers = DevblocksPlatform::importGPC($_REQUEST['enable_email_workers'],'integer',0);
+		if ($enable_email_workers) {
+			$workers = DAO_Worker::getAll();
+			@$email_worker_ids = DevblocksPlatform::importGPC($_REQUEST['email_worker_ids'],'array',array());
+			if(is_array($email_worker_ids) && !empty($email_worker_ids)) {
+				@$active_worker = CerberusApplication::getActiveWorker();
+				$settings = CerberusSettings::getInstance();
+				$default_from = $settings->get(CerberusSettings::DEFAULT_REPLY_FROM, '');
+				$default_personal = $settings->get(CerberusSettings::DEFAULT_REPLY_PERSONAL, '');
+				// See if we need a group-specific reply-to
+				if(!empty($ticket->team_id)) {
+					@$group_from = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_FROM);
+					if(!empty($group_from))
+						$default_from = $group_from;
+					
+					@$group_personal = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_PERSONAL);
+					if(!empty($group_personal))
+						$default_personal = $group_personal;
+				}
+
+				foreach($email_worker_ids as $email_worker_id) {
+					try {
+						if(null == $mailer)
+							$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+							
+				 		// Create the message
+						$mail = $mail_service->createMessage();
+						$mail->setTo(array($workers[$email_worker_id]->email));
+						$mail->setFrom(array($default_from => $default_personal));
+						$mail->setReplyTo($default_from);
+						$mail->setSubject(sprintf("[%s #%s]: %s [%s]",
+							$translate->_('ticket.comments.comments'),
+							$ticket->mask,
+							$ticket->subject,
+							$translate->_('ticket.comments.comments')
+						));
+				
+						$headers = $mail->getHeaders();
+						$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+						$headers->addTextHeader('Precedence','List');
+						$headers->addTextHeader('Auto-Submitted','auto-generated');
+				
+						$mail->setBody(sprintf("#%s: %s\n%s %s: %s\n%s", $ticket->mask, $ticket->subject, $active_worker->getName(), $translate->_('ticket.comments.comments'), $comment, $url_writer->write('c=display&mask=' . $ticket->mask, true, false))); // [TODO] Translate);
+				
+						$result = $mailer->send($mail);
+				
+					} catch(Exception $e) {
+						//
+					}
+				}
+			}
+		}
+
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket->mask,'comments')));
 	}
 	
