@@ -623,7 +623,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		
 		$ticket_reply_status = DAO_GroupSettings::get($group_id,DAO_GroupSettings::SETTING_TICKET_REPLY_STATUS,255);
 		if(255==$ticket_reply_status) {
-			$reply_status = $settings->get(CerberusSettings::DEFAULT_TICKET_REPLY_STATUS,1);
+			$reply_status = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_TICKET_REPLY_STATUS,1);
 		} else {
 			$reply_status = $ticket_reply_status;
 		}
