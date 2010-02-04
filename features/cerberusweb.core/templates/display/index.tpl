@@ -18,7 +18,7 @@
 					<b>{$translate->_('common.bucket')|capitalize}:</b> {if !empty($ticket_category_id)}{$ticket_category->name}{else}{$translate->_('common.inbox')|capitalize}{/if} &nbsp; 
 					<b>{$translate->_('ticket.mask')|capitalize}:</b> {$ticket->mask} &nbsp; 
 					<b>{$translate->_('ticket.id')}:</b> {$ticket->id} &nbsp; 
-					{ if isset($total_time_all) }
+					{ if $total_time_all != -1 }
 						<b>Total Ticket Time Worked: </b> {$total_time_all} Mins&nbsp; 
 					{/if}
 					<br>
