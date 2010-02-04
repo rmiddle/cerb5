@@ -158,6 +158,7 @@ class ChDisplayPage extends CerberusPageExtension {
 			))
 		);
 		
+		$total_time_all = -1;
 		if (class_exists('Extension_TimeTrackingSource',true)):
 			// Adds total time worked per ticket to the token list.
 			$db = DevblocksPlatform::getDatabaseService();
@@ -175,9 +176,9 @@ class ChDisplayPage extends CerberusPageExtension {
 			} else {
 				$total_time_all = 0;			
 			}
-			$tpl->assign('total_time_all', $total_time_all);
 		endif;
 
+		$tpl->assign('total_time_all', $total_time_all);
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/index.tpl');
 	}
 	
