@@ -7,3 +7,5 @@ http://forums.cerb4.com/showthread.php?t=2270
 The simple issues is that function _parseFile($full_filename) { doesn't check for error before calling @unlink($full_filename); so the file gets deleted no mater what and only moved to failed if you have code in place to trap a certain error. I see several errors that could result in the lose of emails. At a min that function needs updated with code to check for errors and move the to fail instead of removing it on fail.
 
 
+/helpdesk/xxx  Braches spefic to helpdesk.
+

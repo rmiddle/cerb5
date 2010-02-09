@@ -145,7 +145,6 @@ class ParseCron extends CerberusCronPageExtension {
 
 	function configure($instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
 
@@ -236,7 +235,6 @@ class MaintCron extends CerberusCronPageExtension {
 
 	function configure($instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
 
@@ -271,7 +269,6 @@ class HeartbeatCron extends CerberusCronPageExtension {
 
 	function configure($instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
 
@@ -996,7 +993,6 @@ class ImportCron extends CerberusCronPageExtension {
 
 	function configure($instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
 
@@ -1148,7 +1144,6 @@ class Pop3Cron extends CerberusCronPageExtension {
 
 	function configure($instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
 
