@@ -11,19 +11,19 @@
 
 	{assign var=rowIdPrefix value="row_"|cat:$view->id|cat:"_"|cat:$result.t_id}
 	{if $smarty.foreach.results.iteration % 2}
-		{assign var=tableRowBg value="tableRowBg"}
+		{assign var=tableRowClass value="even"}
 	{else}
-		{assign var=tableRowBg value="tableRowAltBg"}
+		{assign var=tableRowClass value="odd"}
 	{/if}
 	
 		<div>
-			<a href="{devblocks_url}c=mobile&a=display&t={$result.t_mask}{/devblocks_url}" class="ticketLink" style="font-size:12px;">
+			<a href="{devblocks_url}c=mobile&a=display&t={$result.t_mask}{/devblocks_url}" style="font-size:12px;">
 				<b id="subject_{$result.t_id}_{$view->id}">
 				{if $result.t_is_closed}<strike>{/if}
 				{$result.t_subject|escape|truncate:37:"..."}
 				{if $result.t_is_closed}</strike>{/if}
 				</b>
-			</a>  <br />
+			</a>  <br>
 			<table border="0" width="100%">
 				<tr>
 					<td width="14">&nbsp;</td>
@@ -32,7 +32,7 @@
 						{if $result.t_last_action_code=='O'}
 							{assign var=action_worker_id value=$result.t_next_worker_id}
 							<span title="{$result.t_first_wrote}"><b>New</b> 
-							{if isset($workers.$action_worker_id)}for {$workers.$action_worker_id->getName()}{else}from <a href="javascript:;" onclick="genericAjaxPanel('c=contacts&a=showAddressPeek&email={$result.t_first_wrote|escape:'url'}&view_id={$view->id}',this,false,'500px',ajax.cbAddressPeek);">{$result.t_first_wrote|truncate:45:'...':true:true}</a>{/if}</span>
+							{if isset($workers.$action_worker_id)}for {$workers.$action_worker_id->getName()}{else}from <a href="javascript:;" onclick="genericAjaxPanel('c=contacts&a=showAddressPeek&email={$result.t_first_wrote|escape:'url'}&view_id={$view->id}',null,false,'500');">{$result.t_first_wrote|truncate:45:'...':true:true}</a>{/if}</span>
 						{elseif $result.t_last_action_code=='R'}
 							{assign var=action_worker_id value=$result.t_next_worker_id}
 							{if isset($workers.$action_worker_id)}
@@ -57,7 +57,7 @@
 	{/foreach}
 	
 </table>
-<table cellpadding="2" cellspacing="0" border="0" width="100%" class="tableBg" id="{$view->id}_actions">
+<table cellpadding="2" cellspacing="0" border="0" width="100%" id="{$view->id}_actions">
 	<tr>
 		<td align="right" valign="top" nowrap="nowrap">
 			{math assign=fromRow equation="(x*y)+1" x=$view->renderPage y=$view->renderLimit}

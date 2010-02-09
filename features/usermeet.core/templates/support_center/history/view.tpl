@@ -25,9 +25,9 @@
 			{* add arrow if sorting by this column, finish table header tag *}
 			{if $header==$view->renderSortBy}
 				{if $view->renderSortAsc}
-					<img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/sort_ascending.png{/devblocks_url}" align="absmiddle">
+					<img src="{devblocks_url}c=resource&p=usermeet.core&f=images/sort_ascending.png{/devblocks_url}" align="absmiddle">
 				{else}
-					<img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/sort_descending.png{/devblocks_url}" align="absmiddle">
+					<img src="{devblocks_url}c=resource&p=usermeet.core&f=images/sort_descending.png{/devblocks_url}" align="absmiddle">
 				{/if}
 			{/if}
 			</td>
@@ -38,9 +38,9 @@
 	{foreach from=$data item=result key=idx name=results}
 
 	{assign var=rowIdPrefix value="row_"|cat:$view->id|cat:"_"|cat:$result.t_id}
-	{$tableRowBg = ($smarty.foreach.results.iteration % 2) ? "tableRowBg" : "tableRowAltBg"}
+	{$tableRowClass = ($smarty.foreach.results.iteration % 2) ? "tableRowBg" : "tableRowAltBg"}
 	
-		<tr class="{$tableRowBg}" id="{$rowIdPrefix}_s" onmouseover="$(this).addClass('tableRowHover');" onmouseout="$(this).removeClass('tableRowHover');" onclick="">
+		<tr class="{$tableRowClass}" id="{$rowIdPrefix}_s" onmouseover="$(this).addClass('hover');" onmouseout="$(this).removeClass('hover');" onclick="">
 		{foreach from=$view->view_columns item=column name=columns}
 			{if $column=="t_subject"}
 			<td>
