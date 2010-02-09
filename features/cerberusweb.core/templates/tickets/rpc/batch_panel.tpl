@@ -1,6 +1,6 @@
 <table cellpadding="0" cellspacing="0" border="0" width="98%">
 	<tr>
-		<td align="left" width="0%" nowrap="nowrap" style="padding-right:5px;"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/gear.gif{/devblocks_url}" align="absmiddle"></td>
+		<td align="left" width="0%" nowrap="nowrap" style="padding-right:5px;"><span class="cerb-sprite sprite-folder_gear"></span></td>
 		<td align="left" width="100%" nowrap="nowrap"><h1>{$translate->_('common.bulk_update')|capitalize}</h1></td>
 	</tr>
 </table>
@@ -10,7 +10,6 @@
 <input type="hidden" name="a" value="doBatchUpdate">
 <input type="hidden" name="view_id" value="{$view_id}">
 <input type="hidden" name="ticket_ids" value="">
-<div style="height:400px;overflow:auto;">
 
 <h2>{$translate->_('common.bulk_update.with')|capitalize}:</h2>
 <label><input type="radio" name="filter" value="" onclick="toggleDiv('categoryFilterPanelSender','none');toggleDiv('categoryFilterPanelSubject','none');" {if empty($ticket_ids)}checked{/if}> {$translate->_('common.bulk_update.filter.all')}</label> 
@@ -118,9 +117,8 @@
 {include file="file:$core_tpl/internal/custom_fields/bulk/form.tpl" bulk=true}
 
 <br>
-</div>
 
-<button type="button" onclick="ajax.saveBatchPanel('{$view_id}');"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/check.gif{/devblocks_url}" align="top"> {$translate->_('common.save_changes')|capitalize}</button>
-<button type="button" onclick="genericPanel.hide();"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/delete.gif{/devblocks_url}" align="top"> {$translate->_('common.cancel')|capitalize}</button>
+<button type="button" onclick="ajax.saveBatchPanel('{$view_id}');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>
+<button type="button" onclick="genericPanel.dialog('close');"><span class="cerb-sprite sprite-delete"></span> {$translate->_('common.cancel')|capitalize}</button>
 <br>
 </form>

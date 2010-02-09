@@ -55,8 +55,8 @@ Sort biggest piles by:
 				</optgroup>
 			{/if}
 		</select>
-		{if $active_worker->hasPriv('core.ticket.actions.close')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$hash}.value='ac';"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/folder_ok.gif{/devblocks_url}" align="top" border="0"></a>{/if}
-		{if $active_worker->hasPriv('core.ticket.actions.spam')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$hash}.value='as';"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/spam.gif{/devblocks_url}" align="top" border="0"></a>{/if}
+		{if $active_worker->hasPriv('core.ticket.actions.close')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$hash}.value='ac';"><span class="cerb-sprite sprite-folder_ok"></span></a>{/if}
+		{if $active_worker->hasPriv('core.ticket.actions.spam')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$hash}.value='as';"><span class="cerb-sprite sprite-spam-"></span></a>{/if}
 		{if $active_worker->hasPriv('core.ticket.actions.delete')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$hash}.value='ad';"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/delete.gif{/devblocks_url}" align="top" border="0"></a>{/if}
 	</td>
 	<td width="98%" align="top">
@@ -99,8 +99,8 @@ Sort biggest piles by:
 					{/foreach}
 				</optgroup>
 			</select>
-			{if $active_worker->hasPriv('core.ticket.actions.close')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$sender_hash}.value='ac';"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/folder_ok.gif{/devblocks_url}" align="top" border="0"></a>{/if}
-			{if $active_worker->hasPriv('core.ticket.actions.spam')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$sender_hash}.value='as';"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/spam.gif{/devblocks_url}" align="top" border="0"></a>{/if}
+			{if $active_worker->hasPriv('core.ticket.actions.close')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$sender_hash}.value='ac';"><span class="cerb-sprite sprite-folder_ok"></span></a>{/if}
+			{if $active_worker->hasPriv('core.ticket.actions.spam')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$sender_hash}.value='as';"><span class="cerb-sprite sprite-spam"></span></a>{/if}
 			{if $active_worker->hasPriv('core.ticket.actions.delete')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$sender_hash}.value='ad';"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/delete.gif{/devblocks_url}" align="top" border="0"></a>{/if}
 		</td>
 		<td width="98%">
@@ -120,13 +120,13 @@ Sort biggest piles by:
 </div>
 
 <button type="button" onclick="showLoadingPanel();this.form.submit();" style="">Perform selected actions</button>
-<button type="button" onclick="toggleDiv('{$view_id}_tips','none');clearDiv('{$view_id}_tips');" style="">Do nothing</button>
+<button type="button" onclick="toggleDiv('{$view_id}_tips','none');$('#{$view_id}_tips').html('');" style="">Do nothing</button>
 
 {else}
 
 There aren't enough tickets in this list for auto-assist to find patterns.<br>
 <br>
-<button type="button" onclick="toggleDiv('{$view_id}_tips','none');clearDiv('{$view_id}_tips');" style="">Do nothing</button><br>
+<button type="button" onclick="toggleDiv('{$view_id}_tips','none');$('#{$view_id}_tips').html('');" style="">Do nothing</button><br>
 
 {/if}
 

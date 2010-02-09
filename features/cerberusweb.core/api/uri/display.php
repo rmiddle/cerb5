@@ -21,7 +21,6 @@ class ChDisplayPage extends CerberusPageExtension {
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 
 		$visit = CerberusApplication::getVisit(); /* @var $visit CerberusVisit */
@@ -304,7 +303,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		@$hide = DevblocksPlatform::importGPC($_REQUEST['hide'],'integer',0);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 
 		$message = DAO_Ticket::getMessage($id);
@@ -629,7 +627,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		}
 		$tpl->assign('reply_status', $reply_status);
 
-		$tpl->cache_lifetime = "0";
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/rpc/reply.tpl');
 	}
 	
