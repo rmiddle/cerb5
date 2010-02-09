@@ -58,7 +58,6 @@ if (class_exists('Extension_AppPreBodyRenderer',true)):
 			$tpl = DevblocksPlatform::getTemplateService();
 			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
 			$tpl->assign('path', $tpl_path);
-			$tpl->cache_lifetime = "0";
 			
 			$tpl->assign('current_timestamp', time());
 			
@@ -73,7 +72,6 @@ if (class_exists('Extension_TicketToolbarItem',true)):
 			$tpl = DevblocksPlatform::getTemplateService();
 			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
 			$tpl->assign('path', $tpl_path);
-			$tpl->cache_lifetime = "0";
 			
 			$tpl->assign('ticket', $ticket); /* @var $ticket CerberusTicket */
 			
@@ -93,7 +91,6 @@ if (class_exists('Extension_ReplyToolbarItem',true)):
 			$tpl = DevblocksPlatform::getTemplateService();
 			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
 			$tpl->assign('path', $tpl_path);
-			$tpl->cache_lifetime = "0";
 			
 			$tpl->assign('message', $message); /* @var $message CerberusMessage */
 			
@@ -113,7 +110,6 @@ if (class_exists('Extension_LogMailToolbarItem',true)):
 			$tpl = DevblocksPlatform::getTemplateService();
 			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
 			$tpl->assign('path', $tpl_path);
-			$tpl->cache_lifetime = "0";
 			
 			$tpl->display('file:' . $tpl_path . 'timetracking/renderers/logmail_toolbar_timer.tpl');
 		}
@@ -126,7 +122,6 @@ if (class_exists('Extension_SendMailToolbarItem',true)):
 			$tpl = DevblocksPlatform::getTemplateService();
 			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
 			$tpl->assign('path', $tpl_path);
-			$tpl->cache_lifetime = "0";
 			
 			$tpl->display('file:' . $tpl_path . 'timetracking/renderers/sendmail_toolbar_timer.tpl');
 		}
@@ -470,7 +465,6 @@ class C4_TimeTrackingEntryView extends C4_AbstractView {
 		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_TimeEntry::ID);
 		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.timetracking/templates/timetracking/time/view.tpl');
 	}
@@ -1007,9 +1001,11 @@ class ChTimeTrackingAjaxController extends DevblocksControllerExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl_path = dirname(dirname(__FILE__)).'/templates/';
 		$tpl->assign('path', $tpl_path);
-		$tpl->cache_lifetime = "0";
 
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+		
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		$tpl->assign('view_id', $view_id);
 		
 		/*
 		 * [IMPORTANT -- Yes, this is simply a line in the sand.]
@@ -1207,7 +1203,6 @@ class ChTimeTrackingAjaxController extends DevblocksControllerExtension {
 		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_TimeEntry::ID);
 		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->cache_lifetime = "0";
 		$tpl->display('file:' . $path . 'timetracking/time/bulk.tpl');
 	}
 	
@@ -1253,7 +1248,6 @@ class TimeTrackingActivityTab extends Extension_ActivityTab {
 	
 	function showTab() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
 		
@@ -1286,7 +1280,6 @@ class ChTimeTrackingConfigActivityTab extends Extension_ConfigTab {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
-		$tpl->cache_lifetime = "0";
 
 		$billable_activities = DAO_TimeTrackingActivity::getWhere(sprintf("%s!=0",DAO_TimeTrackingActivity::RATE));
 		$tpl->assign('billable_activities', $billable_activities);
@@ -1342,7 +1335,6 @@ class ChTimeTrackingConfigActivityTab extends Extension_ConfigTab {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
-		$tpl->cache_lifetime = "0";
 		
 		if(!empty($id) && null != ($activity = DAO_TimeTrackingActivity::get($id)))
 			$tpl->assign('activity', $activity);
@@ -1370,30 +1362,22 @@ class ChReportTimeSpentWorker extends Extension_Report {
 	}
 	
 	function render() {
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
-		$tpl->assign('path', $this->tpl_path);
-		
-		$tpl->assign('start', '-30 days');
-		$tpl->assign('end', 'now');
-		
 		$db = DevblocksPlatform::getDatabaseService();
+
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('path', $this->tpl_path);
 		
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
-		
-		$tpl->display('file:' . $this->tpl_path . '/reports/time_spent_worker/index.tpl');
-	}
-	
-	function getTimeSpentWorkerReportAction() {
-		$db = DevblocksPlatform::getDatabaseService();
 
+		$sources = DAO_TimeTrackingEntry::getSources();
+		$tpl->assign('sources', $sources);		
+		
 		@$sel_worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);
+		$tpl->assign('sel_worker_id', $sel_worker_id);
 		
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
-		$tpl->assign('path', $this->tpl_path);
-
+		// Dates
+		
 		// import dates from form
 		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
 		@$end = DevblocksPlatform::importGPC($_REQUEST['end'],'string','');
@@ -1425,17 +1409,13 @@ class ChReportTimeSpentWorker extends Extension_Report {
 		$tpl->assign('start', $start);
 		$tpl->assign('end', $end);
 		
-		$workers = DAO_Worker::getAll();
-		$tpl->assign('workers', $workers);
-
-		$sources = DAO_TimeTrackingEntry::getSources();
-		$tpl->assign('sources', $sources);		
+		// Table
 		
 		$sql = sprintf("SELECT tte.log_date, tte.time_actual_mins, tte.worker_id, tte.notes, ".
 				"tte.source_extension_id, tte.source_id, ".
 				"tta.name activity_name, o.name org_name, o.id org_id ".
 				"FROM timetracking_entry tte ".
-				"INNER JOIN timetracking_activity tta ON tte.activity_id = tta.id ".
+				"LEFT JOIN timetracking_activity tta ON tte.activity_id = tta.id ".
 				"LEFT JOIN contact_org o ON o.id = tte.debit_org_id ".
 				"INNER JOIN worker w ON tte.worker_id = w.id ".
 				"WHERE log_date > %d AND log_date <= %d ".
@@ -1444,7 +1424,6 @@ class ChReportTimeSpentWorker extends Extension_Report {
 			$start_time,
 			$end_time
 		);
-		//echo $sql;
 		$rs = $db->Execute($sql);
 	
 		$time_entries = array();
@@ -1459,7 +1438,6 @@ class ChReportTimeSpentWorker extends Extension_Report {
 			$log_date = intval($rs->fields['log_date']);
 			$notes = $rs->fields['notes'];
 			
-			
 			if(!isset($time_entries[$worker_id]))
 				$time_entries[$worker_id] = array();
 				
@@ -1470,41 +1448,16 @@ class ChReportTimeSpentWorker extends Extension_Report {
 			$time_entry['log_date'] = $log_date;
 			$time_entry['notes'] = $notes;
 			$time_entry['source_extension_id'] = $rs->fields['source_extension_id'];
-			$time_entry['source_id'] = intval($rs->fields['source_id']);			
+			$time_entry['source_id'] = intval($rs->fields['source_id']);
 			
 			$time_entries[$worker_id]['entries'][] = $time_entry;
 			@$time_entries[$worker_id]['total_mins'] = intval($time_entries[$worker_id]['total_mins']) + $mins;
 			
 			$rs->MoveNext();
 		}
-		//print_r($time_entries);
-		$tpl->assign('time_entries', $time_entries);
+		$tpl->assign('time_entries', $time_entries);		
 		
-		$tpl->display('file:' . $this->tpl_path . '/reports/time_spent_worker/html.tpl');
-	}
-	
-	function getTimeSpentWorkerChartAction() {
-		// import dates from form
-		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
-		@$end = DevblocksPlatform::importGPC($_REQUEST['end'],'string','');
-		@$countonly = DevblocksPlatform::importGPC($_REQUEST['countonly'],'integer',0);
-		
-		// use date range if specified, else use duration prior to now
-		$start_time = 0;
-		$end_time = 0;
-		if (empty($start) && empty($end)) {
-			$start = "-30 days";
-			$end = "now";
-			$start_time = strtotime($start);
-			$end_time = strtotime($end);
-		} else {
-			$start_time = strtotime($start);
-			$end_time = strtotime($end);
-		}
-		
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$groups = DAO_Group::getAll();
+		// Chart
 		
 		$sql = sprintf("SELECT sum(tte.time_actual_mins) mins, tte.worker_id, w.first_name, w.last_name ".
 				"FROM timetracking_entry tte ".
@@ -1517,20 +1470,23 @@ class ChReportTimeSpentWorker extends Extension_Report {
 				);
 		$rs = $db->Execute($sql);
 
-		if($countonly) {
-			echo intval($rs->RecordCount());
-			return;
-		}
+		$data = array();
+		$iter = 0;
 		
 	    if(is_a($rs,'ADORecordSet'))
 	    while(!$rs->EOF) {
 	    	$mins = intval($rs->fields['mins']);
 			$worker_name = $rs->fields['first_name'] . ' ' . $rs->fields['last_name'];
-			
-			echo $worker_name, "\t", $mins . "\n";
+
+			$data[$iter++] = array('value'=>$worker_name,'mins'=>$mins);
 			
 		    $rs->MoveNext();
 	    }
+	    $tpl->assign('data', $data);
+		
+		// Template
+		
+		$tpl->display('file:' . $this->tpl_path . '/reports/time_spent_worker/index.tpl');
 	}
 };
 endif;
@@ -1545,25 +1501,19 @@ class ChReportTimeSpentOrg extends Extension_Report {
 	}
 	
 	function render() {
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
-		$tpl->assign('path', $this->tpl_path);
-		
-		$tpl->assign('start', '-30 days');
-		$tpl->assign('end', 'now');
-		
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$tpl->display('file:' . $this->tpl_path . '/reports/time_spent_org/index.tpl');
-	}
-	
-	function getTimeSpentOrgReportAction() {
 		$db = DevblocksPlatform::getDatabaseService();
 
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->tpl_path);
 
+		$workers = DAO_Worker::getAll();
+		$tpl->assign('workers', $workers);
+		
+		$sources = DAO_TimeTrackingEntry::getSources();
+		$tpl->assign('sources', $sources);
+		
+		// Dates
+		
 		// import dates from form
 		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
 		@$end = DevblocksPlatform::importGPC($_REQUEST['end'],'string','');
@@ -1593,19 +1543,15 @@ class ChReportTimeSpentOrg extends Extension_Report {
 		
 		// reload variables in template
 		$tpl->assign('start', $start);
-		$tpl->assign('end', $end);
-
-		$workers = DAO_Worker::getAll();
-		$tpl->assign('workers', $workers);
+		$tpl->assign('end', $end);		
 		
-		$sources = DAO_TimeTrackingEntry::getSources();
-		$tpl->assign('sources', $sources);
+		// Table
 		
 		$sql = sprintf("SELECT tte.log_date, tte.time_actual_mins, tte.notes, tte.worker_id, ".
 				"tte.source_extension_id, tte.source_id, ".
 				"tta.name activity_name, o.name org_name, o.id org_id ".
 				"FROM timetracking_entry tte ".
-				"INNER JOIN timetracking_activity tta ON tte.activity_id = tta.id ".
+				"LEFT JOIN timetracking_activity tta ON tte.activity_id = tta.id ".
 				"LEFT JOIN contact_org o ON o.id = tte.debit_org_id ".
 				"WHERE log_date > %d AND log_date <= %d ".
 				"ORDER BY org_name, log_date ",
@@ -1648,34 +1594,9 @@ class ChReportTimeSpentOrg extends Extension_Report {
 			
 			$rs->MoveNext();
 		}
-		//print_r($time_entries);
-		$tpl->assign('time_entries', $time_entries);
+		$tpl->assign('time_entries', $time_entries);		
 		
-		$tpl->display('file:' . $this->tpl_path . '/reports/time_spent_org/html.tpl');
-	}
-	
-	function getTimeSpentOrgChartAction() {
-		// import dates from form
-		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
-		@$end = DevblocksPlatform::importGPC($_REQUEST['end'],'string','');
-		@$countonly = DevblocksPlatform::importGPC($_REQUEST['countonly'],'integer',0);
-		
-		// use date range if specified, else use duration prior to now
-		$start_time = 0;
-		$end_time = 0;
-		if (empty($start) && empty($end)) {
-			$start = "-30 days";
-			$end = "now";
-			$start_time = strtotime($start);
-			$end_time = strtotime($end);
-		} else {
-			$start_time = strtotime($start);
-			$end_time = strtotime($end);
-		}
-		
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$groups = DAO_Group::getAll();
+		// Chart
 		
 		$sql = sprintf("SELECT sum(tte.time_actual_mins) mins, o.id org_id, o.name org_name ".
 				"FROM timetracking_entry tte ".
@@ -1687,11 +1608,9 @@ class ChReportTimeSpentOrg extends Extension_Report {
 				$end_time
 				);
 		$rs = $db->Execute($sql);
-
-		if($countonly) {
-			echo intval($rs->RecordCount());
-			return;
-		}
+		
+		$data = array();
+		$iter = 0;
 		
 	    if(is_a($rs,'ADORecordSet'))
 	    while(!$rs->EOF) {
@@ -1699,10 +1618,15 @@ class ChReportTimeSpentOrg extends Extension_Report {
 			$org_name = $rs->fields['org_name'];
 			if(empty($org_name)) $org_name = '(no org)';
 			
-			echo $org_name, "\t", $mins . "\n";
+			$data[$iter++] = array('value'=>$org_name,'mins'=>$mins);
 			
 		    $rs->MoveNext();
 	    }
+	    $tpl->assign('data', $data);
+		
+		// Template
+		
+		$tpl->display('file:' . $this->tpl_path . '/reports/time_spent_org/index.tpl');
 	}
 };
 endif;
@@ -1717,24 +1641,18 @@ class ChReportTimeSpentActivity extends Extension_Report {
 	}
 	
 	function render() {
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
-		$tpl->assign('path', $this->tpl_path);
-		
-		$tpl->assign('start', '-30 days');
-		$tpl->assign('end', 'now');
-		
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$tpl->display('file:' . $this->tpl_path . '/reports/time_spent_activity/index.tpl');
-	}
-	
-	function getTimeSpentActivityReportAction() {
 		$db = DevblocksPlatform::getDatabaseService();
 
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->tpl_path);
+
+		$workers = DAO_Worker::getAll();
+		$tpl->assign('workers', $workers);
+		
+		$sources = DAO_TimeTrackingEntry::getSources();
+		$tpl->assign('sources', $sources);
+		
+		// Dates
 
 		// import dates from form
 		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
@@ -1763,16 +1681,12 @@ class ChReportTimeSpentActivity extends Extension_Report {
 			$tpl->assign('invalidDate', true);
 		}
 		
-		$workers = DAO_Worker::getAll();
-		$tpl->assign('workers', $workers);
-		
-		$sources = DAO_TimeTrackingEntry::getSources();
-		$tpl->assign('sources', $sources);
-		
 		// reload variables in template
 		$tpl->assign('start', $start);
 		$tpl->assign('end', $end);
-
+		
+		// Table
+		
 		$sql = sprintf("SELECT tte.log_date, tte.time_actual_mins, tte.notes, tte.source_extension_id, tte.source_id,".
 				"tta.id activity_id, tta.name activity_name, ".
 				"o.name org_name, tte.worker_id ".
@@ -1819,34 +1733,9 @@ class ChReportTimeSpentActivity extends Extension_Report {
 			
 			$rs->MoveNext();
 		}
-		//print_r($time_entries);
-		$tpl->assign('time_entries', $time_entries);
+		$tpl->assign('time_entries', $time_entries);		
 		
-		$tpl->display('file:' . $this->tpl_path . '/reports/time_spent_activity/html.tpl');
-	}
-	
-	function getTimeSpentActivityChartAction() {
-		// import dates from form
-		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
-		@$end = DevblocksPlatform::importGPC($_REQUEST['end'],'string','');
-		@$countonly = DevblocksPlatform::importGPC($_REQUEST['countonly'],'integer',0);
-		
-		// use date range if specified, else use duration prior to now
-		$start_time = 0;
-		$end_time = 0;
-		if (empty($start) && empty($end)) {
-			$start = "-30 days";
-			$end = "now";
-			$start_time = strtotime($start);
-			$end_time = strtotime($end);
-		} else {
-			$start_time = strtotime($start);
-			$end_time = strtotime($end);
-		}
-		
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$groups = DAO_Group::getAll();
+		// Chart
 		
 		$sql = sprintf("SELECT sum(tte.time_actual_mins) mins, tta.name activity_name ".
 				"FROM timetracking_entry tte ".
@@ -1859,10 +1748,8 @@ class ChReportTimeSpentActivity extends Extension_Report {
 				);
 		$rs = $db->Execute($sql);
 
-		if($countonly) {
-			echo intval($rs->RecordCount());
-			return;
-		}
+		$data = array();
+		$iter = 0;
 		
 	    if(is_a($rs,'ADORecordSet'))
 	    while(!$rs->EOF) {
@@ -1870,11 +1757,15 @@ class ChReportTimeSpentActivity extends Extension_Report {
 			$activity = $rs->fields['activity_name'];
 			if(empty($activity)) $activity = '(no activity)';
 			
-			echo $activity, "\t", $mins . "\n";
+			$data[$iter++] = array('value'=>$activity, 'mins'=>$mins);
 			
 		    $rs->MoveNext();
 	    }
+	    $tpl->assign('data', $data);		
+		
+		// Template
+		
+		$tpl->display('file:' . $this->tpl_path . '/reports/time_spent_activity/index.tpl');
 	}
 };
 endif;
-?>
