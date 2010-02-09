@@ -259,7 +259,7 @@
 			{/if}
 			<button type="button" onclick="$('#reply{$message->id}').html('');"><span class="cerb-sprite sprite-delete"></span> {$translate->_('display.ui.discard')|capitalize}</button>
 			{if $active_worker->hasPriv('core.ticket.actions.take')}
-			<button type="button" onclick="$('#reply{$message->id}').html('');genericAjaxGet('','c=display&a=discardAndSurrender&ticket_id={$ticket->id}');"><span class="cerb-sprite sprite-flag_white"></span> {$translate->_('display.ui.discard_surrender')}</button>
+			  <button type="button" onclick="$('#reply{$message->id}').html('');genericAjaxGet('','c=display&a=discardAndSurrender&ticket_id={$ticket->id}');"><span class="cerb-sprite sprite-flag_white"></span> {$translate->_('display.ui.discard_surrender')}</button>
 			{/if}
 		</td>
 	</tr>
