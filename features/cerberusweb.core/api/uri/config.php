@@ -26,7 +26,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 
 		$worker = CerberusApplication::getActiveWorker();
@@ -98,7 +97,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	// Ajax
 	function showTabSettingsAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$license = CerberusLicense::getInstance();
@@ -145,7 +143,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	// Ajax
 	function showTabAttachmentsAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$tpl->assign('response_uri', 'config/attachments');
@@ -184,7 +181,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 //		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_FeedbackEntry::ID);
 //		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->cache_lifetime = "0";
 		$tpl->display('file:' . $path . 'configuration/tabs/attachments/bulk.tpl');
 	}
 	
@@ -293,7 +289,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 //	        }
 //			
 //			$tpl = DevblocksPlatform::getTemplateService();
-//			$tpl->cache_lifetime = "0";
 //			$tpl->assign('path', $this->_TPL_PATH);
 //	        
 //	        $tpl->assign('checked', $checked);
@@ -310,7 +305,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	// Ajax
 	function showTabWorkersAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$workers = DAO_Worker::getAllWithDisabled();
@@ -340,7 +334,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$tpl->assign('view_id', $view_id);
@@ -523,7 +516,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Worker::ID);
 		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->cache_lifetime = "0";
 		$tpl->display('file:' . $path . 'configuration/tabs/workers/bulk.tpl');
 	}
 	
@@ -560,7 +552,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	// Ajax
 	function showTabGroupsAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$workers = DAO_Worker::getAllActive();
@@ -577,7 +568,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	// Ajax
 	function showTabMailAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$settings = DevblocksPlatform::getPluginSettingsService();
@@ -609,7 +599,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		if(!empty($id)) {
@@ -706,7 +695,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		@$smtp_pass = DevblocksPlatform::importGPC($_REQUEST['smtp_pass'],'string','');
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		// [JAS]: Test the provided SMTP settings and give form feedback
@@ -765,7 +753,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		}
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		// [JAS]: Test the provided POP settings and give form feedback
@@ -793,7 +780,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	// Ajax
 	function showTabPreParserAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$filters = DAO_PreParseRule::getAll(true);
@@ -850,7 +836,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		if(null != ($filter = DAO_PreParseRule::get($id))) {
@@ -1103,7 +1088,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	// Ajax
 	function showTabParserAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 
 		$rules = DAO_MailToGroupRule::getWhere();
@@ -1129,7 +1113,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	// Ajax
 	function showTabFieldsAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		// Alphabetize
@@ -1143,7 +1126,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	// Ajax
 	function showTabPluginsAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		// Auto synchronize when viewing Config->Extensions
@@ -1167,7 +1149,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$settings = DevblocksPlatform::getPluginSettingsService();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$license = CerberusLicense::getInstance();
@@ -1220,7 +1201,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
 
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 
 		$plugins = DevblocksPlatform::getPluginRegistry();
@@ -1295,7 +1275,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	// Ajax
 	function showTabSchedulerAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 	    $jobs = DevblocksPlatform::getExtensions('cerberusweb.cron', true);
@@ -1306,7 +1285,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	
 	private function _getFieldSource($ext_id) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 
 		$tpl->assign('ext_id', $ext_id);
@@ -1513,7 +1491,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
 
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 
 		$teams = DAO_Group::getAll();

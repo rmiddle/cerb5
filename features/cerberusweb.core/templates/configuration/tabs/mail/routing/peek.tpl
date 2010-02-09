@@ -5,7 +5,6 @@
 
 <h2>Add Mail Routing Rule</h2>
 
-<div style="height:400;overflow:auto;">
 <b>Rule Name:</b> (e.g. ProductX Support)<br>
 <input type="text" name="name" value="{$rule->name|escape}" size="45" style="width:95%;"><br>
 <label><input type="checkbox" name="is_sticky" value="1" {if $rule->is_sticky}checked="checked"{/if}> <span style="border-bottom:1px dotted;" title="Sticky rules are checked for matches first, are manually sortable, and can be stacked with subsequent rules.">Sticky</span></label>
@@ -228,9 +227,8 @@
 {* Set Ticket Fields *}
 {include file="file:$core_tpl/internal/custom_fields/filters/peek_set_custom_fields.tpl" fields=$ticket_fields filter=$rule divName="divSetTicketFields" label="Set ticket custom fields"}
 
-</div>
 <br>
 
-<button type="submit"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/check.gif{/devblocks_url}" align="top"> {$translate->_('common.save_changes')}</button>
+<button type="submit"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
 </form>
 <br>
