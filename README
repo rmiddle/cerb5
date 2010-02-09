@@ -1,8 +1,7 @@
-Add limiter to email templates that limits them by groups you belong to.
+Branch breakout
 
+Master - The master branch this should be close to or the Same as WGM current master.  
 
-<<<<<<< Temporary merge branch 1:README
-=======
 Jira/chd-xxxx - Branches starting with Jira cantained the required patches to complete the Jira issue with the same number.  URL: http://www.wgmdev.com/jira/browse/CHD-XXXX
 
 fix/ - This is the branch that contains all my fixes in one place.  If you are looking for all the features I have added into the system this is the branch you want.
@@ -19,4 +18,3 @@ X_X_X/jira/ - Jira fixes for the Version in question.
 
 Thanks
 Robert
->>>>>>> Temporary merge branch 2:README
