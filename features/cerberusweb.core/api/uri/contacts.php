@@ -72,7 +72,6 @@ class ChContactsPage extends CerberusPageExtension {
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$visit = CerberusApplication::getVisit();		
@@ -203,7 +202,6 @@ class ChContactsPage extends CerberusPageExtension {
 	
 	function showOrgsTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$defaults = new C4_AbstractViewModel();
@@ -221,7 +219,6 @@ class ChContactsPage extends CerberusPageExtension {
 	
 	function showAddysTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$defaults = new C4_AbstractViewModel();
@@ -245,7 +242,6 @@ class ChContactsPage extends CerberusPageExtension {
 			return;
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 
 		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/import/index.tpl');
@@ -479,7 +475,6 @@ class ChContactsPage extends CerberusPageExtension {
 		@$org = DevblocksPlatform::importGPC($_REQUEST['org']);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$tpl->assign('org_id', $org);
@@ -502,7 +497,6 @@ class ChContactsPage extends CerberusPageExtension {
 		@$org = DevblocksPlatform::importGPC($_REQUEST['org']);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$contact = DAO_ContactOrg::get($org);
@@ -538,7 +532,6 @@ class ChContactsPage extends CerberusPageExtension {
 		@$org = DevblocksPlatform::importGPC($_REQUEST['org']);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$contact = DAO_ContactOrg::get($org);
@@ -573,7 +566,6 @@ class ChContactsPage extends CerberusPageExtension {
 	
 	function showTabNotesAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		@$org_id = DevblocksPlatform::importGPC($_REQUEST['org']);
@@ -610,7 +602,6 @@ class ChContactsPage extends CerberusPageExtension {
 		@$org = DevblocksPlatform::importGPC($_REQUEST['org']);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$contact = DAO_ContactOrg::get($org);
@@ -677,7 +668,6 @@ class ChContactsPage extends CerberusPageExtension {
 		@$org_id = DevblocksPlatform::importGPC($_REQUEST['org_id'],'string','');
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		if(!empty($address_id)) {
@@ -787,7 +777,6 @@ class ChContactsPage extends CerberusPageExtension {
 	    $custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Address::ID);
 	    $tpl->assign('custom_fields', $custom_fields);
 	    
-		$tpl->cache_lifetime = "0";
 		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/addresses/address_bulk.tpl');
 	}
 	
@@ -808,7 +797,6 @@ class ChContactsPage extends CerberusPageExtension {
 		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
 		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->cache_lifetime = "0";
 		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/org_bulk.tpl');
 	}
 		
@@ -817,7 +805,6 @@ class ChContactsPage extends CerberusPageExtension {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$contact = DAO_ContactOrg::get($id);
@@ -1205,7 +1192,7 @@ class ChContactsPage extends CerberusPageExtension {
 	}
 	
 	function getOrgsAutoCompletionsAction() {
-		@$starts_with = DevblocksPlatform::importGPC($_REQUEST['query'],'string','');
+		@$starts_with = DevblocksPlatform::importGPC($_REQUEST['q'],'string','');
 		
 		$params = array(
 			DAO_ContactOrg::NAME => $starts_with
@@ -1224,7 +1211,7 @@ class ChContactsPage extends CerberusPageExtension {
 		);
 		
 		foreach($orgs AS $val){
-			echo $val[SearchFields_ContactOrg::NAME] . "\t";
+			echo $val[SearchFields_ContactOrg::NAME] . "|";
 			echo $val[SearchFields_ContactOrg::ID] . "\n";
 		}
 		exit;
@@ -1232,7 +1219,7 @@ class ChContactsPage extends CerberusPageExtension {
 	
 	function getEmailAutoCompletionsAction() {
 		$db = DevblocksPlatform::getDatabaseService();
-		@$query = DevblocksPlatform::importGPC($_REQUEST['query'],'string','');
+		@$query = DevblocksPlatform::importGPC($_REQUEST['q'],'string','');
 		
 		$starts_with = strtolower($query) . '%';
 		
@@ -1261,7 +1248,7 @@ class ChContactsPage extends CerberusPageExtension {
 				(!empty($last)) ? $last : ''
 			);
 			
-			echo sprintf("%s\t%s%s\n",
+			echo sprintf("%s|%s%s\n",
 				$email,
 				!empty($personal) ? ('"'.$personal.'" ') : '',
 				!empty($personal) ? ("<".$email.">") : $email
@@ -1274,7 +1261,7 @@ class ChContactsPage extends CerberusPageExtension {
 	}
 	
 	function getCountryAutoCompletionsAction() {
-		@$starts_with = DevblocksPlatform::importGPC($_REQUEST['query'],'string','');
+		@$starts_with = DevblocksPlatform::importGPC($_REQUEST['q'],'string','');
 		
 		$db = DevblocksPlatform::getDatabaseService();
 		
