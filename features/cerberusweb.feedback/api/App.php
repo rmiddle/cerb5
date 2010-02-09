@@ -21,7 +21,6 @@ class ChFeedbackActivityTab extends Extension_ActivityTab {
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
 		
@@ -359,7 +358,6 @@ class C4_FeedbackEntryView extends C4_AbstractView {
 		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_FeedbackEntry::ID);
 		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->cache_lifetime = "0";
 		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.feedback/templates/feedback/view.tpl');
 	}
@@ -627,11 +625,12 @@ class ChFeedbackController extends DevblocksControllerExtension {
 	
 	function showEntryAction() {
 		@$active_worker = CerberusApplication::getActiveWorker(); 
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
 		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl_path = dirname(dirname(__FILE__)).'/templates/';
 		$tpl->assign('path', $this->plugin_path . '/templates/');
-		$tpl->cache_lifetime = "0";
+		$tpl->assign('view_id', $view_id);
 
 		// Editing
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
@@ -802,7 +801,6 @@ class ChFeedbackController extends DevblocksControllerExtension {
 		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_FeedbackEntry::ID);
 		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->cache_lifetime = "0";
 		$tpl->display('file:' . $path . 'feedback/bulk.tpl');
 	}
 	

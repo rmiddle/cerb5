@@ -49,6 +49,10 @@
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
+class CustomFieldSource_CommunityPortal extends Extension_CustomFieldSource {
+	const ID = 'usermeet.fields.source.community_portal';
+};
+
 class UmPortalHelper {
 	static private $_code = null; 
 	
@@ -78,6 +82,456 @@ class UmPortalHelper {
 		}
 		return $fingerprint;
 	}
+};
+
+class UmCommunityPage extends CerberusPageExtension {
+	const ID = 'usermeet.page.community';
+
+	private $_TPL_PATH = '';
+	
+	function __construct($manifest) {
+		$this->_TPL_PATH = dirname(__FILE__) . '/templates/';
+		parent::__construct($manifest);
+	}
+	
+	function isVisible() {
+		// check login
+		$visit = CerberusApplication::getVisit();
+		
+		if(empty($visit)) {
+			return false;
+		} else {
+			return true;
+		}
+	}
+
+	function render() {
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('path', $this->_TPL_PATH);
+		
+		$response = DevblocksPlatform::getHttpResponse();
+		$tpl->assign('request_path', implode('/',$response->path));
+		
+		$stack = $response->path;
+		array_shift($stack); // community
+		
+		if(!empty($stack)) {
+			@$code = array_shift($stack); // code
+			$tool = DAO_CommunityTool::getByCode($code);
+			$tpl->assign('tool', $tool);
+			$tpl->assign('tool_manifests', DevblocksPlatform::getExtensions('usermeet.tool', false));
+
+//			$tab_manifests = DevblocksPlatform::getExtensions('cerberusweb.activity.tab', false);
+//			uasort($tab_manifests, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
+//			$tpl->assign('tab_manifests', $tab_manifests);
+
+			@$tab_selected = array_shift($stack);
+			if(empty($tab_selected)) $tab_selected = 'settings';
+			$tpl->assign('tab_selected', $tab_selected);
+			
+			$tpl->display('file:' . $this->_TPL_PATH . 'community/display/index.tpl');
+		}
+		
+	}
+	
+	function showAddPortalPeekAction() {
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('path', $this->_TPL_PATH);
+		
+		$tool_manifests = DevblocksPlatform::getExtensions('usermeet.tool', false);
+		$tpl->assign('tool_manifests', $tool_manifests);
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'community/config/tab/add.tpl');
+	}
+	
+	function saveAddPortalPeekAction() {
+		@$name = DevblocksPlatform::importGPC($_POST['name'],'string', '');
+		@$extension_id = DevblocksPlatform::importGPC($_POST['extension_id'],'string', '');
+		
+		$portal_code = DAO_CommunityTool::generateUniqueCode();
+		
+		// Create portal
+		$fields = array(
+			DAO_CommunityTool::NAME => $name,
+			DAO_CommunityTool::EXTENSION_ID => $extension_id,
+			DAO_CommunityTool::CODE => $portal_code,
+		);
+		$portal_id = DAO_CommunityTool::create($fields);
+		
+		// Redirect to the display page
+		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('community',$portal_code)));
+	}
+	
+	function showTabSettingsAction() {
+		@$tool_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('path', $this->_TPL_PATH);
+
+		if(null != ($instance = DAO_CommunityTool::get($tool_id))) {
+			$tool = DevblocksPlatform::getExtension($instance->extension_id, true);
+			$tpl->assign('tool', $tool);
+			$tpl->assign('instance', $instance);
+		}
+			
+		$tpl->display('file:' . $this->_TPL_PATH . 'community/display/tabs/settings/index.tpl');
+	}
+	
+	function saveTabSettingsAction() {
+		@$code = DevblocksPlatform::importGPC($_POST['portal'],'string');
+		@$name = DevblocksPlatform::importGPC($_POST['portal_name'],'string','');
+        @$iDelete = DevblocksPlatform::importGPC($_POST['do_delete'],'integer',0);
+		
+        if(null != ($instance = DAO_CommunityTool::getByCode($code))) {
+			// Deleting?
+			if(!empty($iDelete)) {
+				$tool = DAO_CommunityTool::getByCode($code); /* @var $tool Model_CommunityTool */
+				DAO_CommunityTool::delete($tool->id);
+				DevblocksPlatform::redirect(new DevblocksHttpResponse(array('config','communities')));
+				return;
+				
+			} else {
+				$manifest = DevblocksPlatform::getExtension($instance->extension_id, false, true);
+	            $tool = $manifest->createInstance(); /* @var $tool Extension_UsermeetTool */
+				
+				// Update the tool name if it has changed
+				if(0 != strcmp($instance->name,$name))
+					DAO_CommunityTool::update($instance->id, array(
+						DAO_CommunityTool::NAME => $name
+					));
+				
+				// Defer the rest to tool instances and extensions
+				$tool->saveConfiguration($instance);
+			}
+		}
+		
+		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('community',$code,'settings')));
+	}
+	
+	function showTabTemplatesAction() {
+		@$tool_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('path', $this->_TPL_PATH);
+
+		if(null != ($tool = DAO_CommunityTool::get($tool_id)))
+			$tpl->assign('tool', $tool);
+		
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = 'portal_templates';
+		$defaults->class_name = 'View_DevblocksTemplate';
+		
+		$view = C4_AbstractViewLoader::getView($defaults->id, $defaults);
+
+		$view->name = 'Custom Templates';
+		$view->params[SearchFields_DevblocksTemplate::TAG] = new DevblocksSearchCriteria(SearchFields_DevblocksTemplate::TAG,'=','portal_'.$tool->code);
+		C4_AbstractViewLoader::setView($view->id, $view);  
+		
+		$tpl->assign('view', $view);
+		$tpl->assign('view_fields', View_DevblocksTemplate::getFields());
+		$tpl->assign('view_searchable_fields', View_DevblocksTemplate::getSearchFields());
+			
+		$tpl->display('file:' . $this->_TPL_PATH . 'community/display/tabs/templates/index.tpl');
+	}
+	
+	function getTemplatePeekAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('path', $this->_TPL_PATH);
+		$tpl->assign('view_id', $view_id);
+		
+		if(null != ($template = DAO_DevblocksTemplate::get($id)))
+			$tpl->assign('template', $template);
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'community/display/tabs/templates/peek.tpl');
+	}
+	
+	function showTemplatesBulkPanelAction() {
+		@$id_csv = DevblocksPlatform::importGPC($_REQUEST['ids']);
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
+
+		$tpl = DevblocksPlatform::getTemplateService();
+		$path = $this->_TPL_PATH;
+		$tpl->assign('path', $path);
+		$tpl->assign('view_id', $view_id);
+
+	    if(!empty($id_csv)) {
+	        $ids = DevblocksPlatform::parseCsvString($id_csv);
+	        $tpl->assign('ids', implode(',', $ids));
+	    }
+		
+		// Custom Fields
+//		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_FeedbackEntry::ID);
+//		$tpl->assign('custom_fields', $custom_fields);
+		
+		$tpl->display('file:' . $path . 'community/display/tabs/templates/bulk.tpl');
+	}
+	
+	function doTemplatesBulkUpdateAction() {
+		// Checked rows
+	    @$ids_str = DevblocksPlatform::importGPC($_REQUEST['ids'],'string');
+		$ids = DevblocksPlatform::parseCsvString($ids_str);
+
+		// Filter: whole list or check
+	    @$filter = DevblocksPlatform::importGPC($_REQUEST['filter'],'string','');
+	    
+	    // View
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
+		$view = C4_AbstractViewLoader::getView($view_id);
+		
+		// Templates fields
+		@$deleted = trim(DevblocksPlatform::importGPC($_POST['deleted'],'integer',0));
+
+		$do = array();
+		
+		// Do: Deleted
+		if(0 != strlen($deleted))
+			$do['deleted'] = $deleted;
+			
+		// Do: Custom fields
+//		$do = DAO_CustomFieldValue::handleBulkPost($do);
+			
+		$view->doBulkUpdate($filter, $do, $ids);
+		
+		$view->render();
+		return;
+	}	
+
+	function saveTemplatePeekAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+		@$content = DevblocksPlatform::importGPC($_REQUEST['content'],'string','');
+		@$do_delete = DevblocksPlatform::importGPC($_REQUEST['do_delete'],'integer',0);
+		
+		if(!empty($do_delete)) {
+			DAO_DevblocksTemplate::delete($id);
+			
+		} else {
+			DAO_DevblocksTemplate::update($id, array(
+				DAO_DevblocksTemplate::CONTENT => $content,
+				DAO_DevblocksTemplate::LAST_UPDATED => time(),
+			));
+		}
+
+		// Clear template cache
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->clear_compiled_tpl();
+		
+		if(null != ($view = C4_AbstractViewLoader::getView($view_id)))
+			$view->render();
+	}
+	
+	function showAddTemplatePeekAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		@$portal = DevblocksPlatform::importGPC($_REQUEST['portal'],'string','');
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('path', $this->_TPL_PATH);
+		$tpl->assign('view_id', $view_id);
+		$tpl->assign('portal', $portal);
+
+		if(null == ($tool = DAO_CommunityTool::getByCode($portal)))
+			return;
+			
+		if(null == ($tool_ext = DevblocksPlatform::getExtension($tool->extension_id, false)))
+			return;
+			
+		if(null == ($template_set = @$tool_ext->params['template_set']))
+			$template_set = ''; // not null
+			
+		$templates = DevblocksPlatform::getTemplates($template_set);
+		$existing_templates = DAO_DevblocksTemplate::getWhere(sprintf("%s = %s",
+			DAO_DevblocksTemplate::TAG,
+			C4_ORMHelper::qstr('portal_'.$portal)
+		));
+		
+		// Sort templates
+		uasort($templates, create_function('$a, $b', "return strcasecmp(\$a->plugin_id.' '.\$a->path,\$b->plugin_id.' '.\$b->path);\n"));
+		
+		// Filter out templates implemented by this portal already
+		if(is_array($templates))
+		foreach($templates as $idx => $template) { /* @var $template DevblocksTemplate */
+			if(is_array($existing_templates))
+			foreach($existing_templates as $existing) { /* @var $existing Model_DevblocksTemplate */
+				if(0 == strcasecmp($template->plugin_id, $existing->plugin_id)
+					&& 0 == strcasecmp($template->path, $existing->path))
+						unset($templates[$idx]);
+			}
+		}
+		$tpl->assign('templates', $templates);
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'community/display/tabs/templates/add.tpl');
+	}
+	
+	function saveAddTemplatePeekAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		@$portal = DevblocksPlatform::importGPC($_REQUEST['portal'],'string','');
+		@$template = DevblocksPlatform::importGPC($_REQUEST['template'],'string','');
+		
+		list($plugin_id, $template_path) = explode(':', $template, 2);
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('view_id', $view_id);
+		
+		// Pull from filesystem for editing
+		$content = '';
+		if(null != ($plugin = DevblocksPlatform::getPlugin($plugin_id))) {
+			$path = APP_PATH . '/' . $plugin->dir . '/templates/' . $template_path;
+			if(file_exists($path)) {
+				$content = file_get_contents($path);
+			}
+		} 
+		
+		$fields = array(
+			DAO_DevblocksTemplate::LAST_UPDATED => 0,
+			DAO_DevblocksTemplate::PLUGIN_ID => $plugin_id,
+			DAO_DevblocksTemplate::PATH => $template_path,
+			DAO_DevblocksTemplate::TAG => 'portal_' . $portal,
+			DAO_DevblocksTemplate::CONTENT => $content,
+		);
+		$id = DAO_DevblocksTemplate::create($fields);
+
+		$template = DAO_DevblocksTemplate::get($id);
+		$tpl->assign('template', $template); 
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'community/display/tabs/templates/peek.tpl');
+	}
+	
+	function showImportTemplatesPeekAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		@$portal = DevblocksPlatform::importGPC($_REQUEST['portal'],'string','');
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('path', $this->_TPL_PATH);
+		$tpl->assign('view_id', $view_id);
+		$tpl->assign('portal', $portal);
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'community/display/tabs/templates/import.tpl');
+	}
+	
+	function saveImportTemplatesPeekAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		@$portal = DevblocksPlatform::importGPC($_REQUEST['portal'],'string','');
+		@$import_file = $_FILES['import_file'];
+
+		DAO_DevblocksTemplate::importXmlFile($import_file['tmp_name'], 'portal_'.$portal);
+		
+		// Clear template cache
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->clear_compiled_tpl();
+		
+		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('community',$portal,'templates')));
+	}
+
+	function showExportTemplatesPeekAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		@$portal = DevblocksPlatform::importGPC($_REQUEST['portal'],'string','');
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('path', $this->_TPL_PATH);
+		$tpl->assign('view_id', $view_id);
+		$tpl->assign('portal', $portal);
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'community/display/tabs/templates/export.tpl');
+	}
+	
+	function saveExportTemplatesPeekAction() {
+		if(null == ($active_worker = CerberusApplication::getActiveWorker()) || !$active_worker->is_superuser)
+			exit;
+		
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		@$portal = DevblocksPlatform::importGPC($_REQUEST['portal'],'string','');
+		@$filename = DevblocksPlatform::importGPC($_REQUEST['filename'],'string','');
+		@$author = DevblocksPlatform::importGPC($_REQUEST['author'],'string','');
+		@$email = DevblocksPlatform::importGPC($_REQUEST['email'],'string','');
+		
+		// Build XML file
+		$xml = simplexml_load_string(
+			'<?xml version="1.0" encoding="' . LANG_CHARSET_CODE . '"?>'.
+			'<cerb5>'.
+			'<templates>'.
+			'</templates>'.
+			'</cerb5>'
+		); /* @var $xml SimpleXMLElement */
+		
+		// Author
+		$eAuthor =& $xml->templates->addChild('author'); /* @var $eAuthor SimpleXMLElement */
+		$eAuthor->addChild('name', htmlspecialchars($author));
+		$eAuthor->addChild('email', htmlspecialchars($email));
+		
+		// Load view
+		if(null == ($view = C4_AbstractViewLoader::getView($view_id)))
+			exit;
+		
+		// Load all data
+		$view->renderLimit = -1;
+		$view->renderPage = 0;
+		list($results, $null) = $view->getData();
+		
+		// Add template
+		if(is_array($results))
+		foreach($results as $result) {
+			// Load content
+			if(null == ($template = DAO_DevblocksTemplate::get($result[SearchFields_DevblocksTemplate::ID])))
+				continue;
+
+			$eTemplate =& $xml->templates->addChild('template', htmlspecialchars($template->content)); /* @var $eTemplate SimpleXMLElement */
+			$eTemplate->addAttribute('plugin_id', htmlspecialchars($template->plugin_id));
+			$eTemplate->addAttribute('path', htmlspecialchars($template->path));
+		}
+		
+		// Format download file
+		$imp = new DOMImplementation;
+		$doc = $imp->createDocument("", "");
+		$doc->encoding = LANG_CHARSET_CODE;
+		$doc->formatOutput = true;
+		
+		$simplexml = dom_import_simplexml($xml); /* @var $dom DOMElement */
+		$simplexml = $doc->importNode($simplexml, true);
+		$simplexml = $doc->appendChild($simplexml);
+
+		header("Content-type: text/xml");
+		header("Content-Disposition: attachment; filename=\"$filename\"");
+		
+		echo $doc->saveXML();
+		exit;
+	}
+	
+	function showTabInstallationAction() {
+		@$tool_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('path', $this->_TPL_PATH);
+
+		if(null != ($tool = DAO_CommunityTool::get($tool_id)))
+			$tpl->assign('tool', $tool);
+			
+        // Install
+        $url_writer = DevblocksPlatform::getUrlService();
+        $url = $url_writer->write('c=portal&a='.$tool->code,true);
+        $url_parts = parse_url($url);
+        
+        $host = $url_parts['host'];
+        @$port = $_SERVER['SERVER_PORT']; 
+		$base = substr(DEVBLOCKS_WEBPATH,0,-1); // consume trailing
+        $path = substr($url_parts['path'],strlen(DEVBLOCKS_WEBPATH)-1); // consume trailing slash
+
+        @$parts = explode('/', $path);
+        if($parts[1]=='index.php') // 0 is null from /part1/part2 paths.
+        	unset($parts[1]);
+        $path = implode('/', $parts);
+        
+		$tpl->assign('host', $host);
+		$tpl->assign('is_ssl', ($url_writer->isSSL() ? 1 : 0));
+		$tpl->assign('port', $port);
+		$tpl->assign('base', $base);
+		$tpl->assign('path', $path);
+			
+		$tpl->display('file:' . $this->_TPL_PATH . 'community/display/tabs/installation/index.tpl');
+	}
+	
 };
 
 class UmPortalController extends DevblocksControllerExtension {
@@ -145,93 +599,20 @@ class UmConfigCommunitiesTab extends Extension_ConfigTab {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl_path = dirname(__FILE__) . '/templates/';
 		$tpl->assign('path', $tpl_path);
-		$tpl->cache_lifetime = "0";
 
-		// Community sites
-	    $communities = DAO_Community::getList();
-	    $tpl->assign('communities', $communities);
-
-	    // Tool Manifests
-	    $tools = DevblocksPlatform::getExtensions('usermeet.tool', false, true);
-	    $tpl->assign('tool_manifests', $tools);
-	    
-	    // Tool Instances
-	    $community_tools = array();
-	    $instances = DAO_CommunityTool::getList();
-	    foreach($instances as $tool) {
-	    	// Only tools with valid plugins
-	    	if(!isset($tools[$tool->extension_id]))
-				continue;
-			
-	        if(!isset($community_tools[$tool->community_id]))
-				$community_tools[$tool->community_id] = array();
-				
-	        $community_tools[$tool->community_id][$tool->code] = $tool;
-	    }
-	    $tpl->assign('community_tools', $community_tools);
+	    // View
+		$tpl->assign('response_uri', 'config/communities');
+		
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = 'portals_cfg';
+		$defaults->class_name = 'C4_CommunityPortalView';
+		
+		$view = C4_AbstractViewLoader::getView($defaults->id, $defaults);
+		$tpl->assign('view', $view);
+		$tpl->assign('view_fields', C4_CommunityPortalView::getFields());
+		$tpl->assign('view_searchable_fields', C4_CommunityPortalView::getSearchFields());
 	    
 		$tpl->display('file:' . $tpl_path . 'community/config/tab/index.tpl');
-	}
-	
-	function getCommunityAction() {
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
-
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
-		$tpl_path = dirname(__FILE__) . '/templates/';
-		$tpl->assign('path', $tpl_path);
-		
-		if(!empty($id)) {
-			$community = DAO_Community::get($id);
-			$tpl->assign('community', $community);
-		}
-		
-	    // Tool Manifests
-	    $tools = DevblocksPlatform::getExtensions('usermeet.tool', false, true);
-	    $tpl->assign('tool_manifests', $tools);
-		
-		$tpl->display('file:' . $tpl_path . 'community/config/tab/community_config.tpl');
-	}
-	
-	function saveCommunityAction() {
-		// [TODO] Privs
-		@$id = DevblocksPlatform::importGPC($_POST['id'],'integer',0);
-		@$name = DevblocksPlatform::importGPC($_POST['name'],'string','New Community');	
-		@$delete = DevblocksPlatform::importGPC($_POST['do_delete'],'integer',0);	
-
-	    @$add_tool_id = DevblocksPlatform::importGPC($_POST['add_tool_id'],'string');
-
-		if(DEMO_MODE) {
-			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','communities')));
-			return;
-		}
-	    
-		if(!empty($delete)) {
-			DAO_Community::delete($id);
-			
-		} else {
-		    $fields = array(
-		        DAO_Community::NAME => (!empty($name) ? $name : "New Community"),
-		    );
-			
-			if(empty($id)) { // Create
-			    $id = DAO_Community::create($fields);
-				
-			} else { // Edit || Delete
-			    DAO_Community::update($id,$fields);
-			}
-			
-			if(!empty($add_tool_id) && !empty($id)) {
-			    $fields = array(
-			        DAO_CommunityTool::COMMUNITY_ID => $id,
-			        DAO_CommunityTool::EXTENSION_ID => $add_tool_id
-			    );
-			    $tool_id = DAO_CommunityTool::create($fields);
-			}
-			
-		}
-		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('config','communities')));
 	}
 	
 	// [TODO] This really doesn't belong on the tab here
@@ -244,106 +625,5 @@ class UmConfigCommunitiesTab extends Extension_ConfigTab {
 		$module->getSituation();
 	}
 	
-	function getCommunityToolAction() {
-		$worker = CerberusApplication::getActiveWorker();
-		if(!$worker || !$worker->is_superuser) {
-			echo "Access denied.";
-			return;
-		}
-		
-		@$portal = DevblocksPlatform::importGPC($_REQUEST['portal'],'string','');
-		@$is_submitted = DevblocksPlatform::importGPC($_POST['is_submitted'],'integer',0);
-		
-		UmPortalHelper::setCode($portal);
-		
-		if(!empty($is_submitted))
-			$is_submitted = time();
-
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->cache_lifetime = "0";
-		$tpl_path = dirname(__FILE__) . '/templates/';
-		$tpl->assign('path', $tpl_path);
-	
-		$tpl->assign('portal', $portal);
-		$tpl->assign('is_submitted', $is_submitted);
-		
-		if(null != ($instance = DAO_CommunityTool::getByCode($portal))) {
-			$tpl->assign('instance', $instance);
-			$manifest = DevblocksPlatform::getExtension($instance->extension_id, false, true);
-            if(null != ($tool = $manifest->createInstance())) { /* @var $app Extension_UsermeetTool */
-        		$tpl->assign('tool', $tool);
-            }
-		}
-        
-        // Community Record
-        $community_id = $instance->community_id;
-        $community = DAO_Community::get($community_id);
-        $tpl->assign('community', $community);
-		
-        // Install
-        $url_writer = DevblocksPlatform::getUrlService();
-        $url = $url_writer->write('c=portal&a='.$portal,true);
-        $url_parts = parse_url($url);
-        
-        $host = $url_parts['host'];
-        @$port = $_SERVER['SERVER_PORT']; 
-		$base = substr(DEVBLOCKS_WEBPATH,0,-1); // consume trailing
-        $path = substr($url_parts['path'],strlen(DEVBLOCKS_WEBPATH)-1); // consume trailing slash
-
-        @$parts = explode('/', $path);
-        if($parts[1]=='index.php') // 0 is null from /part1/part2 paths.
-        	unset($parts[1]);
-        $path = implode('/', $parts);
-        
-		$tpl->assign('host', $host);
-		$tpl->assign('is_ssl', ($url_writer->isSSL() ? 1 : 0));
-		$tpl->assign('port', $port);
-		$tpl->assign('base', $base);
-		$tpl->assign('path', $path);
-        
-		$tpl->display('file:' . $tpl_path . 'community/config/tab/tool_config.tpl');
-	}
-	
-	function saveCommunityToolAction() {
-		@$code = DevblocksPlatform::importGPC($_POST['portal'],'string');
-		@$name = DevblocksPlatform::importGPC($_POST['portal_name'],'string','');
-        @$iDelete = DevblocksPlatform::importGPC($_POST['do_delete'],'integer',0);
-		
-		UmPortalHelper::setCode($code);
-		
-		if(DEMO_MODE) {
-			if($iDelete) {
-				DevblocksPlatform::redirect(new DevblocksHttpResponse(array('config','communities')));
-			} else {
-				self::getCommunityToolAction();
-			}
-			return;
-		}
-
-        if(null != ($instance = DAO_CommunityTool::getByCode($code))) {
-			// Deleting?
-			if(!empty($iDelete)) {
-				$tool = DAO_CommunityTool::getByCode($code); /* @var $tool Model_CommunityTool */
-				DAO_CommunityTool::delete($tool->id);
-				DevblocksPlatform::redirect(new DevblocksHttpResponse(array('config','communities')));
-				return;
-				
-			} else {
-				$manifest = DevblocksPlatform::getExtension($instance->extension_id, false, true);
-	            $tool = $manifest->createInstance(); /* @var $tool Extension_UsermeetTool */
-				
-				// Update the tool name if it has changed
-				if(0 != strcmp($instance->name,$name))
-					DAO_CommunityTool::update($instance->id, array(
-						DAO_CommunityTool::NAME => $name
-					));
-				
-				// Defer the rest to tool instances and extensions
-				$tool->saveConfiguration();
-			}
-		}
-		
-		self::getCommunityToolAction();
-	}
 };
 

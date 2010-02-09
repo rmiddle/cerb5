@@ -35,10 +35,7 @@
 				<tr>
 					<td width="0%" nowrap="nowrap" valign="middle" align="right"><b>{'mail.log_message.requesters'|devblocks_translate}:</b>&nbsp;</td>
 					<td width="100%">
-						<div id="emailautocomplete" style="width:98%;padding-bottom:2em;z-index:1;">
-							<input type="text" name="reqs" id="emailinput" value="{$reqs}" style="_position:absolute;border:1px solid rgb(180,180,180);padding:2px;" autocomplete="off">
-							<div id="emailcontainer"></div>
-						</div>
+						<input type="text" name="reqs" id="emailinput" value="{$reqs}" style="border:1px solid rgb(180,180,180);padding:2px;width:98%;">
 					</td>
 				</tr>
 				<tr>
@@ -51,8 +48,8 @@
 	
 	<tr>
 		<td>
-		<button type="button" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id='+selectValue(this.form.to),{literal}function(o){insertAtCursor(document.getElementById('content'),o.responseText);}{/literal});"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/document_edit.gif{/devblocks_url}" align="top"> Insert Signature</button>
-		<button type="button" onclick="genericAjaxPanel('c=display&a=showTemplatesPanel&type=3&txt_name=content',this,false,'550px');"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/text_rich.gif{/devblocks_url}" align="top"> E-mail Templates</button>
+		<button type="button" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id='+selectValue(this.form.to),function(text) { insertAtCursor(document.getElementById('content'), text); } );"><span class="cerb-sprite sprite-document_edit"></span> Insert Signature</button>
+		<button type="button" onclick="genericAjaxPanel('c=display&a=showTemplatesPanel&type=3&txt_name=content',null,false,'550');"><span class="cerb-sprite sprite-text_rich"></span> E-mail Templates</button>
 		{* Plugin Toolbar *}
 		{if !empty($logmail_toolbaritems)}
 			{foreach from=$logmail_toolbaritems item=renderer}
@@ -80,7 +77,7 @@
 					
 					<b>{$translate->_('display.reply.attachments_add')}</b> 
 					(<a href="javascript:;" onclick="appendFileInput('displayReplyAttachments','attachment[]');">{$translate->_('display.reply.attachments_more')|lower}</a>)
-					(<a href="javascript:;" onclick="clearDiv('displayReplyAttachments');appendFileInput('displayReplyAttachments','attachment[]');">{$translate->_('common.clear')|lower}</a>)
+					(<a href="javascript:;" onclick="$('#displayReplyAttachments').html('');appendFileInput('displayReplyAttachments','attachment[]');">{$translate->_('common.clear')|lower}</a>)
 					<br>
 					<table cellpadding="2" cellspacing="0" border="0" width="100%">
 						<tr>
@@ -183,8 +180,8 @@
 	<tr>
 		<td>
 			<br>
-			<button type="button" onclick="this.form.do_submit.value='1';this.form.submit();"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/check.gif{/devblocks_url}" align="top"> Send Message</button>
-			<button type="button" onclick="document.location='{devblocks_url}c=tickets{/devblocks_url}';"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/delete.gif{/devblocks_url}" align="top"> Discard</button>
+			<button type="button" onclick="this.form.do_submit.value='1';this.form.submit();"><span class="cerb-sprite sprite-check"></span> Send Message</button>
+			<button type="button" onclick="document.location='{devblocks_url}c=tickets{/devblocks_url}';"><span class="cerb-sprite sprite-delete"></span> Discard</button>
 		</td>
 	</tr>
   </tbody>
@@ -192,10 +189,8 @@
 </form>
 </div>
 
-<script type="text/javascript">
-{literal}
-YAHOO.util.Event.addListener(window,'load',function(e) {
-	ajax.cbEmailMultiplePeek(null);
-});
-{/literal}
+<script language="JavaScript1.2" type="text/javascript">
+	$(function() {
+		ajax.emailAutoComplete('#emailinput', { multiple: true } );
+	} );
 </script>
