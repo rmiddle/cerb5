@@ -58,6 +58,10 @@
 				
 				<div id="configSmtpTest"></div>	
 				<button type="button" onclick="genericAjaxGet('configSmtpTest','c=config&a=getSmtpTest&host='+this.form.smtp_host.value+'&port='+encodeURIComponent(this.form.smtp_port.value)+'&enc='+encodeURIComponent($('input[name=\'smtp_enc\']:checked').val())+'&smtp_user='+encodeURIComponent(this.form.smtp_auth_user.value)+'&smtp_pass='+encodeURIComponent(this.form.smtp_auth_pass.value));"><span class="cerb-sprite sprite-gear"></span> Test SMTP</button>				
+<<<<<<< HEAD:features/cerberusweb.core/templates/configuration/tabs/mail/outgoing_settings.tpl
+=======
+
+>>>>>>> jira/chd-1602:features/cerberusweb.core/templates/configuration/tabs/mail/outgoing_settings.tpl
 			</blockquote>
 			
 			<h3>Default Preferences</h3>
