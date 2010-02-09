@@ -29,10 +29,11 @@
 <div id="mailTabs">
 	<ul>
 		{$tabs = [workflow]}
-		
-{/literal}{if $active_worker->hasPriv('core.mail.workflow')}
+
+{if $active_worker->hasPriv('core.mail.workflow')}			
 		<li><a href="{devblocks_url}ajax.php?c=tickets&a=showWorkflowTab&request={$request_path|escape:'url'}{/devblocks_url}">{$translate->_('mail.workflow')|capitalize|escape:'quotes'}</a></li>
-{/if}{literal}
+{/if}			
+
 		
 		{if $active_worker->hasPriv('core.mail.overview')}
 			{$tabs[] = overview}
