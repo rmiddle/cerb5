@@ -2,12 +2,11 @@
 <div id="divTimeTrackingBox" style="display:{if isset($session.timetracking)}block{else}none{/if};position:fixed;width:300px;height:30px;top:2;right:320;background-color:rgb(50,50,50);color:rgb(255,255,255);opacity:.9;filter:alpha(opacity=90);z-index:2;vertical-align:middle;text-align:center;padding:5px;">
 	{'timetracking.activity.tab'|devblocks_translate}: 
 	<span style="font-size:18pt;font-weight:bold;"><span id="divTimeTrackingCounter">--</span></span>
-	<button id="btnTimeTrackingPlay" type="button" onclick="timeTrackingTimer.play();" style="display:none;"><img src="{devblocks_url}c=resource&p=cerberusweb.timetracking&f=images/16x16/media_play_green.png{/devblocks_url}"></button>
-	<button id="btnTimeTrackingPause" type="button" onclick="timeTrackingTimer.pause();" style="display:none;"><img src="{devblocks_url}c=resource&p=cerberusweb.timetracking&f=images/16x16/media_pause.png{/devblocks_url}"></button>
-	<button id="btnTimeTrackingStop" type="button" onclick="timeTrackingTimer.stop();" style="display:none;"><img src="{devblocks_url}c=resource&p=cerberusweb.timetracking&f=images/16x16/media_stop_red.png{/devblocks_url}"></button>
+	<button id="btnTimeTrackingPlay" type="button" onclick="timeTrackingTimer.play();" style="display:none;"><span class="cerb-sprite sprite-media_play_green"></span></button>
+	<button id="btnTimeTrackingPause" type="button" onclick="timeTrackingTimer.pause();" style="display:none;"><span class="cerb-sprite sprite-media_pause"></span></button>
+	<button id="btnTimeTrackingStop" type="button" onclick="timeTrackingTimer.stop();" style="display:none;"><span class="cerb-sprite sprite-media_stop_red"></span></button>
 </div>
 <script type="text/javascript">
-	{literal}
 	var timeTrackingTimerClass = function() {
 		this.counter = 0;
 		this.enabled = false;
@@ -20,9 +19,9 @@
 			
 			if(this.enabled) {
 				var _self = this;
-				setTimeout(function(ms){
+				setTimeout(function(ms) {
 					_self.increment();
-				},1000);
+				} ,1000);
 			}
 		}
 	
@@ -58,7 +57,7 @@
 			var _self = this;
 			setTimeout(function(ms) {
 				_self.increment();
-			},10);
+			} ,10);
 		}
 		
 		this.play = function(source_ext_id, source_id) {
@@ -101,9 +100,9 @@
 			btn = document.getElementById('btnTimeTrackingStop');
 			if(null != btn) btn.style.display = 'none';
 
-			genericAjaxGet('','c=timetracking&a=pauseTimer', function(o) {
-				genericAjaxPanel('c=timetracking&a=getStopTimerPanel',null,true,'500px',ajax.cbAddressPeek);
-			});
+			genericAjaxGet('','c=timetracking&a=pauseTimer', function() {
+				genericAjaxPanel('c=timetracking&a=getStopTimerPanel',null,true,'500');
+			} );
 		}
 		
 		this.finish = function() {
@@ -113,12 +112,11 @@
 		
 			this.counter = 0;
 			genericAjaxGet('','c=timetracking&a=clearEntry');
-			genericPanel.hide();
+			genericPanel.dialog('close');
 		}
 	};
 	
 	timeTrackingTimer = new timeTrackingTimerClass();
-	{/literal}
 	
 	{if isset($session.timetracking_started) && $current_timestamp} {* timer is running *}
 		{* Recover the total from any pause/unpause segments *}
