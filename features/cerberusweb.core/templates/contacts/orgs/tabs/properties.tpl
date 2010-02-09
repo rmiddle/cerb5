@@ -29,13 +29,7 @@
 		<tr>
 			<td align="right">{'contact_org.country'|devblocks_translate}: </td>
 			<td>
-			
-				<div id="org_country_autocomplete" style="width:98%;" class="yui-ac">
-					<input type="text" name="country" id="org_country_input" value="{$contact->country|escape}" class="yui-ac-input">
-					<div id="org_country_container" class="yui-ac-container"></div>
-				</div>			
-				<br>
-				<br>
+				<input type="text" name="country" id="countryinput" value="{$contact->country|escape}" style="width:98%;">
 			</td>
 		</tr>
 		<tr>
@@ -53,10 +47,14 @@
 	<br>
 	
 	{if $active_worker->hasPriv('core.addybook.org.actions.update')}
-		<button type="submit"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/check.gif{/devblocks_url}" align="top"> {$translate->_('common.save_changes')|capitalize}</button>
+		<button type="submit"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>
 	{else}
 		<div class="error">You do not have permission to modify this record.</div>	
 	{/if}
 </blockquote>
 
 </form>
+
+<script language="JavaScript1.2" type="text/javascript">
+	ajax.countryAutoComplete('#countryinput');
+</script>
