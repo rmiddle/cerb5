@@ -31,3 +31,5 @@ return array($team_id, $category_id);
 
 I did this so I could use this for reports were I need both inbox $category_id=0 and all I decided to use $category_id=-1 for.
 
+/helpdesk/xxx  Braches spefic to helpdesk.
+

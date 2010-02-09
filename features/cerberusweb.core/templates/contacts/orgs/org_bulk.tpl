@@ -1,6 +1,6 @@
 <table cellpadding="0" cellspacing="0" border="0" width="98%">
 	<tr>
-		<td align="left" width="1%" nowrap="nowrap" style="padding-right:5px;"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/gear.gif{/devblocks_url}" align="absmiddle"></td>
+		<td align="left" width="1%" nowrap="nowrap" style="padding-right:5px;"><span class="cerb-sprite sprite-folder_gear"></span></td>
 		<td align="left" width="100%"><h1>{$translate->_('common.bulk_update')|capitalize}</h1></td>
 	</tr>
 </table>
@@ -10,8 +10,6 @@
 <input type="hidden" name="a" value="doOrgBulkUpdate">
 <input type="hidden" name="view_id" value="{$view_id}">
 <input type="hidden" name="org_ids" value="{$org_ids}">
-
-<div style="height:400px;overflow:auto;">
 
 <h2>{$translate->_('common.bulk_update.with')|capitalize}:</h2>
 
@@ -33,9 +31,8 @@
 {include file="file:$core_tpl/internal/custom_fields/bulk/form.tpl" bulk=true}	
 
 <br>
-</div>
 
-{if $active_worker->hasPriv('core.addybook.org.actions.update')}<button type="button" onclick="genericPanel.hide();genericAjaxPost('formBatchUpdate','view{$view_id}');"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/check.gif{/devblocks_url}" align="top"> {$translate->_('common.save_changes')|capitalize}</button>{/if}
-<button type="button" onclick="genericPanel.hide();"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/delete.gif{/devblocks_url}" align="top"> {$translate->_('common.cancel')|capitalize}</button>
+{if $active_worker->hasPriv('core.addybook.org.actions.update')}<button type="button" onclick="genericPanel.dialog('close');genericAjaxPost('formBatchUpdate','view{$view_id}');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>{/if}
+<button type="button" onclick="genericPanel.dialog('close');"><span class="cerb-sprite sprite-delete"></span> {$translate->_('common.cancel')|capitalize}</button>
 <br>
 </form>

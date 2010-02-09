@@ -32,8 +32,10 @@
 	<tr>
 		<td width="0%" nowrap="nowrap" align="right" valign="top">{'task.due_date'|devblocks_translate|capitalize}: </td>
 		<td width="100%">
-			<input type="text" name="due_date" size="45" value="{if !empty($task->due_date)}{$task->due_date|devblocks_date}{/if}"><button type="button" onclick="ajax.getDateChooser('dateTaskDue',this.form.due_date);">&nbsp;<img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/calendar.gif{/devblocks_url}" align="top">&nbsp;</button>
-			<div id="dateTaskDue" style="display:none;position:absolute;z-index:1;"></div>
+			<input type="text" id="taskDueDate" name="due_date" size="45" value="{if !empty($task->due_date)}{$task->due_date|devblocks_date}{/if}">
+			<script type="text/javascript" language="JavaScript1.2">
+				devblocksAjaxDateChooser('#taskDueDate');
+			</script>
 		</td>
 	</tr>
 	<tr>
@@ -66,11 +68,13 @@
 
 {include file="file:$core_tpl/internal/custom_fields/bulk/form.tpl" bulk=false}
 
+<br>
+
 {if ($active_worker->hasPriv('core.tasks.actions.create') && (empty($task) || $active_worker->id==$task->worker_id))
 	|| ($active_worker->hasPriv('core.tasks.actions.update_nobody') && empty($task->worker_id)) 
 	|| $active_worker->hasPriv('core.tasks.actions.update_all')}
-	<button type="button" onclick="this.form.submit();"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/check.gif{/devblocks_url}" align="top"> {$translate->_('common.save_changes')}</button>
-	<button type="button" onclick="if(confirm('Are you sure you want to permanently delete this task?')){literal}{{/literal}this.form.do_delete.value='1';this.form.submit();{literal}}{/literal}"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/delete2.gif{/devblocks_url}" align="top"> {$translate->_('common.delete')|capitalize}</button>
+	<button type="button" onclick="this.form.submit();"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
+	<button type="button" onclick="if(confirm('Are you sure you want to permanently delete this task?')){literal}{{/literal}this.form.do_delete.value='1';this.form.submit();{literal}}{/literal}"><span class="cerb-sprite sprite-delete2"></span> {$translate->_('common.delete')|capitalize}</button>
 {else}
 	<div class="error">{'error.core.no_acl.edit'|devblocks_translate}</div>
 {/if}
