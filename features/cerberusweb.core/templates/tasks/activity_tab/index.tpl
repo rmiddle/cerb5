@@ -1,6 +1,6 @@
 {if $active_worker->hasPriv('core.tasks.actions.create')}
 <form action="{devblocks_url}{/devblocks_url}" style="margin-bottom:5px;">
-	<button type="button" onclick="genericAjaxPanel('c=tasks&a=showTaskPeek&id=0&view_id={$view->id}',this,false,'500px',{literal}function(o){document.getElementById('formTaskPeek').title.focus();}{/literal});"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/gear_add.gif{/devblocks_url}" align="top"> {'tasks.add'|devblocks_translate}</button>
+	<button type="button" onclick="genericAjaxPanel('c=tasks&a=showTaskPeek&id=0&view_id={$view->id}',null,false,'500');"><span class="cerb-sprite sprite-add"></span> {'tasks.add'|devblocks_translate}</button>
 </form>
 {/if}
 
@@ -14,7 +14,7 @@
 		</div>
 	</td>
 	
-	<td nowrap="nowrap" width="0%"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/spacer.gif{/devblocks_url}" width="5" height="1"></td>
+	<td nowrap="nowrap" width="0%" style="padding-right:5px;"></td>
 	
 	<td width="100%" valign="top">
 		<div id="view{$view->id}">{$view->render()}</div>
