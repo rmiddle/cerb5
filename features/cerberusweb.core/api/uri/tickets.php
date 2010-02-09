@@ -83,8 +83,8 @@ class ChTicketsPage extends CerberusPageExtension {
 				$tpl->assign('groups', $groups);
 
 				// Custom fields
-				$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Ticket::ID);
-				$tpl->assign('ticket_fields', $fields);
+				$ticket_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Ticket::ID);
+				$tpl->assign('ticket_fields', $ticket_fields);
 
 				$tpl->display('file:' . $this->_TPL_PATH . 'tickets/compose/index.tpl');
 				break;

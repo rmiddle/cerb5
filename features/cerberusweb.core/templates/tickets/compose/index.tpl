@@ -1,5 +1,4 @@
 {include file="file:$core_tpl/tickets/submenu.tpl"}
-
 {if !empty($last_ticket_mask)}
 <div class="success">Message sent! &nbsp; &nbsp; <a href="{devblocks_url}c=display&mask={$last_ticket_mask}{/devblocks_url}" style="font-weight:normal;color:rgb(80,80,80);">View the message</a></div>
 {/if}
@@ -108,7 +107,6 @@
 				<tr>
 					<td style="background-color:rgb(184,0,4);width:10px;"></td>
 					<td style="padding-left:5px;">
-						<H2>{$translate->_('common.custom_fields')|capitalize}:</H2>
 						{* [TODO] Display by Group *}
 						<table cellpadding="2" cellspacing="1" border="0">
 							{assign var=last_group_id value=-1}
