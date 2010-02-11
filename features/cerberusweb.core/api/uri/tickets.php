@@ -975,11 +975,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		@$ticket_reopen = DevblocksPlatform::importGPC($_POST['ticket_reopen'],'string','');
 		@$unlock_date = DevblocksPlatform::importGPC($_POST['unlock_date'],'string','');
 		
-		if(DEMO_MODE) {
-			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('tickets','compose')));
-			return;
-		}
-
 		if(empty($to)) {
 			$visit = CerberusApplication::getVisit(); /* @var CerberusVisit $visit */
 			$visit->set('compose.no_to_in_ticket', TRUE);
@@ -1030,11 +1025,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		@$ticket_reopen = DevblocksPlatform::importGPC($_POST['ticket_reopen'],'string','');
 		@$unlock_date = DevblocksPlatform::importGPC($_POST['unlock_date'],'string','');
 		
-		if(DEMO_MODE) {
-			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('tickets','create')));
-			return;
-		}
-
 		// ********
 		
 		$message = new CerberusParserMessage();
