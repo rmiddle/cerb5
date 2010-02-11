@@ -24,7 +24,7 @@
 		{/if}
 	{/if}
 	{*<a href="{devblocks_url}c=config&a=jobs&b=manage&id={$job_id}{/devblocks_url}">{$job->manifest->name}</a>*}
-	<a href="javascript:;" onclick="toggleDiv('job_{$job_id}');">{if !$enabled}{$translate->_('common.disabled')|capitalize}{/if}{$job->manifest->name}</a>
+	<a href="javascript:;" onclick="toggleDiv('job_{$job_id}');">{if !$enabled}({$translate->_('common.disabled')|capitalize}) {/if}{$job->manifest->name}</a>
 	
 	<div id="" style="display:block;border:1px solid rgb(200,200,200);background-color:rgb(255,255,255);padding:5px;margin:5px;">
 		{if $enabled}
