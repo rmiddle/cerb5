@@ -359,7 +359,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$translate = DevblocksPlatform::getTranslationService();
 		$active_worker = CerberusApplication::getActiveWorker();
 		
-		if(!$active_worker || !$active_worker->is_superuser || DEMO_MODE) {
+		if(!$active_worker || !$active_worker->is_superuser) {
 			return;
 		}
 		
@@ -620,11 +620,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 			return;
 		}
 		
-		if(DEMO_MODE) {
-			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','mail')));
-			return;
-		}
-		
 		@$id = DevblocksPlatform::importGPC($_POST['account_id'],'integer');
 		@$enabled = DevblocksPlatform::importGPC($_POST['pop3_enabled'],'integer',0);
 		@$nickname = DevblocksPlatform::importGPC($_POST['nickname'],'string');
@@ -812,11 +807,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	    @$sticky_ids = DevblocksPlatform::importGPC($_REQUEST['sticky_ids'],'array',array());
 	    @$sticky_order = DevblocksPlatform::importGPC($_REQUEST['sticky_order'],'array',array());
 
-		if(DEMO_MODE) {
-			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','preparser')));
-			return;
-		}
-		
 		DAO_PreParseRule::delete($ids);
 
 	    // Reordering
@@ -871,11 +861,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		@$is_sticky = DevblocksPlatform::importGPC($_POST['is_sticky'],'integer',0);
 		@$rules = DevblocksPlatform::importGPC($_POST['rules'],'array',array());
 		@$do = DevblocksPlatform::importGPC($_POST['do'],'array',array());
-		
-		if(DEMO_MODE) {
-			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','preparser')));
-			return;
-		}
 		
 		$criterion = array();
 		$actions = array();
@@ -1327,11 +1312,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 			return;
 		}
 		
-		if(DEMO_MODE) {
-			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','fields')));
-			return;
-		}
-		
 		// Type of custom fields
 		@$ext_id = DevblocksPlatform::importGPC($_POST['ext_id'],'string','');
 		
@@ -1392,11 +1372,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 			return;
 		}
 		
-		if(DEMO_MODE) {
-			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','scheduler')));
-			return;
-		}
-		
 	    // [TODO] Save the job changes
 	    @$id = DevblocksPlatform::importGPC($_REQUEST['id'],'string','');
 	    @$enabled = DevblocksPlatform::importGPC($_REQUEST['enabled'],'integer',0);
@@ -1443,11 +1418,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		@$key = DevblocksPlatform::importGPC($_POST['key'],'string','');
 		@$email = DevblocksPlatform::importGPC($_POST['email'],'string','');
 		@$do_delete = DevblocksPlatform::importGPC($_POST['do_delete'],'integer',0);
-
-		if(DEMO_MODE) {
-			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','settings')));
-			return;
-		}
 
 		if(!empty($do_delete)) {
 			$settings->set('cerberusweb.core',CerberusSettings::LICENSE, '');
@@ -1522,11 +1492,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 			return;
 		}
 		
-		if(DEMO_MODE) {
-			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','workflow')));
-			return;
-		}
-		
 		@$id = DevblocksPlatform::importGPC($_POST['id']);
 		@$name = DevblocksPlatform::importGPC($_POST['name']);
 		@$delete = DevblocksPlatform::importGPC($_POST['delete_box']);
@@ -1589,11 +1554,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 			return;
 		}
 		
-		if(DEMO_MODE) {
-			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','settings')));
-			return;
-		}
-		
 	    @$title = DevblocksPlatform::importGPC($_POST['title'],'string','');
 	    @$logo = DevblocksPlatform::importGPC($_POST['logo'],'string');
 	    @$authorized_ips_str = DevblocksPlatform::importGPC($_POST['authorized_ips'],'string','');
@@ -1618,11 +1578,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 			return;
 		}
 		
-		if(DEMO_MODE) {
-			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','mail')));
-			return;
-		}
-		
 	    @$attachments_enabled = DevblocksPlatform::importGPC($_POST['attachments_enabled'],'integer',0);
 	    @$attachments_max_size = DevblocksPlatform::importGPC($_POST['attachments_max_size'],'integer',10);
 	    @$parser_autoreq = DevblocksPlatform::importGPC($_POST['parser_autoreq'],'integer',0);
@@ -1644,11 +1599,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 		if(!$worker || !$worker->is_superuser) {
 			echo $translate->_('common.access_denied');
-			return;
-		}
-		
-		if(DEMO_MODE) {
-			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','mail')));
 			return;
 		}
 		
@@ -1698,11 +1648,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 		if(!$worker || !$worker->is_superuser) {
 			echo $translate->_('common.access_denied');
-			return;
-		}
-		
-		if(DEMO_MODE) {
-			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','mail')));
 			return;
 		}
 		
@@ -2013,11 +1958,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 		if(!$worker || !$worker->is_superuser) {
 			echo $translate->_('common.access_denied');
-			return;
-		}
-		
-		if(DEMO_MODE) {
-			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','plugins')));
 			return;
 		}
 		
