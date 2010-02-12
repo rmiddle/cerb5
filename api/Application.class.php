@@ -678,7 +678,6 @@ class CerberusSettings {
 	const AUTHORIZED_IPS = 'authorized_ips';
 	const LICENSE = 'license';
 	const ACL_ENABLED = 'acl_enabled';
-		self::DISABLE_WORKER_EMAIL_TO_CUSTOMER => 0,
 };
 
 // [TODO] This gets called a lot when it happens after the registry cache
