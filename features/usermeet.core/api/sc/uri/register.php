@@ -231,8 +231,6 @@ class UmScRegisterController extends Extension_UmScController {
 			DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('portal',UmPortalHelper::getCode(),'register','confirm')));
 			return;
 		}
-	$tpl->assign('register_confirmation', sprintf("You are now registered, please login"));
-	DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('portal',UmPortalHelper::getCode(),'register','confirm')));
 	}
 
 };
