@@ -501,7 +501,7 @@ class ImportCron extends CerberusCronPageExtension {
 			$email_to_worker_id = array();
 			
 			if(is_array($workers))
-			foreach($workers as $worker) { /* @var $worker CerberusWorker */
+			foreach($workers as $worker) { /* @var $worker Model_Worker */
 				$email_to_worker_id[strtolower($worker->email)] = intval($worker->id);
 			}
 		}
@@ -523,7 +523,7 @@ class ImportCron extends CerberusCronPageExtension {
 			$bucket_name_to_id = array();
 
 			if(is_array($buckets))
-			foreach($buckets as $bucket) { /* @var $bucket CerberusCategory */
+			foreach($buckets as $bucket) { /* @var $bucket Model_Bucket */
 				// Hash by team ID and bucket name
 				$hash = md5($bucket->team_id . strtolower($bucket->name));
 				$bucket_to_id[$hash] = intval($bucket->id);
