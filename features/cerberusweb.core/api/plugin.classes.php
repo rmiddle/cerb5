@@ -329,7 +329,7 @@ XML;
         $channel->addChild('description', '');
         
         // View
-        $view = new C4_WorkerEventView();
+        $view = new View_WorkerEvent();
         $view->name = $feed->title;
         $view->params = $feed->params['params'];
         $view->renderLimit = 100;
@@ -339,8 +339,6 @@ XML;
         // Results
         list($results, $count) = $view->getData();
 
-        // [TODO] We should probably be building this feed with Zend Framework for compliance
-        
         foreach($results as $event) {
         	$created = intval($event[SearchFields_WorkerEvent::CREATED_DATE]);
             if(empty($created)) $created = time();
@@ -431,7 +429,7 @@ XML;
         $channel->addChild('description', '');
         
         // View
-        $view = new C4_TicketView();
+        $view = new View_Ticket();
         $view->name = $feed->title;
         $view->params = $feed->params['params'];
         $view->renderLimit = 100;
@@ -440,8 +438,6 @@ XML;
 
         // Results
         list($tickets, $count) = $view->getData();
-        
-        // [TODO] We should probably be building this feed with Zend Framework for compliance
         
         foreach($tickets as $ticket) {
         	$created = intval($ticket[SearchFields_Ticket::TICKET_UPDATED_DATE]);
@@ -526,7 +522,7 @@ XML;
         $channel->addChild('description', '');
         
         // View
-        $view = new C4_TaskView();
+        $view = new View_Task();
         $view->name = $feed->title;
         $view->params = $feed->params['params'];
         $view->renderLimit = 100;
@@ -537,8 +533,6 @@ XML;
         list($results, $count) = $view->getData();
 
         $task_sources = DevblocksPlatform::getExtensions('cerberusweb.task.source',true);
-        
-        // [TODO] We should probably be building this feed with Zend Framework for compliance
         
         foreach($results as $task) {
         	$created = intval($task[SearchFields_Task::UPDATED_DATE]);

@@ -86,7 +86,7 @@ class CrmOppsActivityTab extends Extension_ActivityTab {
 			
 		// Index
 		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'C4_CrmOpportunityView';
+		$defaults->class_name = 'View_CrmOpportunity';
 		$defaults->id = self::VIEW_ACTIVITY_OPPS;
 		$defaults->name = $translate->_('crm.tab.title');
 		$defaults->renderSortBy = SearchFields_CrmOpportunity::UPDATED_DATE;
@@ -100,8 +100,8 @@ class CrmOppsActivityTab extends Extension_ActivityTab {
 		$tpl->assign('quick_search_type', $quick_search_type);
 		
 		$tpl->assign('view', $view);
-		$tpl->assign('view_fields', C4_CrmOpportunityView::getFields());
-		$tpl->assign('view_searchable_fields', C4_CrmOpportunityView::getSearchFields());
+		$tpl->assign('view_fields', View_CrmOpportunity::getFields());
+		$tpl->assign('view_searchable_fields', View_CrmOpportunity::getSearchFields());
 		
 		$tpl->display($tpl_path . 'crm/opps/activity_tab/index.tpl');		
 	}
@@ -442,7 +442,7 @@ class CrmPage extends CerberusPageExtension {
 		$tpl->assign('opp', $opp);
 		
 		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'C4_TaskView';
+		$defaults->class_name = 'View_Task';
 		$defaults->id = 'opp_tasks';
 		$defaults->view_columns = array(
 			SearchFields_Task::SOURCE_EXTENSION,
@@ -504,7 +504,7 @@ class CrmPage extends CerberusPageExtension {
 		
 		// View
 		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'C4_TicketView';
+		$defaults->class_name = 'View_Ticket';
 		$defaults->id = 'opp_tickets';
 		$defaults->name = '';
 		$defaults->renderPage = 0;
@@ -818,7 +818,7 @@ class CrmPage extends CerberusPageExtension {
         $translate = DevblocksPlatform::getTranslationService();
 		
         if(null == ($searchView = C4_AbstractViewLoader::getView(CrmOppsActivityTab::VIEW_ACTIVITY_OPPS))) {
-        	$searchView = new C4_CrmOpportunityView();
+        	$searchView = new View_CrmOpportunity();
         	$searchView->id = CrmOppsActivityTab::VIEW_ACTIVITY_OPPS;
         	$searchView->name = $translate->_('common.search_results');
         	C4_AbstractViewLoader::setView($searchView->id, $searchView);
@@ -1184,28 +1184,28 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 	}
 	
 	/**
-	 * @param ADORecordSet $rs
+	 * @param resource $rs
 	 * @return Model_CrmOpportunity[]
 	 */
 	static private function _getObjectsFromResult($rs) {
 		$objects = array();
 		
-		if(is_a($rs,'ADORecordSet'))
-		while(!$rs->EOF) {
+		while($row = mysql_fetch_assoc($rs)) {
 			$object = new Model_CrmOpportunity();
-			$object->id = intval($rs->fields['id']);
-			$object->name = $rs->fields['name'];
-			$object->amount = doubleval($rs->fields['amount']);
-			$object->primary_email_id = intval($rs->fields['primary_email_id']);
-			$object->created_date = $rs->fields['created_date'];
-			$object->updated_date = $rs->fields['updated_date'];
-			$object->closed_date = $rs->fields['closed_date'];
-			$object->is_won = $rs->fields['is_won'];
-			$object->is_closed = $rs->fields['is_closed'];
-			$object->worker_id = $rs->fields['worker_id'];
+			$object->id = intval($row['id']);
+			$object->name = $row['name'];
+			$object->amount = doubleval($row['amount']);
+			$object->primary_email_id = intval($row['primary_email_id']);
+			$object->created_date = $row['created_date'];
+			$object->updated_date = $row['updated_date'];
+			$object->closed_date = $row['closed_date'];
+			$object->is_won = $row['is_won'];
+			$object->is_closed = $row['is_closed'];
+			$object->worker_id = $row['worker_id'];
 			$objects[$object->id] = $object;
-			$rs->MoveNext();
 		}
+		
+		mysql_free_result($rs);
 		
 		return $objects;
 	}
@@ -1320,19 +1320,17 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 			($has_multiple_values ? 'GROUP BY o.id ' : '').
 			$sort_sql;
 		
-		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
+		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
 		$results = array();
 		
-		if(is_a($rs,'ADORecordSet'))
-		while(!$rs->EOF) {
+		while($row = mysql_fetch_assoc($rs)) {
 			$result = array();
-			foreach($rs->fields as $f => $v) {
+			foreach($row as $f => $v) {
 				$result[$f] = $v;
 			}
-			$id = intval($rs->fields[SearchFields_CrmOpportunity::ID]);
+			$id = intval($row[SearchFields_CrmOpportunity::ID]);
 			$results[$id] = $result;
-			$rs->MoveNext();
 		}
 
 		// [JAS]: Count all
@@ -1344,6 +1342,8 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 				$where_sql;
 			$total = $db->GetOne($count_sql);
 		}
+		
+		mysql_free_result($rs);
 		
 		return array($results,$total);
     }
@@ -1374,22 +1374,22 @@ class SearchFields_CrmOpportunity implements IDevblocksSearchFields {
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		$columns = array(
-			self::ID => new DevblocksSearchField(self::ID, 'o', 'id', null, $translate->_('crm.opportunity.id')),
+			self::ID => new DevblocksSearchField(self::ID, 'o', 'id', $translate->_('crm.opportunity.id')),
 			
-			self::PRIMARY_EMAIL_ID => new DevblocksSearchField(self::PRIMARY_EMAIL_ID, 'o', 'primary_email_id', null, $translate->_('crm.opportunity.primary_email_id')),
-			self::EMAIL_ADDRESS => new DevblocksSearchField(self::EMAIL_ADDRESS, 'a', 'email', null, $translate->_('crm.opportunity.email_address')),
+			self::PRIMARY_EMAIL_ID => new DevblocksSearchField(self::PRIMARY_EMAIL_ID, 'o', 'primary_email_id', $translate->_('crm.opportunity.primary_email_id')),
+			self::EMAIL_ADDRESS => new DevblocksSearchField(self::EMAIL_ADDRESS, 'a', 'email', $translate->_('crm.opportunity.email_address')),
 			
-			self::ORG_ID => new DevblocksSearchField(self::ORG_ID, 'org', 'id', null),
-			self::ORG_NAME => new DevblocksSearchField(self::ORG_NAME, 'org', 'name', null, $translate->_('crm.opportunity.org_name')),
+			self::ORG_ID => new DevblocksSearchField(self::ORG_ID, 'org', 'id'),
+			self::ORG_NAME => new DevblocksSearchField(self::ORG_NAME, 'org', 'name', $translate->_('crm.opportunity.org_name')),
 			
-			self::NAME => new DevblocksSearchField(self::NAME, 'o', 'name', null, $translate->_('crm.opportunity.name')),
-			self::AMOUNT => new DevblocksSearchField(self::AMOUNT, 'o', 'amount', null, $translate->_('crm.opportunity.amount')),
-			self::CREATED_DATE => new DevblocksSearchField(self::CREATED_DATE, 'o', 'created_date', null, $translate->_('crm.opportunity.created_date')),
-			self::UPDATED_DATE => new DevblocksSearchField(self::UPDATED_DATE, 'o', 'updated_date', null, $translate->_('crm.opportunity.updated_date')),
-			self::CLOSED_DATE => new DevblocksSearchField(self::CLOSED_DATE, 'o', 'closed_date', null, $translate->_('crm.opportunity.closed_date')),
-			self::IS_WON => new DevblocksSearchField(self::IS_WON, 'o', 'is_won', null, $translate->_('crm.opportunity.is_won')),
-			self::IS_CLOSED => new DevblocksSearchField(self::IS_CLOSED, 'o', 'is_closed', null, $translate->_('crm.opportunity.is_closed')),
-			self::WORKER_ID => new DevblocksSearchField(self::WORKER_ID, 'o', 'worker_id', null, $translate->_('crm.opportunity.worker_id')),
+			self::NAME => new DevblocksSearchField(self::NAME, 'o', 'name', $translate->_('crm.opportunity.name')),
+			self::AMOUNT => new DevblocksSearchField(self::AMOUNT, 'o', 'amount', $translate->_('crm.opportunity.amount')),
+			self::CREATED_DATE => new DevblocksSearchField(self::CREATED_DATE, 'o', 'created_date', $translate->_('crm.opportunity.created_date')),
+			self::UPDATED_DATE => new DevblocksSearchField(self::UPDATED_DATE, 'o', 'updated_date', $translate->_('crm.opportunity.updated_date')),
+			self::CLOSED_DATE => new DevblocksSearchField(self::CLOSED_DATE, 'o', 'closed_date', $translate->_('crm.opportunity.closed_date')),
+			self::IS_WON => new DevblocksSearchField(self::IS_WON, 'o', 'is_won', $translate->_('crm.opportunity.is_won')),
+			self::IS_CLOSED => new DevblocksSearchField(self::IS_CLOSED, 'o', 'is_closed', $translate->_('crm.opportunity.is_closed')),
+			self::WORKER_ID => new DevblocksSearchField(self::WORKER_ID, 'o', 'worker_id', $translate->_('crm.opportunity.worker_id')),
 		);
 		
 		// Custom Fields
@@ -1397,7 +1397,7 @@ class SearchFields_CrmOpportunity implements IDevblocksSearchFields {
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
-			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',null,$field->name);
+			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
 		}
 		
 		// Sort by label (translation-conscious)
@@ -1420,7 +1420,7 @@ class Model_CrmOpportunity {
 	public $worker_id;
 };
 
-class C4_CrmOpportunityView extends C4_AbstractView {
+class View_CrmOpportunity extends C4_AbstractView {
 	const DEFAULT_ID = 'crm_opportunities';
 
 	function __construct() {
@@ -1758,7 +1758,7 @@ class CrmOrgOppTab extends Extension_OrgTab {
 		$tpl->assign('org_id', $org_id);
 		
 		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'C4_CrmOpportunityView';
+		$defaults->class_name = 'View_CrmOpportunity';
 		$defaults->id = 'org_opps';
 		$defaults->view_columns = array(
 			SearchFields_CrmOpportunity::EMAIL_ADDRESS,
@@ -1801,7 +1801,7 @@ class CrmTicketOppTab extends Extension_TicketTab {
 		$tpl->assign('address', $address);
 		
 		if(null == ($view = C4_AbstractViewLoader::getView('ticket_opps'))) {
-			$view = new C4_CrmOpportunityView();
+			$view = new View_CrmOpportunity();
 			$view->id = 'ticket_opps';
 		}
 

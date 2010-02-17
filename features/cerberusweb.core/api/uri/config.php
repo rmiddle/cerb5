@@ -113,20 +113,19 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 		// [TODO] This would likely be helpful to the /debug controller
 		
-		if(is_a($rs,'ADORecordSet'))
-		while(!$rs->EOF) {
-			$table_name = $rs->fields['Name'];
-			$table_size_data = intval($rs->fields['Data_length']);
-			$table_size_indexes = intval($rs->fields['Index_length']);
-			$table_size_slack = intval($rs->fields['Data_free']);
+		if($row = mysql_fetch_assoc($rs)) {
+			$table_name = $row['Name'];
+			$table_size_data = intval($row['Data_length']);
+			$table_size_indexes = intval($row['Index_length']);
+			$table_size_slack = intval($row['Data_free']);
 			
 			$total_db_size += $table_size_data + $table_size_indexes;
 			$total_db_data += $table_size_data;
 			$total_db_indexes += $table_size_indexes;
 			$total_db_slack += $table_size_slack;
-			
-			$rs->MoveNext();
 		}
+		
+		mysql_free_result($rs);
 		
 		$sql = "SELECT SUM(file_size) FROM attachment";
 		$total_file_size = intval($db->GetOne($sql));
@@ -148,13 +147,13 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$tpl->assign('response_uri', 'config/attachments');
 
 		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'C4_AttachmentView';
-		$defaults->id = C4_AttachmentView::DEFAULT_ID;
+		$defaults->class_name = 'View_Attachment';
+		$defaults->id = View_Attachment::DEFAULT_ID;
 
-		$view = C4_AbstractViewLoader::getView(C4_AttachmentView::DEFAULT_ID, $defaults);
+		$view = C4_AbstractViewLoader::getView(View_Attachment::DEFAULT_ID, $defaults);
 		$tpl->assign('view', $view);
-		$tpl->assign('view_fields', C4_AttachmentView::getFields());
-		$tpl->assign('view_searchable_fields', C4_AttachmentView::getSearchFields());
+		$tpl->assign('view_fields', View_Attachment::getFields());
+		$tpl->assign('view_searchable_fields', View_Attachment::getSearchFields());
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/attachments/index.tpl');
 	}
@@ -231,10 +230,9 @@ class ChConfigurationPage extends CerberusPageExtension  {
 //			
 //			// Build a hash of valid ids
 //			$valid_ids_set = array();
-//			if(is_a($rs,'ADORecordSet'))
-//			while(!$rs->EOF) {
-//		        $valid_ids_set[intval($rs->fields['id'])] = $rs->fields['filepath'];
-//		        $rs->MoveNext();
+//			
+//			while($row = mysql_fetch_assoc($rs)) {
+//		        $valid_ids_set[intval($row['id'])] = $row['filepath'];
 //			}
 //			
 //			$total_files_db = count($valid_ids_set);
@@ -317,12 +315,12 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = 'workers_cfg';
-		$defaults->class_name = 'C4_WorkerView';
+		$defaults->class_name = 'View_Worker';
 		
 		$view = C4_AbstractViewLoader::getView($defaults->id, $defaults);
 		$tpl->assign('view', $view);
-		$tpl->assign('view_fields', C4_WorkerView::getFields());
-		$tpl->assign('view_searchable_fields', C4_WorkerView::getSearchFields());
+		$tpl->assign('view_fields', View_Worker::getFields());
+		$tpl->assign('view_searchable_fields', View_Worker::getSearchFields());
 		
 		$tpl->assign('license',CerberusLicense::getInstance());
 		
