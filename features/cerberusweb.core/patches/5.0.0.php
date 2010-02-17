@@ -16,18 +16,13 @@ if(isset($tables['setting']) && isset($tables['devblocks_setting'])) {
     unset($tables['setting']);
 }
 
-// ===========================================================================
 // Add the mail_template.team_id to mail_template so we can limit the display of templates based on group ownwership
 
-$columns = $datadict->MetaColumns('mail_template');
-$indexes = $datadict->MetaIndexes('mail_template',false);
+list($columns, $indexes) = $db->metaTable('mail_template');
 
 if(!isset($columns['team_id'])) {
-        $sql = $datadict->AddColumnSQL('mail_template', 'team_id I4 DEFAULT 0 NOTNULL');
-        $datadict->ExecuteSQLArray($sql);
-
-        $sql = $datadict->CreateIndexSQL('team_id','mail_template','team_id');
-        $datadict->ExecuteSQLArray($sql);
+	$db->Execute('ALTER TABLE mail_template ADD COLUMN team_id INT DEFAULT 0 NOT NULL');
+	$db->Execute('ALTER TABLE mail_template ADD INDEX team_id (team_id)');
 }
 
 return TRUE;

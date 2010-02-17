@@ -5822,7 +5822,7 @@ class DAO_MailTemplate extends DevblocksORMHelper {
 			$object->template_type = intval($row['template_type']);
 			$object->owner_id = intval($row['owner_id']);
 			$object->content = $row['content'];
-                        $object->team_id = intval($rs->fields['team_id']);
+			$object->team_id = intval($row['team_id']);
 			$objects[$object->id] = $object;
 		}
 		
