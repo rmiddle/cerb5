@@ -12,5 +12,6 @@
 		$file_prefix = dirname(dirname(__FILE__)) . '/patches';
 		
 		$this->registerPatch(new DevblocksPatch('cerberusweb.timetracking',4,$file_prefix.'/1.0.0.php',''));
+		$this->registerPatch(new DevblocksPatch('cerberusweb.timetracking',5,$file_prefix.'/5.0.0.php',''));
 	}
 };
