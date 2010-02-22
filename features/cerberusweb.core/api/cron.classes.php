@@ -765,7 +765,7 @@ class ImportCron extends CerberusCronPageExtension {
 			if(isset($eMessage->content['content-type'])) { // do we have a content-type?
 				if(strtolower($eMessage->content['content-type']) == 'html') { // html?
 					// Force to plaintext part
-					$sMessageContent = CerberusApplication::stripHTML($sMessageContent);
+					$sMessageContent = DevblocksPlatform::stripHTML($sMessageContent);
 				}
 			}				
 			unset($sMessageContentB64);
@@ -1015,7 +1015,7 @@ class Pop3Cron extends CerberusCronPageExtension {
 		@set_time_limit(0); // Unlimited (if possible)
 		@ini_set('memory_limit','64M');
 
-		$accounts = DAO_Mail::getPop3Accounts(); /* @var $accounts CerberusPop3Account[] */
+		$accounts = DAO_Mail::getPop3Accounts(); /* @var $accounts Model_Pop3Account[] */
 
 		$timeout = ini_get('max_execution_time');
 		
@@ -1030,7 +1030,7 @@ class Pop3Cron extends CerberusCronPageExtension {
 			return;
 		}
 
-		foreach ($accounts as $account) { /* @var $account CerberusPop3Account */
+		foreach ($accounts as $account) { /* @var $account Model_Pop3Account */
 			if(!$account->enabled)
 			continue;
 
