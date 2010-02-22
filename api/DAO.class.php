@@ -540,7 +540,6 @@ class DAO_ViewRss extends DevblocksORMHelper {
 	}
 };
 
-    const SETTING_TICKET_REPLY_STATUS = 'ticket_reply_status';
 class DAO_Mail {
 	// Pop3 Accounts
 	

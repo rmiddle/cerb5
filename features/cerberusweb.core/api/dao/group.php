@@ -350,6 +350,7 @@ class DAO_GroupSettings {
     const SETTING_REPLY_PERSONAL_WITH_WORKER = 'reply_personal_with_worker';
     const SETTING_SUBJECT_HAS_MASK = 'subject_has_mask';
     const SETTING_SUBJECT_PREFIX = 'subject_prefix';
+    const SETTING_TICKET_REPLY_STATUS = 'ticket_reply_status';
     const SETTING_SPAM_THRESHOLD = 'group_spam_threshold';
     const SETTING_SPAM_ACTION = 'group_spam_action';
     const SETTING_SPAM_ACTION_PARAM = 'group_spam_action_param';
