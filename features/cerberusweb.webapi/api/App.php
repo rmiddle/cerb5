@@ -782,8 +782,8 @@ class Rest_AddressesController extends Ch_RestController {
 	
 	private function _sendConfirmation($email,$link) {
 		$settings = DevblocksPlatform::getPluginSettingsService();
-		$from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM);
-		$from_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL);
+		$from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
+		$from_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL,CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
 		
 		$url = DevblocksPlatform::getUrlService();
 		try {
@@ -1534,10 +1534,10 @@ class Rest_MessagesController extends Ch_RestController {
 	}
 	
 	private function _getMessageXML($id) {
-		$message = DAO_Ticket::getMessage($id); /* @var $message Model_Message */
+		$message = DAO_Message::get($id); /* @var $message Model_Message */
 		if(is_null($message))
 			$this->_error("ID $id not valid.");
-		$message_content = DAO_MessageContent::get($id);
+		$message_content = DAO_MessageContent::get($message->storage_extension, $message->storage_key);
 		$message_headers = DAO_MessageHeader::getAll($id);
 		$message_notes = DAO_MessageNote::getByMessageId($id);
 		
@@ -1583,7 +1583,7 @@ class Rest_MessagesController extends Ch_RestController {
 		if(0 == $ticket_id)
 			$this->_error("Ticket ID was not provided.");
 			
-		$messages = DAO_Ticket::getMessagesByTicket($ticket_id);
+		$messages = DAO_Message::getMessagesByTicket($ticket_id);
 		
 		$xml_out = new SimpleXMLElement("<messages></messages>");
 		foreach($messages as $message) {
@@ -1608,7 +1608,7 @@ class Rest_MessagesController extends Ch_RestController {
 //		if(empty($in_id))
 //			$this->_error("ID was not provided.");
 //			
-//		if(null == ($message = DAO_Ticket::getMessage($in_id)))
+//		if(null == ($message = DAO_Message::get($in_id)))
 //			$this->_error("ID not valid.");
 //
 //		$fields = array();

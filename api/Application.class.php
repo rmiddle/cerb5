@@ -48,7 +48,7 @@
  * 		and Joe Geck.
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2010021901);
+define("APP_BUILD", 2010030203);
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -538,7 +538,7 @@ class CerberusApplication extends DevblocksApplication {
 			$group_settings = DAO_GroupSettings::getSettings();
 			
 			// Global sender
-			$from = strtolower($settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM));
+			$from = strtolower($settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM));
 			@$froms[$from] = $from;
 			
 			// Group senders
@@ -621,7 +621,33 @@ class CerberusSettings {
 	const AUTHORIZED_IPS = 'authorized_ips';
 	const LICENSE = 'license';
 	const ACL_ENABLED = 'acl_enabled';
+	const STORAGE_ENGINE_ATTACHMENT = 'storage_attachment';
+	const STORAGE_ENGINE_MESSAGE_CONTENT = 'storage_message_content';
 };
+
+class CerberusSettingsDefaults {
+	const DEFAULT_REPLY_FROM = 'do-not-reply@localhost'; //$_SERVER['SERVER_ADMIN'] 
+	const DEFAULT_REPLY_PERSONAL = ''; 
+	const DEFAULT_SIGNATURE = ''; 
+	const DEFAULT_SIGNATURE_POS = 0; 
+	const HELPDESK_TITLE = 'Cerberus Helpdesk :: Team-based E-mail Management'; 
+	const SMTP_HOST = 'localhost'; 
+	const SMTP_AUTH_ENABLED = 0; 
+	const SMTP_AUTH_USER = ''; 
+	const SMTP_AUTH_PASS = ''; 
+	const SMTP_PORT = 25; 
+	const SMTP_ENCRYPTION_TYPE = 'None';
+	const SMTP_MAX_SENDS = 20;
+	const SMTP_TIMEOUT = 30;
+	const ATTACHMENTS_ENABLED = 1; 
+	const ATTACHMENTS_MAX_SIZE = 10; 
+	const PARSER_AUTO_REQ = 0; 
+	const PARSER_AUTO_REQ_EXCLUDE = ''; 
+	const AUTHORIZED_IPS = '';
+	const ACL_ENABLED = 0;
+	const STORAGE_ENGINE_ATTACHMENT = 'devblocks.storage.engine.disk';
+	const STORAGE_ENGINE_MESSAGE_CONTENT = 'devblocks.storage.engine.database';
+}
 
 // [TODO] This gets called a lot when it happens after the registry cache
 class C4_DevblocksExtensionDelegate implements DevblocksExtensionDelegate {

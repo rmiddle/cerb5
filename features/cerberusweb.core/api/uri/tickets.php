@@ -692,10 +692,6 @@ class ChTicketsPage extends CerberusPageExtension {
             	$params[SearchFields_Ticket::TICKET_SUBJECT] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_SUBJECT,DevblocksSearchCriteria::OPER_LIKE,$query);               
                 break;
                 
-            case "content":
-            	$params[SearchFields_Ticket::TICKET_MESSAGE_CONTENT] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_MESSAGE_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,$query);               
-                break;
-                
             case "org":
 		        if($query && false===strpos($query,'*'))
 		            $query = '*' . $query . '*';
@@ -799,7 +795,7 @@ class ChTicketsPage extends CerberusPageExtension {
 
 		$active_worker = CerberusApplication::getActiveWorker();
 		$worker = DAO_Worker::getAgent($active_worker->id); // Use the most recent info (not session)
-		$sig = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_SIGNATURE,'');
+		$sig = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_SIGNATURE,CerberusSettingsDefaults::DEFAULT_SIGNATURE);
 
 		if(!empty($group->signature)) {
 			$sig = $group->signature;
@@ -834,10 +830,10 @@ class ChTicketsPage extends CerberusPageExtension {
 		    $tpl->assign('ticket', $ticket);
 		}
 		
-		if(null != ($messages = DAO_Ticket::getMessagesByTicket($tid))) {
+		if(null != ($messages = DAO_Message::getMessagesByTicket($tid))) {
 	        if(!empty($messages)) {	    
 		        @$last = array_pop($messages);
-		        @$content = DAO_MessageContent::get($last->id);
+		        @$content = DAO_MessageContent::get($last->storage_extension, $last->storage_key);
 				
 			    $tpl->assign('message', $last);
 			    $tpl->assign('content', $content);
