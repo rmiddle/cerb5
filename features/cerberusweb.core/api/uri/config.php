@@ -212,94 +212,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$view->render();
 		return;
 	}
-		
-//	function doAttachmentsSyncAction() {
-//		if(null != ($active_worker = CerberusApplication::getActiveWorker()) 
-//			&& $active_worker->is_superuser) {
-//				
-//			// Try to grab as many resources as we can
-//			@ini_set('memory_limit','128M');
-//			@set_time_limit(0);
-//			
-//			$db = DevblocksPlatform::getDatabaseService();
-//			$attachment_path = APP_PATH . '/storage/attachments/';
-//			
-//			// Look up all our valid file ids
-//			$sql = sprintf("SELECT id,filepath FROM attachment");
-//			$rs = $db->Execute($sql);
-//			
-//			// Build a hash of valid ids
-//			$valid_ids_set = array();
-//			
-//			while($row = mysql_fetch_assoc($rs)) {
-//		        $valid_ids_set[intval($row['id'])] = $row['filepath'];
-//			}
-//			
-//			$total_files_db = count($valid_ids_set);
-//			
-//			// Get all our attachment hash directories
-//			$dir_handles = glob($attachment_path.'*',GLOB_ONLYDIR|GLOB_NOSORT);
-//			
-//			$orphans = 0;
-//			$checked = 0;
-//			
-//			// Loop through all our hash directories and check that IDs are valid
-//			if(!empty($dir_handles))
-//			foreach($dir_handles as $dir) {
-//		        $dirinfo = pathinfo($dir);
-//		
-//		        if(!is_numeric($dirinfo['basename']))
-//		                continue;
-//		
-//		        if(false == ($dh = opendir($dir)))
-//	                die("Couldn't open " . $dir);
-//		
-//		        while($file = readdir($dh)) {
-//	                // Skip dirs and files we can't change
-//	                if(is_dir($file))
-//                        continue;
-//	
-//	                $info = pathinfo($file);
-//	                $disk_file_id = $info['filename'];
-//	
-//	                // Only numeric filenames are valid
-//	                if(!is_numeric($disk_file_id))
-//                        continue;
-//	
-//	                if(!isset($valid_ids_set[$disk_file_id])) {
-//                        $orphans++;
-//
-//                        //if(DO_DELETE_FILES)
-//						unlink($dir . DIRECTORY_SEPARATOR . $file);
-//	
-//	                } else {
-//                        unset($valid_ids_set[$disk_file_id]);
-//	                }
-//	                $checked++;
-//		        }
-//		        closedir($dh);
-//			}
-//			
-//			$db_orphans = count($valid_ids_set);
-//			
-//	        foreach($valid_ids_set as $db_id => $null) {
-//                $db->Execute(sprintf("DELETE FROM attachment WHERE id = %d", $db_id));
-//	        }
-//			
-//			$tpl = DevblocksPlatform::getTemplateService();
-//			$tpl->assign('path', $this->_TPL_PATH);
-//	        
-//	        $tpl->assign('checked', $checked);
-//	        $tpl->assign('total_files_db', $total_files_db);
-//	        $tpl->assign('orphans', $orphans);
-//	        $tpl->assign('db_orphans', $db_orphans);
-//	        
-//	        $tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/attachments/cleanup_output.tpl');
-//		}
-//
-//		exit;
-//	}
-	
+
 	// Ajax
 	function showTabWorkersAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
@@ -391,8 +304,8 @@ class ChConfigurationPage extends CerberusPageExtension  {
 					// Creating new worker.  If password is empty, email it to them
 				    if(empty($password)) {
 				    	$settings = DevblocksPlatform::getPluginSettingsService();
-						$replyFrom = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM);
-						$replyPersonal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL, '');
+						$replyFrom = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
+						$replyPersonal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL,CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
 						$url = DevblocksPlatform::getUrlService();
 				    	
 						$password = CerberusApplication::generatePassword(8);
@@ -571,18 +484,18 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$settings = DevblocksPlatform::getPluginSettingsService();
 		$mail_service = DevblocksPlatform::getMailService();
 		
-		$smtp_host = $settings->get('cerberusweb.core',CerberusSettings::SMTP_HOST,'');
-		$smtp_port = $settings->get('cerberusweb.core',CerberusSettings::SMTP_PORT,25);
-		$smtp_auth_enabled = $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_ENABLED,false);
+		$smtp_host = $settings->get('cerberusweb.core',CerberusSettings::SMTP_HOST,CerberusSettingsDefaults::SMTP_HOST);
+		$smtp_port = $settings->get('cerberusweb.core',CerberusSettings::SMTP_PORT,CerberusSettingsDefaults::SMTP_PORT);
+		$smtp_auth_enabled = $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_ENABLED,CerberusSettingsDefaults::SMTP_AUTH_ENABLED);
 		if ($smtp_auth_enabled) {
-			$smtp_auth_user = $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_USER,'');
-			$smtp_auth_pass = $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_PASS,''); 
+			$smtp_auth_user = $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_USER,CerberusSettingsDefaults::SMTP_AUTH_USER);
+			$smtp_auth_pass = $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_PASS,CerberusSettingsDefaults::SMTP_AUTH_PASS); 
 		} else {
 			$smtp_auth_user = '';
 			$smtp_auth_pass = ''; 
 		}
-		$smtp_enc = $settings->get('cerberusweb.core',CerberusSettings::SMTP_ENCRYPTION_TYPE,'None');
-		$smtp_max_sends = $settings->get('cerberusweb.core',CerberusSettings::SMTP_MAX_SENDS,'20');
+		$smtp_enc = $settings->get('cerberusweb.core',CerberusSettings::SMTP_ENCRYPTION_TYPE,CerberusSettingsDefaults::SMTP_ENCRYPTION_TYPE);
+		$smtp_max_sends = $settings->get('cerberusweb.core',CerberusSettings::SMTP_MAX_SENDS,CerberusSettingsDefaults::SMTP_MAX_SENDS);
 		
 		$disable_worker_email_to_customer = $settings->get('cerberusweb.core',CerberusSettings::DISABLE_WORKER_EMAIL_TO_CUSTOMER,'0');
 		$tpl->assign('disable_worker_email_to_customer', $disable_worker_email_to_customer);
@@ -1159,7 +1072,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$tpl->assign('workers', $workers);
 		
 		// Permissions enabled
-		$acl_enabled = $settings->get('cerberusweb.core',CerberusSettings::ACL_ENABLED);
+		$acl_enabled = $settings->get('cerberusweb.core',CerberusSettings::ACL_ENABLED,CerberusSettingsDefaults::ACL_ENABLED);
 		$tpl->assign('acl_enabled', $acl_enabled);
 		
 		if(empty($license) || (!empty($license)&&isset($license['a'])))

@@ -306,7 +306,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 
-		$message = DAO_Ticket::getMessage($id);
+		$message = DAO_Message::get($id);
 		$tpl->assign('message', $message);
 		$tpl->assign('message_id', $message->id);
 		
@@ -335,7 +335,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('requesters', $ticket->getRequesters());
 		
 		if(empty($hide)) {
-			$content = DAO_MessageContent::get($id);
+			$content = DAO_MessageContent::get($message->storage_extension, $message->storage_key);
 			$tpl->assign('content', $content);
 			
 			$notes = DAO_MessageNote::getByTicketId($message->ticket_id);
@@ -456,7 +456,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('path', $this->_TPL_PATH);
 		$tpl->assign('id',$id);
 		
-		$message = DAO_Ticket::getMessage($id);
+		$message = DAO_Message::get($id);
 		$ticket = DAO_Ticket::getTicket($message->ticket_id);
 		$tpl->assign('message',$message);
 		$tpl->assign('ticket',$ticket);
@@ -552,7 +552,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('id',$id);
 		$tpl->assign('is_forward',$is_forward);
 		
-		$message = DAO_Ticket::getMessage($id);
+		$message = DAO_Message::get($id);
 		$tpl->assign('message',$message);
 		
 		$ticket = DAO_Ticket::getTicket($message->ticket_id);
@@ -599,7 +599,7 @@ class ChDisplayPage extends CerberusPageExtension {
 	            $signature = $ticket_team->signature;
 			} else {
 			    // [TODO] Default signature
-		        $signature = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_SIGNATURE);
+		        $signature = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_SIGNATURE,CerberusSettingsDefaults::DEFAULT_SIGNATURE);
 			}
 
 			$tpl->assign('signature', str_replace(
@@ -608,7 +608,7 @@ class ChDisplayPage extends CerberusPageExtension {
 			        $signature
 			));
 			
-		    $signature_pos = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_SIGNATURE_POS,0);
+		    $signature_pos = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_SIGNATURE_POS,CerberusSettingsDefaults::DEFAULT_SIGNATURE_POS);
 			$tpl->assign('signature_pos', $signature_pos);
 		}
 		
@@ -1072,7 +1072,7 @@ class ChDisplayPage extends CerberusPageExtension {
 	function doSplitMessageAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
 		
-		if(null == ($orig_message = DAO_Ticket::getMessage($id)))
+		if(null == ($orig_message = DAO_Message::get($id)))
 			return;
 		
 		if(null == ($orig_headers = $orig_message->getHeaders()))
@@ -1081,7 +1081,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		if(null == ($orig_ticket = DAO_Ticket::getTicket($orig_message->ticket_id)))
 			return;
 
-		if(null == ($messages = DAO_Ticket::getMessagesByTicket($orig_message->ticket_id)))
+		if(null == ($messages = DAO_Message::getMessagesByTicket($orig_message->ticket_id)))
 			return;
 			
 		// Create a new ticket

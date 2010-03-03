@@ -121,4 +121,77 @@ if(!isset($columns['team_id'])) {
 	$db->Execute('ALTER TABLE mail_template ADD INDEX team_id (team_id)');
 }
 
+// ===========================================================================
+// Migrate to attachment storage service
+
+list($columns, $indexes) = $db->metaTable('attachment');
+
+if(isset($columns['filepath'])) {
+	$db->Execute("ALTER TABLE attachment CHANGE COLUMN filepath storage_key VARCHAR(255) DEFAULT '' NOT NULL");
+}
+
+if(!isset($columns['storage_extension'])) {
+	$db->Execute("ALTER TABLE attachment ADD COLUMN storage_extension VARCHAR(255) DEFAULT '' NOT NULL");
+	$db->Execute("UPDATE attachment SET storage_extension='devblocks.storage.engine.disk' WHERE storage_extension=''");
+}
+
+// ===========================================================================
+// Migrate message content to storage service
+
+if(isset($tables['message_content'])) {
+	$storage = DevblocksPlatform::getStorageService('devblocks.storage.engine.database');
+	$ns = 'message_content';
+	
+	$count = $db->GetOne('SELECT COUNT(message_id) FROM message_content');
+	
+	if(!empty($count)) {
+		// Make sure the table exists in namespace by put+delete
+		$key = $storage->put($ns, 0, '');
+		$storage->delete($ns, $key);
+		
+		// Mass move messages
+		$db->Execute("INSERT IGNORE INTO storage_message_content (id, data) SELECT message_id, content FROM message_content");
+	}
+	
+	// [TODO] Delete from message_content WHERE (message_content.message_id INNER JOIN storage_message_content.id)
+	
+	// Drop 'message_content' table
+	$count = $db->GetOne('SELECT COUNT(message_id) FROM message_content');
+	$storage_count = $db->GetOne('SELECT COUNT(id) FROM storage_message_content');
+	
+	if($count == $storage_count) {
+		// Drop table
+		$db->Execute('DROP TABLE message_content');
+	} else {
+		die(sprintf("[cerberusweb.core:5.0.0] ERROR: Can't match counts from 'message_content' (%d) to 'storage_message_content' (%d).",
+			$count,
+			$storage_count
+		));
+	}
+}
+
+// Add storage columns to 'message'
+list($columns, $indexes) = $db->metaTable('message');
+
+if(!isset($columns['storage_extension'])) {
+	$db->Execute("ALTER TABLE message ADD COLUMN storage_extension VARCHAR(255) DEFAULT '' NOT NULL");
+	$db->Execute("ALTER TABLE message ADD INDEX storage_extension (storage_extension)");
+}
+$db->Execute("UPDATE message SET storage_extension='devblocks.storage.engine.database' WHERE storage_extension=''");
+
+if(!isset($columns['storage_key'])) {
+	$db->Execute("ALTER TABLE message ADD COLUMN storage_key VARCHAR(255) DEFAULT '' NOT NULL");
+}
+$db->Execute("UPDATE message SET storage_key=id WHERE storage_key = '' AND storage_extension='devblocks.storage.engine.database'");
+
+// ===========================================================================
+// Enable storage manager scheduled task and give defaults
+
+if(null != ($cron = DevblocksPlatform::getExtension('cron.storage', true, true))) {
+	$cron->setParam(CerberusCronPageExtension::PARAM_ENABLED, true);
+	$cron->setParam(CerberusCronPageExtension::PARAM_DURATION, '5');
+	$cron->setParam(CerberusCronPageExtension::PARAM_TERM, 'm');
+	$cron->setParam(CerberusCronPageExtension::PARAM_LASTRUN, strtotime('Yesterday'));
+}
+
 return TRUE;
