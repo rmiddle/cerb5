@@ -412,71 +412,6 @@ class DAO_Ticket extends C4_ORMHelper {
 	    );
 	}
 	
-	/**
-	 * @return Model_Message[]
-	 */
-	static function getMessagesByTicket($ticket_id) {
-		$db = DevblocksPlatform::getDatabaseService();
-		$messages = array();
-		
-		$sql = sprintf("SELECT m.id , m.ticket_id, m.created_date, m.address_id, m.is_outgoing, m.worker_id ".
-			"FROM message m ".
-			"WHERE m.ticket_id = %d ".
-			"ORDER BY m.created_date ASC ",
-			$ticket_id
-		);
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
-		
-		while($row = mysql_fetch_assoc($rs)) {
-			$message = new Model_Message();
-			$message->id = intval($row['id']);
-			$message->ticket_id = intval($row['ticket_id']);
-			$message->created_date = intval($row['created_date']);
-			$message->address_id = intval($row['address_id']);
-			$message->is_outgoing = intval($row['is_outgoing']);
-			$message->worker_id = intval($row['worker_id']);
-			
-			$messages[$message->id] = $message;
-		}
-		
-		mysql_free_result($rs);
-
-		return $messages;
-	}
-	
-	/**
-	 * Enter description here...
-	 *
-	 * @param integer $id message id
-	 * @return Model_Message
-	 */
-	static function getMessage($id) {
-		$db = DevblocksPlatform::getDatabaseService();
-		$message = null;
-		
-		$sql = sprintf("SELECT m.id , m.ticket_id, m.created_date, m.address_id, m.is_outgoing, m.worker_id ".
-			"FROM message m ".
-			"WHERE m.id = %d ".
-			"ORDER BY m.created_date ASC ",
-			$id
-		);
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
-		
-		if($row = mysql_fetch_assoc($rs)) {
-			$message = new Model_Message();
-			$message->id = intval($row['id']);
-			$message->ticket_id = intval($row['ticket_id']);
-			$message->created_date = intval($row['created_date']);
-			$message->address_id = intval($row['address_id']);
-			$message->is_outgoing = intval($row['is_outgoing']);
-			$message->worker_id = intval($row['worker_id']);
-		}
-		
-		mysql_free_result($rs);
-
-		return $message;
-	}
-	
 	static function getRequestersByTicket($ticket_id) {
 		$db = DevblocksPlatform::getDatabaseService();
 		$addresses = array();
@@ -559,7 +494,6 @@ class DAO_Ticket extends C4_ORMHelper {
 				
 				(isset($tables['msg']) || isset($tables['mc']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
 				(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " "). // [TODO] Choose between first message and all?
-				(isset($tables['mc']) ? "INNER JOIN message_content mc ON (mc.message_id=msg.id) " : " ").
 				(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
 				(isset($tables['ra']) ? "INNER JOIN address ra ON (ra.id=r.address_id) " : " ").
 				
@@ -595,7 +529,6 @@ class DAO_Ticket extends C4_ORMHelper {
 				
 				(isset($tables['msg']) || isset($tables['mc']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
 				(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " "). // [TODO] Choose between first message and all?
-				(isset($tables['mc']) ? "INNER JOIN message_content mc ON (mc.message_id=msg.id) " : " ").
 				(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
 				(isset($tables['ra']) ? "INNER JOIN address ra ON (ra.id=r.address_id) " : " ").
 				
@@ -638,7 +571,6 @@ class DAO_Ticket extends C4_ORMHelper {
 				
 				(isset($tables['msg']) || isset($tables['mc']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
 				(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " "). // [TODO] Choose between first message and all?
-				(isset($tables['mc']) ? "INNER JOIN message_content mc ON (mc.message_id=msg.id) " : " ").
 				(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
 				(isset($tables['ra']) ? "INNER JOIN address ra ON (ra.id=r.address_id) " : " ").
 				
@@ -673,7 +605,6 @@ class DAO_Ticket extends C4_ORMHelper {
 					
 					(isset($tables['msg']) || isset($tables['mc']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
 					(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " "). // [TODO] Choose between first message and all?
-					(isset($tables['mc']) ? "INNER JOIN message_content mc ON (mc.message_id=msg.id) " : " ").
 					(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
 					(isset($tables['ra']) ? "INNER JOIN address ra ON (ra.id=r.address_id) " : " ").
 					
@@ -725,7 +656,6 @@ class DAO_Ticket extends C4_ORMHelper {
 				
 				(isset($tables['msg']) || isset($tables['mc']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
 				(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " "). // [TODO] Choose between first message and all?
-				(isset($tables['mc']) ? "INNER JOIN message_content mc ON (mc.message_id=msg.id) " : " ").
 				(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
 				(isset($tables['ra']) ? "INNER JOIN address ra ON (ra.id=r.address_id) " : " ").
 				
@@ -892,8 +822,7 @@ class DAO_Ticket extends C4_ORMHelper {
 			(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id) " : " ").
 			(isset($tables['ra']) ? "INNER JOIN address ra ON (ra.id=r.address_id) " : " ").
 			(isset($tables['msg']) || isset($tables['mc']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
-			(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " "). // [TODO] Choose between first message and all?
-			(isset($tables['mc']) ? "INNER JOIN message_content mc ON (mc.message_id=msg.id) " : " ")
+			(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " ") // [TODO] Choose between first message and all?
 			;
 			
 		// Org joins
@@ -981,14 +910,9 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 	const TICKET_TEAM_ID = 't_team_id';
 	const TICKET_CATEGORY_ID = 't_category_id';
 	
-	// Message
-//	const MESSAGE_CONTENT = 'msg_content';
-	
 	const TICKET_MESSAGE_HEADER = 'mh_header_name';
     const TICKET_MESSAGE_HEADER_VALUE = 'mh_header_value';	
 
-	const TICKET_MESSAGE_CONTENT = 'mc_content';
-    
 	// Sender
 	const SENDER_ADDRESS = 'a1_address';
 	
@@ -1019,8 +943,6 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 
 			self::ORG_NAME => new DevblocksSearchField(self::ORG_NAME, 'o', 'name', $translate->_('contact_org.name')),
 			self::REQUESTER_ADDRESS => new DevblocksSearchField(self::REQUESTER_ADDRESS, 'ra', 'email',$translate->_('ticket.requester')),
-			
-			self::TICKET_MESSAGE_CONTENT => new DevblocksSearchField(self::TICKET_MESSAGE_CONTENT, 'mc', 'content', $translate->_('message.content')),
 			
 			self::TICKET_TEAM_ID => new DevblocksSearchField(self::TICKET_TEAM_ID,'t','team_id',$translate->_('common.group')),
 			self::TICKET_CATEGORY_ID => new DevblocksSearchField(self::TICKET_CATEGORY_ID, 't', 'category_id',$translate->_('common.bucket')),
@@ -1093,7 +1015,7 @@ class Model_Ticket {
 	function Model_Ticket() {}
 
 	function getMessages() {
-		$messages = DAO_Ticket::getMessagesByTicket($this->id);
+		$messages = DAO_Message::getMessagesByTicket($this->id);
 		return $messages;
 	}
 
@@ -1207,10 +1129,6 @@ class View_Ticket extends C4_AbstractView {
 				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__string.tpl');
 				break;
 
-			case SearchFields_Ticket::TICKET_MESSAGE_CONTENT:
-				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__fulltext.tpl');
-				break;
-				
 			case SearchFields_Ticket::TICKET_FIRST_WROTE_SPAM:
 			case SearchFields_Ticket::TICKET_FIRST_WROTE_NONSPAM:
 				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__number.tpl');
@@ -1375,7 +1293,6 @@ class View_Ticket extends C4_AbstractView {
 
 	static function getColumns() {
 		$fields = self::getFields();
-		unset($fields[SearchFields_Ticket::TICKET_MESSAGE_CONTENT]);
 		unset($fields[SearchFields_Ticket::REQUESTER_ID]);
 		unset($fields[SearchFields_Ticket::REQUESTER_ADDRESS]);
 		unset($fields[SearchFields_Ticket::TICKET_UNLOCK_DATE]);
@@ -1403,10 +1320,6 @@ class View_Ticket extends C4_AbstractView {
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
 
-			case SearchFields_Ticket::TICKET_MESSAGE_CONTENT:
-				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
-				break;
-				
 			case SearchFields_Ticket::TICKET_WAITING:
 			case SearchFields_Ticket::TICKET_DELETED:
 			case SearchFields_Ticket::TICKET_CLOSED:
