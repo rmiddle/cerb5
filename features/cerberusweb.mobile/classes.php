@@ -303,7 +303,7 @@ class ChMobileDisplayPage  extends CerberusMobilePageExtension  {
 		if (0 == strcasecmp($message_id, 'full')) {
 			$tpl->display('file:' . dirname(__FILE__) . '/templates/display.tpl');
 		} else {
-			$message = DAO_Ticket::getMessage($message_id);
+			$message = DAO_Message::get($message_id);
 			if (empty($message))
 				$message = array_pop($ticket->getMessages());
 			$tpl->assign('message', $message);
@@ -466,10 +466,6 @@ class ChMobileTicketsPage extends CerberusMobilePageExtension  {
 			                
 			            case "subject":
 			                $params[SearchFields_Ticket::TICKET_SUBJECT] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_SUBJECT,DevblocksSearchCriteria::OPER_LIKE,$query);               
-			                break;
-			                
-			            case "content":
-			                $params[SearchFields_Ticket::TICKET_MESSAGE_CONTENT] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_MESSAGE_CONTENT,DevblocksSearchCriteria::OPER_LIKE,$query);               
 			                break;
 					}
 				}

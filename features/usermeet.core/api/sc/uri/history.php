@@ -83,9 +83,12 @@ class UmScHistoryController extends Extension_UmScController {
 				SearchFields_Ticket::TICKET_CLOSED,
 			);
 			$view->params = array(
+//				array(
+//					DevblocksSearchCriteria::GROUP_OR,
+//					new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_MESSAGE_CONTENT,DevblocksSearchCriteria::OPER_LIKE,$q),
+//					new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_MASK,DevblocksSearchCriteria::OPER_LIKE,$q.'%'),
+//				),
 				array(
-					DevblocksSearchCriteria::GROUP_OR,
-					new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_MESSAGE_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,$q),
 					new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_MASK,DevblocksSearchCriteria::OPER_LIKE,$q.'%'),
 				),
 				new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_FIRST_WROTE_ID,'=',$active_user->id),
@@ -115,7 +118,7 @@ class UmScHistoryController extends Extension_UmScController {
 			
 			// Security check (mask compare)
 			if(0 == strcasecmp($ticket[SearchFields_Ticket::TICKET_MASK],$mask)) {
-				$messages = DAO_Ticket::getMessagesByTicket($ticket[SearchFields_Ticket::TICKET_ID]);
+				$messages = DAO_Message::getMessagesByTicket($ticket[SearchFields_Ticket::TICKET_ID]);
 				$messages = array_reverse($messages, true);
 				$attachments = array();						
 				
@@ -212,14 +215,14 @@ class UmScHistoryController extends Extension_UmScController {
 		);
 		$ticket = array_shift($tickets);
 		
-		$messages = DAO_Ticket::getMessagesByTicket($ticket[SearchFields_Ticket::TICKET_ID]);
+		$messages = DAO_Message::getMessagesByTicket($ticket[SearchFields_Ticket::TICKET_ID]);
 		$last_message = array_pop($messages); /* @var $last_message Model_Message */
 		$last_message_headers = $last_message->getHeaders();
 		unset($messages);
 
 		// Helpdesk settings
 		$settings = DevblocksPlatform::getPluginSettingsService();
-		$global_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,null);
+		$global_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
 		
 		// Ticket group settings
 		$group_id = $ticket[SearchFields_Ticket::TICKET_TEAM_ID];

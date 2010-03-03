@@ -153,8 +153,8 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 		$mailer = null; // lazy load
     		
     	$settings = DevblocksPlatform::getPluginSettingsService();
-		$default_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, '');
-		$default_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL, '');
+		$default_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
+		$default_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL, CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
 
 		if(null == ($ticket = DAO_Ticket::getTicket($ticket_id)))
 			return;
@@ -281,8 +281,8 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 		$mailer = null; // lazy load
     		
     	$settings = DevblocksPlatform::getPluginSettingsService();
-		$default_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, '');
-		$default_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL, '');
+		$default_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
+		$default_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL, CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
 
 		// Loop through all assigned tickets
 		$tickets = DAO_Ticket::getTickets($ticket_ids);
@@ -422,7 +422,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 			return;
 		
 		// [TODO] This could be more efficient
-		$messages = DAO_Ticket::getMessagesByTicket($ticket_id);
+		$messages = DAO_Message::getMessagesByTicket($ticket_id);
 		$message = end($messages); // last message
 		unset($messages);
 		$headers = $message->getHeaders();
@@ -430,7 +430,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 		// The whole flipping Swift section needs wrapped to catch exceptions
 		try {
 			$settings = DevblocksPlatform::getPluginSettingsService();
-			$reply_to = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, '');
+			$reply_to = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
 			
 			// See if we need a group-specific reply-to
 			if(!empty($ticket->team_id)) {
@@ -467,13 +467,13 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 				if(0 == strcasecmp($attachment->display_name,'original_message.html'))
 					continue;
 					
-				$attachment_path = APP_STORAGE_PATH . '/attachments/'; // [TODO] This is highly redundant in the codebase
-				if(!file_exists($attachment_path . $attachment->filepath))
-					continue;
+				$storage = DevblocksPlatform::getStorageService($attachment->storage_extension);
+				$contents = $storage->get('attachments',$attachment->storage_key);
 				
-				$attach = Swift_Attachment::fromPath($attachment_path . $attachment->filepath);
-				if(!empty($attachment->display_name))
-					$attach->setFilename($attachment->display_name);
+				if(empty($contents))
+					continue;
+
+				$attach = Swift_Attachment::newInstance($contents, $attachment->display_name, $attachment->mime_type);
 				$mime_attachments[] = $attach;
 			}
 	    	
@@ -1525,7 +1525,7 @@ class Model_WatcherMailFilter {
 		$ticket_group_id = $ticket->team_id;
 		
 		// [TODO] These expensive checks should only populate when needed
-		$messages = DAO_Ticket::getMessagesByTicket($ticket->id);
+		$messages = DAO_Message::getMessagesByTicket($ticket->id);
 		$message_headers = array();
 
 		if(empty($messages))
