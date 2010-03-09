@@ -296,10 +296,7 @@ class CerberusMail {
 		));
 		
 		// Content
-	    $storage_key = DAO_MessageContent::set($storage_service, $message_id, $content);
-	    DAO_Message::update($message_id, array(
-	    	DAO_Message::STORAGE_KEY => $storage_key,
-	    ));
+		Storage_MessageContent::put($message_id, $content);
 
 		// Set recipients to requesters
 		foreach($toList as $to) {
@@ -315,8 +312,6 @@ class CerberusMail {
 		}
 		
 		// add files to ticket
-		$storage_extension = DevblocksPlatform::getPluginSetting('cerberusweb.core', CerberusSettings::STORAGE_ENGINE_ATTACHMENT, CerberusSettingsDefaults::STORAGE_ENGINE_ATTACHMENT);
-		
 		if (is_array($files) && !empty($files)) {
 			reset($files);
 			foreach ($files['tmp_name'] as $idx => $file) {
@@ -327,8 +322,6 @@ class CerberusMail {
 					DAO_Attachment::MESSAGE_ID => $message_id,
 					DAO_Attachment::DISPLAY_NAME => $files['name'][$idx],
 					DAO_Attachment::MIME_TYPE => $files['type'][$idx],
-					DAO_Attachment::FILE_SIZE => filesize($file),
-					DAO_Attachment::STORAGE_EXTENSION => $storage_extension,
 				);
 				$file_id = DAO_Attachment::create($fields);
 
@@ -605,11 +598,9 @@ class CerberusMail {
 			if(!empty($forward_files) && is_array($forward_files)) {
 				foreach($forward_files as $file_id) {
 					$attachment = DAO_Attachment::get($file_id);
-
-					$storage = DevblocksPlatform::getStorageService($attachment->storage_extension);
-					$contents = $storage->get('attachments', $attachment->storage_key);
-					
+					$contents = $attachment->getFileContents();
 					$mail->attach(Swift_Attachment::newInstance($contents, $attachment->display_name, $attachment->mime_type));
+					//unset($contents); // [TODO] ?
 				}
 			}
 			
@@ -661,11 +652,7 @@ class CerberusMail {
 			$message_id = DAO_Message::create($fields);
 		    
 			// Content
-		    $storage_key = DAO_MessageContent::set($storage_service, $message_id, $content);
-		    
-			DAO_Message::update($message_id, array(
-				DAO_Message::STORAGE_KEY => $storage_key,
-			));
+			Storage_MessageContent::put($message_id, $content);
 		    
 			$headers = $mail->getHeaders();
 			
@@ -679,7 +666,6 @@ class CerberusMail {
 		    
 			// Attachments
 			$storage_extension = DevblocksPlatform::getPluginSetting('cerberusweb.core', CerberusSettings::STORAGE_ENGINE_ATTACHMENT, CerberusSettingsDefaults::STORAGE_ENGINE_ATTACHMENT);
-			
 			if (is_array($files) && !empty($files)) {
 				reset($files);
 				foreach ($files['tmp_name'] as $idx => $file) {
@@ -691,20 +677,13 @@ class CerberusMail {
 						DAO_Attachment::MESSAGE_ID => $message_id,
 						DAO_Attachment::DISPLAY_NAME => $files['name'][$idx],
 						DAO_Attachment::MIME_TYPE => $files['type'][$idx],
-						DAO_Attachment::FILE_SIZE => filesize($file),
-						DAO_Attachment::STORAGE_EXTENSION => $storage_extension,
 					);
 					$file_id = DAO_Attachment::create($fields);
 
-					// Save to storage
-					$storage = DevblocksPlatform::getStorageService($storage_extension);
-					$storage_key = $storage->put('attachments', $file_id, file_get_contents($file));
+					$contents = file_get_contents($file);
 		            @unlink($file);
-				    
-		            // Update storage key
-				    DAO_Attachment::update($file_id, array(
-				        DAO_Attachment::STORAGE_KEY => $storage_key
-				    ));
+		            
+		            Storage_Attachments::put($file_id, $contents);
 				}
 			}
 			
