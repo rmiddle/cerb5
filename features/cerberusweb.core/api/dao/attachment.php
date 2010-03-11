@@ -315,8 +315,8 @@ class Model_Attachment {
 	public $storage_size = 0;
 	public $storage_profile_id;
 
-	public function getFileContents() {
-		return Storage_Attachments::get($this);
+	public function getFileContents(&$fp=null) {
+		return Storage_Attachments::get($this, $fp);
 	}
 };
 
@@ -373,7 +373,7 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 	 * @param Model_Attachment | $attachment_id
 	 * @return unknown_type
 	 */
-	public static function get($object) {
+	public static function get($object, &$fp=null) {
 		if($object instanceof Model_Attachment) {
 			// Do nothing
 		} elseif(is_numeric($object)) {
@@ -389,7 +389,7 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 		$profile = !empty($object->storage_profile_id) ? $object->storage_profile_id : $object->storage_extension;
 		
 		$storage = DevblocksPlatform::getStorageService($profile);
-		return $storage->get('attachments', $key);
+		return $storage->get('attachments', $key, $fp);
 	}
 	
 	public static function put($id, $contents, $profile=null) {
@@ -410,13 +410,21 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 		// Save to storage
 		if(false === ($storage_key = $storage->put('attachments', $id, $contents)))
 			return false;
+			
+		if(is_resource($contents)) {
+			$stats = fstat($contents);
+			$storage_size = $stats['size'];
+		} else {
+			$storage_size = strlen($contents);
+			unset($contents);
+		}
 	    
 		// Update storage key
 	    DAO_Attachment::update($id, array(
 	        DAO_Attachment::STORAGE_EXTENSION => $storage->manifest->id,
 	        DAO_Attachment::STORAGE_PROFILE_ID => $profile_id,
 	        DAO_Attachment::STORAGE_KEY => $storage_key,
-        	DAO_Attachment::STORAGE_SIZE => strlen($contents),
+        	DAO_Attachment::STORAGE_SIZE => $storage_size,
 	    ));
 	    
 	    return $storage_key;
@@ -449,9 +457,6 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 	
 	public static function archive($stop_time=null) {
 		$db = DevblocksPlatform::getDatabaseService();
-		$logger = DevblocksPlatform::getConsoleLog();
-
-		$ns = 'attachments';
 		
 		// Params
 		$dst_profile = DAO_DevblocksStorageProfile::get(DAO_DevblocksExtensionPropertyStore::get(self::ID, 'archive_storage_profile'));
@@ -461,7 +466,7 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 			return;
 		
 		// Find inactive attachments
-		$sql = sprintf("SELECT attachment.id, attachment.storage_extension, attachment.storage_key, attachment.storage_profile_id ".
+		$sql = sprintf("SELECT attachment.id, attachment.storage_extension, attachment.storage_key, attachment.storage_profile_id, attachment.storage_size ".
 			"FROM attachment ".
 			"INNER JOIN message ON (message.id=attachment.message_id) ".
 			"INNER JOIN ticket ON (ticket.id=message.ticket_id) ".
@@ -476,83 +481,16 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 		$rs = $db->Execute($sql);
 		
 		while($row = mysql_fetch_assoc($rs)) {
-			$src_key = $row['storage_key'];
-			$src_id = $row['id'];
-			
-			$src_profile = new Model_DevblocksStorageProfile();
-			$src_profile->id = $row['storage_profile_id'];
-			$src_profile->extension_id = $row['storage_extension'];
-			
-			if(empty($src_key) || empty($src_id)  
-				|| !$src_profile instanceof Model_DevblocksStorageProfile
-				|| !$dst_profile instanceof Model_DevblocksStorageProfile
-				)
-				continue;
-			
-			$src_engine = DevblocksPlatform::getStorageService(!empty($src_profile->id) ? $src_profile->id : $src_profile->extension_id);
-			
-			$logger->info(sprintf("[Storage] Archiving %s %d from (%s) to (%s)...",
-				$ns,
-				$src_id,
-				$src_profile->extension_id,
-				$dst_profile->extension_id
-			));
-			
-			if(false === ($data = $src_engine->get($ns, $src_key))) {
-				$logger->error(sprintf("[Storage] Error reading %s key (%s) from (%s)",
-					$ns,
-					$src_key,
-					$src_profile->extension_id
-				));
-				continue;
-			}
-		
-			$logger->info(sprintf("[Storage] Loaded %d bytes of data from (%s)...",
-				strlen($data),
-				$src_profile->extension_id
-			));
-			
-			if(false === ($dst_key = self::put($src_id, $data, $dst_profile))) {
-				$logger->error(sprintf("[Storage] Error saving %s %d to (%s)",
-					$ns,
-					$src_id,
-					$dst_profile->extension_id
-				));
-				unset($data);
-				continue;
-			}
-			
-			$logger->info(sprintf("[Storage] Saved %s %d to destination (%s) as key (%s)...",
-				$ns,
-				$src_id,
-				$dst_profile->extension_id,
-				$dst_key
-			));
-			
-			// Free mem
-			unset($data);
-			
-			$src_engine->delete($ns, $src_key);
-			$logger->info(sprintf("[Storage] Deleted %s %d from source (%s)...",
-				$ns,
-				$src_id,
-				$src_profile->extension_id
-			));
-			
-			$logger->info(''); // blank
+			self::_migrate($dst_profile, $row);
 
 			if(time() > $stop_time)
 				return;
 		}
-		
 	}
 	
 	public static function unarchive($stop_time=null) {
-		$logger = DevblocksPlatform::getConsoleLog();
 		$db = DevblocksPlatform::getDatabaseService();
 
-		$ns = 'attachments';
-		
 		// Params
 		$dst_profile = DAO_DevblocksStorageProfile::get(DAO_DevblocksExtensionPropertyStore::get(self::ID, 'active_storage_profile'));
 		$archive_after_days = DAO_DevblocksExtensionPropertyStore::get(self::ID, 'archive_after_days');
@@ -561,7 +499,7 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 			return;
 		
 		// Find active attachments
-		$sql = sprintf("SELECT attachment.id, attachment.storage_extension, attachment.storage_key, attachment.storage_profile_id ".
+		$sql = sprintf("SELECT attachment.id, attachment.storage_extension, attachment.storage_key, attachment.storage_profile_id, attachment.storage_size ".
 			"FROM attachment ".
 			"INNER JOIN message ON (message.id=attachment.message_id) ".
 			"INNER JOIN ticket ON (ticket.id=message.ticket_id) ".
@@ -576,30 +514,48 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 		$rs = $db->Execute($sql);
 		
 		while($row = mysql_fetch_assoc($rs)) {
-			$src_key = $row['storage_key'];
-			$src_id = $row['id'];
-			
-			$src_profile = new Model_DevblocksStorageProfile();
-			$src_profile->id = $row['storage_profile_id'];
-			$src_profile->extension_id = $row['storage_extension'];
-			
-			if(!empty($src_profile->id))
-			
-			if(empty($src_key) || empty($src_id)  
-				|| !$src_profile instanceof Model_DevblocksStorageProfile
-				|| !$dst_profile instanceof Model_DevblocksStorageProfile
-				)
-				continue;
-			
-			$src_engine = DevblocksPlatform::getStorageService(!empty($src_profile->id) ? $src_profile->id : $src_profile->extension_id);
-			
-			$logger->info(sprintf("[Storage] Unarchiving %s %d from (%s) to (%s)...",
-				$ns,
-				$src_id,
-				$src_profile->extension_id,
-				$dst_profile->extension_id
-			));
-			
+			self::_migrate($dst_profile, $row, true);
+
+			if(time() > $stop_time)
+				return;
+		}
+	}
+	
+	private static function _migrate($dst_profile, $row, $is_unarchive=false) {
+		$logger = DevblocksPlatform::getConsoleLog();
+		
+		$ns = 'attachments';
+		
+		$src_key = $row['storage_key'];
+		$src_id = $row['id'];
+		$src_size = $row['storage_size'];
+		
+		$src_profile = new Model_DevblocksStorageProfile();
+		$src_profile->id = $row['storage_profile_id'];
+		$src_profile->extension_id = $row['storage_extension'];
+		
+		if(empty($src_key) || empty($src_id)  
+			|| !$src_profile instanceof Model_DevblocksStorageProfile
+			|| !$dst_profile instanceof Model_DevblocksStorageProfile
+			)
+			return;
+		
+		$src_engine = DevblocksPlatform::getStorageService(!empty($src_profile->id) ? $src_profile->id : $src_profile->extension_id);
+		
+		$logger->info(sprintf("[Storage] %s %s %d (%d bytes) from (%s) to (%s)...",
+			(($is_unarchive) ? 'Unarchiving' : 'Archiving'),
+			$ns,
+			$src_id,
+			$src_size,
+			$src_profile->extension_id,
+			$dst_profile->extension_id
+		));
+
+		// Do as quicker strings if under 1MB?
+		$is_small = ($src_size < 1000000) ? true : false;  
+		
+		// Allocate a temporary file for retrieving content
+		if($is_small) {
 			if(false === ($data = $src_engine->get($ns, $src_key))) {
 				$logger->error(sprintf("[Storage] Error reading %s key (%s) from (%s)",
 					$ns,
@@ -608,12 +564,31 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 				));
 				continue;
 			}
-			
-			$logger->info(sprintf("[Storage] Loaded %d bytes of data from (%s)...",
-				strlen($data),
-				$src_profile->extension_id
-			));
-			
+		} else {
+			$fp_in = DevblocksPlatform::getTempFile();
+			if(false === $src_engine->get($ns, $src_key, $fp_in)) {
+				$logger->error(sprintf("[Storage] Error reading %s key (%s) from (%s)",
+					$ns,
+					$src_key,
+					$src_profile->extension_id
+				));
+				continue;
+			}
+		}
+
+		if($is_small) {
+			$loaded_size = strlen($data);
+		} else {
+			$stats_in = fstat($fp_in);
+			$loaded_size = $stats_in['size'];
+		}
+		
+		$logger->info(sprintf("[Storage] Loaded %d bytes of data from (%s)...",
+			$loaded_size,
+			$src_profile->extension_id
+		));
+		
+		if($is_small) {
 			if(false === ($dst_key = self::put($src_id, $data, $dst_profile))) {
 				$logger->error(sprintf("[Storage] Error saving %s %d to (%s)",
 					$ns,
@@ -623,29 +598,41 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 				unset($data);
 				continue;
 			}
-			
-			$logger->info(sprintf("[Storage] Saved %s %d to destination (%s) as key (%s)...",
-				$ns,
-				$src_id,
-				$dst_profile->extension_id,
-				$dst_key
-			));
-			
-			// Free mem
-			unset($data);
-			
-			$src_engine->delete($ns, $src_key);
-			$logger->info(sprintf("[Storage] Deleted %s %d from source (%s)...",
-				$ns,
-				$src_id,
-				$src_profile->extension_id
-			));
-			
-			$logger->info(''); // blank
-
-			if(time() > $stop_time)
-				return;
+		} else {
+			if(false === ($dst_key = self::put($src_id, $fp_in, $dst_profile))) {
+				$logger->error(sprintf("[Storage] Error saving %s %d to (%s)",
+					$ns,
+					$src_id,
+					$dst_profile->extension_id
+				));
+				fclose($fp_in);
+				continue;
+			}
 		}
+		
+		$logger->info(sprintf("[Storage] Saved %s %d to destination (%s) as key (%s)...",
+			$ns,
+			$src_id,
+			$dst_profile->extension_id,
+			$dst_key
+		));
+		
+		// Free resources
+		if($is_small) {
+			unset($data);
+		} else {
+			@unlink(DevblocksPlatform::getTempFileInfo($fp_in));
+			fclose($fp_in);
+		}
+		
+		$src_engine->delete($ns, $src_key);
+		$logger->info(sprintf("[Storage] Deleted %s %d from source (%s)...",
+			$ns,
+			$src_id,
+			$src_profile->extension_id
+		));
+		
+		$logger->info(''); // blank
 	}
 };
 
