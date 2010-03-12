@@ -48,7 +48,7 @@
  * 		and Joe Geck.
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2010030801);
+define("APP_BUILD", 2010031104);
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -158,10 +158,6 @@ class CerberusApplication extends DevblocksApplication {
 		
 		if(!is_writeable(APP_STORAGE_PATH . "/import/new")) {
 			$errors[] = APP_STORAGE_PATH . "/import/new/" ." is not writeable by the webserver.  Please adjust permissions and reload this page.";
-		}
-		
-		if(!is_writeable(APP_STORAGE_PATH . "/attachments/")) {
-			$errors[] = APP_STORAGE_PATH . "/attachments/" ." is not writeable by the webserver.  Please adjust permissions and reload this page.";
 		}
 		
 		if(!is_writeable(APP_STORAGE_PATH . "/mail/new/")) {
