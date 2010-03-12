@@ -103,6 +103,34 @@ class CerberusMail {
 	}
 
 	static function compose($properties) {
+	
+		@$team_id = 
+		$worker = CerberusApplication::getActiveWorker();
+		
+		$settings = DevblocksPlatform::getPluginSettingsService();
+		$default_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
+		$default_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL,CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
+		
+		$team_from = DAO_GroupSettings::get($properties['team_id'];,DAO_GroupSettings::SETTING_REPLY_FROM,'');
+		$team_personal = DAO_GroupSettings::get($properties['team_id'];,DAO_GroupSettings::SETTING_REPLY_PERSONAL,'');
+		$team_personal_with_worker = DAO_GroupSettings::get($properties['team_id'];,DAO_GroupSettings::SETTING_REPLY_PERSONAL_WITH_WORKER,0);
+		
+		$properties['from'] = !empty($team_from) ? $team_from : $default_from;
+		$properties['personal'] = !empty($team_personal) ? $team_personal : $default_personal;
+		
+		$processSendMessageGlobal = DevblocksPlatform::getExtensions('cerberusweb.send_message.global', true);
+		if(!empty($processSendMessageGlobal)) {
+			foreach($processSendMessageGlobal as $run_filter) { /* Run the run loop and update properties */
+				try {
+					$run_filter->run(&$properties);
+				} catch(Exception $e) {
+					// print_r($e);
+				}
+			}
+		}
+		
+		@$from = $properties['from'];
+		@$personal = $properties['personal'];
 		@$team_id = $properties['team_id'];
 		@$toStr = $properties['to'];
 		@$cc = $properties['cc'];
@@ -118,19 +146,6 @@ class CerberusMail {
 		@$next_worker_id = $properties['next_worker_id'];
 		@$ticket_reopen = $properties['ticket_reopen'];
 		@$unlock_date = $properties['unlock_date'];
-		
-		$worker = CerberusApplication::getActiveWorker();
-		
-		$settings = DevblocksPlatform::getPluginSettingsService();
-		$default_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
-		$default_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL,CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
-		
-		$team_from = DAO_GroupSettings::get($team_id,DAO_GroupSettings::SETTING_REPLY_FROM,'');
-		$team_personal = DAO_GroupSettings::get($team_id,DAO_GroupSettings::SETTING_REPLY_PERSONAL,'');
-		$team_personal_with_worker = DAO_GroupSettings::get($team_id,DAO_GroupSettings::SETTING_REPLY_PERSONAL_WITH_WORKER,0);
-		
-		$from = !empty($team_from) ? $team_from : $default_from;
-		$personal = !empty($team_personal) ? $team_personal : $default_personal;
 		
 		// Prefix the worker name on the personal line?
 		if(!empty($team_personal_with_worker) && !empty($worker)) {
@@ -204,6 +219,11 @@ class CerberusMail {
 				
 				$email->setBody($content);
 				
+				// If html version included sent as html part
+				if ((isset($properties['html_content'])) && ($properties['html_content']) == true)
+					$email->addPart($properties['html_content'], 'text/html'); 
+				}
+	
 				// Mime Attachments
 				if (is_array($files) && !empty($files)) {
 					foreach ($files['tmp_name'] as $idx => $file) {
@@ -403,6 +423,17 @@ class CerberusMail {
 		'dont_save_copy'
 		*/
 
+		$processSendMessageGlobal = DevblocksPlatform::getExtensions('cerberusweb.send_message.global', true);
+		if(!empty($processSendMessageGlobal)) {
+			foreach($processSendMessageGlobal as $run_filter) { /* Run the run loop and update properties */
+				try {
+					$run_filter->run(&$properties);
+				} catch(Exception $e) {
+					// print_r($e);
+				}
+			}
+		}
+			
 		$mail_succeeded = true;
 		try {
 			// objects
@@ -563,7 +594,6 @@ class CerberusMail {
 					$mail->setBcc($aBcc);
 			    }
 			}
-			
 			/*
 			 * [IMPORTANT -- Yes, this is simply a line in the sand.]
 			 * You're welcome to modify the code to meet your needs, but please respect 
@@ -580,6 +610,11 @@ class CerberusMail {
 			
 			// Body
 			$mail->setBody($content);
+			
+			// If html version included sent as html part
+			if ((isset($properties['html_content'])) && ($properties['html_content']) == true)
+				$mail->addPart($properties['html_content'], 'text/html'); 
+			}
 	
 			// Mime Attachments
 			if (is_array($files) && !empty($files)) {
@@ -772,6 +807,19 @@ class CerberusMail {
 	}
 	
 	static function reflect(CerberusParserMessage $message, $to) {
+	
+		// FIXME Since this is just an example this function would need to be converted to use property to keep the extension point the same.
+		$processSendMessageGlobal = DevblocksPlatform::getExtensions('cerberusweb.send_message.global', true);
+		if(!empty($processSendMessageGlobal)) {
+			foreach($processSendMessageGlobal as $run_filter) { /* Run the run loop and update properties */
+				try {
+					$run_filter->run(&$properties);
+				} catch(Exception $e) {
+					// print_r($e);
+				}
+			}
+		}
+
 		try {
 			$mail_service = DevblocksPlatform::getMailService();
 			$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
@@ -808,6 +856,12 @@ class CerberusMail {
 			$headers->addTextHeader('X-CerberusRedirect','1');
 
 			$mail->setBody($message->body);
+			
+				// If html version included sent as html part
+				if ((isset($properties['html_content'])) && ($properties['html_content']) == true)
+					$mail->addPart($properties['html_content'], 'text/html'); 
+				}
+			
 			
 			// Files
 			if(is_array($message->files))

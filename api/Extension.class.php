@@ -206,6 +206,15 @@ abstract class Extension_MailFilterAction extends DevblocksExtension {
 	function saveConfig() { return array(); }
 };
 
+abstract class Extension_ extends DevblocksExtension {
+  function __construct($manifest) {
+    $this->DevblocksExtension($manifest,1);
+  }
+
+  function run($properties) {}
+  function render($list) {} 
+};
+
 abstract class Extension_TaskSource extends DevblocksExtension {
 	const EXTENSION_POINT = 'cerberusweb.task.source';
 	
