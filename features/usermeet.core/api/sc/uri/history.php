@@ -215,15 +215,10 @@ class UmScHistoryController extends Extension_UmScController {
 	
 	function saveTicketCustomPropertiesAction() {
 		@$mask = DevblocksPlatform::importGPC($_REQUEST['mask'],'string','');
-		@$closed = DevblocksPlatform::importGPC($_REQUEST['closed'],'integer','0');
 		
 		$umsession = UmPortalHelper::getSession();
 		$active_user = $umsession->getProperty('sc_login', null);
 		
-		// Custom field saves
-		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
-		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
-
 		// Secure retrieval (address + mask)
 		list($tickets) = DAO_Ticket::search(
 			array(),
@@ -239,12 +234,11 @@ class UmScHistoryController extends Extension_UmScController {
 		);
 		$ticket = array_shift($tickets);
 		$ticket_id = $ticket[SearchFields_Ticket::TICKET_ID];
-
-		$fields = array(
-			DAO_Ticket::IS_CLOSED => ($closed) ? 1 : 0
-		);
-		DAO_Ticket::updateTicket($ticket_id,$fields);
 		
+		// Custom field saves
+		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
+		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
+
 		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('portal',UmPortalHelper::getCode(),'history',$ticket[SearchFields_Ticket::TICKET_MASK])));		
 	}
 	

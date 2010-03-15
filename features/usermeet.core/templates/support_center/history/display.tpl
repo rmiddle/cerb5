@@ -40,19 +40,26 @@
 </div>
 
 {* Custom Fields *}
-<div class="custom_fields">
+<div id="custom_fields_div">
+<form action="{devblocks_url}c=history{/devblocks_url}" method="post" name="">
+<input type="hidden" name="a" value="saveTicketCustomProperties">
+<input type="hidden" name="mask" value="{$ticket.t_mask}">
 	<table cellpadding="2" cellspacing="1" border="0">
 		{foreach from=$ticket_fields item=f key=f_id}
 			{assign var=field_group_id value=$f->group_id}
 			{if $cf_select.$f_id != 0}
+				<script type="text/javascript">
+					$("#custom_fields_div").addClass("custom_fields");
+				</script>
 				{if $field_group_id == 0 || $field_group_id == $ticket.t_team_id}
 					<tr>
 						<td valign="top" width="1%" nowrap="nowrap">
-							<input type="hidden" name="field_ids[]" value="{$f_id}">
 							<b>{$f->name}:</b>
 						</td>
 						<td valign="top" width="99%">
 							{if $cf_select.$f_id == 2} {* Read Write Version *}
+								<input type="hidden" name="field_ids[]" value="{$f_id}">
+								{assign var=display_submit value=1}
 								{if $f->type=='S'}
 									<input type="text" name="field_{$f_id}" size="45" maxlength="255" value="{$ticket_field_values.$f_id|escape}"><br>
 								{elseif $f->type=='U'}
@@ -121,8 +128,10 @@
 								{elseif $f->type=='E'}
 									{if !empty($ticket_field_values.$f_id)}{$ticket_field_values.$f_id|devblocks_date}{/if}<br>
 								{elseif $f->type=='W'}
-									{$cust_worker = DAO_Worker::getAgent($ticket_field_values.$f_id)}
-									{$cust_worker->getName()}
+									{if $ticket_field_values.$f_id != 0}
+										{$cust_worker = DAO_Worker::getAgent($ticket_field_values.$f_id)}
+										{$cust_worker->getName()}
+									{/if}
 								{/if}
 							{/if}  
 						</td>
@@ -131,6 +140,10 @@
 			{/if}
 		{/foreach}
 	</table>
+	{if $display_submit}
+		<button type="submit" id="btnSubmit">{$translate->_('common.save')|capitalize}</button>
+	{/if}
+</form>
 </div>
 
 {* Message History *}
