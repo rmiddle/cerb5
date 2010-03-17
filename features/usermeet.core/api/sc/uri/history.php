@@ -1,5 +1,7 @@
 <?php
 class UmScHistoryController extends Extension_UmScController {
+	const PARAM_NEXT_ASSIGNED_TO = 'history.next_assigned_to';
+	const PARAM_CF_SELECT = 'history.cf_select';
 	
 	function isVisible() {
 		$umsession = UmPortalHelper::getSession();
@@ -151,11 +153,28 @@ class UmScHistoryController extends Extension_UmScController {
 						unset($attach);
 					}
 				}
+				// Groups (for custom fields)
+				$groups = DAO_Group::getAll();
+				$tpl->assign('groups', $groups);
+
+				// Custom fields
+				$ticket_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Ticket::ID);
+				$tpl->assign('ticket_fields', $ticket_fields);
+
+				$ticket_field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Ticket::ID, $ticket[SearchFields_Ticket::TICKET_ID]));
+				$tpl->assign('ticket_field_values', $ticket_field_values);
 				
 				$tpl->assign('ticket', $ticket);
 				$tpl->assign('messages', $messages);
 				$tpl->assign('attachments', $attachments);
-				
+
+				$display_next_assigned_to = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_NEXT_ASSIGNED_TO, 0);
+				$tpl->assign('display_next_assigned_to', $display_next_assigned_to);
+						
+				$cf_select_serial = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(),self::PARAM_CF_SELECT, '');
+				$cf_select = !empty($cf_select_serial) ? unserialize($cf_select_serial) : array();
+				$tpl->assign('cf_select', $cf_select);
+        
 				$tpl->display("devblocks:usermeet.core:support_center/history/display.tpl:portal_".UmPortalHelper::getCode());
 			}
 		}
@@ -190,6 +209,35 @@ class UmScHistoryController extends Extension_UmScController {
 		);
 		DAO_Ticket::updateTicket($ticket_id,$fields);
 		
+		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('portal',UmPortalHelper::getCode(),'history',$ticket[SearchFields_Ticket::TICKET_MASK])));		
+	}
+	
+	function saveTicketCustomPropertiesAction() {
+		@$mask = DevblocksPlatform::importGPC($_REQUEST['mask'],'string','');
+		
+		$umsession = UmPortalHelper::getSession();
+		$active_user = $umsession->getProperty('sc_login', null);
+		
+		// Secure retrieval (address + mask)
+		list($tickets) = DAO_Ticket::search(
+			array(),
+			array(
+				new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_MASK,'=',$mask),
+				new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_FIRST_WROTE_ID,'=',$active_user->id),
+			),
+			1,
+			0,
+			null,
+			null,
+			false
+		);
+		$ticket = array_shift($tickets);
+		$ticket_id = $ticket[SearchFields_Ticket::TICKET_ID];
+		
+		// Custom field saves
+		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
+		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
+
 		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('portal',UmPortalHelper::getCode(),'history',$ticket[SearchFields_Ticket::TICKET_MASK])));		
 	}
 	
@@ -249,6 +297,40 @@ class UmScHistoryController extends Extension_UmScController {
 		CerberusParser::parseMessage($message,array('no_autoreply'=>true));
 		
 		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('portal',UmPortalHelper::getCode(),'history',$ticket[SearchFields_Ticket::TICKET_MASK])));
+	}
+
+	function configure(Model_CommunityTool $instance) {
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl_path = dirname(dirname(dirname(dirname(__FILE__)))) . '/templates/';
+
+		$settings = DevblocksPlatform::getPluginSettingsService();
+        
+		$next_assigned_to = DAO_CommunityToolProperty::get($instance->code, self::PARAM_NEXT_ASSIGNED_TO, 0);
+		$tpl->assign('next_assigned_to', $next_assigned_to);
+
+		$groups = DAO_Group::getAll();
+		$tpl->assign('groups', $groups);
+		
+		// Contact: Fields
+		$ticket_fields = DAO_CustomField::getBySource('cerberusweb.fields.source.ticket');
+		$tpl->assign('ticket_fields', $ticket_fields);
+
+		$cf_select_serial = DAO_CommunityToolProperty::get($instance->code,self::PARAM_CF_SELECT, '');
+		$cf_select = !empty($cf_select_serial) ? unserialize($cf_select_serial) : array();
+		$tpl->assign('cf_select', $cf_select);
+		
+		$tpl->display("file:${tpl_path}portal/sc/config/module/history.tpl");
+	}
+	
+	function saveConfiguration(Model_CommunityTool $instance) {
+		@$iNextAssignedTo = DevblocksPlatform::importGPC($_POST['next_assigned_to'],'integer',0);
+		DAO_CommunityToolProperty::set($instance->code, self::PARAM_NEXT_ASSIGNED_TO, $iNextAssignedTo);
+
+		$ticket_fields = DAO_CustomField::getBySource('cerberusweb.fields.source.ticket');
+		foreach ($ticket_fields as $id => $value) {
+			@$cf_select[$id] = DevblocksPlatform::importGPC($_POST['cf_select_'.$id],'integer',0);
+		}
+		DAO_CommunityToolProperty::set($instance->code, self::PARAM_CF_SELECT, serialize($cf_select));
 	}
 };
 

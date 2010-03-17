@@ -148,6 +148,13 @@ TABLE.sidebar TD INPUT {
 	padding:2px;
 }
 
+#history DIV.custom_fields {
+	margin:5px;
+	margin-bottom:10px;
+	border:1px solid rgb(200,200,200);
+	padding:5px;
+}
+
 #history DIV.message {
 	margin:5px;
 	margin-bottom:10px;
