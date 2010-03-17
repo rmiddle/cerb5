@@ -161,8 +161,7 @@ class UmScHistoryController extends Extension_UmScController {
 				$ticket_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Ticket::ID);
 				$tpl->assign('ticket_fields', $ticket_fields);
 
-				$ticket_field_values_ids = DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Ticket::ID, $ticket[SearchFields_Ticket::TICKET_ID]);
-				$ticket_field_values = array_shift($ticket_field_values_ids);
+				$ticket_field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Ticket::ID, $ticket[SearchFields_Ticket::TICKET_ID]));
 				$tpl->assign('ticket_field_values', $ticket_field_values);
 				
 				$tpl->assign('ticket', $ticket);
