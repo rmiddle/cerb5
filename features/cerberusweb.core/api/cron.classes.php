@@ -202,6 +202,17 @@ class MaintCron extends CerberusCronPageExtension {
 
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' obscure spam words.');
 		
+		// Nuke read notificatons
+		// [TODO] Make this configurable from job
+		$sql = sprintf("DELETE FROM worker_event ".
+			"WHERE is_read = 1 ".
+			"AND created_date < %d ",
+			$purge_waitsecs
+		);
+		$db->Execute($sql);
+
+		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' Notifications.');
+		
 		// [mdf] Remove any empty directories inside storage/mail/new
 		$mailDir = APP_MAIL_PATH . 'new' . DIRECTORY_SEPARATOR;
 		$subdirs = glob($mailDir . '*', GLOB_ONLYDIR);
