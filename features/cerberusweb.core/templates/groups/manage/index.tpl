@@ -51,7 +51,7 @@
 	</blockquote>
 	<br>
 
-        <blockquote style="margin-left:20px;display:{if $group_settings.smtp_is_enabled}block{else}none{/if};">
+        <blockquote style="margin-left:20px;">
 
             <b>Use Group Outgong SMTP Server:</b> (optional)<br>
             <label><input type="checkbox" name="smtp_is_enabled" value="1" onclick="toggleDiv('configGroupSmtpSetting',(this.checked?'block':'none'));{if $group_settings.smtp_is_enabled}checked{/if}> Enabled</label><br>
