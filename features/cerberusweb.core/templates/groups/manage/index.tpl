@@ -50,7 +50,7 @@
 		Re: [ <input type="text" name="subject_prefix" value="{$group_settings.subject_prefix|escape}" size="24"> #MASK-12345-678]: This is the subject line<br>
 	</blockquote>
 	<br>
-	
+			
 	<b>Group E-mail Signature:</b> (optional, defaults to helpdesk signature)<br>
 	<div style="display:none">
 		{assign var=default_signature value=$settings->get('cerberusweb.core','default_signature')}
@@ -73,7 +73,64 @@
 	<br> 
 	</div>
 	<br>
+    </div>
 	
+	<h3>Group Outgong SMTP Server:</b> (optional)</h3>
+    <label><input type="checkbox" name="smtp_is_enabled" value="1" onclick="toggleDiv('configGroupSmtpSetting',(this.checked?'block':'none'));" {if $group_settings.smtp_is_enabled}checked{/if}> <b>Enable Group Specific Outgoing Settings?</b></label><br>
+    <br>
+
+    <div id="configGroupSmtpSetting" style="margin-left:15px;display:{if $group_settings.smtp_is_enabled}block{else}none{/if};">
+		<br>
+        <b>SMTP Hosts:</b><br>
+		<input type="text" name="smtp_host" value="{if $group_settings.smtp_host}{$group_settings.smtp_host}{else}localhost{/if}" size="45">
+        <i>(e.g. localhost)</i>
+        <br>
+        <br>
+
+        <b>SMTP Port:</b><br>
+        <input type="text" name="smtp_port" value="{if $group_settings.smtp_port}{$group_settings.smtp_port}{else}25{/if}" size="5">
+        <i>(usually '25')</i>
+        <br>
+        <br>
+
+        <b>SMTP Encryption:</b> (optional)<br>
+        <label><input type="radio" name="smtp_enc" value="None" {if $group_settings.smtp_enc == 'None'}checked{/if}>None</label>&nbsp;&nbsp;&nbsp;
+        <label><input type="radio" name="smtp_enc" value="TLS" {if $group_settings.smtp_enc == 'TLS'}checked{/if}>TLS</label>&nbsp;&nbsp;&nbsp;
+        <label><input type="radio" name="smtp_enc" value="SSL" {if $group_settings.smtp_enc == 'SSL'}checked{/if}>SSL</label><br>
+        <br>
+
+        <b>SMTP Authentication:</b> (optional)<br>
+        <label><input type="checkbox" name="smtp_auth_enabled" value="1" onclick="toggleDiv('configGeneralSmtpAuth',(this.checked?'block':'none'));if(!this.checked){literal}{{/literal}this.form.smtp_auth_user.value='';this.form.smtp_auth_pass.value='';{literal}}{/literal}" {if $group_settings.smtp_auth_enabled}checked{/if}> Enabled</label><br>
+        <br>
+
+        <div id="configGeneralSmtpAuth" style="margin-left:15px;display:{if $group_settings.smtp_auth_enabled}block{else}none{/if};">
+            <b>Username:</b><br>
+            <input type="text" name="smtp_auth_user" value="{$group_settings.smtp_auth_user}" size="45"><br>
+            <br>
+
+            <b>Password:</b><br>
+            <input type="text" name="smtp_auth_pass" value="{$group_settings.smtp_auth_pass}" size="45"><br>
+            <br>
+        </div>
+
+        <b>SMTP Timeout:</b><br>
+        <input type="text" name="smtp_timeout" value="{if $group_settings.smtp_timeout}{$group_settings.smtp_timeout}{else}30{/if}" size="4">
+        seconds
+        <br>
+        <br>
+
+        <b>Maximum Deliveries Per SMTP Connection:</b><br>
+        <input type="text" name="smtp_max_sends" value="{if $group_settings.smtp_max_sends}{$group_settings.smtp_max_sends}{else}20{/if}" size="5">
+        <i>(tuning this depends on your mail server; default is 20)</i>
+        <br>
+        <br>
+
+        <div id="configSmtpTest"></div>
+        <button type="button" onclick="genericAjaxGet('configSmtpTest','c=config&a=getSmtpTest&host='+this.form.smtp_host.value+'&port='+encodeURIComponent(this.form.smtp_port.value)+'&enc='+encodeURIComponent($('input[name=\'smtp_enc\']:checked').val())+'&smtp_user='+encodeURIComponent(this.form.smtp_auth_user.value)+'&smtp_pass='+encodeURIComponent(this.form.smtp_auth_pass.value));"><span class="cerb-sprite sprite-gear"></span> Test SMTP</button>
+        <br>
+        <br>
+    </div>
+
 	<h3>New Ticket Auto-Response</h3>
 	
 	<label><input type="checkbox" name="auto_reply_enabled" value="1" onclick="toggleDiv('divGroupCfgAutoReply',(this.checked)?'block':'none');" {if $group_settings.auto_reply_enabled}checked{/if}> <b>Send an auto-response when this group receives a new message?</b></label><br>
