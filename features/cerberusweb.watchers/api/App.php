@@ -208,14 +208,22 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 			@$group_personal = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_PERSONAL);
 			if(!empty($group_personal))
 				$reply_personal = $group_personal;
+				
+			@$group_smtp = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, 0);
+		} else {
+			$group_smtp  = 0;
 		}
 		
 		if(is_array($notify_emails))
 		foreach($notify_emails as $send_to) {
 	    	try {
-	    		if(null == $mailer)
-					$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
-				
+	    		if(null == $mailer) {
+					if ($group_smtp) {
+						$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+					} else {
+						$mailer = $mail_service->getMailer(CerberusMail::getMailerGroupDefaults($ticket->team_id);
+					}
+				}
 		 		// Create the message
 					
 				$mail = $mail_service->createMessage();
@@ -334,16 +342,24 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 				@$group_personal = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_PERSONAL);
 				if(!empty($group_personal))
 					$reply_personal = $group_personal;
+					
+				@$group_smtp = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, 0);
+			} else {
+				$group_smtp  = 0;
 			}
 			
 			if(is_array($notify_emails))
 			foreach($notify_emails as $send_to) {
 		    	try {
-		    		if(null == $mailer)
-						$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+		    		if(null == $mailer) {
+						if ($group_smtp) {
+							$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+						} else {
+							$mailer = $mail_service->getMailer(CerberusMail::getMailerGroupDefaults($ticket->team_id);
+						}
+					}
 					
 			 		// Create the message
-
 					$mail = $mail_service->createMessage();
 					$mail->setTo(array($send_to));
 					$mail->setFrom(array($reply_to => $reply_personal));
@@ -437,6 +453,10 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 				@$group_from = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_FROM, '');
 				if(!empty($group_from))
 					$reply_to = $group_from;
+					
+				@$group_smtp = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, 0);
+			} else {
+				$group_smtp  = 0;
 			}
 			
 			$sender = DAO_Address::get($message->address_id);
@@ -480,7 +500,11 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 	    	// Send copies
 			if(is_array($notify_emails) && !empty($notify_emails)) {
 				$mail_service = DevblocksPlatform::getMailService();
-				$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+				if ($group_smtp) {
+					$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+				} else {
+					$mailer = $mail_service->getMailer(CerberusMail::getMailerGroupDefaults($ticket->team_id);
+				}
 				
 				foreach($notify_emails as $to) {
 					// Proxy the message
