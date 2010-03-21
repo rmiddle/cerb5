@@ -359,7 +359,7 @@ class DAO_GroupSettings {
     const SETTING_CLOSE_REPLY_ENABLED = 'close_reply_enabled';
     const SETTING_INBOX_IS_ASSIGNABLE = 'inbox_is_assignable';
 	const SETTING_SMTP_IS_ENABLED = 'smtp_is_enabled';
-	const SETTING_SMTP_SMTP_HOST = 'smtp_host';
+	const SETTING_SMTP_HOST = 'smtp_host';
 	const SETTING_SMTP_PORT = 'smtp_port';
 	const SETTING_SMTP_ENC = 'smtp_enc';
 	const SETTING_SMTP_AUTH_ENABLED = 'smtp_auth_enabled';

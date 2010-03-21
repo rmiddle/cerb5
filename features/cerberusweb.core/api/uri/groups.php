@@ -576,7 +576,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_CLOSE_REPLY, $close_reply);
 
 		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, $smtp_is_enabled);
-		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_SMTP_HOST, $smtp_host);
+		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_HOST, $smtp_host);
 		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_PORT, $smtp_port);
 		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_ENC, $smtp_enc);
 		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_AUTH_ENABLED, $smtp_auth_enabled);
