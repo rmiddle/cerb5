@@ -48,7 +48,7 @@
  * 		and Joe Geck.
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2010031104);
+define("APP_BUILD", 2010032201);
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -641,17 +641,21 @@ class CerberusSettingsDefaults {
 
 // [TODO] This gets called a lot when it happens after the registry cache
 class C4_DevblocksExtensionDelegate implements DevblocksExtensionDelegate {
+	static $_worker = null;
+	
 	static function shouldLoadExtension(DevblocksExtensionManifest $extension_manifest) {
 		// Always allow core
 		if("cerberusweb.core" == $extension_manifest->plugin_id)
 			return true;
-		
+			
 		// [TODO] This should limit to just things we can run with no session
 		// Community Tools, Cron/Update.  They are still limited by their own
 		// isVisible() otherwise.
-		if(null == ($active_worker = CerberusApplication::getActiveWorker()))
-			return true;
-			
-		return $active_worker->hasPriv('plugin.'.$extension_manifest->plugin_id);
+		if(null == self::$_worker) {
+			if(null == (self::$_worker = CerberusApplication::getActiveWorker()))
+				return true;
+		}
+		
+		return self::$_worker->hasPriv('plugin.'.$extension_manifest->plugin_id);
 	}
 };
