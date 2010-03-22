@@ -34,13 +34,18 @@ class DAO_Message extends DevblocksORMHelper {
 	 * @param string $where
 	 * @return Model_Note[]
 	 */
-	static function getWhere($where=null) {
+	static function getWhere($where=null, $sortBy='created_date', $sortAsc=true, $limit=null) {
 		$db = DevblocksPlatform::getDatabaseService();
+
+		list($where_sql, $sort_sql, $limit_sql) = self::_getWhereSQL($where, $sortBy, $sortAsc, $limit);
 		
+		// SQL
 		$sql = "SELECT id, ticket_id, created_date, is_outgoing, worker_id, address_id, storage_extension, storage_key, storage_profile_id, storage_size ".
 			"FROM message ".
-			(!empty($where) ? sprintf("WHERE %s ",$where) : "").
-			"ORDER BY created_date asc";
+			$where_sql.
+			$sort_sql.
+			$limit_sql
+		;
 		$rs = $db->Execute($sql);
 		
 		return self::_getObjectsFromResult($rs);
@@ -68,6 +73,9 @@ class DAO_Message extends DevblocksORMHelper {
 	 */
 	static private function _getObjectsFromResult($rs) {
 		$objects = array();
+		
+		if(empty($rs))
+			return $objects;
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			$object = new Model_Message();
@@ -146,6 +154,13 @@ class DAO_Message extends DevblocksORMHelper {
 		$db->Execute($sql);
 		
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' message_note records.');
+		
+		// Search indexes
+
+		$sql = "DELETE QUICK fulltext_message_content FROM fulltext_message_content LEFT JOIN message ON fulltext_message_content.id = message.id WHERE message.id IS NULL";
+		$db->Execute($sql);
+		
+		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' fulltext_message_content records.');
 		
 		// Attachments
 		DAO_Attachment::maint();
@@ -294,6 +309,50 @@ class Model_Message {
 	}
 };
 
+class Search_MessageContent {
+	const ID = 'cerberusweb.search.schema.message_content';
+	
+	public static function index($stop_time=null) {
+		$logger = DevblocksPlatform::getConsoleLog();
+		
+		if(false == ($search = DevblocksPlatform::getSearchService())) {
+			$logger->error("[Search] The search engine is misconfigured.");
+			return;
+		}
+		
+		$ns = 'message_content';
+		$id = DAO_DevblocksExtensionPropertyStore::get(self::ID, 'last_indexed_id', 0);
+		$done = false;
+		
+		while(!$done && time() < $stop_time) {
+			$where = sprintf("%s > %d", DAO_Message::ID, $id);
+			$messages = DAO_Message::getWhere($where, 'id', true, 100);
+	
+			if(empty($messages)) {
+				$done = true;
+				continue;
+			}
+			
+			foreach($messages as $message) { /* @var $message Model_Message */
+				$id = $message->id;
+				$logger->info(sprintf("[Search] Indexing %s %d...", 
+					$ns,
+					$id
+				));
+				
+				if(false !== ($content = Storage_MessageContent::get($message))) {
+					$search->index($ns, $id, $content);
+				}
+				
+				flush();
+			}
+		}
+		
+		if(!empty($id))
+			DAO_DevblocksExtensionPropertyStore::put(self::ID, 'last_indexed_id', $id);
+	}
+};
+
 class Storage_MessageContent extends Extension_DevblocksStorageSchema {
 	const ID = 'cerberusweb.storage.schema.message_content';
 	
@@ -362,7 +421,9 @@ class Storage_MessageContent extends Extension_DevblocksStorageSchema {
 		$key = $object->storage_key;
 		$profile = !empty($object->storage_profile_id) ? $object->storage_profile_id : $object->storage_extension;
 		
-		$storage = DevblocksPlatform::getStorageService($profile);
+		if(false === ($storage = DevblocksPlatform::getStorageService($profile)))
+			return false;
+			
 		return $storage->get('message_content', $key, $fp);
 	}
 	
