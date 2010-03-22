@@ -63,6 +63,10 @@
 			<h3>Default Preferences</h3>
 			
 			<blockquote style="margin-left:20px;">
+				<b>Autoreplies flood protection timeout:</b><br>
+				<input type="text" name="autoreply_limiter" value="{$autoreply_limiter}" size="5"> (Default 300 seconds)<br>
+				<br>
+				
 				<b>By default, reply to mail as:</b> (E-mail Address)<br>
 				<input type="text" name="sender_address" value="{$settings->get('cerberusweb.core','default_reply_from')|escape}" size="45"> (e.g. support@yourcompany.com)<br>
 				<br>

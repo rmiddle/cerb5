@@ -494,9 +494,10 @@ class CerberusMail {
 				// Don't send e-mail to ourselves
 				if(isset($helpdesk_senders[$first_address->email]))
 					return;
-					
+			
+				$autoreply_limiter = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_AUTOREPLY_LIMITER,CerberusSettingsDefaults::DEFAULT_AUTOREPLY_LIMITER);
 				// Make sure we haven't mailed this address an autoreply within 5 minutes
-				if($first_address->last_autoreply > 0 && $first_address->last_autoreply > time()-300) {
+				if($first_address->last_autoreply > 0 && $first_address->last_autoreply > time()-$autoreply_limiter) {
 					return;
 				}
 					
