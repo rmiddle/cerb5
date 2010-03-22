@@ -687,6 +687,9 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$smtp_enc = $settings->get('cerberusweb.core',CerberusSettings::SMTP_ENCRYPTION_TYPE,CerberusSettingsDefaults::SMTP_ENCRYPTION_TYPE);
 		$smtp_max_sends = $settings->get('cerberusweb.core',CerberusSettings::SMTP_MAX_SENDS,CerberusSettingsDefaults::SMTP_MAX_SENDS);
 		
+		$autoreply_limiter = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_AUTOREPLY_LIMITER,CerberusSettingsDefaults::DEFAULT_AUTOREPLY_LIMITER);
+		$tpl->assign('autoreply_limiter', $autoreply_limiter);
+		
 		$disable_worker_email_to_customer = $settings->get('cerberusweb.core',CerberusSettings::DISABLE_WORKER_EMAIL_TO_CUSTOMER,'0');
 		$tpl->assign('disable_worker_email_to_customer', $disable_worker_email_to_customer);
 		

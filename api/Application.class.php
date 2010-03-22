@@ -603,6 +603,7 @@ class CerberusSettings {
 	const DEFAULT_REPLY_PERSONAL = 'default_reply_personal'; 
 	const DEFAULT_SIGNATURE = 'default_signature'; 
 	const DEFAULT_SIGNATURE_POS = 'default_signature_pos'; 
+	const DEFAULT_AUTOREPLY_LIMITER = 'default_autoreply_limiter'; 
 	const HELPDESK_TITLE = 'helpdesk_title'; 
 	const HELPDESK_LOGO_URL = 'helpdesk_logo_url'; 
 	const DISABLE_WORKER_EMAIL_TO_CUSTOMER = 'disable_worker_email_to_customer'; 
@@ -630,6 +631,7 @@ class CerberusSettingsDefaults {
 	const DEFAULT_REPLY_PERSONAL = ''; 
 	const DEFAULT_SIGNATURE = ''; 
 	const DEFAULT_SIGNATURE_POS = 0; 
+	const DEFAULT_AUTOREPLY_LIMITER = 300; 
 	const HELPDESK_TITLE = 'Cerberus Helpdesk :: Team-based E-mail Management'; 
 	const SMTP_HOST = 'localhost'; 
 	const SMTP_AUTH_ENABLED = 0; 
