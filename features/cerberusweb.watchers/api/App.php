@@ -221,7 +221,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 					if ($group_smtp) {
 						$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 					} else {
-						$mailer = $mail_service->getMailer(CerberusMail::getMailerGroupDefaults($ticket->team_id);
+						$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults($ticket->team_id);
 					}
 				}
 		 		// Create the message
@@ -355,7 +355,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 						if ($group_smtp) {
 							$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 						} else {
-							$mailer = $mail_service->getMailer(CerberusMail::getMailerGroupDefaults($ticket->team_id);
+							$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults($ticket->team_id);
 						}
 					}
 					
@@ -503,7 +503,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 				if ($group_smtp) {
 					$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 				} else {
-					$mailer = $mail_service->getMailer(CerberusMail::getMailerGroupDefaults($ticket->team_id);
+					$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults($ticket->team_id);
 				}
 				
 				foreach($notify_emails as $to) {
