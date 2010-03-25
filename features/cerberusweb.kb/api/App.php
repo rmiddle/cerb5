@@ -360,12 +360,6 @@ class ChKbAjaxController extends DevblocksControllerExtension {
         @$type = DevblocksPlatform::importGPC($_POST['type'],'string'); 
         @$query = DevblocksPlatform::importGPC($_POST['query'],'string');
 
-        $query = trim($query);
-        
-		if(false === strpos($query,'*')) {
-			$query = '*'.$query.'*';
-		}
-        
         $visit = CerberusApplication::getVisit(); /* @var $visit CerberusVisit */
         $translate = DevblocksPlatform::getTranslationService();
 		
@@ -379,12 +373,11 @@ class ChKbAjaxController extends DevblocksControllerExtension {
         $params = array();
         
         switch($type) {
-            case "content":
-				$params[SearchFields_KbArticle::CONTENT] = array(
-					DevblocksSearchCriteria::GROUP_OR,
-					new DevblocksSearchCriteria(SearchFields_KbArticle::TITLE,DevblocksSearchCriteria::OPER_LIKE,$query),
-					new DevblocksSearchCriteria(SearchFields_KbArticle::CONTENT,DevblocksSearchCriteria::OPER_LIKE,$query),
-				);
+            case "articles_all":
+				$params[SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT] = new DevblocksSearchCriteria(SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,array($query,'all'));
+                break;
+            case "articles_phrase":
+				$params[SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT] = new DevblocksSearchCriteria(SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,array($query,'phrase'));
                 break;
         }
         
@@ -496,7 +489,7 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 
 		@$topic_id = DevblocksPlatform::importGPC($_REQUEST['topic_id'],'integer',0);
 		$tpl->assign('topic_id', $topic_id);
-
+		
 		@$div = DevblocksPlatform::importGPC($_REQUEST['div'],'string','');
 		$tpl->assign('div', $div);
 
@@ -506,18 +499,23 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 			$params[SearchFields_KbArticle::CATEGORY_ID] = 
 				new DevblocksSearchCriteria(SearchFields_KbArticle::CATEGORY_ID, '=', $topic_id);
 
-		if(!empty($q))
-			if(false === strpos($q,'*')) {
-				$q = '*'.$q.'*';
-			}
+		@$scope = DevblocksPlatform::importGPC($_REQUEST['scope'],'string','expert');
+		switch($scope) {
+			case 'all':
+				$params[SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT] = new DevblocksSearchCriteria(SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT, DevblocksSearchCriteria::OPER_FULLTEXT, array($q,'all'));
+				break;
+			case 'any':
+				$params[SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT] = new DevblocksSearchCriteria(SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT, DevblocksSearchCriteria::OPER_FULLTEXT, array($q,'any'));
+				break;
+			case 'phrase':
+				$params[SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT] = new DevblocksSearchCriteria(SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT, DevblocksSearchCriteria::OPER_FULLTEXT, array($q,'phrase'));
+				break;
+			default:
+			case 'expert':
+				$params[SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT] = new DevblocksSearchCriteria(SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT, DevblocksSearchCriteria::OPER_FULLTEXT, array($q,'expert'));
+				break;
+		}
 		
-			$params[SearchFields_KbArticle::CATEGORY_ID] = 
-				array(
-					DevblocksSearchCriteria::GROUP_OR,
-					new DevblocksSearchCriteria(SearchFields_KbArticle::TITLE, DevblocksSearchCriteria::OPER_LIKE, $q),
-					new DevblocksSearchCriteria(SearchFields_KbArticle::CONTENT, DevblocksSearchCriteria::OPER_LIKE, $q),
-				);
-
 		list($results, $null) = DAO_KbArticle::search(
 			$params,
 			25,
@@ -798,7 +796,7 @@ class DAO_KbArticle extends DevblocksORMHelper {
 		if(!isset($fields[$sortBy]))
 			$sortBy=null;
 
-        list($tables,$wheres) = parent::_parseSearchParams($params, array(), $fields,$sortBy);
+        list($tables,$wheres) = parent::_parseSearchParams($params, array(), $fields, $sortBy);
 		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
 		
 		$select_sql = sprintf("SELECT ".
@@ -824,6 +822,10 @@ class DAO_KbArticle extends DevblocksORMHelper {
 				SearchFields_KbArticle::TOP_CATEGORY_ID
 			);
 			$join_sql .= "LEFT JOIN kb_article_to_category katc ON (kb.id=katc.kb_article_id) ";
+		}
+		
+		if(isset($tables['ftkb'])) {
+			$join_sql .= 'LEFT JOIN fulltext_kb_article ftkb ON (ftkb.id=kb.id) ';
 		}
 		
 		$where_sql = "".
@@ -877,6 +879,8 @@ class SearchFields_KbArticle implements IDevblocksSearchFields {
 	const CATEGORY_ID = 'katc_category_id';
 	const TOP_CATEGORY_ID = 'katc_top_category_id';
 	
+	const FULLTEXT_ARTICLE_CONTENT = 'ftkb_content';
+	
 	/**
 	 * @return DevblocksSearchField[]
 	 */
@@ -894,6 +898,12 @@ class SearchFields_KbArticle implements IDevblocksSearchFields {
 			self::CATEGORY_ID => new DevblocksSearchField(self::CATEGORY_ID, 'katc', 'kb_category_id'),
 			self::TOP_CATEGORY_ID => new DevblocksSearchField(self::TOP_CATEGORY_ID, 'katc', 'kb_top_category_id', $translate->_('kb_article.topic')),
 		);
+
+		// Fulltext
+		$tables = DevblocksPlatform::getDatabaseTables();
+		if(isset($tables['fulltext_kb_article'])) {
+			$columns[self::FULLTEXT_ARTICLE_CONTENT] = new DevblocksSearchField(self::FULLTEXT_ARTICLE_CONTENT, 'ftkb', 'content', $translate->_('kb_article.content'));
+		}
 		
 		// Sort by label (translation-conscious)
 		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
@@ -1108,7 +1118,7 @@ class Search_KbArticle {
 					$id
 				));
 				
-				$search->index($ns, $id, strip_tags($article->content));
+				$search->index($ns, $id, $article->title . ' ' . strip_tags($article->content));
 				
 				flush();
 			}
@@ -1178,7 +1188,6 @@ class View_KbArticle extends C4_AbstractView {
 
 		switch($field) {
 			case SearchFields_KbArticle::TITLE:
-			case SearchFields_KbArticle::CONTENT:
 				$tpl->display('file:' . $this->_CORE_TPL_PATH . 'internal/views/criteria/__string.tpl');
 				break;
 			case SearchFields_KbArticle::UPDATED:
@@ -1195,6 +1204,9 @@ class View_KbArticle extends C4_AbstractView {
 				$tpl->assign('topics', $topics);
 
 				$tpl->display('file:' . $this->_TPL_PATH . 'search/criteria/kb_topic.tpl');
+				break;
+			case SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT:
+				$tpl->display('file:' . $this->_CORE_TPL_PATH . 'internal/views/criteria/__fulltext.tpl');
 				break;
 			default:
 				echo '';
@@ -1240,11 +1252,15 @@ class View_KbArticle extends C4_AbstractView {
 		$fields = self::getFields();
 		unset($fields[SearchFields_KbArticle::ID]);
 		unset($fields[SearchFields_KbArticle::FORMAT]);
+		unset($fields[SearchFields_KbArticle::CONTENT]);
 		return $fields;
 	}
 
 	static function getColumns() {
-		return self::getFields();
+		$fields = self::getFields();
+		unset($fields[SearchFields_KbArticle::CONTENT]);
+		unset($fields[SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT]);
+		return $fields;
 	}
 
 	function doSetCriteria($field, $oper, $value) {
@@ -1252,7 +1268,6 @@ class View_KbArticle extends C4_AbstractView {
 
 		switch($field) {
 			case SearchFields_KbArticle::TITLE:
-			case SearchFields_KbArticle::CONTENT:
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
@@ -1278,6 +1293,11 @@ class View_KbArticle extends C4_AbstractView {
 			case SearchFields_KbArticle::TOP_CATEGORY_ID:
 				@$topic_ids = DevblocksPlatform::importGPC($_REQUEST['topic_id'], 'array', array());
 				$criteria = new DevblocksSearchCriteria($field, $oper, $topic_ids);
+				break;
+				
+			case SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT:
+				@$scope = DevblocksPlatform::importGPC($_REQUEST['scope'],'string','expert');
+				$criteria = new DevblocksSearchCriteria($field, $oper, array($value,$scope));
 				break;
 		}
 

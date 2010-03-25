@@ -62,14 +62,8 @@
       
       {if $expanded}
       <div style="margin:2px;margin-left:10px;">
-      	 <div id="{$message->id}fh" style="display:block;">
-				 <a href="javascript:;" onclick="toggleDiv('{$message->id}sh');toggleDiv('{$message->id}h');toggleDiv('{$message->id}fh');toggleDiv('{$message->id}hh');">{$translate->_('display.convo.full_headers')|lower}</a>
-				 | <a href="#{$message->id}act">{$translate->_('display.convo.skip_to_bottom')|lower}</a>
-				 </div>
-      	 <div id="{$message->id}hh" style="display:none;">
-				 <a href="javascript:;" onclick="toggleDiv('{$message->id}sh');toggleDiv('{$message->id}h');toggleDiv('{$message->id}fh');toggleDiv('{$message->id}hh');">{$translate->_('display.convo.hide_headers')|lower}</a>
-				 | <a href="#{$message->id}act">{$translate->_('display.convo.skip_to_bottom')|lower}</a>
-				 </div>
+      	 <a href="javascript:;" class="brief" onclick="if($(this).hasClass('brief')) { $('#{$message->id}sh').hide();$('#{$message->id}h').show();$(this).html('{$translate->_('display.convo.brief_headers')|lower|escape}').removeClass('brief'); } else { $('#{$message->id}sh').show();$('#{$message->id}h').hide();$(this).html('{$translate->_('display.convo.full_headers')|lower|escape}').addClass('brief'); } ">{$translate->_('display.convo.full_headers')|lower|escape}</a>
+      	 | <a href="#{$message->id}act">{$translate->_('display.convo.skip_to_bottom')|lower}</a>
       </div>
       {/if}
       
