@@ -328,7 +328,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		// Log activity
 		DAO_Worker::logActivity(
-			$active_worker->id,
 			new Model_Activity(
 				'activity.mail.workflow',
 				array(
@@ -511,7 +510,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		// Log activity
 		DAO_Worker::logActivity(
-			$active_worker->id,
 			new Model_Activity(
 				'activity.mail.overview',
 				array(
@@ -542,7 +540,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		// Log activity
 		DAO_Worker::logActivity(
-			$active_worker->id,
 			new Model_Activity(
 				'activity.mail.search'
 			)
