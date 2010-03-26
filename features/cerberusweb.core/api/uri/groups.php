@@ -81,6 +81,13 @@ class ChGroupsPage extends CerberusPageExtension  {
 		$ticket_reply_status = DAO_GroupSettings::get($group_id,DAO_GroupSettings::SETTING_TICKET_REPLY_STATUS,255);
 		@$tpl->assign('ticket_reply_status', $ticket_reply_status);
 
+		// Signature
+		
+		CerberusTemplates::getWorkerSignatureTokens($active_worker, $token_labels, $token_values);
+		$tpl->assign('token_labels', $token_labels);
+		
+		// Template
+		
 		$tpl->display('file:' . $tpl_path . 'groups/manage/index.tpl');
 	}
 	

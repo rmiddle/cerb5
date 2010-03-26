@@ -702,8 +702,14 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$default_ticket_send_status = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_TICKET_SEND_STATUS,1);
 		$tpl->assign('default_ticket_send_status', $default_ticket_send_status);
 
+		// POP3
 		$pop3_accounts = DAO_Mail::getPop3Accounts();
 		$tpl->assign('pop3_accounts', $pop3_accounts);
+		
+		// Signature
+		
+		CerberusTemplates::getWorkerSignatureTokens(null, $token_labels, $token_values);
+		$tpl->assign('token_labels', $token_labels);
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/mail/index.tpl');
 	}
@@ -2083,9 +2089,9 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		}
 		
 		$pluginStack = DevblocksPlatform::getPluginRegistry();
-		@$plugins_enabled = DevblocksPlatform::importGPC($_REQUEST['plugins_enabled'],'array');
+		@$plugins_enabled = DevblocksPlatform::importGPC($_REQUEST['plugins_enabled']);
 		
-		if(is_array($pluginStack))
+		if(null !== $plugins_enabled && is_array($pluginStack))
 		foreach($pluginStack as $plugin) {
 			$enabled = false;
 			
@@ -2095,7 +2101,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 					$enabled = true;
 					break;
 				default:
-					if(array_search($plugin->id, $plugins_enabled)) {
+					if(false !== array_search($plugin->id, $plugins_enabled)) {
 						$enabled = true;
 					}
 					break;
