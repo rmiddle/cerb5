@@ -91,6 +91,11 @@
 			<class name="View_ContactOrg" />
 		</file>
 		
+		<file path="api/dao/explorer.php">
+			<class name="DAO_ExplorerSet" />
+			<class name="Model_ExplorerSet" />
+		</file>
+		
 		<file path="api/dao/group.php">
 			<class name="DAO_Group" />
 			<class name="DAO_GroupSettings" />
@@ -362,6 +367,18 @@
 			</class>
 			<params>
 				<param key="uri" value="files" />
+			</params>
+		</extension>
+		
+		<extension point="devblocks.controller">
+			<id>core.controller.explorer</id>
+			<name>Explorer Controller</name>
+			<class>
+				<file>api/uri/explorer.php</file>
+				<name>ChExplorerController</name>
+			</class>
+			<params>
+				<param key="uri" value="explore" />
 			</params>
 		</extension>
 
@@ -978,6 +995,19 @@
 			<class>
 				<file>api/plugin.classes.php</file>
 				<name>ChTaskSource_Ticket</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+		
+		<!-- Explorer Toolbars -->
+		
+		<extension point="cerberusweb.explorer.toolbar">
+			<id>cerberusweb.explorer.toolbar.worker_events</id>
+			<name>Worker Events</name>
+			<class>
+				<file>api/uri/home.php</file>
+				<name>ChExplorerToolbarWorkerEvents</name>
 			</class>
 			<params>
 			</params>
