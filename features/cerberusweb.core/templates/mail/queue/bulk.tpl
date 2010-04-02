@@ -1,6 +1,6 @@
 <form action="{devblocks_url}{/devblocks_url}" method="POST" id="formBatchUpdate" name="formBatchUpdate">
-<input type="hidden" name="c" value="config">
-<input type="hidden" name="a" value="doAttachmentsBulkUpdate">
+<input type="hidden" name="c" value="tickets">
+<input type="hidden" name="a" value="doDraftsBulkUpdate">
 <input type="hidden" name="view_id" value="{$view_id}">
 <input type="hidden" name="ids" value="{$ids}">
 
@@ -13,14 +13,18 @@
 <H2>{$translate->_('common.bulk_update.do')|capitalize}:</H2>
 <table cellspacing="0" cellpadding="2" width="100%">
 	<tr>
-		<td width="0%" nowrap="nowrap" align="right">Status:</td>
+		<td width="0%" nowrap="nowrap" align="right">{$translate->_('common.status')|capitalize}:</td>
 		<td width="100%">
-			<select name="deleted">
+			<select name="status">
 				<option value="">&nbsp;</option>
-				<option value="1">{$translate->_('status.deleted')}</option>
+				<option value="queue">Queue</option>
+				<option value="draft">Draft</option>
+				<option value="delete">{$translate->_('common.delete')|capitalize}</option>
 			</select>
 			
-			<button type="button" onclick="this.form.deleted.selectedIndex=1;">{$translate->_('status.deleted')}</button>
+			<button type="button" onclick="this.form.status.selectedIndex=1;">send</button>
+			<button type="button" onclick="this.form.status.selectedIndex=2;">draft</button>
+			<button type="button" onclick="this.form.status.selectedIndex=3;">{$translate->_('common.delete')|lower}</button>
 		</td>
 	</tr>
 </table>

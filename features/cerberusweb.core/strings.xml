@@ -495,6 +495,9 @@
 		<tu tuid='acl.core.ticket.actions.spam'>
 			<tuv xml:lang="en_US"><seg>[Tickets] Can report tickets as spam</seg></tuv>
 		</tu>
+		<tu tuid='acl.core.ticket.view.actions.broadcast_reply'>
+			<tuv xml:lang="en_US"><seg>[Tickets] Can broadcast reply to ticket lists</seg></tuv>
+		</tu>
 		<tu tuid='acl.core.ticket.view.actions.bulk_update'>
 			<tuv xml:lang="en_US"><seg>[Tickets] Can bulk update tickets in lists</seg></tuv>
 		</tu>
@@ -1114,9 +1117,6 @@
 			<tuv xml:lang="en_US"><seg>Drafts</seg></tuv>
 		</tu>
 		
-		<tu tuid='mail.inbound'>
-			<tuv xml:lang="en_US"><seg>Inbound</seg></tuv>
-		</tu>
 		<tu tuid='mail.inbox_filter'>
 			<tuv xml:lang="en_US"><seg>Inbox Filter</seg></tuv>
 		</tu>
@@ -1164,9 +1164,6 @@
 			<tuv xml:lang="en_US"><seg>[Waiting] %s</seg></tuv>
 		</tu>
 		
-		<tu tuid='mail.outbound'>
-			<tuv xml:lang="en_US"><seg>Outbound</seg></tuv>
-		</tu>
 		<tu tuid='mail.piles'>
 			<tuv xml:lang="en_US"><seg>Piles</seg></tuv>
 		</tu>
@@ -1176,8 +1173,14 @@
 		<tu tuid='mail.quick_search.messages_phrase'>
 			<tuv xml:lang="en_US"><seg>Messages (phrase)</seg></tuv>
 		</tu>
+		<tu tuid='mail.received'>
+			<tuv xml:lang="en_US"><seg>Received</seg></tuv>
+		</tu>
 		<tu tuid='mail.send_mail'>
 			<tuv xml:lang="en_US"><seg>Send Mail</seg></tuv>
+		</tu>
+		<tu tuid='mail.sent'>
+			<tuv xml:lang="en_US"><seg>Sent</seg></tuv>
 		</tu>
 		<tu tuid='mail.surrender'>
 			<tuv xml:lang="en_US"><seg>Surrender</seg></tuv>
