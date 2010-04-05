@@ -48,7 +48,7 @@
  * 		and Joe Geck.
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2010040101);
+define("APP_BUILD", 2010040402);
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -584,7 +584,7 @@ class CerberusTemplates {
 			'worker_first_name' => $token_prefix.$translate->_('worker.first_name'),
 			'worker_last_name' => $token_prefix.$translate->_('worker.last_name'),
 			'worker_title' => $token_prefix.$translate->_('worker.title'),
-			'global_timestamp' => '(Global) '.$translate->_('Timestamp'),
+			'global_timestamp|date' => '(Global) '.$translate->_('Current Date+Time'),
 		);
 		
 		if(is_array($fields))
@@ -652,31 +652,155 @@ class CerberusTemplates {
 		asort($token_labels);
 		
 		return true;
+	}
+	
+	/**
+	 * 
+	 * @param mixed $ticket
+	 * @param array $token_labels
+	 * @param array $token_values
+	 */
+	public static function getTicketSearchTokens($ticket, &$token_labels, &$token_values) {
+		$translate = DevblocksPlatform::getTranslationService();
+		$workers = DAO_Worker::getAll();
+//		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Worker::ID);
+		
+		// Polymorph
+//		if(is_numeric($ticket)) {
+//			$worker = DAO_Worker::getAgent($worker);
+//		} elseif($worker instanceof Model_Worker) {
+//			// It's what we want already.
+//		} else {
+//			$worker = null;
+//		}
+			
+		// Token labels
+		$global_prefix = '(Global) ';
+		$sender_prefix = '(Sender) ';
+		$ticket_prefix = '(Ticket) ';
+		$token_labels = array(
+			'sender_first_name' => $sender_prefix.$translate->_('address.first_name'),
+			'sender_last_name' => $sender_prefix.$translate->_('address.last_name'),
+			'sender_num_nonspam' => $sender_prefix.$translate->_('address.num_nonspam'),
+			'sender_num_spam' => $sender_prefix.$translate->_('address.num_spam'),
+		
+			'ticket_id' => $ticket_prefix.$translate->_('ticket.id'),
+			'ticket_mask' => $ticket_prefix.$translate->_('ticket.mask'),
+			'ticket_subject' => $ticket_prefix.$translate->_('ticket.subject'),
+			'ticket_last_worker' => $ticket_prefix.$translate->_('ticket.last_worker'),
+			'ticket_next_worker' => $ticket_prefix.$translate->_('ticket.next_worker'),
+			'ticket_first_wrote' => $ticket_prefix.$translate->_('ticket.first_wrote'),
+			'ticket_last_wrote' => $ticket_prefix.$translate->_('ticket.last_wrote'),
+			'ticket_created|date' => $ticket_prefix.$translate->_('ticket.created'),
+			'ticket_updated|date' => $ticket_prefix.$translate->_('ticket.updated'),
+		
+			'global_timestamp|date' => $global_prefix.$translate->_('Current Date+Time'),
+		);
+		
+//		if(is_array($fields))
+//		foreach($fields as $cf_id => $field) {
+//			$token_labels['worker_custom_'.$cf_id] = $token_prefix.$field->name;
+//		}
+
+		// Token values
+		$token_values = array();
+		
+		// Worker token values
+		if(null != $ticket) {
+			@$last_worker_id = $ticket[SearchFields_Ticket::TICKET_LAST_WORKER_ID];
+			@$next_worker_id = $ticket[SearchFields_Ticket::TICKET_NEXT_WORKER_ID];
+			@$first_wrote_address = DAO_Address::get($ticket[SearchFields_Ticket::TICKET_FIRST_WROTE_ID]);
+
+			$token_values['sender_first_name'] = (!empty($first_wrote_address)) ? $first_wrote_address->first_name : '';
+			$token_values['sender_last_name'] = (!empty($first_wrote_address)) ? $first_wrote_address->last_name : '';
+			$token_values['sender_num_nonspam'] = (!empty($first_wrote_address)) ? $first_wrote_address->num_nonspam : '';
+			$token_values['sender_num_spam'] = (!empty($first_wrote_address)) ? $first_wrote_address->num_spam : '';
+			
+			$token_values['ticket_id'] = $ticket[SearchFields_Ticket::TICKET_ID];
+			$token_values['ticket_mask'] = $ticket[SearchFields_Ticket::TICKET_MASK];
+			$token_values['ticket_subject'] = $ticket[SearchFields_Ticket::TICKET_SUBJECT];
+			$token_values['ticket_last_worker'] = (!empty($last_worker_id) && isset($workers[$last_worker_id])) ? $workers[$last_worker_id]->getName() : '';
+			$token_values['ticket_next_worker'] = (!empty($next_worker_id) && isset($workers[$next_worker_id])) ? $workers[$next_worker_id]->getName() : '';
+			$token_values['ticket_first_wrote'] = $ticket[SearchFields_Ticket::TICKET_FIRST_WROTE];
+			$token_values['ticket_last_wrote'] = $ticket[SearchFields_Ticket::TICKET_LAST_WROTE];
+			$token_values['ticket_created'] = $ticket[SearchFields_Ticket::TICKET_CREATED_DATE];
+			$token_values['ticket_updated'] = $ticket[SearchFields_Ticket::TICKET_UPDATED_DATE];
+			
+			$token_values['global_timestamp'] = time();
+			
+//			$token_values['worker_custom'] = array();
+			
+//			@$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Worker::ID, $worker->id));
+//			if(is_array($field_values) && !empty($field_values)) {
+//				foreach($field_values as $cf_id => $cf_val) {
+//					if(!isset($fields[$cf_id]))
+//						continue;
+//					
+//					// The literal value
+//					if(null != $worker)
+//						$token_values['worker_custom'][$cf_id] = $cf_val;
+//					
+//					// Stringify
+//					if(is_array($cf_val))
+//						$cf_val = implode(', ', $cf_val);
+//						
+//					if(is_string($cf_val)) {
+//						if(null != $worker)
+//							$token_values['worker_custom_'.$cf_id] = $cf_val;
+//					}
+//				}
+//			}
+		}
+
+		// Plugin-provided tokens
+		$token_extension_mfts = DevblocksPlatform::getExtensions('cerberusweb.template.token', false);
+		foreach($token_extension_mfts as $mft) { /* @var $mft DevblocksExtensionManifest */
+			@$token = $mft->params['token'];
+			@$label = $mft->params['label'];
+			@$bind = $mft->params['bind'][0];
+			
+			if(empty($token) || empty($label) || !is_array($bind))
+				continue;
+
+			if(!isset($bind['ticket']))
+				continue;
+				
+			if(null != ($ext = $mft->createInstance()) && $ext instanceof ITemplateToken_Ticket) {
+				/* @var $ext ITemplateToken_Signature */
+				$value = $ext->getTicketTokenValue($worker);
+				
+				if(!empty($value)) {
+					$token_labels[$token] = $label;
+					$token_values[$token] = $value;
+				}
+			}
+		}
+		
+		asort($token_labels);
+		
+		return true;
 	}	
 };
 
 class CerberusLicense {
-	public $name = '';
-	public $users = 3;
-	public $key = '';
-	
 	/**
 	 * @return array
 	 */
 	public static function getInstance() {
 		$settings = DevblocksPlatform::getPluginSettingsService();
-		$license = $settings->get('cerberusweb.core',CerberusSettings::LICENSE,array());
-		if(!empty($license)) {
-			@$license = unserialize($license);
-		}
-		if(!is_array($license))
+		@$license = json_decode($settings->get('cerberusweb.core',CerberusSettings::LICENSE,array()),true);
+		if(empty($license) || !is_array($license))
 			$license = array();
 		return $license;
 	}
 
-	public static function validate($key, $email) {
-		/*  																																																																																																																														*/foreach(array('L0NvbXBhbnk6ICguKikv'=>'b','L1VzZXJzOiAoLiopLw=='=>'d','L1NlcmlhbDogKC4qKS8='=>'s') as $k=>$v)@preg_match(base64_decode($k),$key,$matches)?@$$v=trim($matches[1]):null;@$r=array('name'=>$b,'email'=>$email,'users'=>intval($d),'serial'=>$s);foreach(array(chr(97)=>0,chr(101)=>3) as $k=>$v)if(@substr(str_replace('-','',$s),0,1).@substr(str_replace('-','',$s),4,1).@substr(str_replace('-','',$s),8,1)==@substr(strtoupper(md5(@substr($b,0,1).@substr($b,-1,1).@strlen($b).$d.@substr($email,0,1).@substr($email,4,1).@strlen($email))),$v,3))@$r[$k]=$s;return $r;/*
-		 * we're sure being generous here! [TODO]
+	/*
+	 * Please purchase a legitimate license and help support the project.
+	 * http://www.cerberusweb.com/
+	 */
+	public static function validate($key, $company, $email) {
+		/*  																																																																																																																														*/try{foreach(array('L0tleTogKC4qKS8='=>'s','L0NyZWF0ZWQ6ICguKikv'=>'c','L1VwZGF0ZWQ6ICguKikv'=>'u','L0V4cGlyZXM6ICguKikv'=>'e','L1dvcmtlcnM6ICguKikv'=>'w') as $k=>$v)@preg_match(base64_decode($k),$key,$matches)?@$$v=trim($matches[1]):null;$r=array();@$w=intval($w);@$cp=base64_decode('Y29tcGFueQ==');@$em=base64_decode('ZW1haWw=');@$cd=preg_replace('/[^A-Z0-9]/','',$s);@$l=explode('-',$e);@$e=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$l=explode('-',$c);@$c=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$l=explode('-',$u);@$u=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$h=str_split(strtoupper(sha1(sha1('cerb5').sha1($$cp).sha1($$em).sha1(intval($w)).sha1($c).sha1($e))),1);if(0==@strcasecmp(dechex(strlen($$cp)+intval($w)),substr($cd,3,2))&&@intval(hexdec(substr($cd,5,1))==@intval(bindec(sprintf("%d%d%d%d",(182<=gmdate('z',$e))?1:0,(5==gmdate('w',$e))?1:0,('th'==gmdate('S',$e))?1:0,(1==gmdate('w',$e))?1:0))))&&0==@strcasecmp($h[hexdec(substr($cd,1,2))-@hexdec(substr($cd,0,1))],substr($cd,0,1)))@$r=array(base64_decode('a2V5')=>$s,base64_decode('Y3JlYXRlZA==')=>$c,base64_decode('dXBkYXRlZA==')=>$u,base64_decode('ZXhwaXJlcw==')=>$e,@$cp=>$$cp,@$em=>$$em,base64_decode('d29ya2Vycw==')=>intval($w));return $r;}catch(Exception $e){return array();}/*
+		 * [TODO] This should probably do a little more checking
 		 */
 		$lines = explode("\n", $key);
 		
@@ -684,15 +808,17 @@ class CerberusLicense {
 		 * Remember that our cache can return stale data here. Be sure to
 		 * clear caches.  The config area does already.
 		 */
-		return (!empty($key)) 
+		return (!empty($key) && !empty($lines)) 
 			? array(
-				'name' => (list($k,$v)=explode(":",$lines[1]))?trim($v):null,
+				'company' => $company,
 				'email' => $email,
-				'users' => (list($k,$v)=explode(":",$lines[2]))?trim($v):null,
-				'serial' => (list($k,$v)=explode(":",$lines[3]))?trim($v):null,
-				'date' => time()
+				'key'     => (list($k,$v)=explode(":",$lines[1]))?trim($v):null,
+				'created' => (list($k,$v)=explode(":",$lines[2]))?trim($v):null,
+				'updated' => (list($k,$v)=explode(":",$lines[3]))?trim($v):null,
+				'expires' => (list($k,$v)=explode(":",$lines[4]))?trim($v):null,
+				'workers' => (list($k,$v)=explode(":",$lines[5]))?trim($v):null
 			)
-			: null;
+			: array();
 	}
 };
 
@@ -721,7 +847,7 @@ class CerberusSettings {
 	const PARSER_AUTO_REQ = 'parser_autoreq'; 
 	const PARSER_AUTO_REQ_EXCLUDE = 'parser_autoreq_exclude'; 
 	const AUTHORIZED_IPS = 'authorized_ips';
-	const LICENSE = 'license';
+	const LICENSE = 'license_json';
 	const ACL_ENABLED = 'acl_enabled';
 	const STORAGE_ENGINE_ATTACHMENT = 'storage_attachment';
 	const STORAGE_ENGINE_MESSAGE_CONTENT = 'storage_message_content';

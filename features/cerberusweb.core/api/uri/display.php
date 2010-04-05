@@ -228,7 +228,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		
 		$tpl->assign('expanded', (empty($hide) ? true : false));
 		
-		$tpl->register_modifier('makehrefs', array('CerberusUtils', 'smarty_modifier_makehrefs')); 
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/modules/conversation/message.tpl');
 	}
 
@@ -313,8 +312,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
 
-		$tpl->register_modifier('makehrefs', array('CerberusUtils', 'smarty_modifier_makehrefs')); 
-		
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/modules/conversation/notes.tpl');
 	}
 	
@@ -746,8 +743,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
 		
-		$tpl->register_modifier('makehrefs', array('CerberusUtils', 'smarty_modifier_makehrefs')); 
-		
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/modules/conversation/index.tpl');
 	}
 	
@@ -782,8 +777,6 @@ class ChDisplayPage extends CerberusPageExtension {
 			}
 		}
 		$tpl->assign('comment_addresses', $comment_addresses);
-		
-		$tpl->register_modifier('makehrefs', array('CerberusUtils', 'smarty_modifier_makehrefs'));		
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/modules/comments/index.tpl');
 	}
