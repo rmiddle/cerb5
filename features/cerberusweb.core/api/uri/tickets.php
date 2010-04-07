@@ -763,6 +763,14 @@ class ChTicketsPage extends CerberusPageExtension {
 		// Loop through view and get IDs
 		$view = C4_AbstractViewLoader::getView($view_id);
 
+		// Page start
+		@$explore_from = DevblocksPlatform::importGPC($_REQUEST['explore_from'],'integer',0);
+		if(empty($explore_from)) {
+			$orig_pos = 1+($view->renderPage * $view->renderLimit);
+		} else {
+			$orig_pos = 1;
+		}
+		
 		$view->renderPage = 0;
 		$view->renderLimit = 25;
 		$pos = 0;
@@ -790,6 +798,9 @@ class ChTicketsPage extends CerberusPageExtension {
 			
 			if(is_array($results))
 			foreach($results as $draft_id => $row) {
+				if($draft_id==$explore_from)
+					$orig_pos = $pos;
+				
 				if($row[SearchFields_MailQueue::TYPE]==Model_MailQueue::TYPE_COMPOSE) {
 					$url = $url_writer->write(sprintf("c=tickets&a=compose&id=%d", $draft_id), true);
 				} elseif($row[SearchFields_MailQueue::TYPE]==Model_MailQueue::TYPE_TICKET_REPLY) {
@@ -812,7 +823,7 @@ class ChTicketsPage extends CerberusPageExtension {
 			
 		} while(!empty($results));
 		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('explore',$hash,'1')));
+		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('explore',$hash,$orig_pos)));
 	}
 	
 	function viewTicketsExploreAction() {
@@ -827,6 +838,14 @@ class ChTicketsPage extends CerberusPageExtension {
 		// Loop through view and get IDs
 		$view = C4_AbstractViewLoader::getView($view_id);
 
+		// Page start
+		@$explore_from = DevblocksPlatform::importGPC($_REQUEST['explore_from'],'integer',0);
+		if(empty($explore_from)) {
+			$orig_pos = 1+($view->renderPage * $view->renderLimit);
+		} else {
+			$orig_pos = 1;
+		}
+		
 		$view->renderPage = 0;
 		$view->renderLimit = 25;
 		$pos = 0;
@@ -854,6 +873,9 @@ class ChTicketsPage extends CerberusPageExtension {
 			
 			if(is_array($results))
 			foreach($results as $ticket_id => $row) {
+				if($ticket_id==$explore_from)
+					$orig_pos = $pos;
+				
 				$url = $url_writer->write(sprintf("c=display&mask=%s", $row[SearchFields_Ticket::TICKET_MASK]), true);
 
 				$model = new Model_ExplorerSet();
@@ -872,7 +894,7 @@ class ChTicketsPage extends CerberusPageExtension {
 			
 		} while(!empty($results));
 		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('explore',$hash,'1')));
+		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('explore',$hash,$orig_pos)));
 	}	
 	
 	// Ajax
