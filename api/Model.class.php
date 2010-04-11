@@ -64,6 +64,8 @@ abstract class C4_AbstractView {
 	public $renderTotal = true;
 	public $renderSortBy = '';
 	public $renderSortAsc = 1;
+	
+	public $renderTemplate = null;
 
 	function getData() {
 	}
@@ -394,8 +396,11 @@ class C4_AbstractViewModel {
 
 	public $renderPage = 0;
 	public $renderLimit = 10;
+	public $renderTotal = true;
 	public $renderSortBy = '';
 	public $renderSortAsc = 1;
+	
+	public $renderTemplate = null;
 };
 
 /**
@@ -516,9 +521,12 @@ class C4_AbstractViewLoader {
 
 		$model->renderPage = $view->renderPage;
 		$model->renderLimit = $view->renderLimit;
+		$model->renderTotal = $view->renderTotal;
 		$model->renderSortBy = $view->renderSortBy;
 		$model->renderSortAsc = $view->renderSortAsc;
 
+		$model->renderTemplate = $view->renderTemplate;
+		
 		return $model;
 	}
 
@@ -538,9 +546,12 @@ class C4_AbstractViewLoader {
 
 		$inst->renderPage = $model->renderPage;
 		$inst->renderLimit = $model->renderLimit;
+		$inst->renderTotal = $model->renderTotal;
 		$inst->renderSortBy = $model->renderSortBy;
 		$inst->renderSortAsc = $model->renderSortAsc;
 
+		$inst->renderTemplate = $model->renderTemplate;
+		
 		return $inst;
 	}
 };
@@ -1486,68 +1497,6 @@ class Model_Pop3Account {
 	public $username;
 	public $password;
 	public $port=110;
-};
-
-class Model_MailTemplate {
-	const TYPE_COMPOSE = 1;
-	const TYPE_REPLY = 2;
-	const TYPE_CREATE = 3;
-//	const TYPE_CLOSE = 4;
-	
-	public $id = 0;
-	public $title = '';
-	public $description = '';
-	public $folder = '';
-	public $owner_id = 0;
-	public $template_type = 0;
-	public $content = '';
-
-	public function getRenderedContent($message_id) {
-		$raw = $this->content;
-
-		$replace = array();
-		$with = array();
-
-		$replace[] = '#timestamp#';
-		$with[] = date('r');
-		
-		if(!empty($message_id)) {
-			$message = DAO_Message::get($message_id);
-			$ticket = DAO_Ticket::getTicket($message->ticket_id);
-			$sender = DAO_Address::get($message->address_id);
-			$sender_org = DAO_ContactOrg::get($sender->contact_org_id);
-			
-			$replace[] = '#sender_first_name#';
-			$replace[] = '#sender_last_name#';
-			$replace[] = '#sender_org#';
-	
-			$with[] = $sender->first_name;
-			$with[] = $sender->last_name;
-			$with[] = (!empty($sender_org)?$sender_org->name:"");
-			
-			$replace[] = '#ticket_id#';
-			$replace[] = '#ticket_mask#';
-			$replace[] = '#ticket_subject#';
-
-			$with[] = $ticket->id;
-			$with[] = $ticket->mask;
-			$with[] = $ticket->subject;
-		}
-			
-		if(null != ($active_worker = CerberusApplication::getActiveWorker())) {
-			$worker = DAO_Worker::getAgent($active_worker->id); // most recent info (not session)
-			
-			$replace[] = '#worker_first_name#';
-			$replace[] = '#worker_last_name#';
-			$replace[] = '#worker_title#';
-	
-			$with[] = $worker->first_name;
-			$with[] = $worker->last_name;
-			$with[] = $worker->title;
-		}
-
-		return str_replace($replace, $with, $raw);
-	}
 };
 
 class Model_TicketComment {
