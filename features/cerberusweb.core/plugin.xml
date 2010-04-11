@@ -140,6 +140,13 @@
 			<class name="Model_PreParseRule" />
 		</file>
 		
+		<file path="api/dao/snippet.php">
+			<class name="DAO_Snippet" />
+			<class name="Model_Snippet" />
+			<class name="SearchField_Snippet" />
+			<class name="View_Snippet" />
+		</file>
+		
 		<file path="api/dao/task.php">
 			<class name="DAO_Task" />
 			<class name="Model_Task" />
@@ -408,19 +415,6 @@
 			<class>
 				<file>classes.php</file>
 				<name>ChNotificationController</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-
-		<!-- Translations -->
-		
-		<extension point="devblocks.i18n.strings">
-			<id>core.translations</id>
-			<name>Cerberus Helpdesk Strings</name>
-			<class>
-				<file>api/plugin.classes.php</file>
-				<name>ChTranslations</name>
 			</class>
 			<params>
 			</params>
