@@ -52,8 +52,8 @@
 		{assign var=tableRowClass value="odd"}
 	{/if}
 	
-		<tr class="{$tableRowClass}" id="{$rowIdPrefix}_s" onmouseover="$(this).addClass('hover');$('#{$rowIdPrefix}_s').addClass('hover');" onmouseout="$(this).removeClass('hover');$('#{$rowIdPrefix}_s').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { checkAll('{$rowIdPrefix}_s'); $(this).closest('form').find('input[name=explore_from]').first().val('{$result.m_id}'); }">
-		<td align="center"><input type="checkbox" name="row_id[]" value="{$result.m_id}"></td>
+		<tr class="{$tableRowClass}" id="{$rowIdPrefix}_s" onmouseover="$(this).addClass('hover');$('#{$rowIdPrefix}_s').addClass('hover');" onmouseout="$(this).removeClass('hover');$('#{$rowIdPrefix}_s').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { $('#{$rowIdPrefix}_s').find('input[type=checkbox]').first().click(); }">
+		<td align="center"><input type="checkbox" name="row_id[]" value="{$result.m_id}" onclick="$(this).closest('form').find('input[name=explore_from]').first().val('{$result.m_id}');"></td>
 		{foreach from=$view->view_columns item=column name=columns}
 			{if substr($column,0,3)=="cf_"}
 				{include file="file:$core_tpl/internal/custom_fields/view/cell_renderer.tpl"}
@@ -61,6 +61,8 @@
 			<td>
 				{if $result.m_type=="mail.compose"}
 					<a href="{devblocks_url}c=tickets&a=compose&id={$result.m_id|escape:'url'}{/devblocks_url}" class="subject">{if empty($result.$column)}(no subject){else}{$result.$column}{/if}</a>
+				{elseif $result.m_type=="mail.open_ticket"}
+					<a href="{devblocks_url}c=tickets&a=create&id={$result.m_id|escape:'url'}{/devblocks_url}" class="subject">{if empty($result.$column)}(no subject){else}{$result.$column}{/if}</a>
 				{elseif $result.m_type=="ticket.reply"}
 					<a href="{devblocks_url}c=display&id={$result.m_ticket_id|escape:'url'}{/devblocks_url}#draft{$result.m_id|escape:'url'}" class="subject">{if empty($result.$column)}(no subject){else}{$result.$column}{/if}</a>
 				{/if}
