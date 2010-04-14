@@ -196,7 +196,7 @@ class CerberusMail {
 				if ($group_smtp) {
 					$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 				} else {
-					$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults($team_id);
+					$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults($team_id));
 				}
 				$email = $mail_service->createMessage();
 		
@@ -443,7 +443,7 @@ class CerberusMail {
 			if ($group_smtp) {
 				$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 			} else {
-				$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults($ticket->team_id);
+				$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults($ticket->team_id));
 			}
 			$mail = $mail_service->createMessage();
 	        
