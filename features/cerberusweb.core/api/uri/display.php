@@ -463,6 +463,7 @@ class ChDisplayPage extends CerberusPageExtension {
 	    $worker = CerberusApplication::getActiveWorker();
 	    
 		$properties = array(
+		    'draft_id' => $draft_id,
 		    'message_id' => DevblocksPlatform::importGPC(@$_REQUEST['id']),
 		    'ticket_id' => $ticket_id,
 		    'to' => DevblocksPlatform::importGPC(@$_REQUEST['to']),
@@ -600,11 +601,9 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('requesters', $ticket->getRequesters());
 
 		// Drafts
-		$drafts = DAO_MailQueue::getWhere(sprintf("%s = %d AND %s = %d AND %s = %s",
+		$drafts = DAO_MailQueue::getWhere(sprintf("%s = %d AND %s = %s",
 			DAO_MailQueue::TICKET_ID,
 			$id,
-			DAO_MailQueue::WORKER_ID,
-			$active_worker->id,
 			DAO_MailQueue::TYPE,
 			C4_ORMHelper::qstr(Model_MailQueue::TYPE_TICKET_REPLY)
 		));
@@ -984,6 +983,7 @@ class ChDisplayPage extends CerberusPageExtension {
 			DAO_Ticket::UPDATED_DATE => $orig_message->created_date,
 			DAO_Ticket::CATEGORY_ID => $orig_ticket->category_id,
 			DAO_Ticket::FIRST_MESSAGE_ID => $orig_message->id,
+			DAO_Ticket::LAST_MESSAGE_ID => $orig_message->id,
 			DAO_Ticket::FIRST_WROTE_ID => $orig_message->address_id,
 			DAO_Ticket::LAST_WROTE_ID => $orig_message->address_id,
 			DAO_Ticket::LAST_ACTION_CODE => CerberusTicketActionCode::TICKET_OPENED,
@@ -1013,6 +1013,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$last_message = end($messages); /* @var Model_Message $last_message */
 		
 		DAO_Ticket::updateTicket($orig_ticket->id, array(
+			DAO_Ticket::LAST_MESSAGE_ID => $last_message->id,
 			DAO_Ticket::LAST_WROTE_ID => $last_message->address_id
 		));
 		

@@ -48,7 +48,8 @@
  * 		and Joe Geck.
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2010041001);
+define("APP_VERSION", '5.0.0-beta');
+define("APP_BUILD", 2010041501);
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -124,6 +125,16 @@ class CerberusApplication extends DevblocksApplication {
 	
 	static function checkRequirements() {
 		$errors = array();
+		
+		// License
+		// [TODO] 
+	    $license = CerberusLicense::getInstance();
+	    if(!empty($license)&&isset($license['expires'])&&intval(gmdate("Ymd99",$license['expires'])) < APP_BUILD) {
+	    	$errors[] = sprintf("Your Cerb5 license permits software updates through %s, and this update was released on %s.  Please renew your license or download a previous version.",
+	    		gmdate("F d, Y",$license['expires']),
+	    		gmdate("F d, Y",gmmktime(0,0,0,substr(APP_BUILD,4,2),substr(APP_BUILD,6,2),substr(APP_BUILD,0,4)))
+	    	);
+	    }
 		
 		// Privileges
 		
@@ -276,6 +287,71 @@ class CerberusApplication extends DevblocksApplication {
 		
 		return $errors;
 	}
+	
+	static function update() {
+		// Update the platform
+		if(!DevblocksPlatform::update())
+			throw new Exception("Couldn't update Devblocks.");
+			
+		// Read in plugin information from the filesystem to the database
+		DevblocksPlatform::readPlugins();
+		
+		// Clean up missing plugins
+		DAO_Platform::cleanupPluginTables();
+		
+		// Registry
+		$plugins = DevblocksPlatform::getPluginRegistry();
+		
+		// Update the application core (version by version)
+		if(!isset($plugins['cerberusweb.core']))
+			throw new Exception("Couldn't read application manifest.");
+	
+		$plugin_patches = array();
+
+		// Load patches
+		foreach($plugins as $p) { /* @var $p DevblocksPluginManifest */
+			if('devblocks.core'==$p->id)
+				continue;
+			
+			// Don't patch disabled plugins
+			if($p->enabled)
+				$plugin_patches[$p->id] = $p->getPatches();
+		}
+		
+		$core_patches = $plugin_patches['cerberusweb.core'];
+		unset($plugin_patches['cerberusweb.core']);
+		
+		/*
+		 * For each core release, patch plugins in dependency order
+		 */
+		foreach($core_patches as $patch) { /* @var $patch DevblocksPatch */
+			if(!file_exists($patch->getFilename()))
+				throw new Exception("Missing application patch: ".$path);
+			
+			$version = $patch->getVersion();
+			
+			if(!$patch->run())
+				throw new Exception("Application patch failed to apply: ".$path);
+			
+			// Patch this version and then patch plugins up to this version
+			foreach($plugin_patches as $plugin_id => $patches) {
+				$pass = true;
+				foreach($patches as $k => $plugin_patch) {
+					// Recursive patch up to _version_
+					if($pass && version_compare($plugin_patch->getVersion(), $version, "<=")) {
+						if($plugin_patch->run()) {
+							unset($plugin_patches[$plugin_id][$k]);
+						} else {
+							$plugins[$plugin_id]->setEnabled(false);
+							$pass = false;
+						}
+					}
+				}
+			}
+		}
+		
+		return TRUE;
+	}	
 	
 	static function generatePassword($length=8) {
 		$chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789';
@@ -558,6 +634,7 @@ class CerberusSnippetContexts {
 	const CONTEXT_ADDRESS = 'cerberusweb.snippets.address';
 	const CONTEXT_BUCKET = 'cerberusweb.snippets.bucket';
 	const CONTEXT_GROUP = 'cerberusweb.snippets.group';
+	const CONTEXT_MESSAGE = 'cerberusweb.snippets.message';
 	const CONTEXT_ORG = 'cerberusweb.snippets.org';
 	const CONTEXT_TICKET = 'cerberusweb.snippets.ticket';
 	const CONTEXT_WORKER = 'cerberusweb.snippets.worker';
@@ -572,6 +649,9 @@ class CerberusSnippetContexts {
 				break;
 			case 'cerberusweb.snippets.group':
 				self::_getGroupContext($context_object, $labels, $values, $prefix);
+				break;
+			case 'cerberusweb.snippets.message':
+				self::_getMessageContext($context_object, $labels, $values, $prefix);
 				break;
 			case 'cerberusweb.snippets.org':
 				self::_getOrganizationContext($context_object, $labels, $values, $prefix);
@@ -989,15 +1069,15 @@ class CerberusSnippetContexts {
 			$token_labels,
 			$token_values
 		);
-		
-		// First wrote
-		$first_wrote_id = $ticket[SearchFields_Ticket::TICKET_FIRST_WROTE_ID];
+
+		// First message
+		$first_message_id = $ticket[SearchFields_Ticket::TICKET_FIRST_MESSAGE_ID];
 		$merge_token_labels = array();
 		$merge_token_values = array();
-		self::getContext(self::CONTEXT_ADDRESS, $first_wrote_id, $merge_token_labels, $merge_token_values, 'Sender:', true);
+		self::getContext(self::CONTEXT_MESSAGE, $first_message_id, $merge_token_labels, $merge_token_values, 'Message:', true);
 		
 		self::_merge(
-			'initial_sender_',
+			'initial_message_',
 			'Initial:',
 			$merge_token_labels,
 			$merge_token_values,
@@ -1005,15 +1085,15 @@ class CerberusSnippetContexts {
 			$token_values
 		
 		);
-
-		// Last wrote
-		@$last_wrote_id = $ticket[SearchFields_Ticket::TICKET_LAST_WROTE_ID];
+		
+		// Last message
+		$last_message_id = $ticket[SearchFields_Ticket::TICKET_LAST_MESSAGE_ID];
 		$merge_token_labels = array();
 		$merge_token_values = array();
-		self::getContext(self::CONTEXT_ADDRESS, $last_wrote_id, $merge_token_labels, $merge_token_values, 'Sender:', true);
-
+		self::getContext(self::CONTEXT_MESSAGE, $last_message_id, $merge_token_labels, $merge_token_values, 'Message:', true);
+		
 		self::_merge(
-			'latest_sender_',
+			'latest_message_',
 			'Latest:',
 			$merge_token_labels,
 			$merge_token_values,
@@ -1047,6 +1127,59 @@ class CerberusSnippetContexts {
 		
 		return true;
 	}
+	
+	/**
+	 * 
+	 * @param mixed $message
+	 * @param array $token_labels
+	 * @param array $token_values
+	 */
+	private static function _getMessageContext($message, &$token_labels, &$token_values, $prefix=null) {
+		if(is_null($prefix))
+			$prefix = 'Message:';
+		
+		$translate = DevblocksPlatform::getTranslationService();
+
+		// Polymorph
+		if(is_numeric($message)) {
+			$message = DAO_Message::get($message); 
+		} elseif($message instanceof Model_Message) {
+			// It's what we want already.
+		} else {
+			$message = null;
+		}
+		/* @var $message Model_Message */
+		
+		// Token labels
+		$token_labels = array(
+			'content' => $prefix.$translate->_('common.content'),
+		);
+		
+		// Token values
+		$token_values = array();
+		
+		// Message token values
+		if($message) {
+			$token_values['content'] = $message->getContent();
+		}
+
+		// Sender
+		@$address_id = $message->address_id;
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		self::getContext(self::CONTEXT_ADDRESS, $address_id, $merge_token_labels, $merge_token_values, '', true);
+
+		self::_merge(
+			'sender_',
+			'Message:Sender:',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);
+		
+		return true;
+	}	
 	
 	/**
 	 * 
@@ -1279,8 +1412,9 @@ class CerberusLicense {
 	 * @return array
 	 */
 	public static function getInstance() {
+		// [TODO] Move 'data' to another setting
 		$settings = DevblocksPlatform::getPluginSettingsService();
-		@$license = json_decode($settings->get('cerberusweb.core',CerberusSettings::LICENSE,array()),true);
+		@$license = json_decode($settings->get('cerberusweb.core',CerberusSettings::LICENSE,array()),true);																																																																																																						  	try{$l=$license;return self::validate(base64_decode(@$l[base64_decode('ZGF0YQ==')]),@$l['company'],@$l['email']);}catch(Exception $e){}
 		if(empty($license) || !is_array($license))
 			$license = array();
 		return $license;
@@ -1291,7 +1425,7 @@ class CerberusLicense {
 	 * http://www.cerberusweb.com/
 	 */
 	public static function validate($key, $company, $email) {
-		/*  																																																																																																																														*/try{foreach(array('L0tleTogKC4qKS8='=>'s','L0NyZWF0ZWQ6ICguKikv'=>'c','L1VwZGF0ZWQ6ICguKikv'=>'u','L0V4cGlyZXM6ICguKikv'=>'e','L1dvcmtlcnM6ICguKikv'=>'w') as $k=>$v)@preg_match(base64_decode($k),$key,$matches)?@$$v=trim($matches[1]):null;$r=array();@$w=intval($w);@$cp=base64_decode('Y29tcGFueQ==');@$em=base64_decode('ZW1haWw=');@$cd=preg_replace('/[^A-Z0-9]/','',$s);@$l=explode('-',$e);@$e=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$l=explode('-',$c);@$c=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$l=explode('-',$u);@$u=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$h=str_split(strtoupper(sha1(sha1('cerb5').sha1($$cp).sha1($$em).sha1(intval($w)).sha1($c).sha1($e))),1);if(0==@strcasecmp(sprintf("%02X",strlen($$cp)+intval($w)),substr($cd,3,2))&&@intval(hexdec(substr($cd,5,1))==@intval(bindec(sprintf("%d%d%d%d",(182<=gmdate('z',$e))?1:0,(5==gmdate('w',$e))?1:0,('th'==gmdate('S',$e))?1:0,(1==gmdate('w',$e))?1:0))))&&0==@strcasecmp($h[hexdec(substr($cd,1,2))-@hexdec(substr($cd,0,1))],substr($cd,0,1)))@$r=array(base64_decode('a2V5')=>$s,base64_decode('Y3JlYXRlZA==')=>$c,base64_decode('dXBkYXRlZA==')=>$u,base64_decode('ZXhwaXJlcw==')=>$e,@$cp=>$$cp,@$em=>$$em,base64_decode('d29ya2Vycw==')=>intval($w));return $r;}catch(Exception $e){return array();}/*
+		/*  																																																																																																																														*/try{foreach(array('L0tleTogKC4qKS8='=>'s','L0NyZWF0ZWQ6ICguKikv'=>'c','L1VwZGF0ZWQ6ICguKikv'=>'u','L0V4cGlyZXM6ICguKikv'=>'e','L1dvcmtlcnM6ICguKikv'=>'w') as $k=>$v)@preg_match(base64_decode($k),$key,$matches)?@$$v=trim($matches[1]):null;$r=array();@$w=intval($w);@$cp=base64_decode('Y29tcGFueQ==');@$em=base64_decode('ZW1haWw=');@$cd=preg_replace('/[^A-Z0-9]/','',$s);@$l=explode('-',$e);@$e=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$l=explode('-',$c);@$c=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$l=explode('-',$u);@$u=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$h=str_split(strtoupper(sha1(sha1('cerb5').sha1($$cp).sha1($$em).sha1(intval($w)).sha1($c).sha1($e))),1);if(0==@strcasecmp(sprintf("%02X",strlen($$cp)+intval($w)),substr($cd,3,2))&&@intval(hexdec(substr($cd,5,1))==@intval(bindec(sprintf("%d%d%d%d",(182<=gmdate('z',$e))?1:0,(5==gmdate('w',$e))?1:0,('th'==gmdate('S',$e))?1:0,(1==gmdate('w',$e))?1:0))))&&0==@strcasecmp($h[hexdec(substr($cd,1,2))-@hexdec(substr($cd,0,1))],substr($cd,0,1)))@$r=array(base64_decode('a2V5')=>$s,base64_decode('Y3JlYXRlZA==')=>$c,base64_decode('dXBkYXRlZA==')=>$u,base64_decode('ZXhwaXJlcw==')=>$e,@$cp=>$$cp,@$em=>$$em,base64_decode('d29ya2Vycw==')=>intval($w),base64_decode('ZGF0YQ==')=>base64_encode($key));return $r;}catch(Exception $e){return array();}/*
 		 * [TODO] This should probably do a little more checking
 		 */
 		$lines = explode("\n", $key);
