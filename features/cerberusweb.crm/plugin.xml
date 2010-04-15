@@ -1,11 +1,24 @@
 <!DOCTYPE plugin SYSTEM "../../libs/devblocks/plugin.dtd">
 <plugin>
 	<id>cerberusweb.crm</id>
-	<name>[Cerb5] Opportunity Tracking (Experimental)</name>
+	<name>[Cerb5] Opportunity Tracking</name>
 	<description>Create opportunities (sales leads) linked to e-mail addresses. Opportunity records can be created from the Activity menu or while reading tickets.</description>
 	<author>WebGroup Media, LLC.</author>
 	<revision>0</revision>
 	<link>http://www.cerberusweb.com/</link>
+	
+	<!-- Plugin Dependencies -->
+	
+	<dependencies>
+		<require plugin_id="cerberusweb.core" version="5.0.0-beta" />
+	</dependencies>
+	
+	<!-- Patches -->
+	
+	<patches>
+		<patch version="4.0.0-alpha" revision="6" file="patches/4.0.0_alpha.php" />
+		<patch version="4.1.0" revision="12" file="patches/4.1.0.php" />
+	</patches>
 	
 	<!-- Exported Classes -->
 	
@@ -26,19 +39,6 @@
 	
 	<extensions>
 	
-		<!-- Patch Containers -->
-		
-		<extension point="devblocks.patch.container">
-			<id>crm.patches</id>
-			<name>CRM Patches</name>
-			<class>
-				<file>api/Patch.php</file>
-				<name>CrmPatchContainer</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-
 		<!-- Event Listeners -->
 		
 		<extension point="devblocks.listener.event">
