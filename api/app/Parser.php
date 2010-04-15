@@ -689,7 +689,8 @@ class CerberusParser {
 		if($bIsNew && !empty($id) && !empty($email_id)) {
 			// First thread (needed for anti-spam)
 			DAO_Ticket::updateTicket($id, array(
-				 DAO_Ticket::FIRST_MESSAGE_ID => $email_id
+				 DAO_Ticket::FIRST_MESSAGE_ID => $email_id,
+				 DAO_Ticket::LAST_MESSAGE_ID => $email_id,
 			));
 			
 			// Prime the change fields (which a few things like anti-spam might change before we commit)
@@ -764,17 +765,26 @@ class CerberusParser {
 				&& !empty($autoreply) 
 				&& $enumSpamTraining != CerberusTicketSpamTraining::SPAM
 				) {
-					$result = CerberusMail::sendTicketMessage(array(
-						'ticket_id' => $id,
-						'message_id' => $email_id,
-						'content' => str_replace(
-				        	array('#ticket_id#','#mask#','#subject#','#timestamp#', '#sender#','#sender_first#','#orig_body#'),
-				        	array($id, $sMask, $sSubject, date('r'), $fromAddressInst->email, $fromAddressInst->first_name, ltrim($message->body)),
-				        	$autoreply
-						),
-						'is_autoreply' => true,
-						'dont_keep_copy' => true
-					));
+					try {
+						$token_labels = array();
+						$token_values = array();
+						CerberusSnippetContexts::getContext(CerberusSnippetContexts::CONTEXT_TICKET, $id, $token_labels, $token_values);
+						
+						$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+						if(false === ($autoreply_content = $tpl_builder->build($autoreply, $token_values)))
+							throw new Exception('Failed parsing auto-reply snippet.');
+						
+						$result = CerberusMail::sendTicketMessage(array(
+							'ticket_id' => $id,
+							'message_id' => $email_id,
+							'content' => $autoreply_content,
+							'is_autoreply' => true,
+							'dont_keep_copy' => true
+						));
+						
+					} catch (Exception $e) {
+						// [TODO] Error handling
+					}
 			}
 			
 		} // end bIsNew
@@ -788,6 +798,7 @@ class CerberusParser {
 			    DAO_Ticket::IS_WAITING => 0,
 			    DAO_Ticket::IS_CLOSED => 0,
 			    DAO_Ticket::IS_DELETED => 0,
+			    DAO_Ticket::LAST_MESSAGE_ID => $email_id,
 			    DAO_Ticket::LAST_WROTE_ID => $fromAddressInst->id,
 			    DAO_Ticket::LAST_ACTION_CODE => CerberusTicketActionCode::TICKET_CUSTOMER_REPLY,
 			));
