@@ -505,7 +505,7 @@ class CerberusParser {
 							DAO_TicketComment::COMMENT => $message->body,
 						));
 					} else {
-						CerberusMail::sendTicketMessage(array(
+	        		                $result = CerberusMail::sendTicketMessage(array(
 							'message_id' => $msgid,
 							'content' => $message->body,
 							'files' => $attachment_files,
@@ -764,7 +764,7 @@ class CerberusParser {
 				&& !empty($autoreply) 
 				&& $enumSpamTraining != CerberusTicketSpamTraining::SPAM
 				) {
-					CerberusMail::sendTicketMessage(array(
+					$result = CerberusMail::sendTicketMessage(array(
 						'ticket_id' => $id,
 						'message_id' => $email_id,
 						'content' => str_replace(
