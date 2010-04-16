@@ -48,8 +48,8 @@
  * 		and Joe Geck.
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_VERSION", '5.0.0-beta');
-define("APP_BUILD", 2010041501);
+define("APP_VERSION", '5.0.0-rc1');
+define("APP_BUILD", 2010041503);
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -639,6 +639,7 @@ class CerberusSnippetContexts {
 	const CONTEXT_BUCKET = 'cerberusweb.snippets.bucket';
 	const CONTEXT_GROUP = 'cerberusweb.snippets.group';
 	const CONTEXT_MESSAGE = 'cerberusweb.snippets.message';
+	const CONTEXT_OPPORTUNITY = 'cerberusweb.snippets.opportunity';
 	const CONTEXT_ORG = 'cerberusweb.snippets.org';
 	const CONTEXT_TICKET = 'cerberusweb.snippets.ticket';
 	const CONTEXT_WORKER = 'cerberusweb.snippets.worker';
@@ -656,6 +657,9 @@ class CerberusSnippetContexts {
 				break;
 			case 'cerberusweb.snippets.message':
 				self::_getMessageContext($context_object, $labels, $values, $prefix);
+				break;
+			case 'cerberusweb.snippets.opportunity':
+				self::_getOpportunityContext($context_object, $labels, $values, $prefix);
 				break;
 			case 'cerberusweb.snippets.org':
 				self::_getOrganizationContext($context_object, $labels, $values, $prefix);
@@ -681,6 +685,21 @@ class CerberusSnippetContexts {
 				array(
 					'timestamp' => time(),
 				),
+				$labels,
+				$values
+			);
+			
+			// Current worker
+			$active_worker = CerberusApplication::getActiveWorker();
+			$merge_token_labels = array();
+			$merge_token_values = array();
+			self::getContext(self::CONTEXT_WORKER, $active_worker, $merge_token_labels, $merge_token_values, '', true);
+	
+			self::_merge(
+				'worker_',
+				'Current:Worker:',
+				$merge_token_labels,
+				$merge_token_values,
 				$labels,
 				$values
 			);
@@ -1044,21 +1063,6 @@ class CerberusSnippetContexts {
 			$token_values
 		);
 		
-		// Current worker
-		$active_worker = CerberusApplication::getActiveWorker();
-		$merge_token_labels = array();
-		$merge_token_values = array();
-		self::getContext(self::CONTEXT_WORKER, $active_worker, $merge_token_labels, $merge_token_values, '', true);
-
-		self::_merge(
-			'worker_',
-			'Current:Worker:',
-			$merge_token_labels,
-			$merge_token_values,
-			$token_labels,
-			$token_values
-		);
-		
 		// Next worker
 		$next_worker_id = $ticket[SearchFields_Ticket::TICKET_NEXT_WORKER_ID];
 		$merge_token_labels = array();
@@ -1272,6 +1276,112 @@ class CerberusSnippetContexts {
 
 		return true;
 	}
+	
+	/**
+	 * 
+	 * @param mixed $opp
+	 * @param array $token_labels
+	 * @param array $token_values
+	 */
+	private static function _getOpportunityContext($opp, &$token_labels, &$token_values, $prefix=null) {
+		if(is_null($prefix))
+			$prefix = 'Opportunity:';
+		
+		$translate = DevblocksPlatform::getTranslationService();
+		$fields = DAO_CustomField::getBySource(CrmCustomFieldSource_Opportunity::ID);
+
+		// Polymorph
+		if(is_numeric($opp)) {
+			$opp = DAO_CrmOpportunity::get($opp);
+		} elseif($opp instanceof Model_CrmOpportunity) {
+			// It's what we want already.
+		} else {
+			$opp = null;
+		}
+		
+		// Token labels
+		$token_labels = array(
+			'created|date' => $prefix.$translate->_('crm.opportunity.created_date'),
+			'is_closed' => $prefix.$translate->_('crm.opportunity.is_closed'),
+			'is_won' => $prefix.$translate->_('crm.opportunity.is_won'),
+			'title' => $prefix.$translate->_('crm.opportunity.name'),
+			'updated|date' => $prefix.$translate->_('crm.opportunity.updated_date'),
+		);
+		
+		if(is_array($fields))
+		foreach($fields as $cf_id => $field) {
+			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
+		}
+
+		// Token values
+		$token_values = array();
+		
+		// Opp token values
+		if($opp) {
+			$token_values['created'] = $opp->created_date;
+			$token_values['is_closed'] = $opp->is_closed;
+			$token_values['is_won'] = $opp->is_won;
+			$token_values['title'] = $opp->name;
+			$token_values['updated'] = $opp->updated_date;
+//			if(!empty($org->city))
+//				$token_values['city'] = $org->city;
+
+			$token_values['custom'] = array();
+			
+			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(CrmCustomFieldSource_Opportunity::ID, $opp->id));
+			if(is_array($field_values) && !empty($field_values)) {
+				foreach($field_values as $cf_id => $cf_val) {
+					if(!isset($fields[$cf_id]))
+						continue;
+					
+					// The literal value
+					if(null != $opp)
+						$token_values['custom'][$cf_id] = $cf_val;
+					
+					// Stringify
+					if(is_array($cf_val))
+						$cf_val = implode(', ', $cf_val);
+						
+					if(is_string($cf_val)) {
+						if(null != $opp)
+							$token_values['custom_'.$cf_id] = $cf_val;
+					}
+				}
+			}
+		}
+		
+		// Person
+		@$address_id = $opp->primary_email_id;
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		self::getContext(self::CONTEXT_ADDRESS, $address_id, $merge_token_labels, $merge_token_values, '', true);
+
+		self::_merge(
+			'email_',
+			'Lead:',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);
+		
+		// Assignee
+		@$assignee_id = $opp->worker_id;
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		self::getContext(self::CONTEXT_WORKER, $assignee_id, $merge_token_labels, $merge_token_values, '', true);
+
+		self::_merge(
+			'assignee_',
+			'Assignee:',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);		
+		
+		return true;
+	}	
 	
 	/**
 	 * 

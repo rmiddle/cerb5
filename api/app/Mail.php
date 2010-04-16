@@ -245,6 +245,7 @@ class CerberusMail {
 				if(empty($draft_id)) {
 					$params = array(
 						'to' => $toStr,
+						'group_id' => $team_id,
 					);
 					
 					if(!empty($cc))
@@ -252,7 +253,7 @@ class CerberusMail {
 						
 					if(!empty($bcc))
 						$params['bcc'] = $bcc;
-					
+						
 					$fields = array(
 						DAO_MailQueue::TYPE => Model_MailQueue::TYPE_COMPOSE,
 						DAO_MailQueue::TICKET_ID => 0,
