@@ -49,7 +49,7 @@
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 define("APP_VERSION", '5.0.0-rc1');
-define("APP_BUILD", 2010041502);
+define("APP_BUILD", 2010041503);
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -685,6 +685,21 @@ class CerberusSnippetContexts {
 				$values
 			);
 			
+			// Current worker
+			$active_worker = CerberusApplication::getActiveWorker();
+			$merge_token_labels = array();
+			$merge_token_values = array();
+			self::getContext(self::CONTEXT_WORKER, $active_worker, $merge_token_labels, $merge_token_values, '', true);
+	
+			self::_merge(
+				'worker_',
+				'Current:Worker:',
+				$merge_token_labels,
+				$merge_token_values,
+				$labels,
+				$values
+			);
+			
 			// Plugin-provided tokens
 			$token_extension_mfts = DevblocksPlatform::getExtensions('cerberusweb.snippet.token', false);
 			foreach($token_extension_mfts as $mft) { /* @var $mft DevblocksExtensionManifest */
@@ -1044,21 +1059,6 @@ class CerberusSnippetContexts {
 			$token_values
 		);
 		
-		// Current worker
-		$active_worker = CerberusApplication::getActiveWorker();
-		$merge_token_labels = array();
-		$merge_token_values = array();
-		self::getContext(self::CONTEXT_WORKER, $active_worker, $merge_token_labels, $merge_token_values, '', true);
-
-		self::_merge(
-			'worker_',
-			'Current:Worker:',
-			$merge_token_labels,
-			$merge_token_values,
-			$token_labels,
-			$token_values
-		);
-		
 		// Next worker
 		$next_worker_id = $ticket[SearchFields_Ticket::TICKET_NEXT_WORKER_ID];
 		$merge_token_labels = array();
@@ -1355,21 +1355,6 @@ class CerberusSnippetContexts {
 		self::_merge(
 			'email_',
 			'Lead:',
-			$merge_token_labels,
-			$merge_token_values,
-			$token_labels,
-			$token_values
-		);
-		
-		// Current worker
-		$active_worker = CerberusApplication::getActiveWorker();
-		$merge_token_labels = array();
-		$merge_token_values = array();
-		self::getContext(self::CONTEXT_WORKER, $active_worker, $merge_token_labels, $merge_token_values, '', true);
-
-		self::_merge(
-			'worker_',
-			'Current:Worker:',
 			$merge_token_labels,
 			$merge_token_values,
 			$token_labels,
