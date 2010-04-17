@@ -1221,7 +1221,6 @@ class ChTicketsPage extends CerberusPageExtension {
         
         $searchView->params = $params;
         $searchView->renderPage = 0;
-        $searchView->renderSortBy = null;
         
         C4_AbstractViewLoader::setView($searchView->id,$searchView);
         
