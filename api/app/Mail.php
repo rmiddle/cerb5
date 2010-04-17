@@ -187,6 +187,7 @@ class CerberusMail {
 						$mail_headers[$hdr] = $hdr_val;
 				}
 			}
+			
 		} else { // regular mail sending
 			try {
 				@$group_smtp = DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, 0);
@@ -229,6 +230,14 @@ class CerberusMail {
 							continue;
 		
 						$email->attach(Swift_Attachment::fromPath($file)->setFilename($files['name'][$idx]));
+					}
+				}
+				
+			    // Headers
+				foreach($email->getHeaders()->getAll() as $hdr) {
+					if(null != ($hdr_val = $hdr->getFieldBody())) {
+						if(!empty($hdr_val))
+							$mail_headers[$hdr->getFieldName()] = $hdr_val;
 					}
 				}
 				
@@ -282,14 +291,6 @@ class CerberusMail {
 				}
 				
 				return false;
-			}
-
-		    // Headers
-			foreach($email->getHeaders()->getAll() as $hdr) {
-				if(null != ($hdr_val = $hdr->getFieldBody())) {
-					if(!empty($hdr_val))
-						$mail_headers[$hdr->getFieldName()] = $hdr_val;
-				}
 			}
 		}
 		
@@ -366,7 +367,7 @@ class CerberusMail {
 		
 		// Headers
 		foreach($mail_headers as $hdr => $hdr_val) {
-			DAO_MessageHeader::create($message_id, $hdr, CerberusParser::fixQuotePrintableString($hdr_val));			
+			DAO_MessageHeader::create($message_id, $hdr, CerberusParser::fixQuotePrintableString($hdr_val));
 		}
 		
 		// add files to ticket
