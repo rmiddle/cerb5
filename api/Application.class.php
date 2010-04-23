@@ -49,7 +49,7 @@
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 define("APP_VERSION", '5.0.0-rc1');
-define("APP_BUILD", 2010042101);
+define("APP_BUILD", 2010042203);
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -630,44 +630,52 @@ class CerberusApplication extends DevblocksApplication {
 	}
 };
 
-interface ISnippetContextToken {
+interface IContextToken {
 	static function getValue($context, $context_values);
 };
 
-class CerberusSnippetContexts {
-	const CONTEXT_ADDRESS = 'cerberusweb.snippets.address';
-	const CONTEXT_BUCKET = 'cerberusweb.snippets.bucket';
-	const CONTEXT_GROUP = 'cerberusweb.snippets.group';
-	const CONTEXT_MESSAGE = 'cerberusweb.snippets.message';
-	const CONTEXT_OPPORTUNITY = 'cerberusweb.snippets.opportunity';
-	const CONTEXT_ORG = 'cerberusweb.snippets.org';
-	const CONTEXT_TICKET = 'cerberusweb.snippets.ticket';
-	const CONTEXT_WORKER = 'cerberusweb.snippets.worker';
+class CerberusContexts {
+	const CONTEXT_ADDRESS = 'cerberusweb.contexts.address';
+	const CONTEXT_BUCKET = 'cerberusweb.contexts.bucket';
+	const CONTEXT_GROUP = 'cerberusweb.contexts.group';
+	const CONTEXT_MESSAGE = 'cerberusweb.contexts.message';
+	const CONTEXT_NOTIFICATION= 'cerberusweb.contexts.notification';
+	const CONTEXT_OPPORTUNITY = 'cerberusweb.contexts.opportunity';
+	const CONTEXT_ORG = 'cerberusweb.contexts.org';
+	const CONTEXT_TASK = 'cerberusweb.contexts.task';
+	const CONTEXT_TICKET = 'cerberusweb.contexts.ticket';
+	const CONTEXT_WORKER = 'cerberusweb.contexts.worker';
 	
 	public static function getContext($context, $context_object, &$labels, &$values, $prefix=null, $nested=false) {
 		switch($context) {
-			case 'cerberusweb.snippets.address':
+			case 'cerberusweb.contexts.address':
 				self::_getAddressContext($context_object, $labels, $values, $prefix);
 				break;
-			case 'cerberusweb.snippets.bucket':
+			case 'cerberusweb.contexts.bucket':
 				self::_getBucketContext($context_object, $labels, $values, $prefix);
 				break;
-			case 'cerberusweb.snippets.group':
+			case 'cerberusweb.contexts.group':
 				self::_getGroupContext($context_object, $labels, $values, $prefix);
 				break;
-			case 'cerberusweb.snippets.message':
+			case 'cerberusweb.contexts.message':
 				self::_getMessageContext($context_object, $labels, $values, $prefix);
 				break;
-			case 'cerberusweb.snippets.opportunity':
+			case 'cerberusweb.contexts.notification':
+				self::_getNotificationContext($context_object, $labels, $values, $prefix);
+				break;
+			case 'cerberusweb.contexts.opportunity':
 				self::_getOpportunityContext($context_object, $labels, $values, $prefix);
 				break;
-			case 'cerberusweb.snippets.org':
+			case 'cerberusweb.contexts.org':
 				self::_getOrganizationContext($context_object, $labels, $values, $prefix);
 				break;
-			case 'cerberusweb.snippets.ticket':
+			case 'cerberusweb.contexts.task':
+				self::_getTaskContext($context_object, $labels, $values, $prefix);
+				break;
+			case 'cerberusweb.contexts.ticket':
 				self::_getTicketContext($context_object, $labels, $values, $prefix);
 				break;
-			case 'cerberusweb.snippets.worker':
+			case 'cerberusweb.contexts.worker':
 				self::_getWorkerContext($context_object, $labels, $values, $prefix);
 				break;
 			default:
@@ -717,8 +725,8 @@ class CerberusSnippetContexts {
 				if(!isset($contexts[$context]))
 					continue;
 					
-				if(null != ($ext = $mft->createInstance()) && $ext instanceof ISnippetContextToken) {
-					/* @var $ext ISnippetContextToken */
+				if(null != ($ext = $mft->createInstance()) && $ext instanceof IContextToken) {
+					/* @var $ext IContextToken */
 					$value = $ext->getValue($context, $values);
 					
 					if(!empty($value)) {
@@ -892,6 +900,7 @@ class CerberusSnippetContexts {
 		
 		// Worker token values
 		if(null != $worker) {
+			$token_values['id'] = $worker->id;
 			if(!empty($worker->first_name))
 				$token_values['first_name'] = $worker->first_name;
 			if(!empty($worker->last_name))
@@ -986,8 +995,6 @@ class CerberusSnippetContexts {
 			'mask' => $prefix.$translate->_('ticket.mask'),
 			'subject' => $prefix.$translate->_('ticket.subject'),
 			'next_worker_id' => $prefix.$translate->_('ticket.next_worker'). ' ID',
-			'first_wrote' => $prefix.$translate->_('ticket.first_wrote'),
-			'last_wrote' => $prefix.$translate->_('ticket.last_wrote'),
 			'created|date' => $prefix.$translate->_('ticket.created'),
 			'updated|date' => $prefix.$translate->_('ticket.updated'),
 		);
@@ -1006,8 +1013,6 @@ class CerberusSnippetContexts {
 			$token_values['mask'] = $ticket[SearchFields_Ticket::TICKET_MASK];
 			$token_values['subject'] = $ticket[SearchFields_Ticket::TICKET_SUBJECT];
 			$token_values['next_worker_id'] = $ticket[SearchFields_Ticket::TICKET_NEXT_WORKER_ID];
-			$token_values['first_wrote'] = $ticket[SearchFields_Ticket::TICKET_FIRST_WROTE];
-			$token_values['last_wrote'] = $ticket[SearchFields_Ticket::TICKET_LAST_WROTE];
 			$token_values['created'] = $ticket[SearchFields_Ticket::TICKET_CREATED_DATE];
 			$token_values['updated'] = $ticket[SearchFields_Ticket::TICKET_UPDATED_DATE];
 			$token_values['custom'] = array();
@@ -1168,6 +1173,7 @@ class CerberusSnippetContexts {
 		
 		// Message token values
 		if($message) {
+			$token_values['id'] = $message->id;
 			$token_values['content'] = $message->getContent();
 		}
 
@@ -1180,6 +1186,68 @@ class CerberusSnippetContexts {
 		self::_merge(
 			'sender_',
 			'Message:Sender:',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);
+		
+		return true;
+	}	
+	
+	/**
+	 * 
+	 * @param mixed $notification
+	 * @param array $token_labels
+	 * @param array $token_values
+	 */
+	private static function _getNotificationContext($notification, &$token_labels, &$token_values, $prefix=null) {
+		if(is_null($prefix))
+			$prefix = 'Notification:';
+		
+		$translate = DevblocksPlatform::getTranslationService();
+
+		// Polymorph
+		if(is_numeric($notification)) {
+			$notification = DAO_WorkerEvent::get($notification); 
+		} elseif($notification instanceof Model_WorkerEvent) {
+			// It's what we want already.
+		} else {
+			$notification = null;
+		}
+		/* @var $notification Model_WorkerEvent */
+		
+		// Token labels
+		$token_labels = array(
+			'content' => $prefix.$translate->_('common.content'),
+			'created|date' => $prefix.$translate->_('worker_event.created'),
+			'title' => $prefix.$translate->_('worker_event.title'),
+			'url' => $prefix.$translate->_('worker_event.url'),
+			'is_read' => $prefix.$translate->_('worker_event.is_read'),
+		);
+		
+		// Token values
+		$token_values = array();
+		
+		// Notification token values
+		if($notification) {
+			$token_values['content'] = $notification->content;
+			$token_values['created'] = $notification->created_date;
+			$token_values['id'] = $notification->id;
+			$token_values['is_read'] = $notification->is_read;
+			$token_values['title'] = $notification->title;
+			$token_values['url'] = $notification->url;
+		}
+
+		// Worker
+		@$worker_id = $notification->worker_id;
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		self::getContext(self::CONTEXT_WORKER, $worker_id, $merge_token_labels, $merge_token_values, '', true);
+
+		self::_merge(
+			'assignee_',
+			'Assignee:',
 			$merge_token_labels,
 			$merge_token_values,
 			$token_labels,
@@ -1518,7 +1586,91 @@ class CerberusSnippetContexts {
 
 		return true;
 	}
+	
+	private static function _getTaskContext($task, &$token_labels, &$token_values, $prefix=null) {
+		if(is_null($prefix))
+			$prefix = 'Task:';
 		
+		$translate = DevblocksPlatform::getTranslationService();
+		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Task::ID);
+
+		// Polymorph
+		if(is_numeric($task)) {
+			$task = DAO_Task::get($task);
+		} elseif($task instanceof Model_Task) {
+			// It's what we want already.
+		} else {
+			$task = null;
+		}
+		
+		// Token labels
+		$token_labels = array(
+			'completed|date' => $prefix.$translate->_('task.completed_date'),
+			'due|date' => $prefix.$translate->_('task.due_date'),
+			'id' => $prefix.$translate->_('common.id'),
+			'is_completed' => $prefix.$translate->_('task.is_completed'),
+			'title' => $prefix.$translate->_('task.title'),
+			'updated|date' => $prefix.$translate->_('task.updated_date'),
+		);
+		
+		if(is_array($fields))
+		foreach($fields as $cf_id => $field) {
+			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
+		}
+
+		// Token values
+		$token_values = array();
+		
+		if($task) {
+			$token_values['completed'] = $task->completed_date;
+			$token_values['due'] = $task->updated_date;
+			$token_values['id'] = $task->id;
+			$token_values['is_completed'] = $task->is_completed;
+			$token_values['title'] = $task->title;
+			$token_values['updated'] = $task->updated_date;
+			
+			$token_values['custom'] = array();
+			
+			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Task::ID, $task->id));
+			if(is_array($field_values) && !empty($field_values)) {
+				foreach($field_values as $cf_id => $cf_val) {
+					if(!isset($fields[$cf_id]))
+						continue;
+					
+					// The literal value
+					if(null != $org)
+						$token_values['custom'][$cf_id] = $cf_val;
+					
+					// Stringify
+					if(is_array($cf_val))
+						$cf_val = implode(', ', $cf_val);
+						
+					if(is_string($cf_val)) {
+						if(null != $org)
+							$token_values['custom_'.$cf_id] = $cf_val;
+					}
+				}
+			}
+		}
+
+		// Assignee
+		@$assignee_id = $task->worker_id;
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		self::getContext(self::CONTEXT_WORKER, $assignee_id, $merge_token_labels, $merge_token_values, '', true);
+
+		self::_merge(
+			'assignee_',
+			'Assignee:',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);			
+		
+		return true;
+	}	
+	
 };
 
 class CerberusLicense {
