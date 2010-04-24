@@ -294,6 +294,30 @@ class DAO_CommunityTool extends C4_ORMHelper {
 		
 		return array($results,$total);
 	}
+	
+	static function getRequestersByTicket($ticket_id) {
+		$db = DevblocksPlatform::getDatabaseService();
+		$addresses = array();
+		
+		$sql = sprintf("SELECT a.id , a.email, r.is_active ".
+			"FROM address a ".
+			"INNER JOIN requester r ON (r.ticket_id = %d AND a.id=r.address_id) ".
+			"ORDER BY a.email ASC ",
+			$ticket_id
+		);
+		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
+		 
+		while($row = mysql_fetch_assoc($rs)) {
+			$address = new Model_Address();
+			$address->id = intval($row['id']);
+			$address->email = $row['email'];
+			$addresses[$address->id] = $address;
+		}
+		
+		mysql_free_result($rs);
+
+		return $addresses;
+	}
 };
 
 class SearchFields_CommunityTool implements IDevblocksSearchFields {
