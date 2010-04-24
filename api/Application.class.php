@@ -49,7 +49,7 @@
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 define("APP_VERSION", '5.0.0-rc1');
-define("APP_BUILD", 2010042203);
+define("APP_BUILD", 2010042204);
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -637,6 +637,7 @@ interface IContextToken {
 class CerberusContexts {
 	const CONTEXT_ADDRESS = 'cerberusweb.contexts.address';
 	const CONTEXT_BUCKET = 'cerberusweb.contexts.bucket';
+	const CONTEXT_FEEDBACK = 'cerberusweb.contexts.feedback';
 	const CONTEXT_GROUP = 'cerberusweb.contexts.group';
 	const CONTEXT_MESSAGE = 'cerberusweb.contexts.message';
 	const CONTEXT_NOTIFICATION= 'cerberusweb.contexts.notification';
@@ -653,6 +654,9 @@ class CerberusContexts {
 				break;
 			case 'cerberusweb.contexts.bucket':
 				self::_getBucketContext($context_object, $labels, $values, $prefix);
+				break;
+			case 'cerberusweb.contexts.feedback':
+				self::_getFeedbackContext($context_object, $labels, $values, $prefix);
 				break;
 			case 'cerberusweb.contexts.group':
 				self::_getGroupContext($context_object, $labels, $values, $prefix);
@@ -809,6 +813,7 @@ class CerberusContexts {
 		
 		// Address token values
 		if(null != $address) {
+			$token_values['id'] = $address->id;
 			if(!empty($address->email))
 				$token_values['address'] = $address->email;
 			if(!empty($address->first_name))
@@ -1166,6 +1171,9 @@ class CerberusContexts {
 		// Token labels
 		$token_labels = array(
 			'content' => $prefix.$translate->_('common.content'),
+			'created|date' => $prefix.$translate->_('common.created'),
+			'is_outgoing' => $prefix.$translate->_('message.is_outgoing'),
+			'storage_size' => $prefix.$translate->_('message.storage_size'),
 		);
 		
 		// Token values
@@ -1173,8 +1181,13 @@ class CerberusContexts {
 		
 		// Message token values
 		if($message) {
-			$token_values['id'] = $message->id;
 			$token_values['content'] = $message->getContent();
+			$token_values['created'] = $message->created_date;
+			$token_values['id'] = $message->id;
+			$token_values['is_outgoing'] = $message->is_outgoing;
+			$token_values['storage_size'] = $message->storage_size;
+			$token_values['ticket_id'] = $message->ticket_id;
+			$token_values['worker_id'] = $message->worker_id;
 		}
 
 		// Sender
@@ -1231,6 +1244,7 @@ class CerberusContexts {
 		
 		// Notification token values
 		if($notification) {
+			$token_values['id'] = $notification->id;
 			$token_values['content'] = $notification->content;
 			$token_values['created'] = $notification->created_date;
 			$token_values['id'] = $notification->id;
@@ -1302,6 +1316,7 @@ class CerberusContexts {
 		
 		// Org token values
 		if($org) {
+			$token_values['id'] = $org->id;
 			$token_values['name'] = $org->name;
 			$token_values['created'] = $org->created;
 			if(!empty($org->city))
@@ -1369,6 +1384,7 @@ class CerberusContexts {
 		
 		// Token labels
 		$token_labels = array(
+			'amount' => $prefix.$translate->_('crm.opportunity.amount'),
 			'created|date' => $prefix.$translate->_('crm.opportunity.created_date'),
 			'is_closed' => $prefix.$translate->_('crm.opportunity.is_closed'),
 			'is_won' => $prefix.$translate->_('crm.opportunity.is_won'),
@@ -1386,6 +1402,8 @@ class CerberusContexts {
 		
 		// Opp token values
 		if($opp) {
+			$token_values['id'] = $opp->id;
+			$token_values['amount'] = $opp->amount;
 			$token_values['created'] = $opp->created_date;
 			$token_values['is_closed'] = $opp->is_closed;
 			$token_values['is_won'] = $opp->is_won;
@@ -1662,6 +1680,106 @@ class CerberusContexts {
 		self::_merge(
 			'assignee_',
 			'Assignee:',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);			
+		
+		return true;
+	}	
+	
+	private static function _getFeedbackContext($feedback, &$token_labels, &$token_values, $prefix=null) {
+		if(is_null($prefix))
+			$prefix = 'Feedback:';
+		
+		$translate = DevblocksPlatform::getTranslationService();
+		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_FeedbackEntry::ID);
+
+		// Polymorph
+		if(is_numeric($feedback)) {
+			$feedback = DAO_FeedbackEntry::get($feedback);
+		} elseif($feedback instanceof Model_FeedbackEntry) {
+			// It's what we want already.
+		} else {
+			$feedback = null;
+		}
+		
+		// Token labels
+		$token_labels = array(
+			'created|date' => $prefix.$translate->_('feedback_entry.log_date'),
+			'id' => $prefix.$translate->_('feedback_entry.id'),
+			'quote_mood' => $prefix.$translate->_('feedback_entry.quote_mood'),
+			'quote_text' => $prefix.$translate->_('feedback_entry.quote_text'),
+			'url' => $prefix.$translate->_('feedback_entry.source_url'),
+		);
+		
+		if(is_array($fields))
+		foreach($fields as $cf_id => $field) {
+			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
+		}
+
+		// Token values
+		$token_values = array();
+		
+		if($feedback) {
+			$token_values['id'] = $feedback->id;
+			$token_values['created'] = $feedback->log_date;
+			$token_values['quote_text'] = $feedback->quote_text;
+			$token_values['url'] = $feedback->source_url;
+
+			$mood = $feedback->quote_mood;
+			$token_values['quote_mood_id'] = $mood;
+			$token_values['quote_mood'] = ($mood ? (2==$mood ? 'criticism' : 'praise' ) : 'neutral');
+			
+			$token_values['custom'] = array();
+			
+			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_FeedbackEntry::ID, $feedback->id));
+			if(is_array($field_values) && !empty($field_values)) {
+				foreach($field_values as $cf_id => $cf_val) {
+					if(!isset($fields[$cf_id]))
+						continue;
+					
+					// The literal value
+					if(null != $org)
+						$token_values['custom'][$cf_id] = $cf_val;
+					
+					// Stringify
+					if(is_array($cf_val))
+						$cf_val = implode(', ', $cf_val);
+						
+					if(is_string($cf_val)) {
+						if(null != $org)
+							$token_values['custom_'.$cf_id] = $cf_val;
+					}
+				}
+			}
+		}
+
+		// Author
+		@$address_id = $feedback->quote_address_id;
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		self::getContext(self::CONTEXT_ADDRESS, $address_id, $merge_token_labels, $merge_token_values, '', true);
+
+		self::_merge(
+			'author_',
+			'Author:',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);			
+		
+		// Created by (Worker)
+		@$assignee_id = $feedback->worker_id;
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		self::getContext(self::CONTEXT_WORKER, $assignee_id, $merge_token_labels, $merge_token_values, '', true);
+
+		self::_merge(
+			'worker_',
+			'Worker:',
 			$merge_token_labels,
 			$merge_token_values,
 			$token_labels,

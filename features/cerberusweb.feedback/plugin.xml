@@ -25,6 +25,11 @@
 	<class_loader>
 		<file path="api/App.php">
 			<class name="C4_FeedbackEntryView" />
+			<class name="ChCustomFieldSource_FeedbackEntry" />
+			<class name="ChWorkspaceSource_FeedbackEntry" />
+			<class name="DAO_FeedbackEntry" />
+			<class name="Model_FeedbackEntry" />
+			<class name="SearchFields_FeedbackEntry" />
 		</file>
 	</class_loader>
 	
@@ -105,6 +110,20 @@
 				<param key="view_class" value="C4_FeedbackEntryView" />
 			</params>
 		</extension>
+		 
+		<!-- REST Controllers -->
+		
+		<extension point="cerberusweb.rest.controller">
+			<id>feedback.rest.controller.feedback</id>
+			<name>Feedback</name>
+			<class>
+				<file>api/rest/feedback.php</file>
+				<name>ChRest_Feedback</name>
+			</class>
+			<params>
+				<param key="uri" value="feedback" />
+			</params>
+		</extension>		
 		 
 	</extensions>
 </plugin>
