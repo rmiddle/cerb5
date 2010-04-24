@@ -827,6 +827,11 @@ class ChDisplayPage extends CerberusPageExtension {
 		$requesters = DAO_Ticket::getRequestersByTicket($ticket_id);
 		$tpl->assign('requesters', $requesters);
 		
+		if(class_exists('DAO_CommunityTool')) {
+			$sc_access = DAO_CommunityTool::getRequestersByTicket($ticket_id);
+			$tpl->assign('sc_access', $sc_access);
+		}
+		
 		$workers = DAO_Worker::getAllActive();
 		$tpl->assign('workers', $workers);
 		
