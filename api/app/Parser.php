@@ -102,7 +102,7 @@ class CerberusParser {
 		$msginfo = mailparse_msg_get_part_data($mime);
 		
 		$message = new CerberusParserMessage();
-		@$message->encoding = $msginfo['content-charset'];
+		@$message->encoding = $msginfo['charset'];
 		@$message->body_encoding = $message->encoding; // default
 
 		// Decode headers
@@ -135,11 +135,11 @@ class CerberusParser {
 		        if($info['content-type'] == 'text/plain') {
 					$text = mailparse_msg_extract_part_file($section, $full_filename, NULL);
 					
-					if(isset($info['content-charset']) && !empty($info['content-charset'])) {
-						$message->body_encoding = $info['content-charset'];
+					if(isset($info['charset']) && !empty($info['charset'])) {
+						$message->body_encoding = $info['charset'];
 						
-						if(@mb_check_encoding($text, $info['content-charset'])) {
-							$text = mb_convert_encoding($text, LANG_CHARSET_CODE, $info['content-charset']);
+						if(@mb_check_encoding($text, $info['charset'])) {
+							$text = mb_convert_encoding($text, LANG_CHARSET_CODE, $info['charset']);
 						} else {
 							$text = mb_convert_encoding($text, LANG_CHARSET_CODE);
 						}
@@ -153,9 +153,9 @@ class CerberusParser {
 		        } elseif($info['content-type'] == 'text/html') {
 	        		@$text = mailparse_msg_extract_part_file($section, $full_filename, NULL);
 
-					if(isset($info['content-charset']) && !empty($info['content-charset'])) {
-						if(@mb_check_encoding($text, $info['content-charset'])) {
-							$text = mb_convert_encoding($text, LANG_CHARSET_CODE, $info['content-charset']);
+					if(isset($info['charset']) && !empty($info['charset'])) {
+						if(@mb_check_encoding($text, $info['charset'])) {
+							$text = mb_convert_encoding($text, LANG_CHARSET_CODE, $info['charset']);
 						} else {
 							$text = mb_convert_encoding($text, LANG_CHARSET_CODE);
 						}
@@ -498,6 +498,7 @@ class CerberusParser {
 					} 				
 					
 	        		$result = CerberusMail::sendTicketMessage(array(
+						'ticket_id' => $id,
 						'message_id' => $msgid,
 						'content' => $message->body,
 						'files' => $attachment_files,
@@ -567,7 +568,7 @@ class CerberusParser {
 				DAO_Ticket::FIRST_WROTE_ID => intval($fromAddressInst->id),
 				DAO_Ticket::LAST_WROTE_ID => intval($fromAddressInst->id),
 				DAO_Ticket::CREATED_DATE => $iDate,
-				DAO_Ticket::UPDATED_DATE => $iDate,
+				DAO_Ticket::UPDATED_DATE => time(),
 				DAO_Ticket::LAST_ACTION_CODE => CerberusTicketActionCode::TICKET_OPENED,
 			);
 			$id = DAO_Ticket::createTicket($fields);
@@ -759,7 +760,7 @@ class CerberusParser {
 					try {
 						$token_labels = array();
 						$token_values = array();
-						CerberusSnippetContexts::getContext(CerberusSnippetContexts::CONTEXT_TICKET, $id, $token_labels, $token_values);
+						CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, $id, $token_labels, $token_values);
 						
 						$tpl_builder = DevblocksPlatform::getTemplateBuilder();
 						if(false === ($autoreply_content = $tpl_builder->build($autoreply, $token_values)))
