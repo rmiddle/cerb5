@@ -10,9 +10,6 @@
 	</div>
 </div>
 {/if}
-{if !empty($no_to_in_ticket)}
-<div class="error">{$translate->_('display.error.create')}</div>
-{/if}
 
 <div class="block">
 <h2>{$translate->_('mail.log_message')|capitalize}</h2>

@@ -9,9 +9,6 @@
 	</div>
 </div>
 {/if}
-{if !empty($no_to_in_ticket)}
-<div class="error">{$translate->_('display.error.compose')}</div>
-{/if}
 
 <div class="block">
 <h2>Outgoing Message</h2>

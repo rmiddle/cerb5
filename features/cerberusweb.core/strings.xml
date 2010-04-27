@@ -979,12 +979,6 @@
 		<tu tuid='display.invalid_ticket'>
 			<tuv xml:lang="en_US"><seg>Invalid Ticket!</seg></tuv>
 		</tu>
-		<tu tuid='display.error.compose'>
-			<tuv xml:lang="en_US"><seg>Message failed to send! You must enter a "To:" email address</seg></tuv>
-		</tu>
-		<tu tuid='display.error.create'>
-			<tuv xml:lang="en_US"><seg>Message failed to send! You must enter a requester(s) email address</seg></tuv>
-		</tu>
 		
 		<!-- Display: Conversation -->
 		
