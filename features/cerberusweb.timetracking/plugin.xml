@@ -6,6 +6,7 @@
 	<author>WebGroup Media, LLC.</author>
 	<revision>0</revision>
 	<link>http://wiki.cerb4.com/wiki/</link>
+	<image>plugin.png</image>
 	
 	<!-- Plugin Dependencies -->
 	
@@ -26,6 +27,9 @@
 	<class_loader>
 		<file path="api/App.php">
 			<class name="C4_TimeTrackingEntryView" />
+			<class name="DAO_TimeTrackingEntry" />
+			<class name="Model_TimeTrackingEntry" />
+			<class name="SearchFields_TimeTrackingEntry" />
 		</file>
 	</class_loader>
 	
@@ -208,6 +212,20 @@
 				<param key="uri" value="timetracking" />
 			</params>
 		</extension>
+		 
+		<!-- REST Controllers -->
+		
+		<extension point="cerberusweb.rest.controller">
+			<id>cerberusweb.rest.controller.timetracking</id>
+			<name>Time Tracking</name>
+			<class>
+				<file>api/rest/timetracking.php</file>
+				<name>ChRest_TimeTracking</name>
+			</class>
+			<params>
+				<param key="uri" value="timetracking" />
+			</params>
+		</extension>		
 		 
 		<!-- Custom Field Source -->
 		 
