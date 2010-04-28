@@ -475,7 +475,7 @@ class DevblocksPlatform extends DevblocksEngine {
 			
 			// Re-read manifests
 			DevblocksPlatform::readPlugins();
-				
+			
 			if(self::_needsToPatch()) {
 				return false; // the update script will handle new caches
 			} else {
@@ -495,6 +495,10 @@ class DevblocksPlatform extends DevblocksEngine {
 	 */
 	static private function _needsToPatch() {
 		 $plugins = DevblocksPlatform::getPluginRegistry();
+		 
+		 // First install or upgrade
+		 if(empty($plugins))
+		 	return true;
 
 		 foreach($plugins as $plugin) { /* @var $plugin DevblocksPluginManifest */
 		 	if($plugin->enabled) {
@@ -770,7 +774,8 @@ class DevblocksPlatform extends DevblocksEngine {
 		    @$plugin->dir = $row['dir'];
 
 		    // JSON decode
-		    if(null != ($manifest_cache_json = $row['manifest_cache_json'])) {
+		    if(isset($row['manifest_cache_json'])
+		    	&& null != ($manifest_cache_json = $row['manifest_cache_json'])) {
 		    	$plugin->manifest_cache = json_decode($manifest_cache_json, true);
 		    }
 		    
@@ -1321,6 +1326,11 @@ abstract class DevblocksEngine {
 					);
 				}
 			}
+		}
+		
+		// Image
+		if(isset($plugin->image)) {
+			$manifest->manifest_cache['plugin_image'] = (string) $plugin->image;
 		}
 			
 		if(!$persist)
@@ -3765,33 +3775,49 @@ class _DevblocksTemplateManager {
 		return $date->formatTime($format, $string, $gmt);
 	}
 	
-	static function modifier_devblocks_prettytime($string, $format=null) {
+	static function modifier_devblocks_prettytime($string, $is_delta=false) {
 		if(empty($string) || !is_numeric($string))
 			return '';
 		
-		$diffsecs = time() - intval($string);
-		$whole = '';		
+		if(!$is_delta) {
+			$diffsecs = time() - intval($string);
+		} else {
+			$diffsecs = intval($string);
+		}
+		
+		$whole = '';
+
+		if($is_delta) {
+			if($diffsecs > 0)
+				$whole .= '+';
+			if($diffsecs < 0)
+				$whole .= '-';
+		}
 		
 		// The past
 		if($diffsecs >= 0) {
 			if($diffsecs >= 86400) { // days
-				$whole = floor($diffsecs/86400).'d ago';
+				$whole .= floor($diffsecs/86400).'d';
 			} elseif($diffsecs >= 3600) { // hours
-				$whole = floor($diffsecs/3600).'h ago';
+				$whole .= floor($diffsecs/3600).'h';
 			} elseif($diffsecs >= 60) { // mins
-				$whole = floor($diffsecs/60).'m ago';
+				$whole .= floor($diffsecs/60).'m';
 			} elseif($diffsecs >= 0) { // secs
-				$whole = $diffsecs.'s ago';
+				$whole .= $diffsecs.'s';
 			}
+			
+			if(!$is_delta)
+				$whole .= ' ago';
+			
 		} else { // The future
 			if($diffsecs <= -86400) { // days
-				$whole = floor($diffsecs/-86400).'d';
+				$whole .= floor($diffsecs/-86400).'d';
 			} elseif($diffsecs <= -3600) { // hours
-				$whole = floor($diffsecs/-3600).'h';
+				$whole .= floor($diffsecs/-3600).'h';
 			} elseif($diffsecs <= -60) { // mins
-				$whole = floor($diffsecs/-60).'m';
+				$whole .= floor($diffsecs/-60).'m';
 			} elseif($diffsecs <= 0) { // secs
-				$whole = $diffsecs.'s';
+				$whole .= $diffsecs.'s';
 			}
 		}
 		

@@ -420,6 +420,9 @@
 		<tu tuid='acl.core.addybook.addy.actions.update'>
 			<tuv xml:lang="en_US"><seg>[Address Book] Can modify e-mail address contacts</seg></tuv>
 		</tu>
+		<tu tuid='acl.core.addybook.addy.view.actions.broadcast'>
+			<tuv xml:lang="en_US"><seg>[Address Book] Can broadcast compose e-mail to address lists</seg></tuv>
+		</tu>
 		<tu tuid='acl.core.addybook.addy.view.actions.export'>
 			<tuv xml:lang="en_US"><seg>[Address Book] Can export e-mail address lists to CSV/XML</seg></tuv>
 		</tu>
@@ -1221,6 +1224,12 @@
 		</tu>
 		<tu tuid='message.created_date'>
 			<tuv xml:lang="en_US"><seg>Created</seg></tuv>
+		</tu>
+		<tu tuid='message.is_outgoing'>
+			<tuv xml:lang="en_US"><seg>Is Outgoing</seg></tuv>
+		</tu>
+		<tu tuid='message.storage_size'>
+			<tuv xml:lang="en_US"><seg>Size</seg></tuv>
 		</tu>
 
 		<!-- Preferences -->

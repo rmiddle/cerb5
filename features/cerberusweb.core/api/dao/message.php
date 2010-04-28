@@ -187,9 +187,11 @@ class DAO_Message extends DevblocksORMHelper {
 
         list($tables,$wheres,$selects) = parent::_parseSearchParams($params, array(),$fields,$sortBy);
 		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
-		
+
 		$sql = sprintf("SELECT ".
 			"m.id as %s, ".
+			"m.address_id as %s, ".
+			"m.created_date as %s, ".
 			"m.ticket_id as %s, ".
 			"m.storage_extension as %s, ".
 			"m.storage_key as %s, ".
@@ -198,6 +200,8 @@ class DAO_Message extends DevblocksORMHelper {
 			"FROM message m ",
 //			"INNER JOIN team tm ON (tm.id = t.team_id) ".
 			    SearchFields_Message::ID,
+			    SearchFields_Message::ADDRESS_ID,
+			    SearchFields_Message::CREATED_DATE,
 			    SearchFields_Message::TICKET_ID,
 			    SearchFields_Message::STORAGE_EXTENSION,
 			    SearchFields_Message::STORAGE_KEY,
@@ -206,7 +210,9 @@ class DAO_Message extends DevblocksORMHelper {
 			).
 			
 			// [JAS]: Dynamic table joins
+			(isset($tables['t']) ? "INNER JOIN ticket t ON (t.id=m.ticket_id)" : " ").
 			(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=m.id)" : " ").
+			(isset($tables['ftmc']) ? "INNER JOIN fulltext_message_content ftmc ON (ftmc.id=m.id)" : " ").
 			
 			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "").
 			(!empty($sortBy) ? sprintf("ORDER BY %s %s",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : "")
@@ -240,6 +246,8 @@ class DAO_Message extends DevblocksORMHelper {
 class SearchFields_Message implements IDevblocksSearchFields {
 	// Message
 	const ID = 'm_id';
+	const ADDRESS_ID = 'm_address_id';
+	const CREATED_DATE = 'm_created_date';
 	const TICKET_ID = 'm_ticket_id';
 	const STORAGE_EXTENSION = 'm_storage_extension';
 	const STORAGE_KEY = 'm_storage_key';
@@ -250,12 +258,20 @@ class SearchFields_Message implements IDevblocksSearchFields {
 	const MESSAGE_HEADER_NAME = 'mh_header_name';
 	const MESSAGE_HEADER_VALUE = 'mh_header_value';
 
+	// Content
+	const MESSAGE_CONTENT = 'ftmc_content';
+	
+	// Ticket
+	const TICKET_GROUP_ID = 't_group_id';
+
 	/**
 	 * @return DevblocksSearchField[]
 	 */
 	static function getFields() {
 		$columns = array(
 			SearchFields_Message::ID => new DevblocksSearchField(SearchFields_Message::ID, 'm', 'id'),
+			SearchFields_Message::ADDRESS_ID => new DevblocksSearchField(SearchFields_Message::ADDRESS_ID, 'm', 'address_id'),
+			SearchFields_Message::CREATED_DATE => new DevblocksSearchField(SearchFields_Message::CREATED_DATE, 'm', 'created_date'),
 			SearchFields_Message::TICKET_ID => new DevblocksSearchField(SearchFields_Message::TICKET_ID, 'm', 'ticket_id'),
 			SearchFields_Message::STORAGE_EXTENSION => new DevblocksSearchField(SearchFields_Message::STORAGE_EXTENSION, 'm', 'storage_extension'),
 			SearchFields_Message::STORAGE_KEY => new DevblocksSearchField(SearchFields_Message::STORAGE_KEY, 'm', 'storage_key'),
@@ -264,6 +280,10 @@ class SearchFields_Message implements IDevblocksSearchFields {
 			
 			SearchFields_Message::MESSAGE_HEADER_NAME => new DevblocksSearchField(SearchFields_Message::MESSAGE_HEADER_NAME, 'mh', 'header_name'),
 			SearchFields_Message::MESSAGE_HEADER_VALUE => new DevblocksSearchField(SearchFields_Message::MESSAGE_HEADER_VALUE, 'mh', 'header_value'),
+			
+			SearchFields_Message::MESSAGE_CONTENT => new DevblocksSearchField(SearchFields_Message::MESSAGE_CONTENT, 'ftmc', 'content'),
+			
+			SearchFields_Message::TICKET_GROUP_ID => new DevblocksSearchField(SearchFields_Message::TICKET_GROUP_ID, 't', 'team_id'),
 		);
 		
 		// Sort by label (translation-conscious)
@@ -298,6 +318,10 @@ class Model_Message {
 		return DAO_MessageHeader::getAll($this->id);
 	}
 
+	function getSender() {
+		return DAO_Address::get($this->address_id);
+	}
+	
 	/**
 	 * returns an array of the message's attachments
 	 *
@@ -424,7 +448,13 @@ class Storage_MessageContent extends Extension_DevblocksStorageSchema {
 		if(false === ($storage = DevblocksPlatform::getStorageService($profile)))
 			return false;
 			
-		return $storage->get('message_content', $key, $fp);
+		$contents = $storage->get('message_content', $key, $fp);
+		
+		// Convert the appropriate bytes
+		if(!mb_check_encoding($contents, LANG_CHARSET_CODE))
+			$contents = mb_convert_encoding($contents, LANG_CHARSET_CODE);
+			
+		return $contents;
 	}
 	
 	public static function put($id, $contents, $profile=null) {
@@ -442,6 +472,10 @@ class Storage_MessageContent extends Extension_DevblocksStorageSchema {
 		
 		$storage = DevblocksPlatform::getStorageService($profile);
 
+		// Store the appropriate bytes
+		if(!mb_check_encoding($contents, LANG_CHARSET_CODE))
+			$contents = mb_convert_encoding($contents, LANG_CHARSET_CODE);
+		
 		// Save to storage
 		if(false === ($storage_key = $storage->put('message_content', $id, $contents)))
 			return false;
