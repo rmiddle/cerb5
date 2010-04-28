@@ -1,11 +1,12 @@
 <!DOCTYPE plugin SYSTEM "../../libs/devblocks/plugin.dtd">
 <plugin>
 	<id>usermeet.core</id>
-	<name>[Cerb5] Usermeet Communities</name>
+	<name>[Cerb5] Community Portals</name>
 	<description>Community-focused websites; the customer-facing interfaces of Cerberus Helpdesk.</description>
 	<author>WebGroup Media, LLC.</author>
 	<revision>0</revision>
 	<link>http://wiki.cerb4.com/wiki/New_Changes#Community_Tools</link>
+	<image>plugin.png</image>
 	
 	<!-- Plugin Dependencies -->
 	

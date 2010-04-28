@@ -363,7 +363,12 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 		// Write a notification (if not assigned to ourselves)
 		$url_writer = DevblocksPlatform::getUrlService();
 		foreach($ticket_ids as $ticket_id) {
+			// If invalid
 			if(null == ($ticket = $tickets[$ticket_id])) /* @var $ticket Model_Ticket */
+				continue;
+			
+			// If the next worker is the same as the current worker
+			if($next_worker_id == $ticket->next_worker_id)
 				continue;
 				
 			$fields = array(
@@ -380,10 +385,12 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 	
 	private function _handleCronMaint($event) {
 		DAO_Address::maint();
+		DAO_ExplorerSet::maint();
 		DAO_Group::maint();
 		DAO_Ticket::maint();
 		DAO_Message::maint();
 		DAO_Worker::maint();
+		DAO_WorkerEvent::maint();
 	}
 	
 	private function _handleCronHeartbeat($event) {
@@ -522,7 +529,7 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 					try {
 						$token_labels = array();
 						$token_values = array();
-						CerberusSnippetContexts::getContext(CerberusSnippetContexts::CONTEXT_TICKET, $ticket->id, $token_labels, $token_values);
+						CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, $ticket->id, $token_labels, $token_values);
 						
 						if(false === ($closereply_content = $tpl_builder->build($group_settings[$ticket->team_id][DAO_GroupSettings::SETTING_CLOSE_REPLY], $token_values)))
 							throw new Exception('Failed parsing close auto-reply snippet.');

@@ -189,6 +189,7 @@ class CerberusMail {
 						$mail_headers[$hdr] = $hdr_val;
 				}
 			}
+			
 		} else { // regular mail sending
 			try {
 				$mail_service = DevblocksPlatform::getMailService();
@@ -233,6 +234,14 @@ class CerberusMail {
 					}
 				}
 				
+			    // Headers
+				foreach($email->getHeaders()->getAll() as $hdr) {
+					if(null != ($hdr_val = $hdr->getFieldBody())) {
+						if(!empty($hdr_val))
+							$mail_headers[$hdr->getFieldName()] = $hdr_val;
+					}
+				}
+				
 				// [TODO] Allow separated addresses (parseRfcAddress)
 		//		$mailer->log->enable();
 				if(!@$mailer->send($email)) {
@@ -246,6 +255,7 @@ class CerberusMail {
 				if(empty($draft_id)) {
 					$params = array(
 						'to' => $toStr,
+						'group_id' => $team_id,
 					);
 					
 					if(!empty($cc))
@@ -253,7 +263,7 @@ class CerberusMail {
 						
 					if(!empty($bcc))
 						$params['bcc'] = $bcc;
-					
+						
 					$fields = array(
 						DAO_MailQueue::TYPE => Model_MailQueue::TYPE_COMPOSE,
 						DAO_MailQueue::TICKET_ID => 0,
@@ -282,14 +292,6 @@ class CerberusMail {
 				}
 				
 				return false;
-			}
-
-		    // Headers
-			foreach($email->getHeaders()->getAll() as $hdr) {
-				if(null != ($hdr_val = $hdr->getFieldBody())) {
-					if(!empty($hdr_val))
-						$mail_headers[$hdr->getFieldName()] = $hdr_val;
-				}
 			}
 		}
 		
@@ -364,7 +366,7 @@ class CerberusMail {
 		
 		// Headers
 		foreach($mail_headers as $hdr => $hdr_val) {
-			DAO_MessageHeader::create($message_id, $hdr, CerberusParser::fixQuotePrintableString($hdr_val));			
+			DAO_MessageHeader::create($message_id, $hdr, CerberusParser::fixQuotePrintableString($hdr_val));
 		}
 		
 		// add files to ticket
@@ -619,16 +621,6 @@ class CerberusMail {
 				    $aBcc = DevblocksPlatform::parseCsvString(str_replace(';',',',$properties['bcc']));
 					$mail->setBcc($aBcc);
 			    }
-			}
-			/*
-			 * [IMPORTANT -- Yes, this is simply a line in the sand.]
-			 * You're welcome to modify the code to meet your needs, but please respect 
-			 * our licensing.  Buy a legitimate copy to help support the project!
-			 * http://www.cerberusweb.com/
-			 */
-			$license = CerberusLicense::getInstance();
-			if(empty($license) || @empty($license['key'])) {
-				$content .= base64_decode("CgotLS0KUmVtZW1iZXIgYW55dGhpbmcgYWJvdXQgYW55Ym9keSwgZGVmdGx5IHJlcGx5IHRvIGFuIGUtbWFpbCBmbG9vZCwgcXVhcmFudGluZSBzcGFtLCBjYXB0dXJlIG9yZ2FuaWMgZmVlZGJhY2ssIHRyYWNrIHRpbWUsIGZsYWcgb3Bwb3J0dW5pdGllcywgc2hhcmUgdGFza3MsIGFuZCBvdGhlcndpc2UgY29sbGFib3JhdGUgZWZmaWNpZW50bHkgd2l0aCBDZXJiZXJ1cyBIZWxwZGVzayA1LjAuCmh0dHA6Ly93d3cuY2VyYmVydXN3ZWIuY29tLwo=");
 			}
 			
 			// Body

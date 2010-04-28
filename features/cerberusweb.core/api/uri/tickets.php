@@ -573,10 +573,14 @@ class ChTicketsPage extends CerberusPageExtension {
 	
 	function showDraftsTabAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
+		$visit = CerberusApplication::getVisit();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 
+		// Remember the tab
+		$visit->set(CerberusVisit::KEY_MAIL_MODE, 'drafts');
+		
 		$view = C4_AbstractViewLoader::getView('mail_drafts');
 		
 		if(null == $view) {
@@ -621,6 +625,9 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		if(!empty($to))
 			$params['to'] = $to;
+			
+		if(empty($subject) && empty($content))
+			return json_encode(array());
 			
 		@$type = DevblocksPlatform::importGPC($_REQUEST['type'],'string','');
 		
@@ -699,6 +706,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		@$active_worker = CerberusApplication::getActiveWorker();
 		
 		if(!empty($draft_id)
+			&& null != ($draft = DAO_MailQueue::get($draft_id))
 			&& ($active_worker->id == $draft->worker_id || $active_worker->is_superuser)) {
 			
 			DAO_MailQueue::delete($draft_id);
@@ -762,10 +770,14 @@ class ChTicketsPage extends CerberusPageExtension {
 	
 	function showSnippetsTabAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
+		$visit = CerberusApplication::getVisit();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 
+		// Remember the tab
+		$visit->set(CerberusVisit::KEY_MAIL_MODE, 'snippets');
+		
 		$view = C4_AbstractViewLoader::getView('mail_snippets');
 		
 		if(null == $view) {
@@ -775,7 +787,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		}
 		
 		$view->params = array(
-			SearchFields_Snippet::CONTEXT => new DevblocksSearchCriteria(SearchFields_Snippet::CONTEXT, DevblocksSearchCriteria::OPER_IN, array('cerberusweb.snippets.plaintext','cerberusweb.snippets.ticket','cerberusweb.snippets.worker')),
+			SearchFields_Snippet::CONTEXT => new DevblocksSearchCriteria(SearchFields_Snippet::CONTEXT, DevblocksSearchCriteria::OPER_IN, array('cerberusweb.contexts.plaintext','cerberusweb.contexts.ticket','cerberusweb.contexts.worker')),
 //			SearchFields_MailQueue::WORKER_ID => new DevblocksSearchCriteria(SearchFields_MailQueue::WORKER_ID, DevblocksSearchCriteria::OPER_EQ, $active_worker->id),
 //			SearchFields_MailQueue::IS_QUEUED => new DevblocksSearchCriteria(SearchFields_MailQueue::IS_QUEUED, DevblocksSearchCriteria::OPER_EQ, 0),
 		);
@@ -799,19 +811,19 @@ class ChTicketsPage extends CerberusPageExtension {
 		if(null == ($snippet = DAO_Snippet::get($snippet_id))) {
 			$snippet = new Model_Snippet();
 			$snippet->id = 0;
-			$snippet->context = !empty($context) ? $context : 'cerberusweb.snippets.plaintext';
+			$snippet->context = !empty($context) ? $context : 'cerberusweb.contexts.plaintext';
 		}
 		$tpl->assign('snippet', $snippet);
 		
 		switch($snippet->context) {
-			case 'cerberusweb.snippets.plaintext':
+			case 'cerberusweb.contexts.plaintext':
 				break;
-			case 'cerberusweb.snippets.ticket':
-				CerberusSnippetContexts::getContext(CerberusSnippetContexts::CONTEXT_TICKET, null, $token_labels, $token_values);
+			case 'cerberusweb.contexts.ticket':
+				CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, null, $token_labels, $token_values);
 				$tpl->assign('token_labels', $token_labels);
 				break;
-			case 'cerberusweb.snippets.worker':
-				CerberusSnippetContexts::getContext(CerberusSnippetContexts::CONTEXT_WORKER, null, $token_labels, $token_values);
+			case 'cerberusweb.contexts.worker':
+				CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, null, $token_labels, $token_values);
 				$tpl->assign('token_labels', $token_labels);
 				break;
 		}
@@ -1123,6 +1135,7 @@ class ChTicketsPage extends CerberusPageExtension {
         $query = trim($query);
         
         $visit = CerberusApplication::getVisit(); /* @var $visit CerberusVisit */
+		$active_worker = CerberusApplication::getActiveWorker();
 		$searchView = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_SEARCH);
 		
 		if(null == $searchView)
@@ -1177,9 +1190,12 @@ class ChTicketsPage extends CerberusPageExtension {
                 
         }
         
+		// Force group ACL
+		if(!$active_worker->is_superuser)
+        	$params[SearchFields_Ticket::TICKET_TEAM_ID] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID, 'in', array_keys($active_worker->getMemberships()));
+        
         $searchView->params = $params;
         $searchView->renderPage = 0;
-        $searchView->renderSortBy = null;
         
         C4_AbstractViewLoader::setView($searchView->id,$searchView);
         
@@ -1278,7 +1294,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		}
 
 		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
-		CerberusSnippetContexts::getContext(CerberusSnippetContexts::CONTEXT_WORKER, $active_worker, $token_labels, $token_values);
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $active_worker, $token_labels, $token_values);
 		echo "\r\n", $tpl_builder->build($sig, $token_values), "\r\n";
 	}
 	
@@ -2255,7 +2271,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		$tpl->assign('custom_fields', $custom_fields);
 		
 		// Broadcast
-		CerberusSnippetContexts::getContext(CerberusSnippetContexts::CONTEXT_TICKET, null, $token_labels, $token_values);
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, null, $token_labels, $token_values);
 		$tpl->assign('token_labels', $token_labels);
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'tickets/rpc/batch_panel.tpl');
@@ -2391,7 +2407,7 @@ class ChTicketsPage extends CerberusPageExtension {
 				
 			} else {
 				// Try to build the template
-				CerberusSnippetContexts::getContext(CerberusSnippetContexts::CONTEXT_TICKET, array_shift($result), $token_labels, $token_values);
+				CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, array_shift($result), $token_labels, $token_values);
 				if(false === ($out = $tpl_builder->build($broadcast_message, $token_values))) {
 					// If we failed, show the compile errors
 					$errors = $tpl_builder->getErrors();
