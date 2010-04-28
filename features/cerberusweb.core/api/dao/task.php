@@ -23,6 +23,18 @@ class DAO_Task extends C4_ORMHelper {
 		
 		self::update($id, $fields);
 		
+		// New task
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'task.create',
+                array(
+                    'task_id' => $id,
+                	'fields' => $fields,
+                )
+            )
+	    );
+		
 		return $id;
 	}
 	
@@ -354,6 +366,7 @@ class Model_Task {
 	public $completed_date;
 	public $source_extension;
 	public $source_id;
+	public $updated_date;
 };
 
 class View_Task extends C4_AbstractView {

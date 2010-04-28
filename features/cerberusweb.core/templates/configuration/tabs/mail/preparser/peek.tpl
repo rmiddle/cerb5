@@ -2,7 +2,6 @@
 <input type="hidden" name="c" value="config">
 <input type="hidden" name="a" value="saveTabPreParser">
 <input type="hidden" name="id" value="{$filter->id}">
-<h2>Add Pre-Parser Filter</h2>
 
 <b>Filter Name:</b> (e.g. Spam Bounces)<br>
 <input type="text" name="name" size="45" value="{$filter->name|escape}" style="width:95%;"><br>
@@ -142,9 +141,12 @@
 
 {* Message Headers *}
 {assign var=expanded value=false}
-{if isset($filter->criteria.header)}
-	{assign var=expanded value=true}
-{/if}
+{section name=headers start=0 loop=5}
+	{assign var=headerx value='header'|cat:$smarty.section.headers.iteration}
+	{if isset($filter->criteria.$headerx)}
+		{assign var=expanded value=true}
+	{/if}
+{/section}
 <label><input type="checkbox" {if $expanded}checked="checked"{/if} onclick="toggleDiv('divBlockMessageHeaders',(this.checked?'block':'none'));if(!this.checked)checkAll('divBlockMessageHeaders',false);"> <b>Message Headers</b></label><br>
 <table width="500" style="margin-left:10px;display:{if $expanded}block{else}none{/if};" id="divBlockMessageHeaders">
 	<tr>
@@ -240,3 +242,9 @@
 <button type="submit"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
 </form>
 <br>
+
+<script language="JavaScript1.2" type="text/javascript">
+	genericPanel.one('dialogopen',function(event,ui) {
+		genericPanel.dialog('option','title', 'Add Pre-Parser Filter');
+	} );
+</script>
