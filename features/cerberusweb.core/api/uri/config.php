@@ -490,7 +490,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 			if(empty($id) && null == DAO_Worker::lookupAgentEmail($email)) {
 				$workers = DAO_Worker::getAll();
 				$license = CerberusLicense::getInstance();
-				if ((!@empty($license['workers'])&&(@$license['workers']>=100||count($workers)<@$license['workers']))||(@empty($license['workers'])&&count($workers)<3)) {
+				if ((!@empty($license['workers'])&&(@$license['workers']>=100||count($workers)<@$license['workers']))||(@empty($license['workers'])&&count($workers)<1)) {
 					// Creating new worker.  If password is empty, email it to them
 				    if(empty($password)) {
 				    	$settings = DevblocksPlatform::getPluginSettingsService();
@@ -694,7 +694,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 		// Signature
 		
-		CerberusSnippetContexts::getContext(CerberusSnippetContexts::CONTEXT_WORKER, null, $token_labels, $token_values);
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, null, $token_labels, $token_values);
 		$tpl->assign('token_labels', $token_labels);
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/mail/index.tpl');
@@ -1245,9 +1245,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 		
-		$license = CerberusLicense::getInstance();
-		$tpl->assign('license', $license);	
-		
 		$plugins = DevblocksPlatform::getPluginRegistry();
 		$tpl->assign('plugins', $plugins);
 		
@@ -1264,10 +1261,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$acl_enabled = $settings->get('cerberusweb.core',CerberusSettings::ACL_ENABLED,CerberusSettingsDefaults::ACL_ENABLED);
 		$tpl->assign('acl_enabled', $acl_enabled);
 		
-		if(empty($license) || empty($license['workers']))
-			$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/acl/trial.tpl');
-		else
-			$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/acl/index.tpl');
+		$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/acl/index.tpl');
 	}
 	
 	function toggleACLAction() {
