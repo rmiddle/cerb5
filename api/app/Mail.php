@@ -99,7 +99,7 @@ class CerberusMail {
 			
 			$headers = $mail->getHeaders();
 			
-			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 			
 			$mail->setBody($body);
 		
@@ -219,7 +219,7 @@ class CerberusMail {
 				
 				$headers = $email->getHeaders();
 				
-				$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+				$headers->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 				
 				$email->setBody($content);
 				
@@ -359,10 +359,7 @@ class CerberusMail {
 
 		// Set recipients to requesters
 		foreach($toList as $to) {
-			if(null != ($reqAddressInst = CerberusApplication::hashLookupAddress($to, true))) {
-				$reqAddressId = $reqAddressInst->id;
-				DAO_Ticket::createRequester($reqAddressId, $ticket_id);
-			}
+			DAO_Ticket::createRequester($to, $ticket_id);
 		}
 		
 		// Headers
@@ -433,9 +430,9 @@ class CerberusMail {
 	    // [TODO] If we still don't have a $from_addy we need a graceful failure. 
 		
 		/*
-	     * [TODO] Move these into constants?
 	    'draft_id'
 	    'message_id'
+	    'is_forward'
 	    -----'ticket_id'
 		'subject'
 	    'to'
@@ -458,6 +455,7 @@ class CerberusMail {
 		    @$reply_message_id = $properties['message_id'];
 		    @$content = $properties['content'];
 		    @$files = $properties['files'];
+		    @$is_forward = $properties['is_forward']; 
 		    @$forward_files = $properties['forward_files'];
 		    @$worker_id = $properties['agent_id'];
 		    @$subject = $properties['subject'];
@@ -509,12 +507,12 @@ class CerberusMail {
 			
 			$headers = $mail->getHeaders();
 			
-			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 	
 			// Subject
 			if(empty($subject)) $subject = $ticket->subject;
 			
-			if(!empty($properties['to'])) { // forward
+			if(!empty($is_forward)) { // forward
 				$mail->setSubject($subject);
 				
 			} else { // reply
@@ -542,10 +540,20 @@ class CerberusMail {
 			if(isset($properties['is_autoreply']) && $properties['is_autoreply']) {
 				$headers->addTextHeader('Auto-Submitted','auto-replied');
 				
+			    // Recipients
+				$requesters = DAO_Ticket::getRequestersByTicket($ticket_id);
+			    if(!is_array($requesters))
+			    	return;
+
+				// Is the first sender still a requester?
+				if(!isset($requesters[$ticket->first_wrote_address_id]))
+					return;
+					
+				// A legit address?
 				if(null == ($first_address = DAO_Address::get($ticket->first_wrote_address_id)))
 					return;
 	
-				// Don't send e-mail to ourselves
+				// Ourselves?
 				if(isset($helpdesk_senders[$first_address->email]))
 					return;
 			
@@ -587,25 +595,25 @@ class CerberusMail {
 				
 			// Not an auto-reply
 			} else {
-				// Forwards
-				if(!empty($properties['to'])) {
-				    $aTo = DevblocksPlatform::parseCsvString(str_replace(';',',',$properties['to']));
-					
-					if(is_array($aTo))
-					foreach($aTo as $to_addy) {
-						$mail->addTo($to_addy);
-					}
-				    
-				// Replies
-				} else {
+				// Default requester reply
+				if(empty($properties['to']) && !$is_forward) {
 				    // Recipients
 					$requesters = DAO_Ticket::getRequestersByTicket($ticket_id);
 				    if(is_array($requesters))
 				    foreach($requesters as $requester) { /* @var $requester Model_Address */
 						$mail->addTo($requester->email);
 				    }
+					
+				// Forward or overload
+				} elseif(!empty($properties['to'])) {
+				    $aTo = DevblocksPlatform::parseCsvString(str_replace(';',',',$properties['to']));
+					
+					if(is_array($aTo))
+					foreach($aTo as $to_addy) {
+						$mail->addTo($to_addy);
+					}
 				}
-		
+				
 			    // Ccs
 			    if(!empty($properties['cc'])) {
 				    $aCc = DevblocksPlatform::parseCsvString(str_replace(';',',',$properties['cc']));
@@ -633,7 +641,7 @@ class CerberusMail {
 			}
 	
 			// Forward Attachments
-			if(!empty($forward_files) && is_array($forward_files)) {
+			if($is_forward && !empty($forward_files) && is_array($forward_files)) {
 				foreach($forward_files as $file_id) {
 					$attachment = DAO_Attachment::get($file_id);
 					if(false !== ($fp = DevblocksPlatform::getTempFile())) {
@@ -671,16 +679,15 @@ class CerberusMail {
 				if(isset($properties['bcc']))
 					$params['bcc'] = $properties['bcc'];
 				
-				$hint_to = '(requesters)';
 				
-				if(isset($properties['to'])) {
-					// .. forward
-				} else { // reply
+				if(empty($to)) {
+					$hint_to = '(requesters)';
+				} else {
 					$hint_to = implode(', ', array_keys($mail->getTo()));					
 				}
 				
 				$fields = array(
-					DAO_MailQueue::TYPE => Model_MailQueue::TYPE_TICKET_REPLY,
+					DAO_MailQueue::TYPE => empty($is_forward) ? Model_MailQueue::TYPE_TICKET_REPLY : Model_MailQueue::TYPE_TICKET_FORWARD,
 					DAO_MailQueue::TICKET_ID => $properties['ticket_id'],
 					DAO_MailQueue::WORKER_ID => intval($worker_id),
 					DAO_MailQueue::UPDATED => time()+5, // small offset
@@ -693,19 +700,6 @@ class CerberusMail {
 				);
 				DAO_MailQueue::create($fields);
 			}
-			
-			// [TODO] Add note to the draft
-			// add note to message if email failed
-//			if ($mail_succeeded === false) {
-//				$fields = array(
-//					DAO_MessageNote::MESSAGE_ID => $message_id,
-//					DAO_MessageNote::CREATED => time(),
-//					DAO_MessageNote::WORKER_ID => 0,
-//					DAO_MessageNote::CONTENT => 'Exception thrown while sending email: ' . $e->getMessage(),
-//					DAO_MessageNote::TYPE => Model_MessageNote::TYPE_ERROR,
-//				);
-//				DAO_MessageNote::create($fields);
-//			}
 			
 			return false;
 		}

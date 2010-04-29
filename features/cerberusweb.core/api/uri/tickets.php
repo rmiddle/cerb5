@@ -888,7 +888,7 @@ class ChTicketsPage extends CerberusPageExtension {
 			// Make sure we have permission
 			if($active_worker->is_superuser || null != DAO_Snippet::getWhere(sprintf("%s = %d AND %s = %d",
 				DAO_Snippet::ID,
-				DAO_Snippet::$id,
+				$id,
 				DAO_Snippet::CREATED_BY,
 				$active_worker->id
 			))) {
@@ -1620,8 +1620,7 @@ class ChTicketsPage extends CerberusPageExtension {
 			if(empty($requester))
 				continue;
 			$host = empty($requester->host) ? 'localhost' : $requester->host;
-			$requester_addy = DAO_Address::lookupAddress($requester->mailbox . '@' . $host, true);
-			DAO_Ticket::createRequester($requester_addy->id, $ticket_id);
+			DAO_Ticket::createRequester($requester->mailbox . '@' . $host, $ticket_id);
 		}
 
 		// Custom field saves

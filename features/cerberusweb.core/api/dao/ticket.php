@@ -222,7 +222,7 @@ class DAO_Ticket extends C4_ORMHelper {
 			$db->Execute($sql);
 			
 			// Requesters (merge)
-			$sql = sprintf("INSERT IGNORE INTO requester (address_id,ticket_id) ".
+			$sql = sprintf("INSERT IGNORE INTO requester (address_id, ticket_id) ".
 				"SELECT address_id, %d FROM requester WHERE ticket_id IN (%s)",
 				$oldest_id,
 				implode(',', $merge_ticket_ids)
@@ -419,7 +419,7 @@ class DAO_Ticket extends C4_ORMHelper {
 		$db = DevblocksPlatform::getDatabaseService();
 		$addresses = array();
 		
-		$sql = sprintf("SELECT a.id , a.email ".
+		$sql = sprintf("SELECT a.id , a.email, a.first_name, a.last_name ".
 			"FROM address a ".
 			"INNER JOIN requester r ON (r.ticket_id = %d AND a.id=r.address_id) ".
 			"ORDER BY a.email ASC ",
@@ -431,6 +431,8 @@ class DAO_Ticket extends C4_ORMHelper {
 			$address = new Model_Address();
 			$address->id = intval($row['id']);
 			$address->email = $row['email'];
+			$address->first_name = $row['first_name'];
+			$address->last_name = $row['last_name'];
 			$addresses[$address->id] = $address;
 		}
 		
@@ -454,13 +456,43 @@ class DAO_Ticket extends C4_ORMHelper {
 		return !empty($result);
 	}
 	
-	static function createRequester($address_id,$ticket_id) {
+	static function createRequester($raw_email, $ticket_id) {
 		$db = DevblocksPlatform::getDatabaseService();
+		$logger = DevblocksPlatform::getConsoleLog();
+		
+		$helpdesk_senders = CerberusApplication::getHelpdeskSenders();
+
+		if(null == ($address = CerberusApplication::hashLookupAddress($raw_email, true))) {
+			$logger->warn(sprintf("[Parser] %s is a malformed requester e-mail address.", $raw_email));
+			return false;
+		}
+		
+		// Don't add a requester if the sender is a helpdesk address
+		if(isset($helpdesk_senders[$address->email])) {
+			$logger->info(sprintf("[Parser] Not adding %s as a requester because it's a helpdesk-controlled address. ", $address->email));
+			return false;
+		}
+		
+		// Filter out any excluded requesters
+		$exclude_list = DevblocksPlatform::getPluginSetting('cerberusweb.core', CerberusSettings::PARSER_AUTO_REQ_EXCLUDE, CerberusSettingsDefaults::PARSER_AUTO_REQ_EXCLUDE);
+		if(!empty($exclude_list)) {
+			@$excludes = DevblocksPlatform::parseCrlfString($exclude_list);
+			
+			if(is_array($excludes) && !empty($excludes))
+			foreach($excludes as $excl_pattern) {
+				if(@preg_match(DevblocksPlatform::parseStringAsRegExp($excl_pattern), $address->email)) {
+					$logger->info(sprintf("[Parser] Not adding (%s) as a requester because they match (%s) on the exclude list. ", $address->email, $excl_pattern));
+					return false;
+				}
+			}
+		}
+		
 		$db->Execute(sprintf("REPLACE INTO requester (address_id, ticket_id) ".
 			"VALUES (%d, %d)",
-			$address_id,
+			$address->id,
 			$ticket_id
 		));
+		
 		return true;
 	}
 	
