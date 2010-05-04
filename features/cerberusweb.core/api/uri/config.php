@@ -188,6 +188,16 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		} else {
 			$storage_ext_id = 'devblocks.storage.engine.disk';
 		}
+
+		if(!empty($id)) {
+			$storage_schemas = DevblocksPlatform::getExtensions('devblocks.storage.schema', false, true);
+			$tpl->assign('storage_schemas', $storage_schemas);
+			
+			$storage_schema_stats = $profile->getUsageStats();
+			
+			if(!empty($storage_schema_stats))
+				$tpl->assign('storage_schema_stats', $storage_schema_stats);
+		}
 		
 		if(false !== ($storage_ext = DevblocksPlatform::getExtension($storage_ext_id, true))) {
 			$tpl->assign('storage_engine', $storage_ext);
@@ -219,34 +229,48 @@ class ChConfigurationPage extends CerberusPageExtension  {
 			|| null == ($ext = $ext = DevblocksPlatform::getExtension($extension_id, true)))
 			return false;
 			
+		$tpl = DevblocksPlatform::getTemplateService();
+			
 		/* @var $ext Extension_DevblocksStorageEngine */
 			
 		if($ext->testConfig()) {
-			echo "PASS!!";
+			$output = 'Your storage profile is configured properly.';
+			$success = true;
 		} else {
-			echo "FAIL!!!";
+			$output = 'Your storage profile is not configured properly.';
+			$success = false;
 		}
+		
+		$tpl->assign('success', $success);
+		$tpl->assign('output', $output);
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'internal/renderers/test_results.tpl');
 	}
 	
 	function saveStorageProfilePeekAction() {
 		$translate = DevblocksPlatform::getTranslationService();
-		//$active_worker = PortSensorApplication::getActiveWorker();
-		
-		// [TODO] ACL
-		// return;
+		$active_worker = CerberusApplication::getActiveWorker();
+
+		// ACL
+		if(!$active_worker->is_superuser)
+			return;
 		
 		@$id = DevblocksPlatform::importGPC($_POST['id'],'integer');
 		@$view_id = DevblocksPlatform::importGPC($_POST['view_id'],'string');
 		@$name = DevblocksPlatform::importGPC($_POST['name'],'string');
 		@$extension_id = DevblocksPlatform::importGPC($_POST['extension_id'],'string');
-//		@$delete = DevblocksPlatform::importGPC($_POST['do_delete'],'integer',0);
+		@$delete = DevblocksPlatform::importGPC($_POST['do_delete'],'integer',0);
 
-		// [TODO] The superuser set bit here needs to be protected by ACL
-		
 		if(empty($name)) $name = "New Storage Profile";
 		
 		if(!empty($id) && !empty($delete)) {
-//			DAO_DevblocksStorageProfile::delete($id);
+			// Double check that the profile is empty
+			if(null != ($profile = DAO_DevblocksStorageProfile::get($id))) {
+				$stats = $profile->getUsageStats();
+				if(empty($stats)) {
+					DAO_DevblocksStorageProfile::delete($id);
+				}
+			}
 			
 		} else {
 		    $fields = array(
@@ -278,7 +302,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		}
 		
 		if(!empty($view_id)) {
-			$view = Ps_AbstractViewLoader::getView($view_id);
+			$view = C4_AbstractViewLoader::getView($view_id);
 			$view->render();
 		}		
 	}
