@@ -1,7 +1,7 @@
-{if !empty($profile->id)}
+{if !empty($profile->id) && !empty($storage_schema_stats)}
 <div class="ui-state-error ui-corner-all" style="margin: 0 0 .5em 0; padding: 0 .7em;"> 
 	<p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
-	[[WARNING ABOUT CHANGING PARAMS ON A LIVE STORAGE PROFILE]]
+	Warning!  You are changing the configuration of a live storage profile that contains content.  Unless you are very careful you may lose content.  You cannot delete this profile until you've moved all its content.
 	</p>
 </div>
 {/if}
@@ -46,23 +46,32 @@
 		</td>
 	</tr>
 </table>
+<br>
+
+{if !empty($storage_schema_stats)}
+Used by:<br>
+{foreach from=$storage_schema_stats item=stats key=schema_id}
+	<b>{$storage_schemas.{$schema_id}->name}</b>: {$stats.count} objects ({$stats.bytes|devblocks_prettybytes})<br>
+{/foreach}
+<br>
+{/if}
 
 <div id="divTestStorageProfile"></div>
 
 {if $active_worker->is_superuser}
 	<button type="button" onclick="genericAjaxPanelPostCloseReloadView('formStorageProfilePeek', '{$view_id}');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
-	{if 0&&$active_worker->is_superuser}<button type="button" onclick="if(confirm('Are you sure you want to delete this worker and their history?')) { this.form.do_delete.value='1';genericAjaxPanelPostCloseReloadView('formStorageProfilePeek', '{$view_id}'); } "><span class="cerb-sprite sprite-delete2"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
+	{if !empty($profile->id) && empty($storage_schema_stats)}<button type="button" onclick="if(confirm('Are you sure you want to delete this storage profile?')) { this.form.do_delete.value='1';genericAjaxPanelPostCloseReloadView('formStorageProfilePeek', '{$view_id}'); } "><span class="cerb-sprite sprite-delete2"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
 {else}
 	<div class="error">{$translate->_('error.core.no_acl.edit')}</div>	
 {/if}
-<button type="button" onclick="this.form.a.value = 'testStorageProfilePeek';genericAjaxPost('formStorageProfilePeek','divTestStorageProfile');this.form.a.value = 'saveStorageProfilePeek';"><span class="cerb-sprite sprite-gear"></span> {$translate->_('Test')|capitalize}</button>
+<button type="button" onclick="genericAjaxPost('formStorageProfilePeek','divTestStorageProfile','c=config&a=testStorageProfilePeek');"><span class="cerb-sprite sprite-gear"></span> {$translate->_('Test')|capitalize}</button>
 
 <br>
 </form>
 
 <script type="text/javascript" language="JavaScript1.2">
 	genericPanel.one('dialogopen', function(event,ui) {
-		genericPanel.dialog('option','title',"{$schema->manifest->name|escape}");
+		genericPanel.dialog('option','title',"Storage Profile");
 	} );
 </script>
 
