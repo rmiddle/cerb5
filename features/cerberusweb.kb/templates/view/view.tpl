@@ -5,7 +5,8 @@
 	<tr>
 		<td nowrap="nowrap"><span class="title">{$view->name}</span></td>
 		<td nowrap="nowrap" align="right">
-			<a href="javascript:;" onclick="genericAjaxGet('view{$view->id}','c=internal&a=viewRefresh&id={$view->id}');">{$translate->_('common.refresh')|lower}</a>
+			<a href="javascript:;" onclick="$('#btnExplore{$view->id}').click();">explore</a>
+			 | <a href="javascript:;" onclick="genericAjaxGet('view{$view->id}','c=internal&a=viewRefresh&id={$view->id}');">{$translate->_('common.refresh')|lower}</a>
 			<!-- {if $view->id != 'search'} | <a href="{devblocks_url}c=internal&a=searchview&id={$view->id}{/devblocks_url}">{$translate->_('common.search')|lower} list</a>{/if} -->
 			 | <a href="javascript:;" onclick="genericAjaxGet('customize{$view->id}','c=internal&a=viewCustomize&id={$view->id}');toggleDiv('customize{$view->id}','block');">{$translate->_('common.customize')|lower}</a>
 		</td>
@@ -14,10 +15,12 @@
 
 <form id="customize{$view->id}" name="customize{$view->id}" action="#" onsubmit="return false;" style="display:none;"></form>
 <form id="viewForm{$view->id}" name="viewForm{$view->id}" action="{devblocks_url}{/devblocks_url}" method="post">
-<input type="hidden" name="id" value="{$view->id}">
+<button id="btnExplore{$view->id}" type="button" style="display:none;" onclick="this.form.explore_from.value=$(this).closest('form').find('tbody input:checkbox:checked:first').val();this.form.a.value='viewKbArticlesExplore';this.form.submit();"></button>
+<input type="hidden" name="view_id" value="{$view->id}">
 <input type="hidden" name="c" value="kb">
 <input type="hidden" name="a" value="">
 <input type="hidden" name="return" value="{$response_uri}">
+<input type="hidden" name="explore_from" value="0">
 <table cellpadding="1" cellspacing="0" border="0" width="100%" class="worklistBody">
 
 	{* Column Headers *}
@@ -43,14 +46,13 @@
 	{* Column Data *}
 	{foreach from=$data item=result key=idx name=results}
 
-	{assign var=rowIdPrefix value="row_"|cat:$view->id|cat:"_"|cat:$result.kb_id}
 	{if $smarty.foreach.results.iteration % 2}
 		{assign var=tableRowClass value="even"}
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	
-		<tr class="{$tableRowClass}" id="{$rowIdPrefix}_s" onmouseover="$(this).addClass('hover');" onmouseout="$(this).removeClass('hover');" onclick="if(getEventTarget(event)=='TD') checkAll('{$rowIdPrefix}_s');">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+		<tr class="{$tableRowClass}">
 			<td align="center"><input type="checkbox" name="row_id[]" value="{$result.kb_id}"></td>
 		{foreach from=$view->view_columns item=column name=columns}
 			{if $column=="kb_id"}
@@ -88,6 +90,7 @@
 			{/if}
 		{/foreach}
 		</tr>
+	</tbody>
 	{/foreach}
 	
 </table>
