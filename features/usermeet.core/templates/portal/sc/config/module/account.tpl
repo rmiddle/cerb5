@@ -1,27 +1,65 @@
+<table cellspacing="2" cellpadding="2" border="0">
 
-<select name="address_full_name">
-	<option {if $address_full_name == 0}selected{/if} value="0">{$translate->_('portal.sc.cfg.history.next_assigned_to.hide')|capitalize}</option>
-	<option {if $address_full_name == 1}selected{/if} value="1">{$translate->_('portal.sc.cfg.history.next_assigned_to.firstname')|capitalize}</option>
-	<option {if $address_full_name == 2}selected{/if} value="2">{$translate->_('portal.sc.cfg.history.next_assigned_to.fullname')|capitalize}</option>
-</select>
-<b>{$translate->_('portal.sc.cfg.account.full_name')|capitalize}</b>
-<br>
+{$account_fields = [addy_first_name,addy_last_name]}
+{$account_labels = ['First Name','Last Name']}
 
-<table cellpadding="2" cellspacing="1" border="0">
-<tr>
-	<td colspan="2"><H2>Custom Fields</H2></td>
-</tr>
-{foreach from=$address_fields item=a key=a_id}
-	<tr>
-		<td valign="top" width="1%" nowrap="nowrap">
-			<select name="cf_address_select_{$a_id}">
-				<option {if $cf_address_select.$a_id == 0}selected{/if} value="0">{$translate->_('portal.sc.cfg.history.hidden')|capitalize}</option>
-				<option {if $cf_address_select.$a_id == 1}selected{/if} value="1">{$translate->_('portal.sc.cfg.history.read_only')|capitalize}</option>
-				<option {if $cf_address_select.$a_id == 2}selected{/if} value="2">{$translate->_('portal.sc.cfg.history.read_write')|capitalize}</option>
-			</select>
-			<b>{$a->name}</b>
-			<br>
-		</td>
-	</tr>
+{if !empty($address_custom_fields)}
+{foreach from=$address_custom_fields item=field key=field_id}
+	{$account_fields[] = 'addy_custom_'|cat:$field_id}
+	{$account_labels[] = ''|cat:$field->name|cat:' ('|cat:$field_types.{$field->type}|cat:')'}
 {/foreach}
+{/if}
+
+<tr>
+	<td colspan="2"><b>Person</b></td>
+</tr>
+{foreach from=$account_fields item=field name=fields}
+<tr>
+	<td>
+		<input type="hidden" name="fields[]" value="{$field}">
+		<select name="fields_visible[]">
+			<option value="0">Hidden</option>
+			<option value="1" {if 1==$show_fields.{$field}}selected="selected"{/if}>Read Only</option>
+			<option value="2" {if 2==$show_fields.{$field}}selected="selected"{/if}>Editable</option>
+		</select>
+	</td>
+	<td>
+		{$account_labels.{$smarty.foreach.fields.index}|capitalize}
+	</td>
+</tr>
+{/foreach}
+
+<tr>
+	<td colspan="2">&nbsp;</td>
+</tr>
+
+{$account_fields = [org_name,org_street,org_city,org_province,org_postal,org_country,org_phone,org_website]}
+{$account_labels = [Name,Street,City,Province,Postal,Country,Phone,Website]}
+
+{if !empty($org_custom_fields)}
+{foreach from=$org_custom_fields item=field key=field_id}
+	{$account_fields[] = 'org_custom_'|cat:$field_id}
+	{$account_labels[] = ''|cat:$field->name|cat:' ('|cat:$field_types.{$field->type}|cat:')'}
+{/foreach}
+{/if}
+
+<tr>
+	<td colspan="2"><b>Organization</b></td>
+</tr>
+{foreach from=$account_fields item=field name=fields}
+<tr>
+	<td>
+		<input type="hidden" name="fields[]" value="{$field}">
+		<select name="fields_visible[]">
+			<option value="0">Hidden</option>
+			<option value="1" {if 1==$show_fields.{$field}}selected="selected"{/if}>Read Only</option>
+			<option value="2" {if 2==$show_fields.{$field}}selected="selected"{/if}>Editable</option>
+		</select>
+	</td>
+	<td>
+		{$account_labels.{$smarty.foreach.fields.index}|capitalize}
+	</td>
+</tr>
+{/foreach}
+
 </table>
