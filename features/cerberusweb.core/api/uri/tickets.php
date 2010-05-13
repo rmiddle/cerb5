@@ -57,7 +57,7 @@ class ChTicketsPage extends CerberusPageExtension {
 				
 				// Groups
 				$teams = DAO_Group::getAll();
-				$tpl->assign_by_ref('teams', $teams);
+				$tpl->assign('teams', $teams);
 				
 				// Groups+Buckets
 				$team_categories = DAO_Bucket::getTeams();
@@ -1234,7 +1234,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		$tpl->assign('to', $to);
 		
 		$teams = DAO_Group::getAll();
-		$tpl->assign_by_ref('teams', $teams);
+		$tpl->assign('teams', $teams);
 		
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
@@ -1309,6 +1309,34 @@ class ChTicketsPage extends CerberusPageExtension {
 
 		if(!empty($group->signature)) {
 			$sig = $group->signature;
+		}
+
+		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $active_worker, $token_labels, $token_values);
+		echo "\r\n", $tpl_builder->build($sig, $token_values), "\r\n";
+	}
+	
+	function getLogTicketSignatureAction() {
+		@$email = DevblocksPlatform::importGPC($_REQUEST['email'],'string','');
+		
+		$active_worker = CerberusApplication::getActiveWorker();
+		$group_settings = DAO_GroupSettings::getSettings();
+		
+		$group_id = 0;
+		
+		// Translate email to group id
+		if(is_array($group_settings))
+		foreach($group_settings as $settings_group_id => $settings) {
+			if(0==strcasecmp($settings[DAO_GroupSettings::SETTING_REPLY_FROM], $email)) {
+				$group_id = $settings_group_id;
+				break;
+			}
+		}
+		
+		if(!empty($group_id) && null != ($group = DAO_Group::getTeam($group_id)) && !empty($group->signature)) {
+			$sig = $group->signature;
+		} else {
+			$sig = DevblocksPlatform::getPluginSetting('cerberusweb.core', CerberusSettings::DEFAULT_SIGNATURE, CerberusSettingsDefaults::DEFAULT_SIGNATURE);
 		}
 
 		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
@@ -1674,7 +1702,6 @@ class ChTicketsPage extends CerberusPageExtension {
 			$tpl->assign('workers', $workers);
 			
 			// Enforce group memberships
-	       	// [TODO] Test impact
 			$active_worker = CerberusApplication::getActiveWorker();
 			$memberships = $active_worker->getMemberships();
 			$view->params[] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID, 'in', array_keys($memberships)); 
@@ -1704,6 +1731,11 @@ class ChTicketsPage extends CerberusPageExtension {
 	    
 	    $piles_always = array_flip($piles_always); // Flip hash
 
+	    // Enforce worker memberships
+		$active_worker = CerberusApplication::getActiveWorker();
+		$memberships = $active_worker->getMemberships();
+		$view->params['tmpMemberships'] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID, 'in', array_keys($memberships)); 
+	    
 	    foreach($piles_hash as $idx => $hash) {
 	        @$moveto = $piles_moveto[$idx];
 	        @$type = $piles_type[$idx];
@@ -1821,8 +1853,8 @@ class ChTicketsPage extends CerberusPageExtension {
             $view->doBulkUpdate($doType, $doTypeParam, $doData, $doActions, array());
 	    }
 
-	    // Reset the paging since we may have reduced our list size
-	    $view->renderPage = 0;
+	    $view->renderPage = 0; // Reset the paging since we may have reduced our list size
+	    unset($view->params['tmpMemberships']); // Remove our filter
 	    C4_AbstractViewLoader::setView($view_id,$view);
 	    	    
         DevblocksPlatform::redirect(new DevblocksHttpResponse(array('tickets')));
