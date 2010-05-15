@@ -481,7 +481,6 @@ class ImportCron extends CerberusCronPageExtension {
 			DAO_KbArticle::TITLE => $title,
 			DAO_KbArticle::UPDATED => $created,
 			DAO_KbArticle::FORMAT => 1, // HTML
-			DAO_KbArticle::CONTENT_RAW => $content,
 			DAO_KbArticle::CONTENT => $content,
 			DAO_KbArticle::VIEWS => 0, // [TODO]
 		);
@@ -681,12 +680,7 @@ class ImportCron extends CerberusCronPageExtension {
 			$sRequesterAddy = (string) $eAddress; // [TODO] RFC822
 			
 			// Insert requesters
-			if(null == ($requesterAddyInst = CerberusApplication::hashLookupAddress($sRequesterAddy, true))) {
-				$logger->warning('[Importer] Ticket ' . $sMask . ' - Ignoring malformed requester: ' . $sRequesterAddy);
-				continue;				
-			}
-			
-			DAO_Ticket::createRequester($requesterAddyInst->id, $ticket_id);
+			DAO_Ticket::createRequester($sRequesterAddy, $ticket_id);
 		}
 		
 		// Create messages
@@ -1266,13 +1260,15 @@ class MailQueueCron extends CerberusCronPageExtension {
 		
 		do {
 			$messages = DAO_MailQueue::getWhere(
-				sprintf("%s = %d AND %s > %d",
+				sprintf("%s = %d AND %s > %d AND %s < %d",
 					DAO_MailQueue::IS_QUEUED,
 					1,
 					DAO_MailQueue::ID,
-					$last_id
+					$last_id,
+					DAO_MailQueue::QUEUE_FAILS,
+					10
 				),
-				array(DAO_MailQueue::PRIORITY, DAO_MailQueue::UPDATED),
+				array(DAO_MailQueue::QUEUE_PRIORITY, DAO_MailQueue::UPDATED),
 				array(false, true),
 				25
 			);
@@ -1283,6 +1279,9 @@ class MailQueueCron extends CerberusCronPageExtension {
 					
 					if(!$message->send()) {
 						$logger->error(sprintf("[Mail Queue] Failed sending message %d", $message->id));
+						DAO_MailQueue::update($message->id, array(
+							DAO_MailQueue::QUEUE_FAILS => min($message->queue_fails+1,255),
+						));
 					} else {
 						$logger->info(sprintf("[Mail Queue] Sent message %d", $message->id));
 					}

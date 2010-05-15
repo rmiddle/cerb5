@@ -201,7 +201,7 @@ class ChContactsPage extends CerberusPageExtension {
 					'created' => time(),
 					'worker_id' => $active_worker->id,
 					'total' => $total,
-					'return_url' => $url_writer->write('c=contacts&tab=orgs', true),
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=contacts&tab=orgs', true),
 //					'toolbar_extension_id' => '',
 				);
 				$models[] = $model; 
@@ -433,7 +433,7 @@ class ChContactsPage extends CerberusPageExtension {
 			if(!empty($custom_fields) && !empty($id)) {
 				// Format (typecast) and set the custom field types
 				$source_ext_id = ($type=="orgs") ? ChCustomFieldSource_Org::ID : ChCustomFieldSource_Address::ID;
-				DAO_CustomFieldValue::formatAndSetFieldValues($source_ext_id, $id, $custom_fields, $is_blank_unset);
+				DAO_CustomFieldValue::formatAndSetFieldValues($source_ext_id, $id, $custom_fields, $is_blank_unset, true, true);
 			}
 			
 		}

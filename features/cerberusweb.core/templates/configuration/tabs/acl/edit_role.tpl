@@ -50,6 +50,8 @@
 					<label>
 					{if $plugin->id=="cerberusweb.core"}
 						<input type="hidden" name="acl_privs[]" value="plugin.cerberusweb.core">
+					{elseif $plugin->id=="devblocks.core"}
+						<input type="hidden" name="acl_privs[]" value="plugin.devblocks.core">
 					{else}
 						<input type="checkbox" name="acl_privs[]" value="{$plugin_priv|escape}" {if isset($role_privs.$plugin_priv)}checked="checked"{/if} onchange="toggleDiv('privs{$plugin_id}',(this.checked)?'block':'none');">
 					{/if}
@@ -70,10 +72,8 @@
 	
 	<tr>
 		<td colspan="2">
-			{if !empty($license.workers)}
-				<button type="submit"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>
-				{if $active_worker->is_superuser}<button type="button" onclick="if(confirm('Are you sure you want to delete this role?')){literal}{{/literal}this.form.do_delete.value='1';this.form.submit();{literal}}{/literal}"><span class="cerb-sprite sprite-delete2"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
-			{/if}
+			<button type="submit"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>
+			{if $active_worker->is_superuser}<button type="button" onclick="if(confirm('Are you sure you want to delete this role?')){literal}{{/literal}this.form.do_delete.value='1';this.form.submit();{literal}}{/literal}"><span class="cerb-sprite sprite-delete2"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
 		</td>
 	</tr>
 </table>

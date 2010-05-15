@@ -1091,7 +1091,7 @@ class CrmPage extends CerberusPageExtension {
 			if(!empty($custom_fields) && !empty($id)) {
 				// Format (typecast) and set the custom field types
 				$source_ext_id = CrmCustomFieldSource_Opportunity::ID;
-				DAO_CustomFieldValue::formatAndSetFieldValues($source_ext_id, $id, $custom_fields, $is_blank_unset);
+				DAO_CustomFieldValue::formatAndSetFieldValues($source_ext_id, $id, $custom_fields, $is_blank_unset, true, true);
 			}
 			
 		}
@@ -1141,7 +1141,7 @@ class CrmPage extends CerberusPageExtension {
 					'created' => time(),
 					'worker_id' => $active_worker->id,
 					'total' => $total,
-					'return_url' => $url_writer->write('c=activity&tab=opps', true),
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=activity&tab=opps', true),
 //					'toolbar_extension_id' => 'cerberusweb.explorer.toolbar.',
 				);
 				$models[] = $model; 

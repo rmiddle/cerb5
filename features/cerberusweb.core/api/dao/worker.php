@@ -53,24 +53,32 @@ class DAO_Worker extends C4_ORMHelper {
 		return self::getAll(false, true);
 	}
 	
-	static function getAllOnline() {
-		list($whos_online_workers, $null) = self::search(
-			array(),
-		    array(
-		        new DevblocksSearchCriteria(SearchFields_Worker::LAST_ACTIVITY_DATE,DevblocksSearchCriteria::OPER_GT,(time()-60*15)), // idle < 15 mins
-		        new DevblocksSearchCriteria(SearchFields_Worker::LAST_ACTIVITY,DevblocksSearchCriteria::OPER_NOT_LIKE,'%translation_code";N;%'), // translation code not null (not just logged out)
-		    ),
-		    -1,
-		    0,
-		    SearchFields_Worker::LAST_ACTIVITY_DATE,
-		    false,
-		    false
-		);
-		
-		if(!empty($whos_online_workers))
-			return self::getList(array_keys($whos_online_workers));
+	static function getAllOnline($idle_limit=600, $idle_kick=false) {
+		$session = DevblocksPlatform::getSessionService();
+
+		$workers = array();
+
+		foreach($session->getAll() as $sess) {
+			$key = $sess['session_key'];
+			$data = $session->decodeSession($sess['session_data']);
 			
-		return array();
+			@$visit = $data['db_visit']; /* @var $visit CerberusVisit */
+			if(is_null($visit))
+				continue;
+				
+			$worker = $visit->getWorker();
+			
+			// Check the last activity date (and log out as needed)
+			$idle_secs = time() - $worker->last_activity_date;
+			if($idle_secs > $idle_limit) {
+				if($idle_kick)
+					$session->clear($key);
+			} else {
+				$workers[$worker->id] = $worker;
+			}
+		}
+		
+		return $workers;
 	}
 	
 	static function getAll($nocache=false, $with_disabled=true) {
@@ -384,7 +392,7 @@ class DAO_Worker extends C4_ORMHelper {
 		    DAO_Worker::updateAgent($worker->id,array(
 		        DAO_Worker::LAST_ACTIVITY_DATE => time(),
 		        DAO_Worker::LAST_ACTIVITY => serialize($activity),
-		        DAO_Worker::LAST_ACTIVITY_IP => ip2long($ip),
+		        DAO_Worker::LAST_ACTIVITY_IP => sprintf("%u",ip2long($ip)),
 		    ));
 		}
 	}
@@ -567,9 +575,7 @@ class Model_Worker {
 		$settings = DevblocksPlatform::getPluginSettingsService();
 		$acl_enabled = $settings->get('cerberusweb.core',CerberusSettings::ACL_ENABLED,CerberusSettingsDefaults::ACL_ENABLED);
 			
-		// ACL is a paid feature (please respect the licensing and support the project!)
-		$license = CerberusLicense::getInstance();
-		if(!$acl_enabled || !isset($license['key']) || empty($license['workers']))
+		if(!$acl_enabled)
 			return ("core.config"==substr($priv_id,0,11)) ? false : true;
 			
 		// Check the aggregated worker privs from roles
