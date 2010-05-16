@@ -937,7 +937,7 @@ class CerberusContexts {
 		
 		// Polymorph
 		if(is_numeric($worker)) {
-			$worker = DAO_Worker::getAgent($worker);
+			$worker = DAO_Worker::get($worker);
 		} elseif($worker instanceof Model_Worker) {
 			// It's what we want already.
 		} else {
@@ -1587,7 +1587,7 @@ class CerberusContexts {
 			$token_values['created'] = $org->created;
 			if(!empty($org->city))
 				$token_values['city'] = $org->city;
-			if(!empty($org->county))
+			if(!empty($org->country))
 				$token_values['country'] = $org->country;
 			if(!empty($org->phone))
 				$token_values['phone'] = $org->phone;
@@ -1907,7 +1907,7 @@ class CerberusContexts {
 		
 		if($task) {
 			$token_values['completed'] = $task->completed_date;
-			$token_values['due'] = $task->updated_date;
+			$token_values['due'] = $task->due_date;
 			$token_values['id'] = $task->id;
 			$token_values['is_completed'] = $task->is_completed;
 			$token_values['title'] = $task->title;
@@ -1922,7 +1922,7 @@ class CerberusContexts {
 						continue;
 					
 					// The literal value
-					if(null != $org)
+					if(null != $task)
 						$token_values['custom'][$cf_id] = $cf_val;
 					
 					// Stringify
@@ -1930,7 +1930,7 @@ class CerberusContexts {
 						$cf_val = implode(', ', $cf_val);
 						
 					if(is_string($cf_val)) {
-						if(null != $org)
+						if(null != $task)
 							$token_values['custom_'.$cf_id] = $cf_val;
 					}
 				}
