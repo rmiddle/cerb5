@@ -16,25 +16,21 @@ class DAO_Worker extends C4_ORMHelper {
 	const LAST_ACTIVITY_DATE = 'last_activity_date';
 	const LAST_ACTIVITY_IP = 'last_activity_ip';
 	
-	// [TODO] Convert to ::create($id, $fields)
-	static function create($email, $password, $first_name, $last_name, $title) {
-		if(empty($email) || empty($password))
-			return null;
+	static function create($fields) {
+		if(empty($fields[DAO_Worker::EMAIL]) || empty($fields[DAO_Worker::PASSWORD]))
+			return NULL;
 			
 		$db = DevblocksPlatform::getDatabaseService();
 		$id = $db->GenID('generic_seq');
 		
 		$sql = sprintf("INSERT INTO worker (id, email, pass, first_name, last_name, title, is_superuser, is_disabled) ".
-			"VALUES (%d, %s, %s, %s, %s, %s,0,0)",
-			$id,
-			$db->qstr($email),
-			$db->qstr(md5($password)),
-			$db->qstr($first_name),
-			$db->qstr($last_name),
-			$db->qstr($title)
+			"VALUES (%d, '', '', '', '', '', 0, 0)",
+			$id
 		);
 		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 
+		self::update($id, $fields);
+		
 		self::clearCache();
 		
 		return $id;
@@ -170,7 +166,7 @@ class DAO_Worker extends C4_ORMHelper {
 	/**
 	 * @return Model_Worker
 	 */
-	static function getAgent($id) {
+	static function get($id) {
 		if(empty($id)) return null;
 		
 		$workers = self::getAllWithDisabled();
@@ -201,7 +197,7 @@ class DAO_Worker extends C4_ORMHelper {
 		return null;		
 	}
 	
-	static function updateAgent($ids, $fields, $flush_cache=true) {
+	static function update($ids, $fields, $flush_cache=true) {
 		if(!is_array($ids)) $ids = array($ids);
 		
 		$db = DevblocksPlatform::getDatabaseService();
@@ -260,7 +256,7 @@ class DAO_Worker extends C4_ORMHelper {
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' worker_workspace_list records.');
 	}
 	
-	static function deleteAgent($id) {
+	static function delete($id) {
 		if(empty($id)) return;
 		
 		// [TODO] Delete worker notes, comments, etc.
@@ -323,7 +319,7 @@ class DAO_Worker extends C4_ORMHelper {
 		$worker_id = $db->GetOne($sql); // or die(__CLASS__ . ':' . $db->ErrorMsg()); 
 
 		if(!empty($worker_id)) {
-			return self::getAgent($worker_id);
+			return self::get($worker_id);
 		}
 		
 		return null;
@@ -389,7 +385,7 @@ class DAO_Worker extends C4_ORMHelper {
 
 		// Update activity once per 30 seconds
 		if($worker->last_activity_date < (time()-30)) {
-		    DAO_Worker::updateAgent($worker->id,array(
+		    DAO_Worker::update($worker->id,array(
 		        DAO_Worker::LAST_ACTIVITY_DATE => time(),
 		        DAO_Worker::LAST_ACTIVITY => serialize($activity),
 		        DAO_Worker::LAST_ACTIVITY_IP => sprintf("%u",ip2long($ip)),
@@ -856,7 +852,7 @@ class View_Worker extends C4_AbstractView {
 		$batch_total = count($ids);
 		for($x=0;$x<=$batch_total;$x+=100) {
 			$batch_ids = array_slice($ids,$x,100);
-			DAO_Worker::updateAgent($batch_ids, $change_fields);
+			DAO_Worker::update($batch_ids, $change_fields);
 			
 			// Custom Fields
 			self::_doBulkSetCustomFields(ChCustomFieldSource_Worker::ID, $custom_fields, $batch_ids);

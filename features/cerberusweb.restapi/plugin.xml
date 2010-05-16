@@ -1,7 +1,7 @@
 <!DOCTYPE plugin SYSTEM "../../libs/devblocks/plugin.dtd">
 <plugin>
 	<id>cerberusweb.restapi</id>
-	<name>[Cerb5] Web Services API (JSON/XML)</name>
+	<name>[Cerb5] Web Services API (JSON/XML) *EXPERIMENTAL*</name>
 	<description>A RESTful JSON/XML interface for integrating Cerb5 with other applications and tools.</description>
 	<author>WebGroup Media, LLC.</author>
 	<revision>0</revision>
@@ -108,6 +108,18 @@
 			</class>
 			<params>
 				<param key="uri" value="orgs" />
+			</params>
+		</extension>		
+		
+		<extension point="cerberusweb.rest.controller">
+			<id>cerberusweb.rest.controller.parser</id>
+			<name>Parser</name>
+			<class>
+				<file>api/rest/parser.php</file>
+				<name>ChRest_Parser</name>
+			</class>
+			<params>
+				<param key="uri" value="parser" />
 			</params>
 		</extension>		
 		

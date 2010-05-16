@@ -464,7 +464,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 		$tpl->assign('view_id', $view_id);
 		
-		$worker = DAO_Worker::getAgent($id);
+		$worker = DAO_Worker::get($id);
 		$tpl->assign('worker', $worker);
 		
 		$teams = DAO_Group::getAll();
@@ -509,7 +509,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		if(!empty($id) && !empty($delete)) {
 			// Can't delete or disable self
 			if($active_worker->id != $id)
-				DAO_Worker::deleteAgent($id);
+				DAO_Worker::delete($id);
 			
 		} else {
 			if(empty($id) && null == DAO_Worker::lookupAgentEmail($email)) {
@@ -560,7 +560,12 @@ class ChConfigurationPage extends CerberusPageExtension  {
 					}
 			    }
 				
-				$id = DAO_Worker::create($email, $password, '', '', '');
+			    $fields = array(
+			    	DAO_Worker::EMAIL => $email,
+			    	DAO_Worker::PASSWORD => md5($password),
+			    );
+			    
+				$id = DAO_Worker::create($fields);
 			} // end create worker
 		    
 		    // Update
@@ -579,7 +584,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 			}
 			
 			// Update worker
-			DAO_Worker::updateAgent($id, $fields);
+			DAO_Worker::update($id, $fields);
 			
 			// Update group memberships
 			if(is_array($group_ids) && is_array($group_roles))
