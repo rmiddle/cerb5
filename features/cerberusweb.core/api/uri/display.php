@@ -38,7 +38,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		if(!is_numeric($id)) {
 			$id = DAO_Ticket::getTicketIdByMask($id);
 		}
-		$ticket = DAO_Ticket::getTicket($id);
+		$ticket = DAO_Ticket::get($id);
 	
 		if(empty($ticket)) {
 			echo "<H1>".$translate->_('display.invalid_ticket')."</H1>";
@@ -205,7 +205,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('workers', $workers);
 		
 		// Ticket
-		$ticket = DAO_Ticket::getTicket($message->ticket_id);
+		$ticket = DAO_Ticket::get($message->ticket_id);
 		$tpl->assign('ticket', $ticket);
 		$tpl->assign('requesters', $ticket->getRequesters());
 		
@@ -243,7 +243,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		@$next_worker_id = DevblocksPlatform::importGPC($_REQUEST['next_worker_id'],'integer',0);
 		@$unlock_date = DevblocksPlatform::importGPC($_REQUEST['unlock_date'],'integer',0);
 		
-		@$ticket = DAO_Ticket::getTicket($id);
+		@$ticket = DAO_Ticket::get($id);
 		
 		// Anti-Spam
 		if(!empty($spam)) {
@@ -290,7 +290,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		if(isset($properties[DAO_Ticket::IS_CLOSED]) && $properties[DAO_Ticket::IS_CLOSED]==$ticket->is_closed)
 			unset($properties[DAO_Ticket::IS_CLOSED]);
 		
-		DAO_Ticket::updateTicket($id, $properties);
+		DAO_Ticket::update($id, $properties);
 
 		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('display',$id)));
 	}
@@ -320,7 +320,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$active_worker = CerberusApplication::getActiveWorker();
 		$dst_ticket = null;
 
-		$src_ticket = DAO_Ticket::getTicket($src_ticket_id);
+		$src_ticket = DAO_Ticket::get($src_ticket_id);
 		
 		$refresh_id = !empty($src_ticket) ? $src_ticket->mask : $src_ticket_id;
 		
@@ -334,7 +334,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		if(is_string($dst_ticket_id))
 			$dst_ticket = DAO_Ticket::getTicketByMask($dst_ticket_id);
 		else
-			$dst_ticket = DAO_Ticket::getTicket($dst_ticket_id);
+			$dst_ticket = DAO_Ticket::get($dst_ticket_id);
 			
 		if(empty($src_ticket) || empty($dst_ticket)) {
 			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$refresh_id)));
@@ -393,7 +393,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('id',$id);
 		
 		$message = DAO_Message::get($id);
-		$ticket = DAO_Ticket::getTicket($message->ticket_id);
+		$ticket = DAO_Ticket::get($message->ticket_id);
 		$tpl->assign('message',$message);
 		$tpl->assign('ticket',$ticket);
 		
@@ -427,7 +427,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		// [TODO] This really should use an anchor to go back to the message (#r100)
 //		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('display',$ticket_id)));
 
-		if(null != ($ticket = DAO_Ticket::getTicket($ticket_id))) {
+		if(null != ($ticket = DAO_Ticket::get($ticket_id))) {
 			
 			// Notifications
 			$url_writer = DevblocksPlatform::getUrlService();
@@ -474,7 +474,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$message = DAO_Message::get($id);
 		$tpl->assign('message',$message);
 		
-		$ticket = DAO_Ticket::getTicket($message->ticket_id);
+		$ticket = DAO_Ticket::get($message->ticket_id);
 		$tpl->assign('ticket',$ticket);
 
 		// Are we continuing a draft?
@@ -610,7 +610,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		// Validate
 		if(empty($msg_id) 
 			|| empty($ticket_id) 
-			|| null == ($ticket = DAO_Ticket::getTicket($ticket_id)))
+			|| null == ($ticket = DAO_Ticket::get($ticket_id)))
 			return;
 		
 		// Params
@@ -702,7 +702,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		
 		$tpl->assign('expand_all', $expand_all);
 		
-		$ticket = DAO_Ticket::getTicket($id);
+		$ticket = DAO_Ticket::get($id);
 		$tpl->assign('ticket', $ticket);
 		$tpl->assign('requesters', $ticket->getRequesters());
 
@@ -832,7 +832,7 @@ class ChDisplayPage extends CerberusPageExtension {
 
 		$tpl->assign('ticket_id', $ticket_id);
 		
-		$ticket = DAO_Ticket::getTicket($ticket_id);
+		$ticket = DAO_Ticket::get($ticket_id);
 		$tpl->assign('ticket', $ticket);
 
 		$workers = DAO_Worker::getAll();
@@ -888,7 +888,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		);
 		$comment_id = DAO_TicketComment::create($fields);
 		
-		@$ticket = DAO_Ticket::getTicket($ticket_id);
+		@$ticket = DAO_Ticket::get($ticket_id);
 		
 		// Notifications
 		$url_writer = DevblocksPlatform::getUrlService();
@@ -988,7 +988,7 @@ class ChDisplayPage extends CerberusPageExtension {
 
 		$tpl->assign('ticket_id', $ticket_id);
 		
-		$ticket = DAO_Ticket::getTicket($ticket_id);
+		$ticket = DAO_Ticket::get($ticket_id);
 		$tpl->assign('ticket', $ticket);
 
 		$requesters = DAO_Ticket::getRequestersByTicket($ticket_id);
@@ -1023,7 +1023,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		@$subject = DevblocksPlatform::importGPC($_POST['subject'],'string','');
 		@$closed = DevblocksPlatform::importGPC($_POST['closed'],'closed',0);
 		
-		@$ticket = DAO_Ticket::getTicket($ticket_id);
+		@$ticket = DAO_Ticket::get($ticket_id);
 		
 		if(empty($ticket_id) || empty($ticket))
 			return;
@@ -1093,7 +1093,7 @@ class ChDisplayPage extends CerberusPageExtension {
 			$fields[DAO_Ticket::SUBJECT] = $subject;
 
 		if(!empty($fields)) {
-			DAO_Ticket::updateTicket($ticket_id, $fields);
+			DAO_Ticket::update($ticket_id, $fields);
 		}
 
 		// Custom field saves
@@ -1141,7 +1141,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		if(null == ($orig_headers = $orig_message->getHeaders()))
 			return;
 			
-		if(null == ($orig_ticket = DAO_Ticket::getTicket($orig_message->ticket_id)))
+		if(null == ($orig_ticket = DAO_Ticket::get($orig_message->ticket_id)))
 			return;
 
 		if(null == ($messages = DAO_Message::getMessagesByTicket($orig_message->ticket_id)))
@@ -1184,7 +1184,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		// Reindex the original ticket (last wrote, etc.)
 		$last_message = end($messages); /* @var Model_Message $last_message */
 		
-		DAO_Ticket::updateTicket($orig_ticket->id, array(
+		DAO_Ticket::update($orig_ticket->id, array(
 			DAO_Ticket::LAST_MESSAGE_ID => $last_message->id,
 			DAO_Ticket::LAST_WROTE_ID => $last_message->address_id
 		));
@@ -1214,7 +1214,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$visit = CerberusApplication::getVisit();
 		$visit->set('display.history.scope', $scope);
 
-		$ticket = DAO_Ticket::getTicket($ticket_id);
+		$ticket = DAO_Ticket::get($ticket_id);
 
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket->mask,'history')));
 	}
@@ -1229,7 +1229,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('path', $this->_TPL_PATH);
 		
 		// Ticket
-		$ticket = DAO_Ticket::getTicket($ticket_id);
+		$ticket = DAO_Ticket::get($ticket_id);
 		$tpl->assign('ticket', $ticket);
 		
 		$requesters = $ticket->getRequesters();
@@ -1335,7 +1335,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 		
-		$ticket = DAO_Ticket::getTicket($ticket_id);
+		$ticket = DAO_Ticket::get($ticket_id);
 		$tpl->assign('ticket', $ticket);
 		
 		$defaults = new C4_AbstractViewModel();

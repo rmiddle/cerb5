@@ -350,7 +350,7 @@ class CerberusMail {
 		$message_id = DAO_Message::create($fields);
 	    
 		// Link Message to Ticket
-		DAO_Ticket::updateTicket($ticket_id, array(
+		DAO_Ticket::update($ticket_id, array(
 			DAO_Ticket::FIRST_MESSAGE_ID => $message_id,
 		));
 		
@@ -463,7 +463,7 @@ class CerberusMail {
 			$message = DAO_Message::get($reply_message_id);
 	        $message_headers = DAO_MessageHeader::getAll($reply_message_id);		
 			$ticket_id = $message->ticket_id;
-			$ticket = DAO_Ticket::getTicket($ticket_id);
+			$ticket = DAO_Ticket::get($ticket_id);
 	
 			@$group_smtp = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, 0);
 			// objects
@@ -832,7 +832,7 @@ class CerberusMail {
 		}
 			
 		if(!empty($ticket_id) && !empty($change_fields)) {
-		    DAO_Ticket::updateTicket($ticket_id, $change_fields);
+		    DAO_Ticket::update($ticket_id, $change_fields);
 		}
 		
 		// Outbound Reply Event (not automated reply, etc.)

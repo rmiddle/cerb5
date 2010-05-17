@@ -1155,7 +1155,7 @@ class ChTicketsPage extends CerberusPageExtension {
 	        DAO_Ticket::IS_DELETED => 1,
 	        DAO_Ticket::IS_CLOSED => CerberusTicketStatus::CLOSED
 	    );
-	    DAO_Ticket::updateTicket($id, $fields);
+	    DAO_Ticket::update($id, $fields);
 	    
 	    $tpl = DevblocksPlatform::getTemplateService();
 		$path = $this->_TPL_PATH;
@@ -1383,7 +1383,7 @@ class ChTicketsPage extends CerberusPageExtension {
 
 		$tpl->assign('view_id', $view_id);
 		
-		if(null != ($ticket = DAO_Ticket::getTicket($tid))) {
+		if(null != ($ticket = DAO_Ticket::get($tid))) {
 			/* @var $ticket Model_Ticket */
 		    $tpl->assign('ticket', $ticket);
 		}
@@ -1480,7 +1480,7 @@ class ChTicketsPage extends CerberusPageExtension {
 				CerberusBayes::markTicketAsNotSpam($id);
 		}
 		
-		DAO_Ticket::updateTicket($id, $fields);
+		DAO_Ticket::update($id, $fields);
 		
 		// Custom field saves
 		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
@@ -1548,7 +1548,7 @@ class ChTicketsPage extends CerberusPageExtension {
 			if(!empty($draft_id))
 				DAO_MailQueue::delete($draft_id);
 				
-			$ticket = DAO_Ticket::getTicket($ticket_id);
+			$ticket = DAO_Ticket::get($ticket_id);
 			
 			$visit = CerberusApplication::getVisit(); /* @var CerberusVisit $visit */
 			$visit->set('compose.last_ticket', $ticket->mask);
@@ -1658,7 +1658,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		// Parse
 		$ticket_id = CerberusParser::parseMessage($message);
 		
-		$ticket = DAO_Ticket::getTicket($ticket_id);
+		$ticket = DAO_Ticket::get($ticket_id);
 		
 		// Add additional requesters to ticket
 		if(is_array($fromList) && !empty($fromList))
@@ -1940,7 +1940,7 @@ class ChTicketsPage extends CerberusPageExtension {
 	    
 	    // Make our changes to the entire list of tickets
 	    if(!empty($ticket_ids) && !empty($team_id)) {
-	        DAO_Ticket::updateTicket($ticket_ids, $fields);
+	        DAO_Ticket::update($ticket_ids, $fields);
 	    }
 	    
 	    $view = C4_AbstractViewLoader::getView($view_id);
@@ -1978,7 +1978,7 @@ class ChTicketsPage extends CerberusPageExtension {
         View_Ticket::setLastAction($view_id,$last_action);
         //====================================
 	    
-        DAO_Ticket::updateTicket($ticket_ids, $fields);
+        DAO_Ticket::update($ticket_ids, $fields);
 	    
 	    $view = C4_AbstractViewLoader::getView($view_id);
 	    $view->render();
@@ -2022,7 +2022,7 @@ class ChTicketsPage extends CerberusPageExtension {
         View_Ticket::setLastAction($view_id,$last_action);
         //====================================
 	    
-        DAO_Ticket::updateTicket($ticket_ids, $fields);
+        DAO_Ticket::update($ticket_ids, $fields);
 	    
 	    $view = C4_AbstractViewLoader::getView($view_id);
 	    $view->render();
@@ -2070,7 +2070,7 @@ class ChTicketsPage extends CerberusPageExtension {
         View_Ticket::setLastAction($view_id,$last_action);
         //====================================
 	    
-        DAO_Ticket::updateTicket($ticket_ids, $fields);
+        DAO_Ticket::update($ticket_ids, $fields);
 	    
 	    $view = C4_AbstractViewLoader::getView($view_id);
 	    $view->render();
@@ -2102,7 +2102,7 @@ class ChTicketsPage extends CerberusPageExtension {
         View_Ticket::setLastAction($view_id,$last_action);
         //====================================
 
-        DAO_Ticket::updateTicket($ticket_ids, $fields);
+        DAO_Ticket::update($ticket_ids, $fields);
 	    
 	    $view = C4_AbstractViewLoader::getView($view_id);
 	    $view->render();
@@ -2134,7 +2134,7 @@ class ChTicketsPage extends CerberusPageExtension {
         View_Ticket::setLastAction($view_id,$last_action);
         //====================================
 
-        DAO_Ticket::updateTicket($ticket_ids, $fields);
+        DAO_Ticket::update($ticket_ids, $fields);
 	    
 	    $view = C4_AbstractViewLoader::getView($view_id);
 	    $view->render();
@@ -2178,7 +2178,7 @@ class ChTicketsPage extends CerberusPageExtension {
 	        CerberusBayes::markTicketAsNotSpam($id);
 	    }
 	    
-        DAO_Ticket::updateTicket($ticket_ids, $fields);
+        DAO_Ticket::update($ticket_ids, $fields);
 	    
 	    $view = C4_AbstractViewLoader::getView($view_id);
 	    $view->render();
@@ -2222,7 +2222,7 @@ class ChTicketsPage extends CerberusPageExtension {
 	        CerberusBayes::markTicketAsSpam($id);
 	    }
 	    
-        DAO_Ticket::updateTicket($ticket_ids, $fields);
+        DAO_Ticket::update($ticket_ids, $fields);
 	    
 	    $view = C4_AbstractViewLoader::getView($view_id);
 	    $view->render();
@@ -2256,7 +2256,7 @@ class ChTicketsPage extends CerberusPageExtension {
         View_Ticket::setLastAction($view_id,$last_action);
         //====================================
 	    
-        DAO_Ticket::updateTicket($ticket_ids, $fields);
+        DAO_Ticket::update($ticket_ids, $fields);
 	    
 	    $view = C4_AbstractViewLoader::getView($view_id);
 	    $view->render();
@@ -2281,7 +2281,7 @@ class ChTicketsPage extends CerberusPageExtension {
 	     */
 	    if(is_array($last_action->ticket_ids) && !empty($last_action->ticket_ids))
 	    foreach($last_action->ticket_ids as $ticket_id => $fields) {
-	        DAO_Ticket::updateTicket($ticket_id, $fields);
+	        DAO_Ticket::update($ticket_id, $fields);
 	    }
 	    
 	    $visit = CerberusApplication::getVisit();

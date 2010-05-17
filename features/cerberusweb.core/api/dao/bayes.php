@@ -337,7 +337,7 @@ class CerberusBayes {
 	static private function _markTicketAs($ticket_id,$spam=true) {
 		// [TODO] Make sure we can't retrain tickets which are already spam trained
 		// [TODO] This is a performance killer
-		$ticket = DAO_Ticket::getTicket($ticket_id);
+		$ticket = DAO_Ticket::get($ticket_id);
 		
 		if($ticket->spam_training != CerberusTicketSpamTraining::BLANK)
 			return TRUE;
@@ -385,7 +385,7 @@ class CerberusBayes {
 			'spam_score' => ($spam) ? 0.9999 : 0.0001,
 			'spam_training' => ($spam) ? CerberusTicketSpamTraining::SPAM : CerberusTicketSpamTraining::NOT_SPAM,
 		);
-		DAO_Ticket::updateTicket($ticket_id,$fields);
+		DAO_Ticket::update($ticket_id,$fields);
 
 		return TRUE;
 	}
@@ -549,7 +549,7 @@ class CerberusBayes {
 		// pull up text of first ticket message
 	    $messages = DAO_Message::getMessagesByTicket($ticket_id);
 	    $first_message = array_shift($messages);
-	    $ticket = DAO_Ticket::getTicket($ticket_id);
+	    $ticket = DAO_Ticket::get($ticket_id);
 	    
 		if(empty($ticket) || empty($first_message) || !($first_message instanceOf Model_Message)) 
 		    return FALSE;
@@ -584,7 +584,7 @@ class CerberusBayes {
 			    DAO_Ticket::SPAM_SCORE => $out['probability'],
 			    DAO_Ticket::INTERESTING_WORDS => substr(implode(',',array_reverse($rawwords)),0,255),
 			);
-			DAO_Ticket::updateTicket($ticket_id, $fields);
+			DAO_Ticket::update($ticket_id, $fields);
 		}
 		
 		return $out;
