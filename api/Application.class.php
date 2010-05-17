@@ -48,8 +48,8 @@
  * 		and Joe Geck.
  *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2010051301);
-define("APP_VERSION", '5.0.0-rc3');
+define("APP_BUILD", 2010051501);
+define("APP_VERSION", '5.0.0-rc4');
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -2003,7 +2003,7 @@ class CerberusContexts {
 						continue;
 					
 					// The literal value
-					if(null != $org)
+					if(null != $feedback)
 						$token_values['custom'][$cf_id] = $cf_val;
 					
 					// Stringify
@@ -2011,7 +2011,7 @@ class CerberusContexts {
 						$cf_val = implode(', ', $cf_val);
 						
 					if(is_string($cf_val)) {
-						if(null != $org)
+						if(null != $feedback)
 							$token_values['custom_'.$cf_id] = $cf_val;
 					}
 				}
