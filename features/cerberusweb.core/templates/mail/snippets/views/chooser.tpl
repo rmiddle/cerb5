@@ -30,14 +30,13 @@
 	{* Column Data *}
 	{foreach from=$data item=result key=idx name=results}
 
-	{assign var=rowIdPrefix value="row_"|cat:$view->id|cat:"_"|cat:$result.s_id}
 	{if $smarty.foreach.results.iteration % 2}
 		{assign var=tableRowClass value="even"}
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	
-		<tr class="{$tableRowClass}" id="{$rowIdPrefix}_s" onmouseover="$(this).addClass('hover');$('#{$rowIdPrefix}_s').addClass('hover');" onmouseout="$(this).removeClass('hover');$('#{$rowIdPrefix}_s').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { checkAll('{$rowIdPrefix}_s'); }">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+		<tr class="{$tableRowClass}">
 		{*<td align="center"><input type="checkbox" name="row_id[]" value="{$result.s_id}"></td>*}
 		{foreach from=$view->view_columns item=column name=columns}
 			{if substr($column,0,3)=="cf_"}
@@ -45,7 +44,7 @@
 			{elseif $column=="s_title"}
 			<td>
 				<a href="javascript:;" onclick="var contextId=$('#view{$view->id}').data('context_id');if(null==contextId)return;genericAjaxGet('','c=display&a=getSnippet&context_id='+contextId+'&id={$result.s_id|escape}',function(text) { var divname=$('#view{$view->id}').data('text_element');insertAtCursor($('#'+divname)[0], text);$('#'+divname).focus(); } );" class="subject">{if empty($result.$column)}(no title){else}{$result.$column}{/if}</a>
-				<a href="javascript:;" onclick="$('#divSnippetChooserPreview').html('<pre></pre>').insertAfter($(this));genericAjaxGet('','c=internal&a=snippetPaste&snippet_id={$result.s_id|escape}',function(text) { $('#divSnippetChooserPreview pre').append(text); } );"><span class="ui-icon ui-icon-newwin" style="display:inline-block;vertical-align:middle;" title="{$translate->_('views.peek')}"></span></a>
+				<a href="javascript:;" onclick="$('#divSnippetChooserPreview').html('<pre class=\'emailBody\'></pre>').insertAfter($(this));genericAjaxGet('','c=internal&a=snippetPaste&snippet_id={$result.s_id|escape}',function(text) { $('#divSnippetChooserPreview pre').append(text); } );"><span class="ui-icon ui-icon-newwin" style="display:inline-block;vertical-align:middle;" title="{$translate->_('views.peek')}"></span></a>
 				{* [TODO] I can just insert this from $result.s_content if we're not rendering it *}
 			</td>
 			{elseif $column=="s_last_updated"}
@@ -62,11 +61,14 @@
 					{$workers.{$worker_id}->getName()}
 				{/if}
 			</td>
+			{elseif $column=="su_hits"}
+			<td>{if empty($result.$column)}0{else}{$result.$column}{/if}&nbsp;</td>
 			{else}
 			<td>{$result.$column}&nbsp;</td>
 			{/if}
 		{/foreach}
 		</tr>
+	</tbody>
 	{/foreach}
 	
 </table>

@@ -260,6 +260,7 @@ abstract class Extension_RestController extends DevblocksExtension {
 			$_PUT = array();
 			parse_str($this->_payload, $_PUT);
 			foreach($_PUT as $k => $v) {
+				$_POST[$k] = $v;
 				$_REQUEST[$k] = $v;
 			}
 		}
@@ -342,10 +343,32 @@ abstract class Extension_RestController extends DevblocksExtension {
 		
 		return $this->search($filters, $sortToken, $sortAsc, $page, $limit);
 	}
+	
+	protected function _handleRequiredFields($required, $fields) {
+		// Check required fields
+		if(is_array($required))
+		foreach($required as $reqfield)
+			if(!isset($fields[$reqfield]))
+				$this->error(self::ERRNO_CUSTOM, sprintf("'%s' is a required field.", $reqfield));
+	}
+	
+	protected function _handleCustomFields($scope_array) {
+		$fields = array();
+		
+		if(is_array($scope_array))
+		foreach($scope_array as $k => $v) {
+			$parts = explode("_",$k,2);
+			if(2==count($parts) && 'custom'==$parts[0] && is_numeric($parts[1])) {
+				$fields[intval($parts[1])] = DevblocksPlatform::importGPC($scope_array[$k]);
+			}
+		}
+		
+		return $fields;
+	}
 };
 
 interface IExtensionRestController {
 	function getContext($id);
-	function search($filters, $sortToken, $sortAsc, $page, $limit);
+	function search($filters=array(), $sortToken='', $sortAsc=1, $page=1, $limit=10);
 	function translateToken($token, $type='dao');
 };

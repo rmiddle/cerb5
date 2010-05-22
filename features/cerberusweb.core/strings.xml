@@ -18,9 +18,6 @@
 		<tu tuid='core.menu.mail'>
 			<tuv xml:lang="en_US"><seg>mail</seg></tuv>
 		</tu>
-		<tu tuid='core.menu.research'>
-			<tuv xml:lang="en_US"><seg>research</seg></tuv>
-		</tu>
 		
 		<tu tuid='display.tab.comments'>
 			<tuv xml:lang="en_US"><seg>Comments (%s)</seg></tuv>
@@ -29,7 +26,7 @@
 			<tuv xml:lang="en_US"><seg>Conversation</seg></tuv>
 		</tu>
 		<tu tuid='display.tab.history'>
-			<tuv xml:lang="en_US"><seg>Requester History</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Recipient History</seg></tuv>
 		</tu>
 		<tu tuid='display.tab.properties'>
 			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
@@ -354,6 +351,9 @@
 		<tu tuid='common.update'>
 			<tuv xml:lang="en_US"><seg>update</seg></tuv>
 		</tu>
+		<tu tuid='common.updated'>
+			<tuv xml:lang="en_US"><seg>updated</seg></tuv>
+		</tu>
 		<tu tuid='common.upload'>
 			<tuv xml:lang="en_US"><seg>upload</seg></tuv>
 		</tu>
@@ -400,6 +400,10 @@
 		</tu>
 		<tu tuid='dao.snippet.title'>
 			<tuv xml:lang="en_US"><seg>Title</seg></tuv>
+		</tu>
+		
+		<tu tuid='dao.snippet_usage.hits'>
+			<tuv xml:lang="en_US"><seg>Hits</seg></tuv>
 		</tu>
 
 		<!-- Errors -->
@@ -481,11 +485,6 @@
 			<tuv xml:lang="en_US"><seg>[Mail] Can compose new messages from the helpdesk</seg></tuv>
 		</tu>
 
-			<!-- Research -->
-		<tu tuid='acl.core.research'>
-			<tuv xml:lang="en_US"><seg>[Research] Can browse research resources</seg></tuv>
-		</tu>
-		
 			<!-- RSS -->
 		<tu tuid='acl.core.rss'>
 			<tuv xml:lang="en_US"><seg>[RSS] Can export lists as RSS feeds</seg></tuv>
@@ -585,7 +584,7 @@
 			<tuv xml:lang="en_US"><seg>Contact History</seg></tuv>
 		</tu>
 		<tu tuid='addy_book.history.view.requester'>
-			<tuv xml:lang="en_US"><seg>Requester History: %s contact(s)</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Recipient History: %s contact(s)</seg></tuv>
 		</tu>
 		<tu tuid='addy_book.import.dupes.check'>
 			<tuv xml:lang="en_US"><seg>Check for duplicates using</seg></tuv>
@@ -1103,10 +1102,10 @@
 			<tuv xml:lang="en_US"><seg>Open Ticket</seg></tuv>
 		</tu>
 		<tu tuid='mail.log_message.requesters'>
-			<tuv xml:lang="en_US"><seg>Requester(s)</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Recipient(s)</seg></tuv>
 		</tu>
 		<tu tuid='mail.log_message.send_to_requesters'>
-			<tuv xml:lang="en_US"><seg>Send a copy of this message to the requesters.</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Send a copy of this message to the recipients.</seg></tuv>
 		</tu>
 		<tu tuid='mail.merge'>
 			<tuv xml:lang="en_US"><seg>Merge</seg></tuv>
@@ -1198,6 +1197,27 @@
 			<tuv xml:lang="en_US"><seg>Workspace</seg></tuv>
 		</tu>
 		
+		<!-- Mail Queue -->
+		
+		<tu tuid='mail_queue.is_queued'>
+			<tuv xml:lang="en_US"><seg>Is Queued</seg></tuv>
+		</tu>
+		<tu tuid='mail_queue.params_json'>
+			<tuv xml:lang="en_US"><seg>Parameters</seg></tuv>
+		</tu>
+		<tu tuid='mail_queue.queue_fails'>
+			<tuv xml:lang="en_US"><seg># Fails</seg></tuv>
+		</tu>
+		<tu tuid='mail_queue.queue_priority'>
+			<tuv xml:lang="en_US"><seg>Priority</seg></tuv>
+		</tu>
+		<tu tuid='mail_queue.ticket_id'>
+			<tuv xml:lang="en_US"><seg>Ticket ID</seg></tuv>
+		</tu>
+		<tu tuid='mail_queue.type'>
+			<tuv xml:lang="en_US"><seg>Message Type</seg></tuv>
+		</tu>
+		
 		<!-- Message -->
 
 		<tu tuid='message.header.bcc'>
@@ -1262,12 +1282,6 @@ If you did not request this, do not click the link above.  The request will expi
 			<tuv xml:lang="en_US"><seg>%s is not a valid e-mail address.</seg></tuv>
 		</tu>
 
-		<!-- Research -->
-
-		<tu tuid='research.tab.links'>
-			<tuv xml:lang="en_US"><seg>Links</seg></tuv>
-		</tu>
-		
 		<!-- RSS -->
 
 		<tu tuid='rss.bad_feed'>
@@ -1489,11 +1503,14 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='ticket.next_worker'>
 			<tuv xml:lang="en_US"><seg>Next Worker</seg></tuv>
 		</tu>
+		<tu tuid='ticket.recipients.empty'>
+			<tuv xml:lang="en_US"><seg>This ticket has no recipients.</seg></tuv>
+		</tu>
 		<tu tuid='ticket.requester'>
-			<tuv xml:lang="en_US"><seg>Requester</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Recipient</seg></tuv>
 		</tu>
 		<tu tuid='ticket.requesters'>
-			<tuv xml:lang="en_US"><seg>Requesters</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Recipients</seg></tuv>
 		</tu>
 		<tu tuid='ticket.spam_score'>
 			<tuv xml:lang="en_US"><seg>Spam Score</seg></tuv>

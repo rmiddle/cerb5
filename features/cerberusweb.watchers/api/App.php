@@ -144,7 +144,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 		if(null == ($worker_addy = DAO_AddressToWorker::getByAddress($address->email)))
 			return;
 				
-		if(null == ($worker = DAO_Worker::getAgent($worker_addy->worker_id)))
+		if(null == ($worker = DAO_Worker::get($worker_addy->worker_id)))
 			return;
 			
 		$url_writer = DevblocksPlatform::getUrlService();
@@ -156,7 +156,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 		$default_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
 		$default_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL, CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
 
-		if(null == ($ticket = DAO_Ticket::getTicket($ticket_id)))
+		if(null == ($ticket = DAO_Ticket::get($ticket_id)))
 			return;
 
 		// Find all our matching filters
@@ -241,7 +241,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 					$comment
 				);
 				
-				$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+				$headers->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 				$headers->addTextHeader('Precedence','List');
 				$headers->addTextHeader('Auto-Submitted','auto-generated');
 				
@@ -360,7 +360,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 					    $headers->addTextHeader('In-Reply-To', $in_reply_to);
 					}
 					
-					$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+					$headers->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 					$headers->addTextHeader('Precedence','List');
 					$headers->addTextHeader('Auto-Submitted','auto-generated');
 					
@@ -396,7 +396,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
     	
 		$url_writer = DevblocksPlatform::getUrlService();
 		
-		$ticket = DAO_Ticket::getTicket($ticket_id);
+		$ticket = DAO_Ticket::get($ticket_id);
 
 		// Find all our matching filters
 		if(empty($ticket) || false == ($matches = Model_WatcherMailFilter::getMatches(
@@ -496,17 +496,22 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 					));
 
 					$hdrs = $mail->getHeaders();
-					
+
 					if(null !== (@$msgid = $headers['message-id'])) {
-						$hdrs->addTextHeader('Message-Id',$msgid);
+						$hdrs->removeAll('message-id');
+						
+						$hdrs->addTextHeader('Message-Id', $msgid);
 					}
 					
 					if(null !== (@$in_reply_to = $headers['in-reply-to'])) {
+						$hdrs->removeAll('references');
+						$hdrs->removeAll('in-reply-to');
+						
 					    $hdrs->addTextHeader('References', $in_reply_to);
 					    $hdrs->addTextHeader('In-Reply-To', $in_reply_to);
 					}
 					
-					$hdrs->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+					$hdrs->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 					$hdrs->addTextHeader('Precedence','List');
 					$hdrs->addTextHeader('Auto-Submitted','auto-generated');
 					

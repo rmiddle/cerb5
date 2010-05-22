@@ -28,7 +28,7 @@ DevblocksPlatform::getCacheService()->clean();
 
 // DevblocksPlatform::init() workaround 
 if(!defined('DEVBLOCKS_WEBPATH')) {
-	$php_self = $_SERVER["PHP_SELF"];
+	$php_self = $_SERVER["SCRIPT_NAME"];
 	$php_self = str_replace('/install','',$php_self);
 	$pos = strrpos($php_self,'/');
 	$php_self = substr($php_self,0,$pos) . '/';
@@ -619,20 +619,17 @@ switch($step) {
 				
 				// If this worker doesn't exist, create them
 				if(null === ($lookup = DAO_Worker::lookupAgentEmail($worker_email))) {
-					$worker_id = DAO_Worker::create(
-						$worker_email, // email
-						$worker_pass, // pass
-						'Super', // first
-						'User', // last
-						'Administrator' // title
-					);
-	
-					// Superuser bit
 					$fields = array(
+						DAO_Worker::EMAIL => $worker_email,
+						DAO_Worker::PASSWORD => md5($worker_pass),
+						DAO_Worker::FIRST_NAME => 'Super',
+						DAO_Worker::LAST_NAME => 'User',
+						DAO_Worker::TITLE => 'Administrator',
 						DAO_Worker::IS_SUPERUSER => 1, 
 					);
-					DAO_Worker::updateAgent($worker_id, $fields);
 					
+					$worker_id = DAO_Worker::create($fields);
+	
 					// Add the worker e-mail to the addresses table
 					if(!empty($worker_email))
 						DAO_Address::lookupAddress($worker_email, true);

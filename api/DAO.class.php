@@ -1196,7 +1196,7 @@ class DAO_CustomFieldValue extends DevblocksORMHelper {
 	 * @param object $values
 	 * @return 
 	 */
-	public static function formatAndSetFieldValues($source_ext_id, $source_id, $values, $is_blank_unset=true) {
+	public static function formatAndSetFieldValues($source_ext_id, $source_id, $values, $is_blank_unset=true, $delta=false, $autoadd_options=false) {
 		if(empty($source_ext_id) || empty($source_id) || !is_array($values))
 			return;
 
@@ -1207,15 +1207,19 @@ class DAO_CustomFieldValue extends DevblocksORMHelper {
 				continue;
 
 			$field =& $fields[$field_id]; /* @var $field Model_CustomField */
-			$delta = ($field->type==Model_CustomField::TYPE_MULTI_CHECKBOX || $field->type==Model_CustomField::TYPE_MULTI_PICKLIST) 
-					? true 
+			$is_delta = ($field->type==Model_CustomField::TYPE_MULTI_CHECKBOX || $field->type==Model_CustomField::TYPE_MULTI_PICKLIST) 
+					? $delta 
 					: false
 					;
 
 			// if the field is blank
-			if(0==strlen($value)) {
+			if(
+				(is_array($value) && empty($value))
+				||
+				(!is_array($value) && 0==strlen($value))
+			) {
 				// ... and blanks should unset
-				if($is_blank_unset && !$delta)
+				if($is_blank_unset && !$is_delta)
 					self::unsetFieldValue($source_ext_id, $source_id, $field_id);
 				
 				// Skip setting
@@ -1234,17 +1238,51 @@ class DAO_CustomFieldValue extends DevblocksORMHelper {
 					break;
 
 				case Model_CustomField::TYPE_DROPDOWN:
-				case Model_CustomField::TYPE_MULTI_PICKLIST:
-				case Model_CustomField::TYPE_MULTI_CHECKBOX:
 					// If we're setting a field that doesn't exist yet, add it.
-					if(!in_array($value,$field->options) && !empty($value)) {
+					if($autoadd_options && !in_array($value, $field->options) && !empty($value)) {
 						$field->options[] = $value;
 						DAO_CustomField::update($field_id, array(DAO_CustomField::OPTIONS => implode("\n",$field->options)));
 					}
-
+					
 					// If we're allowed to add/remove fields without touching the rest
-					self::setFieldValue($source_ext_id, $source_id, $field_id, $value, $delta);
-						
+					if(in_array($value, $field->options))
+						self::setFieldValue($source_ext_id, $source_id, $field_id, $value); 
+					
+					break;
+					
+				case Model_CustomField::TYPE_MULTI_PICKLIST:
+				case Model_CustomField::TYPE_MULTI_CHECKBOX:
+					if(!is_array($value))
+						$value = array($value);
+
+					// If we're setting a field that doesn't exist yet, add it.
+					foreach($value as $v) {
+						if($autoadd_options && !in_array($v, $field->options) && !empty($v)) {
+							$field->options[] = $v;
+							DAO_CustomField::update($field_id, array(DAO_CustomField::OPTIONS => implode("\n",$field->options)));
+						}
+					}
+
+					if(!$delta) {
+						self::unsetFieldValue($source_ext_id, $source_id, $field_id);
+					}
+					
+					// Protect from injection in cases where it's not desireable (controlled above)
+					foreach($value as $idx => $v) {
+						if(!in_array($v, $field->options))
+							continue;
+
+						$is_unset = ('-'==substr($v,0,1)) ? true : false;
+						$v = ltrim($v,'+-');
+							
+						if($is_unset) {
+							if($delta)
+								self::unsetFieldValue($source_ext_id, $source_id, $field_id, $v);
+						} else {
+							self::setFieldValue($source_ext_id, $source_id, $field_id, $v, true);
+						}
+					}
+
 					break;
 
 				case Model_CustomField::TYPE_CHECKBOX:
@@ -1288,6 +1326,7 @@ class DAO_CustomFieldValue extends DevblocksORMHelper {
 				if(255 < strlen($value))
 					$value = substr($value,0,255);
 				break;
+			case 'E': // date
 			case 'N': // number
 			case 'W': // worker
 				$value = intval($value);
@@ -1324,16 +1363,22 @@ class DAO_CustomFieldValue extends DevblocksORMHelper {
 		if(null == ($table_name = self::getValueTableName($field_id)))
 			return FALSE;
 		
-		// Delete all values or optionally a specific given value
-		$sql = sprintf("DELETE QUICK FROM %s WHERE source_extension = '%s' AND source_id = %d AND field_id = %d %s",
-			$table_name,
-			$source_ext_id,
-			$source_id,
-			$field_id,
-			(!is_null($value) ? sprintf("AND field_value = %s ",$db->qstr($value)) : "")
-		);
+		if(!is_array($value))
+			$value = array($value);
+			
+		foreach($value as $v) {
+			// Delete all values or optionally a specific given value
+			$sql = sprintf("DELETE QUICK FROM %s WHERE source_extension = '%s' AND source_id = %d AND field_id = %d %s",
+				$table_name,
+				$source_ext_id,
+				$source_id,
+				$field_id,
+				(!is_null($v) ? sprintf("AND field_value = %s ",$db->qstr($v)) : "")
+			);
+			$db->Execute($sql);
+		}
 		
-		return $db->Execute($sql);
+		return TRUE;
 	}
 	
 	public static function handleBulkPost($do) {

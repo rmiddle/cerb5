@@ -35,6 +35,53 @@ class DevblocksPlatform extends DevblocksEngine {
     private function __construct() { return false; }
 
 	/**
+	 * @param mixed $value
+	 * @param string $type
+	 * @param mixed $default
+	 * @return mixed
+	 */
+	static function importVar($value,$type=null,$default=null) {
+		if(is_null($value) && !is_null($default))
+			$value = $default;
+		
+		// Sanitize input
+		switch($type) {
+			case 'array':
+				@settype($value,$type);
+				break;
+			case 'bit':
+				$value = !empty($value) ? 1 : 0;
+				break;
+			case 'boolean':
+				$value = !empty($value) ? true : false;
+				break;
+			case 'float':
+				$value = floatval($value);
+				break;
+			case 'integer':
+				$value = intval($value);
+				break;
+			case 'string':
+				$value = (string) $value;
+				break;
+			case 'timestamp':
+				if(!is_numeric($value)) {
+					try {
+						$value = strtotime($value);	
+					} catch(Exception $e) {}
+				} else {
+					$value = abs(intval($value));	
+				}
+				break;
+			default:
+				@settype($value,$type);
+				break;
+		}
+		
+		return $value;		
+	}    
+    
+	/**
 	 * @param mixed $var
 	 * @param string $cast
 	 * @param mixed $default
@@ -53,10 +100,10 @@ class DevblocksPlatform extends DevblocksEngine {
 	    } elseif (is_null($var) && !is_null($default)) {
 	        $var = $default;
 	    }
-	    
-	    if(!is_null($cast))
-	        @settype($var, $cast);
 
+	    if(!is_null($cast))
+	    	$var = self::importVar($var, $cast, $default);
+	    
 	    return $var;
 	}
 
@@ -185,6 +232,15 @@ class DevblocksPlatform extends DevblocksEngine {
 		
 		return $str;
 	}	
+	
+	static function parseMarkdown($text) {
+		static $parser = null;
+		
+		if(is_null($parser))
+			$parser = new Markdown_Parser();
+			
+		return $parser->transform($text);
+	}
 	
 	static function parseRss($url) {
 		// [TODO] curl | file_get_contents() support
@@ -778,10 +834,9 @@ class DevblocksPlatform extends DevblocksEngine {
 		    	&& null != ($manifest_cache_json = $row['manifest_cache_json'])) {
 		    	$plugin->manifest_cache = json_decode($manifest_cache_json, true);
 		    }
-		    
-		    if(file_exists(APP_PATH . DIRECTORY_SEPARATOR . $plugin->dir . DIRECTORY_SEPARATOR . 'plugin.xml')) {
-		        $plugins[$plugin->id] = $plugin;
-		    }
+
+		    if(file_exists(APP_PATH . DIRECTORY_SEPARATOR . $plugin->dir . DIRECTORY_SEPARATOR . 'plugin.xml'))
+	        	$plugins[$plugin->id] = $plugin;
 		}
 
 		$sql = sprintf("SELECT p.id, p.name, p.params, p.plugin_id ".
@@ -996,7 +1051,7 @@ class DevblocksPlatform extends DevblocksEngine {
 	static function getSessionService() {
 	    return _DevblocksSessionManager::getInstance();
 	}
-
+	
 	/**
 	 * @return _DevblocksSearchEngineMysqlFulltext
 	 */
@@ -1211,7 +1266,7 @@ class DevblocksPlatform extends DevblocksEngine {
     
 		// App path (always backend)
 	
-		$app_self = $_SERVER["PHP_SELF"];
+		$app_self = $_SERVER["SCRIPT_NAME"];
 		
         if(DEVBLOCKS_REWRITE) {
             $pos = strrpos($app_self,'/');
@@ -1922,6 +1977,22 @@ class _DevblocksSessionManager {
 		return $instance;
 	}
 	
+	// See: http://php.net/manual/en/function.session-decode.php
+	function decodeSession($data) {
+	    $vars=preg_split('/([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff^|]*)\|/',
+	              $data,-1,PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+	    
+	    $scope = array();
+	    
+	    while(!empty($vars)) {
+	    	@$key = array_shift($vars);
+	    	@$value = unserialize(array_shift($vars));
+	    	$scope[$key] = $value;
+	    }
+	    
+	    return $scope;		
+	}
+	
 	/**
 	 * Returns the current session or NULL if no session exists.
 	 * 
@@ -1939,14 +2010,22 @@ class _DevblocksSessionManager {
 		$_SESSION['db_visit'] = $this->visit;
 	}
 	
+	function getAll() {
+		return _DevblocksSessionDatabaseDriver::getAll();
+	}
+	
 	/**
-	 * Kills the current session.
+	 * Kills the specified or current session.
 	 *
 	 */
-	function clear() {
-		$this->visit = null;
-		unset($_SESSION['db_visit']);
-		session_destroy();
+	function clear($key=null) {
+		if(is_null($key)) {
+			$this->visit = null;
+			unset($_SESSION['db_visit']);
+			session_destroy();
+		} else {
+			_DevblocksSessionDatabaseDriver::destroy($key);
+		}
 	}
 	
 	function clearAll() {
@@ -2014,6 +2093,11 @@ class _DevblocksSessionDatabaseDriver {
 		$db = DevblocksPlatform::getDatabaseService();
 		$db->Execute(sprintf("DELETE FROM devblocks_session WHERE updated + %d < %d", $maxlifetime, time()));
 		return true;
+	}
+	
+	static function getAll() {
+		$db = DevblocksPlatform::getDatabaseService();
+		return $db->GetArray("SELECT session_key, created, updated, session_data FROM devblocks_session");
 	}
 	
 	static function destroyAll() {
@@ -2176,7 +2260,11 @@ class _DevblocksCacheManagerMemcached extends _DevblocksCacheManagerAbstract {
 	
 	function save($data, $key, $tags=array(), $lifetime=0) {
 		$key = $this->_options['key_prefix'] . $key;
-		return $this->_driver->set($key, $data, 0, $lifetime);
+		
+		if($this->_driver instanceof Memcached)
+			return $this->_driver->set($key, $data, $lifetime);
+		else
+			return $this->_driver->set($key, $data, 0, $lifetime);
 	}
 	
 	function load($key) {
@@ -3726,14 +3814,14 @@ class _DevblocksTemplateManager {
 			$instance->compile_check = (defined('DEVELOPMENT_MODE') && DEVELOPMENT_MODE) ? true : false;
 			
 			// Devblocks plugins
-			$instance->register_block('devblocks_url', array('_DevblocksTemplateManager', 'block_devblocks_url'));
-			$instance->register_modifier('devblocks_date', array('_DevblocksTemplateManager', 'modifier_devblocks_date'));
-			$instance->register_modifier('devblocks_hyperlinks', array('_DevblocksTemplateManager', 'modifier_devblocks_hyperlinks'));
-			$instance->register_modifier('devblocks_hideemailquotes', array('_DevblocksTemplateManager', 'modifier_devblocks_hide_email_quotes'));
-			$instance->register_modifier('devblocks_prettytime', array('_DevblocksTemplateManager', 'modifier_devblocks_prettytime'));
-			$instance->register_modifier('devblocks_prettybytes', array('_DevblocksTemplateManager', 'modifier_devblocks_prettybytes'));
-			$instance->register_modifier('devblocks_translate', array('_DevblocksTemplateManager', 'modifier_devblocks_translate'));
-			$instance->register_resource('devblocks', array(
+			$instance->register->block('devblocks_url', array('_DevblocksTemplateManager', 'block_devblocks_url'));
+			$instance->register->modifier('devblocks_date', array('_DevblocksTemplateManager', 'modifier_devblocks_date'));
+			$instance->register->modifier('devblocks_hyperlinks', array('_DevblocksTemplateManager', 'modifier_devblocks_hyperlinks'));
+			$instance->register->modifier('devblocks_hideemailquotes', array('_DevblocksTemplateManager', 'modifier_devblocks_hide_email_quotes'));
+			$instance->register->modifier('devblocks_prettytime', array('_DevblocksTemplateManager', 'modifier_devblocks_prettytime'));
+			$instance->register->modifier('devblocks_prettybytes', array('_DevblocksTemplateManager', 'modifier_devblocks_prettybytes'));
+			$instance->register->modifier('devblocks_translate', array('_DevblocksTemplateManager', 'modifier_devblocks_translate'));
+			$instance->register->resource('devblocks', array(
 				array('_DevblocksSmartyTemplateResource', 'get_template'),
 				array('_DevblocksSmartyTemplateResource', 'get_timestamp'),
 				array('_DevblocksSmartyTemplateResource', 'get_secure'),
@@ -4301,6 +4389,9 @@ class _DevblocksClassLoadManager {
 	}
 	
 	private function _initLibs() {
+		$this->registerClasses(DEVBLOCKS_PATH . 'libs/markdown/markdown.php', array(
+			'Markdown_Parser'
+		));
 		$this->registerClasses(DEVBLOCKS_PATH . 'libs/s3/S3.php', array(
 			'S3'
 		));
@@ -4411,7 +4502,7 @@ class _DevblocksUrlManager {
 	
 	function parseURL($url) {
 		// [JAS]: Use the index.php page as a reference to deconstruct the URI
-		$pos = stripos($_SERVER['PHP_SELF'],'index.php',0);
+		$pos = stripos($_SERVER['SCRIPT_NAME'],'index.php',0);
 		if($pos === FALSE) return array();
 
 		// Decode proxy requests

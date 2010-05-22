@@ -517,4 +517,31 @@ class ChInternalController extends DevblocksControllerExtension {
 	function stopAutoRefreshAction() {
 		unset($_SESSION['autorefresh']);
 	}
+	
+	function transformMarkupToHTMLAction() {
+		$format = DevblocksPlatform::importGPC($_REQUEST['format'],'string', '');
+		$data = DevblocksPlatform::importGPC($_REQUEST['data'],'string', '');
+		
+		switch($format) {
+			case 'markdown':
+				echo DevblocksPlatform::parseMarkdown($data);
+				break;
+			case 'html':
+			default:
+				echo $data;
+				break;
+		}
+	}
+	
+	function deleteNoteAction() {
+		$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+		
+		$active_worker = CerberusApplication::getActiveWorker();
+		
+		if(null != ($note = DAO_Note::get($id))) {
+			if($note->worker_id == $active_worker->id || $active_worker->is_superuser) {
+				DAO_Note::delete($id);
+			}
+		}
+	}
 };
