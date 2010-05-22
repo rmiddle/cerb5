@@ -205,7 +205,6 @@ class ChPageController extends DevblocksControllerExtension {
 		$tpl->assign('session', $_SESSION);
 		$tpl->assign('translate', $translate);
 		$tpl->assign('visit', $visit);
-		$tpl->assign('license',CerberusLicense::getInstance());
 		
 		$tpl->assign('page_manifests',$page_manifests);		
 		$tpl->assign('page',$page);
@@ -386,7 +385,7 @@ class ChTaskSource_Ticket extends Extension_TaskSource {
 	}
 	
 	function getSourceInfo($object_id) {
-		if(null == ($ticket = DAO_Ticket::getTicket($object_id)))
+		if(null == ($ticket = DAO_Ticket::get($object_id)))
 			return;
 		
 		$url = DevblocksPlatform::getUrlService();

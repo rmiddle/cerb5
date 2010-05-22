@@ -316,7 +316,6 @@ class CerberusParser {
 		 */
 		$logger = DevblocksPlatform::getConsoleLog();
 		$settings = DevblocksPlatform::getPluginSettingsService();
-		$helpdesk_senders = CerberusApplication::getHelpdeskSenders();
 		
         // Pre-parse mail filters
 		$pre_filters = Model_PreParseRule::getMatches($message);
@@ -394,6 +393,8 @@ class CerberusParser {
 			if(is_array($sSubject))
 				$sSubject = array_shift($sSubject);
 		}
+		// Remove tabs, returns, and linefeeds
+		$sSubject = str_replace(array("\t","\n","\r")," ",$sSubject);
 		// The subject can still end up empty after QP decode
 		if(empty($sSubject))
 			$sSubject = "(no subject)";
@@ -455,13 +456,13 @@ class CerberusParser {
 						
 						switch($command) {
 							case 'close':
-								DAO_Ticket::updateTicket($id,array(
+								DAO_Ticket::update($id,array(
 									DAO_Ticket::IS_CLOSED => CerberusTicketStatus::CLOSED
 								));
 								break;
 								
 							case 'take':
-								DAO_Ticket::updateTicket($id,array(
+								DAO_Ticket::update($id,array(
 									DAO_Ticket::NEXT_WORKER_ID => $worker_address->worker_id
 								));
 								break;
@@ -581,49 +582,16 @@ class CerberusParser {
 		}
 
 		// [JAS]: Add requesters to the ticket
-		if(!empty($fromAddressInst->id) && !empty($id)) {
-			// Don't add a requester if the sender is a helpdesk address
-			if(isset($helpdesk_senders[$fromAddressInst->email])) {
-				$logger->info("[Parser] Not adding ourselves as a requester: " . $fromAddressInst->email);
-			} else {
-				DAO_Ticket::createRequester($fromAddressInst->id,$id);
-			}
-		}
+		if(!empty($fromAddressInst->id) && !empty($id))
+			DAO_Ticket::createRequester($fromAddressInst->email, $id);
 	    
 		// Add the other TO/CC addresses to the ticket
-		// [TODO] This should be cleaned up and optimized
-		if($settings->get('cerberusweb.core',CerberusSettings::PARSER_AUTO_REQ,CerberusSettingsDefaults::PARSER_AUTO_REQ)) {
-			@$autoreq_exclude_list = $settings->get('cerberusweb.core',CerberusSettings::PARSER_AUTO_REQ_EXCLUDE,CerberusSettingsDefaults::PARSER_AUTO_REQ_EXCLUDE);
+		if($settings->get('cerberusweb.core',CerberusSettings::PARSER_AUTO_REQ, CerberusSettingsDefaults::PARSER_AUTO_REQ)) {
 			$destinations = self::getDestinations($headers);
 			
-			if(is_array($destinations) && !empty($destinations)) {
-				
-				// Filter out any excluded requesters
-				if(!empty($autoreq_exclude_list)) {
-					@$autoreq_exclude = DevblocksPlatform::parseCrlfString($autoreq_exclude_list);
-					
-					if(is_array($autoreq_exclude) && !empty($autoreq_exclude))
-					foreach($autoreq_exclude as $excl_pattern) {
-						$excl_regexp = DevblocksPlatform::parseStringAsRegExp($excl_pattern);
-						
-						// Check all destinations for this pattern
-						foreach($destinations as $idx => $dest) {
-							if(@preg_match($excl_regexp, $dest)) {
-								unset($destinations[$idx]);
-							}
-						}
-					}
-				}
-				
-				foreach($destinations as $dest) {
-					if(null != ($destInst = CerberusApplication::hashLookupAddress($dest, true))) {
-						// Skip if the destination is one of our senders or the matching TO
-						if(isset($helpdesk_senders[$destInst->email]))
-							continue;
-					 	
-						DAO_Ticket::createRequester($destInst->id,$id);
-					}
-				}
+			if(is_array($destinations))
+			foreach($destinations as $dest) {
+				DAO_Ticket::createRequester($dest, $id);
 			}
 		}
 		
@@ -680,7 +648,7 @@ class CerberusParser {
 		// Finalize our new ticket details (post-message creation)
 		if($bIsNew && !empty($id) && !empty($email_id)) {
 			// First thread (needed for anti-spam)
-			DAO_Ticket::updateTicket($id, array(
+			DAO_Ticket::update($id, array(
 				 DAO_Ticket::FIRST_MESSAGE_ID => $email_id,
 				 DAO_Ticket::LAST_MESSAGE_ID => $email_id,
 			));
@@ -725,7 +693,7 @@ class CerberusParser {
 		
 			// Save properties
 			if(!empty($change_fields))
-				DAO_Ticket::updateTicket($id, $change_fields);
+				DAO_Ticket::update($id, $change_fields);
 		}
 
 		// Reply notifications (new messages are handled by 'move' listener)
@@ -744,7 +712,6 @@ class CerberusParser {
 
 		// New ticket processing
 		if($bIsNew) {
-			
 			// Auto reply
 			@$autoreply_enabled = DAO_GroupSettings::get($group_id, DAO_GroupSettings::SETTING_AUTO_REPLY_ENABLED, 0);
 			@$autoreply = DAO_GroupSettings::get($group_id, DAO_GroupSettings::SETTING_AUTO_REPLY, '');
@@ -785,7 +752,7 @@ class CerberusParser {
 		
 		// Re-open and update our date on new replies
 		if(!$bIsNew) {
-			DAO_Ticket::updateTicket($id,array(
+			DAO_Ticket::update($id,array(
 			    DAO_Ticket::UPDATED_DATE => time(),
 			    DAO_Ticket::IS_WAITING => 0,
 			    DAO_Ticket::IS_CLOSED => 0,

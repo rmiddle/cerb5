@@ -201,7 +201,7 @@ class ChContactsPage extends CerberusPageExtension {
 					'created' => time(),
 					'worker_id' => $active_worker->id,
 					'total' => $total,
-					'return_url' => $url_writer->write('c=contacts&tab=orgs', true),
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=contacts&tab=orgs', true),
 //					'toolbar_extension_id' => '',
 				);
 				$models[] = $model; 
@@ -433,7 +433,7 @@ class ChContactsPage extends CerberusPageExtension {
 			if(!empty($custom_fields) && !empty($id)) {
 				// Format (typecast) and set the custom field types
 				$source_ext_id = ($type=="orgs") ? ChCustomFieldSource_Org::ID : ChCustomFieldSource_Address::ID;
-				DAO_CustomFieldValue::formatAndSetFieldValues($source_ext_id, $id, $custom_fields, $is_blank_unset);
+				DAO_CustomFieldValue::formatAndSetFieldValues($source_ext_id, $id, $custom_fields, $is_blank_unset, true, true);
 			}
 			
 		}
@@ -984,22 +984,6 @@ class ChContactsPage extends CerberusPageExtension {
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('contacts','orgs','display',$org_id)));
 	}
 	
-	// [TODO] This is redundant and should be handled by ?c=internal by passing a $return_path
-	function deleteOrgNoteAction() {
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer', 0);
-		@$org_id = DevblocksPlatform::importGPC($_REQUEST['org_id'],'integer', 0);
-		
-		$active_worker = CerberusApplication::getActiveWorker();
-		
-		if(null != ($note = DAO_Note::get($id))) {
-			if($note->worker_id == $active_worker->id || $active_worker->is_superuser) {
-				DAO_Note::delete($id);
-			}
-		}
-		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('contacts','orgs','display',$org_id)));
-	}
-	
 	function saveOrgPeekAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
 		
@@ -1086,11 +1070,13 @@ class ChContactsPage extends CerberusPageExtension {
 			@$broadcast_subject = DevblocksPlatform::importGPC($_REQUEST['broadcast_subject'],'string',null);
 			@$broadcast_message = DevblocksPlatform::importGPC($_REQUEST['broadcast_message'],'string',null);
 			@$broadcast_is_queued = DevblocksPlatform::importGPC($_REQUEST['broadcast_is_queued'],'integer',0);
+			@$broadcast_is_closed = DevblocksPlatform::importGPC($_REQUEST['broadcast_next_is_closed'],'integer',0);
 			if(0 != strlen($do_broadcast) && !empty($broadcast_subject) && !empty($broadcast_message)) {
 				$do['broadcast'] = array(
 					'subject' => $broadcast_subject,
 					'message' => $broadcast_message,
 					'is_queued' => $broadcast_is_queued,
+					'next_is_closed' => $broadcast_is_closed,
 					'group_id' => $broadcast_group_id,
 					'worker_id' => $active_worker->id,
 				);

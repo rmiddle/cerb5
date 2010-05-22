@@ -66,6 +66,9 @@ class ChSignInPage extends CerberusPageExtension {
 
 		$url_service = DevblocksPlatform::getUrlService();
 		
+		$honesty = CerberusLicense::getInstance();
+		$online_workers = DAO_Worker::getAllOnline(86400, true);
+		
 		if($inst->authenticate()) {
 			//authentication passed
 			if($original_path[0]=='')
@@ -73,9 +76,26 @@ class ChSignInPage extends CerberusPageExtension {
 			
 			$devblocks_response = new DevblocksHttpResponse($original_path);
 
-			// Worker
 			$worker = CerberusApplication::getActiveWorker();
-
+			
+			// Please be honest
+			if(!isset($online_workers[$worker->id]) && $honesty->w <= count($online_workers) && 100 > $honesty->w) {
+				$online_workers = DAO_Worker::getAllOnline(600, true);
+				
+				if($honesty->w <= count($online_workers)) {
+					$longest_idle = time();
+					foreach($online_workers as $idle_worker) {
+						if($idle_worker->last_activity_date < $longest_idle)
+							$longest_idle = $idle_worker->last_activity_date; 
+					}
+					$session = DevblocksPlatform::getSessionService();
+					$session->clear();
+					$time = 600 - max(0,time()-$longest_idle);
+					DevblocksPlatform::redirect(new DevblocksHttpResponse(array('login','too_many',$time)));
+					exit;
+				}
+			}
+			
 			// Timezone
 			if(null != ($timezone = DAO_WorkerPref::get($worker->id,'timezone'))) {
 				$_SESSION['timezone'] = $timezone;
@@ -93,11 +113,12 @@ class ChSignInPage extends CerberusPageExtension {
 				$next_page = ($tour_enabled) ?  'welcome' : 'home';				
 				$devblocks_response = new DevblocksHttpResponse(array($next_page));
 			}
-		}
-		else {
+			
+		} else {
 			//authentication failed
 			$devblocks_response = new DevblocksHttpResponse(array('login','failed'));
 		}
+		
 		DevblocksPlatform::redirect($devblocks_response);
 	}
 	
@@ -145,7 +166,7 @@ class ChSignInPage extends CerberusPageExtension {
 			
 			$headers = $mail->getHeaders();
 			
-			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 	
 			$mail->setBody(vsprintf($translate->_('signin.forgot.mail.body'), $code));
 			
@@ -193,7 +214,7 @@ class ChSignInPage extends CerberusPageExtension {
 	        return;
         
 	    if(0 == strcmp($sentcode,$code)) { // passed
-	        DAO_Worker::updateAgent($worker_id, array(
+	        DAO_Worker::update($worker_id, array(
 	            DAO_Worker::PASSWORD => md5($password)
 	        ));
 	        

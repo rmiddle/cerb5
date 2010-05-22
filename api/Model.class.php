@@ -777,9 +777,10 @@ class View_DevblocksTemplate extends C4_AbstractView {
 		}
 		
 		if($deleted) {
-			// Clear template cache
+			// Clear compiled templates
 			$tpl = DevblocksPlatform::getTemplateService();
-			$tpl->clear_compiled_tpl();
+			$tpl->utility->clearCompiledTemplate();
+			$tpl->cache->clearAll();
 		}
 
 		unset($ids);
@@ -1395,7 +1396,7 @@ class Model_MailToGroupRule {
 
 		if(!empty($ticket_ids)) {
 			if(!empty($fields))
-				DAO_Ticket::updateTicket($ticket_ids, $fields);
+				DAO_Ticket::update($ticket_ids, $fields);
 			
 			// Custom Fields
 			C4_AbstractView::_doBulkSetCustomFields(ChCustomFieldSource_Ticket::ID, $field_values, $ticket_ids);
@@ -1426,7 +1427,7 @@ class CerberusVisit extends DevblocksVisit {
 		if(empty($this->worker_id))
 			return null;
 			
-		return DAO_Worker::getAgent($this->worker_id);
+		return DAO_Worker::get($this->worker_id);
 	}
 	
 	public function setWorker(Model_Worker $worker=null) {

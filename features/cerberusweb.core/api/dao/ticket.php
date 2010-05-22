@@ -86,7 +86,7 @@ class DAO_Ticket extends C4_ORMHelper {
 	 */
 	static function getTicketByMask($mask) {
 		if(null != ($id = self::getTicketIdByMask($mask))) {
-			return self::getTicket($id);
+			return self::get($id);
 		}
 		
 		return NULL;
@@ -125,7 +125,6 @@ class DAO_Ticket extends C4_ORMHelper {
 	 * @param array $fields
 	 * @return integer
 	 * 
-	 * [TODO]: Change $last_wrote argument to an ID rather than string?
 	 */
 	static function createTicket($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
@@ -139,10 +138,7 @@ class DAO_Ticket extends C4_ORMHelper {
 		);
 		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
-		self::updateTicket($newId, $fields);
-		
-		// send new ticket auto-response
-//		DAO_Mail::sendAutoresponse($id, 'new');
+		self::update($newId, $fields);
 		
 		return $newId;
 	}
@@ -222,7 +218,7 @@ class DAO_Ticket extends C4_ORMHelper {
 			$db->Execute($sql);
 			
 			// Requesters (merge)
-			$sql = sprintf("INSERT IGNORE INTO requester (address_id,ticket_id) ".
+			$sql = sprintf("INSERT IGNORE INTO requester (address_id, ticket_id) ".
 				"SELECT address_id, %d FROM requester WHERE ticket_id IN (%s)",
 				$oldest_id,
 				implode(',', $merge_ticket_ids)
@@ -248,7 +244,7 @@ class DAO_Ticket extends C4_ORMHelper {
 			);
 			$db->Execute($sql);
 			
-			DAO_Ticket::updateTicket($merge_ticket_ids, array(
+			DAO_Ticket::update($merge_ticket_ids, array(
 				DAO_Ticket::IS_CLOSED => 1,
 				DAO_Ticket::IS_DELETED => 1,
 			));
@@ -260,12 +256,15 @@ class DAO_Ticket extends C4_ORMHelper {
 			$most_recent_updated_ticket = end($tickets);
 
 			// Set our destination ticket to the latest touched details
-			DAO_Ticket::updateTicket($oldest_id,array(
+			DAO_Ticket::update($oldest_id,array(
 				DAO_Ticket::LAST_ACTION_CODE => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_LAST_ACTION_CODE], 
 				DAO_Ticket::LAST_MESSAGE_ID => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_LAST_MESSAGE_ID], 
 				DAO_Ticket::LAST_WROTE_ID => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_LAST_WROTE_ID], 
 				DAO_Ticket::LAST_WORKER_ID => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_LAST_WORKER_ID], 
-				DAO_Ticket::UPDATED_DATE => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_UPDATED_DATE]
+				DAO_Ticket::UPDATED_DATE => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_UPDATED_DATE],
+				DAO_Ticket::IS_CLOSED => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_CLOSED],
+				DAO_Ticket::IS_WAITING => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_WAITING],
+				DAO_Ticket::IS_DELETED => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_DELETED],
 			));			
 
 			// Set up forwarders for the old masks to their new mask
@@ -313,7 +312,7 @@ class DAO_Ticket extends C4_ORMHelper {
 	 * @param integer $id
 	 * @return Model_Ticket
 	 */
-	static function getTicket($id) {
+	static function get($id) {
 		if(empty($id)) return NULL;
 		
 		$tickets = self::getTickets(array($id));
@@ -381,7 +380,7 @@ class DAO_Ticket extends C4_ORMHelper {
 		parent::_updateWhere('ticket', $fields, $where);
 	}
 	
-	static function updateTicket($ids,$fields) {
+	static function update($ids,$fields) {
 		if(!is_array($ids)) $ids = array($ids);
 		
 		/* This event fires before the change takes place in the db,
@@ -419,7 +418,7 @@ class DAO_Ticket extends C4_ORMHelper {
 		$db = DevblocksPlatform::getDatabaseService();
 		$addresses = array();
 		
-		$sql = sprintf("SELECT a.id , a.email ".
+		$sql = sprintf("SELECT a.id , a.email, a.first_name, a.last_name ".
 			"FROM address a ".
 			"INNER JOIN requester r ON (r.ticket_id = %d AND a.id=r.address_id) ".
 			"ORDER BY a.email ASC ",
@@ -431,6 +430,8 @@ class DAO_Ticket extends C4_ORMHelper {
 			$address = new Model_Address();
 			$address->id = intval($row['id']);
 			$address->email = $row['email'];
+			$address->first_name = $row['first_name'];
+			$address->last_name = $row['last_name'];
 			$addresses[$address->id] = $address;
 		}
 		
@@ -454,13 +455,43 @@ class DAO_Ticket extends C4_ORMHelper {
 		return !empty($result);
 	}
 	
-	static function createRequester($address_id,$ticket_id) {
+	static function createRequester($raw_email, $ticket_id) {
 		$db = DevblocksPlatform::getDatabaseService();
+		$logger = DevblocksPlatform::getConsoleLog();
+		
+		$helpdesk_senders = CerberusApplication::getHelpdeskSenders();
+
+		if(null == ($address = CerberusApplication::hashLookupAddress($raw_email, true))) {
+			$logger->warn(sprintf("[Parser] %s is a malformed requester e-mail address.", $raw_email));
+			return false;
+		}
+		
+		// Don't add a requester if the sender is a helpdesk address
+		if(isset($helpdesk_senders[$address->email])) {
+			$logger->info(sprintf("[Parser] Not adding %s as a requester because it's a helpdesk-controlled address. ", $address->email));
+			return false;
+		}
+		
+		// Filter out any excluded requesters
+		$exclude_list = DevblocksPlatform::getPluginSetting('cerberusweb.core', CerberusSettings::PARSER_AUTO_REQ_EXCLUDE, CerberusSettingsDefaults::PARSER_AUTO_REQ_EXCLUDE);
+		if(!empty($exclude_list)) {
+			@$excludes = DevblocksPlatform::parseCrlfString($exclude_list);
+			
+			if(is_array($excludes) && !empty($excludes))
+			foreach($excludes as $excl_pattern) {
+				if(@preg_match(DevblocksPlatform::parseStringAsRegExp($excl_pattern), $address->email)) {
+					$logger->info(sprintf("[Parser] Not adding (%s) as a requester because they match (%s) on the exclude list. ", $address->email, $excl_pattern));
+					return false;
+				}
+			}
+		}
+		
 		$db->Execute(sprintf("REPLACE INTO requester (address_id, ticket_id) ".
 			"VALUES (%d, %d)",
-			$address_id,
+			$address->id,
 			$ticket_id
 		));
+		
 		return true;
 	}
 	

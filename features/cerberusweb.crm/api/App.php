@@ -574,7 +574,7 @@ class CrmPage extends CerberusPageExtension {
 			),
 			25,
 			0,
-			DAO_Note::CREATED,
+			SearchFields_Note::CREATED,
 			false,
 			false
 		);
@@ -622,22 +622,6 @@ class CrmPage extends CerberusPageExtension {
 				DAO_WorkerEvent::IS_READ => 0,
 			);
 			DAO_WorkerEvent::create($fields);
-		}
-		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('crm','opp',$opp_id)));
-	}
-	
-	// [TODO] This is redundant and should be handled by ?c=internal by passing a $return_path
-	function deleteOppNoteAction() {
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer', 0);
-		@$opp_id = DevblocksPlatform::importGPC($_REQUEST['opp_id'],'integer', 0);
-		
-		$active_worker = CerberusApplication::getActiveWorker();
-		
-		if(null != ($note = DAO_Note::get($id))) {
-			if($note->worker_id == $active_worker->id || $active_worker->is_superuser) {
-				DAO_Note::delete($id);
-			}
 		}
 		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('crm','opp',$opp_id)));
@@ -713,11 +697,13 @@ class CrmPage extends CerberusPageExtension {
 			@$broadcast_subject = DevblocksPlatform::importGPC($_REQUEST['broadcast_subject'],'string',null);
 			@$broadcast_message = DevblocksPlatform::importGPC($_REQUEST['broadcast_message'],'string',null);
 			@$broadcast_is_queued = DevblocksPlatform::importGPC($_REQUEST['broadcast_is_queued'],'integer',0);
+			@$broadcast_is_closed = DevblocksPlatform::importGPC($_REQUEST['broadcast_next_is_closed'],'integer',0);
 			if(0 != strlen($do_broadcast) && !empty($broadcast_subject) && !empty($broadcast_message)) {
 				$do['broadcast'] = array(
 					'subject' => $broadcast_subject,
 					'message' => $broadcast_message,
 					'is_queued' => $broadcast_is_queued,
+					'next_is_closed' => $broadcast_is_closed,
 					'group_id' => $broadcast_group_id,
 					'worker_id' => $active_worker->id,
 				);
@@ -1091,7 +1077,7 @@ class CrmPage extends CerberusPageExtension {
 			if(!empty($custom_fields) && !empty($id)) {
 				// Format (typecast) and set the custom field types
 				$source_ext_id = CrmCustomFieldSource_Opportunity::ID;
-				DAO_CustomFieldValue::formatAndSetFieldValues($source_ext_id, $id, $custom_fields, $is_blank_unset);
+				DAO_CustomFieldValue::formatAndSetFieldValues($source_ext_id, $id, $custom_fields, $is_blank_unset, true, true);
 			}
 			
 		}
@@ -1141,7 +1127,7 @@ class CrmPage extends CerberusPageExtension {
 					'created' => time(),
 					'worker_id' => $active_worker->id,
 					'total' => $total,
-					'return_url' => $url_writer->write('c=activity&tab=opps', true),
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=activity&tab=opps', true),
 //					'toolbar_extension_id' => 'cerberusweb.explorer.toolbar.',
 				);
 				$models[] = $model; 
@@ -1339,6 +1325,10 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 			"org.name as %s, ".
 			"o.primary_email_id as %s, ".
 			"a.email as %s, ".
+			"a.first_name as %s, ".
+			"a.last_name as %s, ".
+			"a.num_spam as %s, ".
+			"a.num_nonspam as %s, ".
 			"o.created_date as %s, ".
 			"o.updated_date as %s, ".
 			"o.closed_date as %s, ".
@@ -1352,6 +1342,10 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 			    SearchFields_CrmOpportunity::ORG_NAME,
 			    SearchFields_CrmOpportunity::PRIMARY_EMAIL_ID,
 			    SearchFields_CrmOpportunity::EMAIL_ADDRESS,
+			    SearchFields_CrmOpportunity::EMAIL_FIRST_NAME,
+			    SearchFields_CrmOpportunity::EMAIL_LAST_NAME,
+			    SearchFields_CrmOpportunity::EMAIL_NUM_SPAM,
+			    SearchFields_CrmOpportunity::EMAIL_NUM_NONSPAM,
 			    SearchFields_CrmOpportunity::CREATED_DATE,
 			    SearchFields_CrmOpportunity::UPDATED_DATE,
 			    SearchFields_CrmOpportunity::CLOSED_DATE,
@@ -1436,6 +1430,10 @@ class SearchFields_CrmOpportunity implements IDevblocksSearchFields {
 	const ORG_NAME = 'org_name';
 
 	const EMAIL_ADDRESS = 'a_email';
+	const EMAIL_FIRST_NAME = 'a_first_name';
+	const EMAIL_LAST_NAME = 'a_last_name';
+	const EMAIL_NUM_SPAM = 'a_num_spam';
+	const EMAIL_NUM_NONSPAM = 'a_num_nonspam';
 	
 	/**
 	 * @return DevblocksSearchField[]
@@ -1448,6 +1446,10 @@ class SearchFields_CrmOpportunity implements IDevblocksSearchFields {
 			
 			self::PRIMARY_EMAIL_ID => new DevblocksSearchField(self::PRIMARY_EMAIL_ID, 'o', 'primary_email_id', $translate->_('crm.opportunity.primary_email_id')),
 			self::EMAIL_ADDRESS => new DevblocksSearchField(self::EMAIL_ADDRESS, 'a', 'email', $translate->_('crm.opportunity.email_address')),
+			self::EMAIL_FIRST_NAME => new DevblocksSearchField(self::EMAIL_FIRST_NAME, 'a', 'first_name', $translate->_('address.first_name')),
+			self::EMAIL_LAST_NAME => new DevblocksSearchField(self::EMAIL_LAST_NAME, 'a', 'last_name', $translate->_('address.last_name')),
+			self::EMAIL_NUM_SPAM => new DevblocksSearchField(self::EMAIL_NUM_SPAM, 'a', 'num_spam', $translate->_('address.num_spam')),
+			self::EMAIL_NUM_NONSPAM => new DevblocksSearchField(self::EMAIL_NUM_NONSPAM, 'a', 'num_nonspam', $translate->_('address.num_nonspam')),
 			
 			self::ORG_ID => new DevblocksSearchField(self::ORG_ID, 'org', 'id'),
 			self::ORG_NAME => new DevblocksSearchField(self::ORG_NAME, 'org', 'name', $translate->_('crm.opportunity.org_name')),
@@ -1506,6 +1508,7 @@ class View_CrmOpportunity extends C4_AbstractView {
 			SearchFields_CrmOpportunity::AMOUNT,
 			SearchFields_CrmOpportunity::UPDATED_DATE,
 			SearchFields_CrmOpportunity::WORKER_ID,
+			SearchFields_CrmOpportunity::EMAIL_NUM_NONSPAM,
 		);
 		
 		$this->params = array(
@@ -1553,10 +1556,14 @@ class View_CrmOpportunity extends C4_AbstractView {
 			case SearchFields_CrmOpportunity::NAME:
 			case SearchFields_CrmOpportunity::ORG_NAME:
 			case SearchFields_CrmOpportunity::EMAIL_ADDRESS:
+			case SearchFields_CrmOpportunity::EMAIL_FIRST_NAME:
+			case SearchFields_CrmOpportunity::EMAIL_LAST_NAME:
 				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
 				break;
 				
 			case SearchFields_CrmOpportunity::AMOUNT:
+			case SearchFields_CrmOpportunity::EMAIL_NUM_NONSPAM:
+			case SearchFields_CrmOpportunity::EMAIL_NUM_SPAM:
 				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__number.tpl');
 				break;
 				
@@ -1651,6 +1658,8 @@ class View_CrmOpportunity extends C4_AbstractView {
 			case SearchFields_CrmOpportunity::NAME:
 			case SearchFields_CrmOpportunity::ORG_NAME:
 			case SearchFields_CrmOpportunity::EMAIL_ADDRESS:
+			case SearchFields_CrmOpportunity::EMAIL_FIRST_NAME:
+			case SearchFields_CrmOpportunity::EMAIL_LAST_NAME:
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
@@ -1660,6 +1669,8 @@ class View_CrmOpportunity extends C4_AbstractView {
 				break;
 				
 			case SearchFields_CrmOpportunity::AMOUNT:
+			case SearchFields_CrmOpportunity::EMAIL_NUM_NONSPAM:
+			case SearchFields_CrmOpportunity::EMAIL_NUM_SPAM:
 				$criteria = new DevblocksSearchCriteria($field,$oper,$value);
 				break;
 				
@@ -1783,6 +1794,7 @@ class View_CrmOpportunity extends C4_AbstractView {
 				break;
 
 			$is_queued = (isset($params['is_queued']) && $params['is_queued']) ? true : false; 
+			$next_is_closed = (isset($params['next_is_closed'])) ? intval($params['next_is_closed']) : 0; 
 			
 			if(is_array($ids))
 			foreach($ids as $opp_id) {
@@ -1790,6 +1802,12 @@ class View_CrmOpportunity extends C4_AbstractView {
 					CerberusContexts::getContext(CerberusContexts::CONTEXT_OPPORTUNITY, $opp_id, $tpl_labels, $tpl_tokens);
 					$subject = $tpl_builder->build($params['subject'], $tpl_tokens);
 					$body = $tpl_builder->build($params['message'], $tpl_tokens);
+					
+					$json_params = array(
+						'to' => $tpl_tokens['email_address'],
+						'group_id' => $params['group_id'],
+						'next_is_closed' => $next_is_closed,
+					);
 					
 					$fields = array(
 						DAO_MailQueue::TYPE => Model_MailQueue::TYPE_COMPOSE,
@@ -1799,10 +1817,7 @@ class View_CrmOpportunity extends C4_AbstractView {
 						DAO_MailQueue::HINT_TO => $tpl_tokens['email_address'],
 						DAO_MailQueue::SUBJECT => $subject,
 						DAO_MailQueue::BODY => $body,
-						DAO_MailQueue::PARAMS_JSON => json_encode(array(
-							'to' => $tpl_tokens['email_address'],
-							'group_id' => $params['group_id'],
-						)),
+						DAO_MailQueue::PARAMS_JSON => json_encode($json_params),
 					);
 					
 					if($is_queued) {
@@ -1914,31 +1929,20 @@ class CrmTicketOppTab extends Extension_TicketTab {
 		$tpl_path = dirname(dirname(__FILE__)).'/templates/';
 		$tpl->assign('path', $tpl_path);
 
-		$ticket = DAO_Ticket::getTicket($ticket_id);
+		$ticket = DAO_Ticket::get($ticket_id);
 		$tpl->assign('ticket_id', $ticket_id);
 		
-		$address = DAO_Address::get($ticket->first_wrote_address_id);
-		$tpl->assign('address', $address);
+		$requesters = DAO_Ticket::getRequestersByTicket($ticket_id);
 		
 		if(null == ($view = C4_AbstractViewLoader::getView('ticket_opps'))) {
 			$view = new View_CrmOpportunity();
 			$view->id = 'ticket_opps';
 		}
 
-		if(!empty($address->contact_org_id)) { // org
-			@$org = DAO_ContactOrg::get($address->contact_org_id);
-			
-			$view->name = "Org: " . $org->name;
-			$view->params = array(
-				SearchFields_CrmOpportunity::ORG_ID => new DevblocksSearchCriteria(SearchFields_CrmOpportunity::ORG_ID,'=',$org->id) 
-			);
-			
-		} else { // address
-			$view->name = "Requester: " . $address->email;
-			$view->params = array(
-				SearchFields_CrmOpportunity::PRIMARY_EMAIL_ID => new DevblocksSearchCriteria(SearchFields_CrmOpportunity::PRIMARY_EMAIL_ID,'=',$ticket->first_wrote_address_id) 
-			);
-		}
+		$view->name = sprintf("Opportunities: %s recipient(s)", count($requesters));
+		$view->params = array(
+			SearchFields_CrmOpportunity::PRIMARY_EMAIL_ID => new DevblocksSearchCriteria(SearchFields_CrmOpportunity::PRIMARY_EMAIL_ID,'in',array_keys($requesters)), 
+		);
 		
 		C4_AbstractViewLoader::setView($view->id, $view);
 		

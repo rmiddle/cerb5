@@ -16,11 +16,16 @@ class ChUpdateController extends DevblocksControllerExtension {
 	    array_shift($stack); // update
 
 	    $cache = DevblocksPlatform::getCacheService(); /* @var $cache _DevblocksCacheManager */
+    	$url = DevblocksPlatform::getUrlService();
 	    
 	    switch(array_shift($stack)) {
+	    	case 'unlicense':
+	    		DevblocksPlatform::setPluginSetting('cerberusweb.core',CerberusSettings::LICENSE, '');
+	    		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('update')));
+	    		break;
+	    		
 	    	case 'locked':
 	    		if(!DevblocksPlatform::versionConsistencyCheck()) {
-	    			$url = DevblocksPlatform::getUrlService();
 	    			echo "<h1>Cerberus Helpdesk 5.x</h1>";
 	    			echo "The helpdesk is currently waiting for an administrator to finish upgrading. ".
 	    				"Please wait a few minutes and then ". 
@@ -59,12 +64,58 @@ class ChUpdateController extends DevblocksControllerExtension {
 				    return;
 			    }
 				
+			    // Potential errors
+			    $errors = array();
+
+			    // Release dates
+			    $r = array(
+			    	'5.0' => gmmktime(0,0,0,4,22,2010),
+			    );
+			    
+			    /*																																																																																																																																																																																																																			*/$r = array('5.0'=>1271894400,);/*
+			     * This well-designed software is the result of over 8 years of R&D.
+			     * We're sharing every resulting byte of that hard work with you.
+			     * You're free to make changes for your own use, but we ask that you 
+			     * please respect our licensing and help support commerical open source.
+			     */
+			    $remuneration = CerberusLicense::getInstance();
+				@$u = $remuneration->upgrades;
+				
+			    $version = null;
+				foreach(array_keys($r) as $v) {
+					if($u>=$r[$v])
+						$version = array($v => $r[$v]);
+				}
+				
+				end($r);
+				
+			    if(!is_null($u) && $u < end($r)) {
+			    	$errors[] = sprintf("Your Cerb5 license is valid for %s software updates.  Your coverage for major software updates expired on %s, and %s is not included.  Please <a href='%s' target='_blank'>renew your license</a>%s, <a href='%s'>remove your license</a> and enter Evaluation Mode (1 simultaneous worker), or <a href='%s' target='_blank'>download</a> an earlier version.",
+			    		is_array($version)?(key($version).'.x'):('earlier'),
+			    		gmdate("F d, Y",$u),
+			    		APP_VERSION,
+			    		'http://www.cerberusweb.com/buy',
+			    		!is_null($remuneration->key) ? sprintf(" (%s)",$remuneration->key) : '',
+			    		$url->write('c=update&a=unlicense'),
+			    		'http://www.cerberusweb.com/download'
+			    	);
+			    }
+			    
 			    // Check requirements
-			    $errors = CerberusApplication::checkRequirements();
+			    $errors += CerberusApplication::checkRequirements();
 			    
 			    if(!empty($errors)) {
+				    echo "
+				    <style>
+				    a { color: red; font-weight:bold; }
+				    ul { color:red; }
+				    </style>
+				    ";
+			    	
+				    echo "<h1>Cerberus Helpdesk 5.x</h1>";
+				    
 			    	echo $translate->_('update.correct_errors');
-			    	echo "<ul style='color:red;'>";
+			    	echo "<ul>";
 			    	foreach($errors as $error) {
 			    		echo "<li>".$error."</li>";
 			    	}
@@ -97,7 +148,8 @@ class ChUpdateController extends DevblocksControllerExtension {
 						
 						// Clear compiled templates
 						$tpl = DevblocksPlatform::getTemplateService();
-						$tpl->clear_compiled_tpl();
+						$tpl->utility->clearCompiledTemplate();
+						$tpl->cache->clearAll();
 
 						// Reload plugin translations
 						DAO_Translation::reloadPluginStrings();
