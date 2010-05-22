@@ -69,9 +69,9 @@ class CerberusMail {
 			return array(
 				'host' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_HOST,'localhost'),
 				'port' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_PORT,25),
-				'auth_user' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_AUTH_USER''),
+				'auth_user' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_AUTH_USER,''),
 				'auth_pass' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_AUTH_PASS,''),
-				'enc' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_ENC,,'None'),
+				'enc' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_ENC,'None'),
 				'max_sends' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_MAX_SENDS,20),
 				'timeout' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_TIMEOUT,30),
 			);
