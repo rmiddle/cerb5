@@ -1,4 +1,52 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2010, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Cerberus Public License.
+| The latest version of this license can be found here:
+| http://www.cerberusweb.com/license.php
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+/*
+ * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
+ * 
+ * Sure, it would be so easy to just cheat and edit this file to use the 
+ * software without paying for it.  But we trust you anyway.  In fact, we're 
+ * writing this software for you! 
+ * 
+ * Quality software backed by a dedicated team takes money to develop.  We 
+ * don't want to be out of the office bagging groceries when you call up 
+ * needing a helping hand.  We'd rather spend our free time coding your 
+ * feature requests than mowing the neighbors' lawns for rent money. 
+ * 
+ * We've never believed in hiding our source code out of paranoia over not 
+ * getting paid.  We want you to have the full source code and be able to 
+ * make the tweaks your organization requires to get more done -- despite 
+ * having less of everything than you might need (time, people, money, 
+ * energy).  We shouldn't be your bottleneck.
+ * 
+ * We've been building our expertise with this project since January 2002.  We 
+ * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
+ * let us take over your shared e-mail headache is a worthwhile investment.  
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
+ * 
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
+ *
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ */
 class ChDisplayPage extends CerberusPageExtension {
 	private $_TPL_PATH = '';
 	
@@ -592,7 +640,9 @@ class ChDisplayPage extends CerberusPageExtension {
 				DAO_MailQueue::delete($draft_id);
 		}
 
-        DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket_mask)));
+		$ticket_uri = !empty($ticket_mask) ? $ticket_mask : $ticket_id;
+		
+        DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket_uri)));
 	}
 	
 	function saveDraftReplyAction() {
@@ -1465,10 +1515,8 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('path', $this->_TPL_PATH);
 
 		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer');
-		@$div = DevblocksPlatform::importGPC($_REQUEST['div'],'string');
 		
 		$tpl->assign('ticket_id', $ticket_id);
-		$tpl->assign('div', $div);
 		
 		$requesters = DAO_Ticket::getRequestersByTicket($ticket_id);
 		$tpl->assign('requesters', $requesters);
@@ -1478,43 +1526,52 @@ class ChDisplayPage extends CerberusPageExtension {
 	
 	function saveRequestersPanelAction() {
 		@$ticket_id = DevblocksPlatform::importGPC($_POST['ticket_id'],'integer');
-		@$msg_id = DevblocksPlatform::importGPC($_POST['msg_id'],'integer');
-
-		// Dels
-		@$req_deletes = DevblocksPlatform::importGPC($_POST['req_deletes'],'array',array());
-		if(!empty($req_deletes))
-		foreach($req_deletes as $del_id) {
-			DAO_Ticket::deleteRequester($ticket_id, $del_id);
-		}		
 
 		// Adds
-		@$req_adds = DevblocksPlatform::importGPC($_POST['req_adds'],'string','');
-		$req_list = DevblocksPlatform::parseCrlfString($req_adds);
-		$req_addys = array();
-		
-		if(is_array($req_list) && !empty($req_list)) {
-			foreach($req_list as $req) {
-				if(empty($req))
-					continue;
-					
-				$rfc_addys = imap_rfc822_parse_adrlist($req, 'localhost');
-				
-				foreach($rfc_addys as $rfc_addy) {
-					$addy = $rfc_addy->mailbox . '@' . $rfc_addy->host;
-					DAO_Ticket::createRequester($addy, $ticket_id);
-				}
-			}
+		@$req_adds = DevblocksPlatform::parseCrlfString(DevblocksPlatform::importGPC($_POST['req_adds'],'string',''));
+
+		if(is_array($req_adds))
+		foreach($req_adds as $req) {
+			DAO_Ticket::createRequester($req, $ticket_id);
 		}
-				
+		
+		// Deletes
+		@$req_deletes = DevblocksPlatform::importGPC($_POST['req_deletes'],'array',array());
+		
+		if(is_array($req_deletes))
+		foreach($req_deletes as $req_id) {
+			DAO_Ticket::deleteRequester($ticket_id, $req_id);
+		}
+		
+		exit;
+	}
+	
+	function requesterAddAction() {
+		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer');
+		@$email = DevblocksPlatform::importGPC($_REQUEST['email'],'string');
+		
+		DAO_Ticket::createRequester($email, $ticket_id);
+	}
+	
+	function requesterRemoveAction() {
+		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer');
+		@$address_id = DevblocksPlatform::importGPC($_REQUEST['address_id'],'integer');
+		
+		DAO_Ticket::deleteRequester($ticket_id, $address_id);
+	}
+	
+	function requestersRefreshAction() {
+		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer');
+		
 		$requesters = DAO_Ticket::getRequestersByTicket($ticket_id);
 
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 		
+		$tpl->assign('ticket_id', $ticket_id);
 		$tpl->assign('requesters', $requesters);
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/rpc/requester_list.tpl');
-		
-		exit;
 	}
+	
 };
