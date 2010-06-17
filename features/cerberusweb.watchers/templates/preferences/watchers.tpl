@@ -3,4 +3,4 @@
 	<button type="button" onclick="genericAjaxPanel('c=preferences&a=handleTabAction&tab=core.pref.notifications&action=showWatcherPanel&id=0&view_id={$view->id}',null,false,'550');"><span class="cerb-sprite sprite-funnel"></span> Add Watcher Filter</button>
 </form>
 
-<div id="view{$view->id}">{$view->render()}</div>
+{include file="$core_tpl/internal/views/search_and_view.tpl" view=$view}

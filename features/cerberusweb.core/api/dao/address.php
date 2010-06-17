@@ -144,8 +144,19 @@ class DAO_Address extends C4_ORMHelper {
 		
 		$sql = "DELETE QUICK address_to_worker FROM address_to_worker LEFT JOIN worker ON address_to_worker.worker_id=worker.id WHERE worker.id IS NULL";
 		$db->Execute($sql);
-		
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' address_to_worker records.');
+		
+		// Context Links
+		$db->Execute(sprintf("DELETE QUICK context_link FROM context_link LEFT JOIN address ON context_link.from_context_id=address.id WHERE context_link.from_context = %s AND address.id IS NULL",
+			$db->qstr(CerberusContexts::CONTEXT_ADDRESS)
+		));
+		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' address context link sources.');
+		
+		$db->Execute(sprintf("DELETE QUICK context_link FROM context_link LEFT JOIN address ON context_link.to_context_id=address.id WHERE context_link.to_context = %s AND address.id IS NULL",
+			$db->qstr(CerberusContexts::CONTEXT_ADDRESS)
+		));
+		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' address context link targets.');
+		
 	}
 	
     static function delete($ids) {
@@ -162,6 +173,9 @@ class DAO_Address extends C4_ORMHelper {
         $sql = sprintf("DELETE QUICK FROM address WHERE id IN (%s)", $address_ids);
         $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
        
+		// Context links
+		DAO_ContextLink::delete(CerberusContexts::CONTEXT_ADDRESS, $ids);
+        
         // Custom fields
         DAO_CustomFieldValue::deleteBySourceIds(ChCustomFieldSource_Address::ID, $ids);
     }
@@ -490,10 +504,20 @@ class View_Address extends C4_AbstractView {
 			SearchFields_Address::NUM_NONSPAM,
 			SearchFields_Address::NUM_SPAM,
 		);
+		$this->columnsHidden = array(
+			SearchFields_Address::PASS,
+		);
 		
-		$this->params = array(
+		$this->paramsDefault = array(
 			SearchFields_Address::IS_REGISTERED => new DevblocksSearchCriteria(SearchFields_Address::IS_REGISTERED,'=',1),
 		);
+		$this->paramsHidden = array(
+			SearchFields_Address::CONTACT_ORG_ID,
+			SearchFields_Address::ID,
+			SearchFields_Address::PASS,
+		);
+		
+		$this->doResetCriteria();
 	}
 
 	function getData() {
@@ -520,8 +544,15 @@ class View_Address extends C4_AbstractView {
 		$address_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Address::ID);
 		$tpl->assign('custom_fields', $address_fields);
 		
-		$tpl->assign('view_fields', $this->getColumns());
-		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/contacts/addresses/address_view.tpl');
+		switch($this->renderTemplate) {
+			case 'contextlinks_chooser':
+				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/contacts/addresses/view_contextlinks_chooser.tpl');
+				break;
+			default:
+				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/contacts/addresses/address_view.tpl');
+				break;
+		}
+		
 	}
 
 	function renderCriteria($field) {
@@ -567,32 +598,10 @@ class View_Address extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_Address::getFields();
 	}
 
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_Address::ID]);
-		unset($fields[SearchFields_Address::CONTACT_ORG_ID]);
-		unset($fields[SearchFields_Address::PASS]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_Address::PASS]);
-		return $fields;
-	}
-
-	function doResetCriteria() {
-		parent::doResetCriteria();
-		
-		$this->params = array(
-			SearchFields_Address::IS_REGISTERED => new DevblocksSearchCriteria(SearchFields_Address::IS_REGISTERED,'=',1),
-		);
-	}
-	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -750,5 +759,207 @@ class View_Address extends C4_AbstractView {
 		}
 
 		unset($ids);
+	}
+};
+
+class Context_Address extends Extension_DevblocksContext {
+    function __construct($manifest) {
+        parent::__construct($manifest);
+    }
+
+	function getContext($address, &$token_labels, &$token_values, $prefix=null) {
+		if(is_null($prefix))
+			$prefix = 'Email:';
+		
+		$translate = DevblocksPlatform::getTranslationService();
+		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Address::ID);
+		
+		// Polymorph
+		if(is_numeric($address)) {
+			$address = DAO_Address::get($address);
+		} elseif($address instanceof Model_Address) {
+			// It's what we want already.
+		} elseif(is_string($address)) {
+			$address = DAO_Address::getByEmail($address);
+		} else {
+			$address = null;
+		}
+			
+		// Token labels
+		$token_labels = array(
+			'address' => $prefix.$translate->_('common.email'),
+			'first_name' => $prefix.$translate->_('address.first_name'),
+			'last_name' => $prefix.$translate->_('address.last_name'),
+			'num_spam' => $prefix.$translate->_('address.num_spam'),
+			'num_nonspam' => $prefix.$translate->_('address.num_nonspam'),
+			'is_registered' => $prefix.$translate->_('address.is_registered'),
+			'is_banned' => $prefix.$translate->_('address.is_banned'),
+		);
+		
+		if(is_array($fields))
+		foreach($fields as $cf_id => $field) {
+			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
+		}
+
+		// Token values
+		$token_values = array();
+		
+		// Address token values
+		if(null != $address) {
+			$token_values['id'] = $address->id;
+			if(!empty($address->email))
+				$token_values['address'] = $address->email;
+			if(!empty($address->first_name))
+				$token_values['first_name'] = $address->first_name;
+			if(!empty($address->last_name))
+				$token_values['last_name'] = $address->last_name;
+			$token_values['num_spam'] = $address->num_spam;
+			$token_values['num_nonspam'] = $address->num_nonspam;
+			$token_values['is_registered'] = $address->is_registered;
+			$token_values['is_banned'] = $address->is_banned;
+			$token_values['custom'] = array();
+			
+			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Address::ID, $address->id));
+			if(is_array($field_values) && !empty($field_values)) {
+				foreach($field_values as $cf_id => $cf_val) {
+					if(!isset($fields[$cf_id]))
+						continue;
+					
+					// The literal value
+					if(null != $address)
+						$token_values['custom'][$cf_id] = $cf_val;
+					
+					// Stringify
+					if(is_array($cf_val))
+						$cf_val = implode(', ', $cf_val);
+						
+					if(is_string($cf_val)) {
+						if(null != $address)
+							$token_values['custom_'.$cf_id] = $cf_val;
+					}
+				}
+			}
+		}
+		
+		// Email Org
+		$org_id = (null != $address && !empty($address->contact_org_id)) ? $address->contact_org_id : null;
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_ORG, $org_id, $merge_token_labels, $merge_token_values, null, true);
+
+		CerberusContexts::merge(
+			'org_',
+			'',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);		
+		
+		return true;		
+	}
+	
+	function renderChooserPanel($from_context, $from_context_id, $to_context, $return_uri) {
+		$tpl = DevblocksPlatform::getTemplateService();
+		$path = dirname(dirname(dirname(__FILE__))) . '/templates/';
+		$tpl->assign('path', $path);
+		
+		$tpl->assign('context', $this);
+		$tpl->assign('from_context', $from_context);
+		$tpl->assign('from_context_id', $from_context_id);
+		$tpl->assign('to_context', $to_context);
+		$tpl->assign('context_extension', $this);
+		$tpl->assign('return_uri', $return_uri);
+		
+		$links = DAO_ContextLink::getLinks($from_context, $from_context_id);
+		$ids = array();
+		
+		if(is_array($links))
+		foreach($links as $link) {
+			if($link->context !== $to_context)
+				continue;
+			$ids[] = $link->context_id;
+		}
+		
+		if(!empty($ids)) {
+			$links = array();
+			$link_ids = DAO_Address::getWhere(
+				sprintf("%s IN (%s)",
+					DAO_Address::ID,
+					implode(',', $ids)
+				)
+			);
+			
+			if(is_array($link_ids))
+			foreach($link_ids as $link_id => $link) {
+				$links[$link_id] = $link->email;
+			}
+			
+			$tpl->assign('links', $links);
+		}
+		
+		// View
+		
+		$view_id = 'contextlink_'.str_replace('.','_',$this->id);
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = $view_id; 
+		$defaults->class_name = 'View_Address';
+		
+		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
+		$view->name = 'Organizations';
+		
+		$view->view_columns = array(
+			SearchFields_Address::FIRST_NAME,
+			SearchFields_Address::LAST_NAME,
+			SearchFields_Address::ORG_NAME,
+		);
+		
+		$view->paramsDefault = array(
+			SearchFields_Address::IS_BANNED => new DevblocksSearchCriteria(SearchFields_Address::IS_BANNED,'=',0),
+		);
+		$view->paramsHidden = array(
+			SearchFields_Address::ID,
+			SearchFields_Address::CONTACT_ORG_ID,
+		);
+		$view->params = $view->paramsDefault;
+		
+		$view->renderSortBy = SearchFields_Address::EMAIL;
+		$view->renderSortAsc = true;
+		$view->renderLimit = 10;
+		$view->renderTemplate = 'contextlinks_chooser';
+		
+		C4_AbstractViewLoader::setView($view_id, $view);
+		
+		$tpl->assign('view', $view);
+
+		// Template
+		
+		$tpl->display('file:'.$path.'context_links/choosers/__generic.tpl');
+	}
+	
+	function saveChooserPanel($from_context, $from_context_id, $to_context, $to_context_data) {
+		if(is_array($to_context_data))
+		foreach($to_context_data as $to_context_item) {
+			if(!empty($to_context) && null != ($addy = DAO_Address::get($to_context_item))) {
+				DAO_ContextLink::setLink($from_context, $from_context_id, $to_context, $addy->id);
+			}
+		}
+		
+		return TRUE;
+	}
+	
+	function getView($ids) {
+		$view_id = str_replace('.','_',$this->id);
+		
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = $view_id; 
+		$defaults->class_name = 'View_Address';
+		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
+		$view->name = 'E-mail Addresses';
+		$view->params = array(
+			SearchFields_Address::ID => new DevblocksSearchCriteria(SearchFields_Address::ID,'in',$ids),
+		);
+		C4_AbstractViewLoader::setView($view_id, $view);
+		return $view;
 	}
 };

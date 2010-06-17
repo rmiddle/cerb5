@@ -1,9 +1,10 @@
+{$view_filters = $view->getParamsAvailable()}
 {if !empty($params)}
 {foreach from=$params item=param key=param_key name=params}
 	{if !$nested}
 	<tr>
 		<td width="100%">
-		<span class="cerb-sprite sprite-data_find"></span>
+		<input type="checkbox" name="field_deletes[]" value="{$param->field}">
 	{/if}
 		
 	{if is_array($param)}
@@ -14,7 +15,7 @@
 					{include file="file:$core_tpl/internal/views/criteria_list_params.tpl" params=$p nested=true}
 				{else}
 					{assign var=field value=$p->field} 
-					{$view_fields.$field->db_label} 
+					{$view_filters.$field->db_label|capitalize} 
 					{$p->operator}
 					<b>{$view->renderCriteriaParam($p)}</b>
 				{/if}
@@ -24,7 +25,7 @@
 		{/foreach}
 	{else}
 		{assign var=field value=$param->field} 
-		{$view_fields.$field->db_label} 
+		{$view_filters.$field->db_label|capitalize} 
 		{$param->operator}
 		<b>{$view->renderCriteriaParam($param)}</b>
 		
@@ -35,13 +36,6 @@
 	{/if}
 		
 	{if !$nested}
-		</td>
-		<td width="0%" nowrap="nowrap" valign="top">
-			{if !$batchDelete}
-			<a href="javascript:;" onclick="document.{$view->id}_criteriaForm.field.value='{$param_key}';document.{$view->id}_criteriaForm.submit();"><span class="cerb-sprite sprite-forbidden"></span></a>
-			{else}
-			<input type="checkbox" name="field_deletes[]" value="{$param->field}">
-			{/if}
 		</td>
 	</tr>
 	{/if}

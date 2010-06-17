@@ -600,7 +600,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 		
-//		$db = DevblocksPlatform::getDatabaseService();
 		$visit = CerberusApplication::getVisit();
 		$active_worker = CerberusApplication::getActiveWorker();
 		
@@ -614,15 +613,9 @@ class ChTicketsPage extends CerberusPageExtension {
 		// Remember the tab
 		$visit->set(CerberusVisit::KEY_MAIL_MODE, 'search');		
 		
-		// Request path
-//		@$request = DevblocksPlatform::importGPC($_REQUEST['request'],'string','');
-//		$response_path = explode('/', $request);
-//		@array_shift($response_path); // tickets
-//		@array_shift($response_path); // overview
-
-		$tpl->assign('response_uri', 'tickets/search');
-		
 		$view = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_SEARCH);
+		
+		// [TODO] Convert to defaults
 		
 		if(null == $view) {
 			$view = View_Ticket::createSearchView();
@@ -630,7 +623,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		}
 		
 		$tpl->assign('view', $view);
-		$tpl->assign('params', $view->params);
 	
 		$teams = DAO_Group::getAll();
 		$tpl->assign('teams', $teams);
@@ -640,9 +632,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		$team_categories = DAO_Bucket::getTeams();
 		$tpl->assign('team_categories', $team_categories);
-		
-		$tpl->assign('view_fields', View_Ticket::getFields());
-		$tpl->assign('view_searchable_fields', View_Ticket::getSearchFields());
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'tickets/search/index.tpl');
 	}
