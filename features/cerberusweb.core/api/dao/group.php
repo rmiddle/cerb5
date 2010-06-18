@@ -407,6 +407,15 @@ class DAO_GroupSettings {
     const SETTING_CLOSE_REPLY = 'close_reply';
     const SETTING_CLOSE_REPLY_ENABLED = 'close_reply_enabled';
     const SETTING_INBOX_IS_ASSIGNABLE = 'inbox_is_assignable';
+	const SETTING_SMTP_IS_ENABLED = 'smtp_is_enabled';
+	const SETTING_SMTP_HOST = 'smtp_host';
+	const SETTING_SMTP_PORT = 'smtp_port';
+	const SETTING_SMTP_ENC = 'smtp_enc';
+	const SETTING_SMTP_AUTH_ENABLED = 'smtp_auth_enabled';
+	const SETTING_SMTP_AUTH_USER = 'smtp_auth_user';
+	const SETTING_SMTP_AUTH_PASS = 'smtp_auth_pass';
+	const SETTING_SMTP_TIMEOUT = 'smtp_timeout';
+	const SETTING_SMTP_MAX_SENDS = 'smtp_max_sends';
     
 	static function set($group_id, $key, $value) {
 		$db = DevblocksPlatform::getDatabaseService();

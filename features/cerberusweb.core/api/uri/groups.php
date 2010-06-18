@@ -595,6 +595,23 @@ class ChGroupsPage extends CerberusPageExtension  {
 	    @$spam_moveto = DevblocksPlatform::importGPC($_REQUEST['spam_action_moveto'],'integer',0);
 	    @$ticket_reply_status = DevblocksPlatform::importGPC($_REQUEST['ticket_reply_status'],'integer',255);
  
+	    @$smtp_is_enabled = DevblocksPlatform::importGPC($_REQUEST['smtp_is_enabled'],'integer',0);
+	    @$smtp_host = DevblocksPlatform::importGPC($_REQUEST['smtp_host'],'string','localhost');
+	    @$smtp_port = DevblocksPlatform::importGPC($_REQUEST['smtp_port'],'integer',25);
+	    @$smtp_enc = DevblocksPlatform::importGPC($_REQUEST['smtp_enc'],'string','None');
+	    @$smtp_timeout = DevblocksPlatform::importGPC($_REQUEST['smtp_timeout'],'integer',30);
+	    @$smtp_max_sends = DevblocksPlatform::importGPC($_REQUEST['smtp_max_sends'],'integer',20);
+
+	    @$smtp_auth_enabled = DevblocksPlatform::importGPC($_REQUEST['smtp_auth_enabled'],'integer', 0);
+	    if($smtp_auth_enabled) {
+		    @$smtp_auth_user = DevblocksPlatform::importGPC($_REQUEST['smtp_auth_user'],'string');
+		    @$smtp_auth_pass = DevblocksPlatform::importGPC($_REQUEST['smtp_auth_pass'],'string');
+
+	    } else { // need to clear auth info when smtp auth is disabled
+		    @$smtp_auth_user = '';
+		    @$smtp_auth_pass = '';
+	    }
+
 	    // [TODO] Move this into DAO_GroupSettings
 	    DAO_Group::updateTeam($team_id, array(
 	        DAO_Group::TEAM_SIGNATURE => $signature
@@ -613,6 +630,16 @@ class ChGroupsPage extends CerberusPageExtension  {
 	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_AUTO_REPLY, $auto_reply);
 	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_CLOSE_REPLY_ENABLED, $close_reply_enabled);
 	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_CLOSE_REPLY, $close_reply);
+
+		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, $smtp_is_enabled);
+		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_HOST, $smtp_host);
+		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_PORT, $smtp_port);
+		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_ENC, $smtp_enc);
+		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_AUTH_ENABLED, $smtp_auth_enabled);
+		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_AUTH_USER, $smtp_auth_user);
+		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_AUTH_PASS, $smtp_auth_pass);
+		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_TIMEOUT, $smtp_timeout);
+		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_MAX_SENDS, $smtp_max_sends);
 	       
         DevblocksPlatform::redirect(new DevblocksHttpResponse(array('groups',$team_id)));
 	}

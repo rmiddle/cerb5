@@ -50,20 +50,33 @@
 class CerberusMail {
 	private function __construct() {}
 	
-	static function getMailerDefaults() {
-		$settings = DevblocksPlatform::getPluginSettingsService();
+	static function getMailerDefaults($team_id=0) {
+		@$group_smtp = DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, 0);
+		if($team_id == 0 || $group_smtp == 0) {
+			$settings = DevblocksPlatform::getPluginSettingsService();
 
-		return array(
-			'host' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_HOST,CerberusSettingsDefaults::SMTP_HOST),
-			'port' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_PORT,CerberusSettingsDefaults::SMTP_PORT),
-			'auth_user' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_USER,null),
-			'auth_pass' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_PASS,null),
-			'enc' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_ENCRYPTION_TYPE,CerberusSettingsDefaults::SMTP_ENCRYPTION_TYPE),
-			'max_sends' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_MAX_SENDS,CerberusSettingsDefaults::SMTP_MAX_SENDS),
-			'timeout' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_TIMEOUT,CerberusSettingsDefaults::SMTP_TIMEOUT),
-		);
+			return array(
+				'host' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_HOST,CerberusSettingsDefaults::SMTP_HOST),
+				'port' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_PORT,CerberusSettingsDefaults::SMTP_PORT),
+				'auth_user' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_USER,null),
+				'auth_pass' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_PASS,null),
+				'enc' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_ENCRYPTION_TYPE,CerberusSettingsDefaults::SMTP_ENCRYPTION_TYPE),
+				'max_sends' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_MAX_SENDS,CerberusSettingsDefaults::SMTP_MAX_SENDS),
+				'timeout' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_TIMEOUT,CerberusSettingsDefaults::SMTP_TIMEOUT),
+			);
+		} else {
+			return array(
+				'host' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_HOST,'localhost'),
+				'port' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_PORT,25),
+				'enc' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_ENC,'None'),
+				'auth_user' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_AUTH_USER,null),
+				'auth_pass' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_AUTH_PASS,null),
+				'timeout' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_TIMEOUT,30),
+				'max_sends' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_MAX_SENDS,20),
+			);
+		}
 	}
-	
+		
 	static function quickSend($to, $subject, $body, $from_addy=null, $from_personal=null) {
 		try {
 			$mail_service = DevblocksPlatform::getMailService();
@@ -176,8 +189,14 @@ class CerberusMail {
 			
 		} else { // regular mail sending
 			try {
+				@$group_smtp = DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, 0);
+				// objects
 				$mail_service = DevblocksPlatform::getMailService();
-				$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+				if ($group_smtp) {
+					$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults($team_id));
+				} else {
+					$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+				}
 				$email = $mail_service->createMessage();
 		
 				$email->setTo($toList);
@@ -430,13 +449,8 @@ class CerberusMail {
 		'dont_send',
 		'dont_save_copy'
 		*/
-
+		
 		try {
-			// objects
-		    $mail_service = DevblocksPlatform::getMailService();
-		    $mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
-			$mail = $mail_service->createMessage();
-	        
 		    // properties
 		    @$reply_message_id = $properties['message_id'];
 		    @$content = $properties['content'];
@@ -456,6 +470,16 @@ class CerberusMail {
 			if(null == ($ticket = DAO_Ticket::get($ticket_id)))
 				return;
 	
+			@$group_smtp = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, 0);
+			// objects
+		    $mail_service = DevblocksPlatform::getMailService();
+			if ($group_smtp) {
+				$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults($ticket->team_id));
+			} else {
+				$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+			}
+			$mail = $mail_service->createMessage();
+	        
 			// [TODO] Check that message|ticket isn't NULL
 			
 			// If this ticket isn't spam trained and our outgoing message isn't an autoreply
@@ -831,6 +855,7 @@ class CerberusMail {
 	
 	static function reflect(CerberusParserMessage $message, $to) {
 		try {
+			// objects
 			$mail_service = DevblocksPlatform::getMailService();
 			$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 			$mail = $mail_service->createMessage();
