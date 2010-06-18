@@ -2,7 +2,7 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2007, WebGroup Media LLC
+| All source code & content (c) Copyright 2010, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
 | This source code is released under the Cerberus Public License.
@@ -26,7 +26,7 @@
  * needing a helping hand.  We'd rather spend our free time coding your 
  * feature requests than mowing the neighbors' lawns for rent money. 
  * 
- * We've never believed in encoding our source code out of paranoia over not 
+ * We've never believed in hiding our source code out of paranoia over not 
  * getting paid.  We want you to have the full source code and be able to 
  * make the tweaks your organization requires to get more done -- despite 
  * having less of everything than you might need (time, people, money, 
@@ -35,18 +35,17 @@
  * We've been building our expertise with this project since January 2002.  We 
  * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
  * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your in-box that you probably 
- * haven't had since spammers found you in a game of "E-mail Address 
- * Battleship".  Miss. Miss. You sunk my in-box!
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
  * 
- * A legitimate license entitles you to support, access to the developer 
- * mailing list, the ability to participate in betas and the warm fuzzy 
- * feeling of feeding a couple obsessed developers who want to help you get 
- * more done than 'the other guy'.
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
  *
- * - Jeff Standen, Mike Fogg, Brenan Cavish, Darren Sugita, Dan Hildebrandt
- * 		and Joe Geck.
- *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class CerberusMail {
 	private function __construct() {}
@@ -294,10 +293,6 @@ class CerberusMail {
 		
 		// "Next:" [TODO] This is highly redundant with CerberusMail::reply
 		
-		if(isset($closed) && 1==$closed)
-			$fields[DAO_Ticket::IS_CLOSED] = 1;
-		if(isset($closed) && 2==$closed)
-			$fields[DAO_Ticket::IS_WAITING] = 1;
 		if(!empty($move_bucket)) {
 	        list($team_id, $bucket_id) = CerberusApplication::translateTeamCategoryCode($move_bucket);
 		    $fields[DAO_Ticket::TEAM_ID] = $team_id;
@@ -328,11 +323,6 @@ class CerberusMail {
 	    );
 		$message_id = DAO_Message::create($fields);
 	    
-		// Link Message to Ticket
-		DAO_Ticket::update($ticket_id, array(
-			DAO_Ticket::FIRST_MESSAGE_ID => $message_id,
-		));
-		
 		// Content
 		Storage_MessageContent::put($message_id, $content);
 
@@ -367,6 +357,18 @@ class CerberusMail {
 				}
 			}
 		}
+
+		// Finalize ticket
+		$fields = array(
+			DAO_Ticket::FIRST_MESSAGE_ID => $message_id,
+		);
+		
+		if(isset($closed) && 1==$closed)
+			$fields[DAO_Ticket::IS_CLOSED] = 1;
+		if(isset($closed) && 2==$closed)
+			$fields[DAO_Ticket::IS_WAITING] = 1;
+		
+		DAO_Ticket::update($ticket_id, $fields);
 		
 		// Train as not spam
 		CerberusBayes::markTicketAsNotSpam($ticket_id);
@@ -444,10 +446,15 @@ class CerberusMail {
 		    @$worker_id = $properties['agent_id'];
 		    @$subject = $properties['subject'];
 		    
-			$message = DAO_Message::get($reply_message_id);
-	        $message_headers = DAO_MessageHeader::getAll($reply_message_id);		
+			if(null == ($message = DAO_Message::get($reply_message_id)))
+				return;
+				
+	        $message_headers = DAO_MessageHeader::getAll($reply_message_id);
+
 			$ticket_id = $message->ticket_id;
-			$ticket = DAO_Ticket::get($ticket_id);
+	        
+			if(null == ($ticket = DAO_Ticket::get($ticket_id)))
+				return;
 	
 			// [TODO] Check that message|ticket isn't NULL
 			
@@ -694,7 +701,7 @@ class CerberusMail {
 		    }
 		    
 		    // Only change the subject if not forwarding
-		    if(!empty($subject) && empty($properties['to'])) {
+		    if(!empty($subject) && !$is_forward) {
 		    	$change_fields[DAO_Ticket::SUBJECT] = $subject;
 		    }
 		    

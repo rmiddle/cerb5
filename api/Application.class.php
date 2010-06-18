@@ -26,7 +26,7 @@
  * needing a helping hand.  We'd rather spend our free time coding your 
  * feature requests than mowing the neighbors' lawns for rent money. 
  * 
- * We've never believed in encoding our source code out of paranoia over not 
+ * We've never believed in hiding our source code out of paranoia over not 
  * getting paid.  We want you to have the full source code and be able to 
  * make the tweaks your organization requires to get more done -- despite 
  * having less of everything than you might need (time, people, money, 
@@ -35,21 +35,20 @@
  * We've been building our expertise with this project since January 2002.  We 
  * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
  * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your in-box that you probably 
- * haven't had since spammers found you in a game of "E-mail Address 
- * Battleship".  Miss. Miss. You sunk my in-box!
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
  * 
- * A legitimate license entitles you to support, access to the developer 
- * mailing list, the ability to participate in betas and the warm fuzzy 
- * feeling of feeding a couple obsessed developers who want to help you get 
- * more done than 'the other guy'.
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
  *
- * - Jeff Standen, Mike Fogg, Brenan Cavish, Darren Sugita, Dan Hildebrandt
- * 		and Joe Geck.
- *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2010051802);
-define("APP_VERSION", '5.0.1-dev');
+define("APP_BUILD", 2010061702);
+define("APP_VERSION", '5.0.1');
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -67,6 +66,7 @@ DevblocksPlatform::registerClasses($path . 'Parser.php', array(
 	'CerberusParser',
 	'CerberusParserMessage',
 	'ParserFile',
+	'ParserFileBuffer',
 ));
 
 DevblocksPlatform::registerClasses($path . 'Update.php', array(
@@ -1348,7 +1348,6 @@ class CerberusContexts {
 		// Token labels
 		$token_labels = array(
 			'content' => $prefix.$translate->_('kb_article.content'),
-			'is_html' => $prefix.$translate->_('kb_article.format'),
 			'id' => $prefix.$translate->_('common.id'),
 			'title' => $prefix.$translate->_('kb_article.title'),
 			'updated|date' => $prefix.$translate->_('kb_article.updated'),
@@ -1365,8 +1364,7 @@ class CerberusContexts {
 		
 		// Token values
 		if(null != $article) {
-			$token_values['content'] = $article->content;
-			$token_values['is_html'] = $article->format;
+			$token_values['content'] = $article->getContent();
 			$token_values['id'] = $article->id;
 			$token_values['title'] = $article->title;
 			$token_values['updated'] = $article->updated;
