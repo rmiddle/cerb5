@@ -597,7 +597,15 @@ class ChDisplayPage extends CerberusPageExtension {
 		));
 		$tpl->assign('kb_topics', $kb_topics);
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'display/rpc/reply.tpl');
+		$ticket_reply_status = DAO_GroupSettings::get($group_id,DAO_GroupSettings::SETTING_TICKET_REPLY_STATUS,255);
+		if(255==$ticket_reply_status) {
+			$reply_status = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_TICKET_REPLY_STATUS,1);
+		} else {
+			$reply_status = $ticket_reply_status;
+		}
+		$tpl->assign('reply_status', $reply_status);
+
+ 		$tpl->display('file:' . $this->_TPL_PATH . 'display/rpc/reply.tpl');
 	}
 	
 	function sendReplyAction() {

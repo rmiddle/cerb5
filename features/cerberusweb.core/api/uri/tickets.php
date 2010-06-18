@@ -79,7 +79,8 @@ class ChTicketsPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 
-		$visit = CerberusApplication::getVisit();
+		$settings = DevblocksPlatform::getPluginSettingsService();
+ 		$visit = CerberusApplication::getVisit();
 		$active_worker = $visit->getWorker();
 		
 		$response = DevblocksPlatform::getHttpResponse();
@@ -141,6 +142,8 @@ class ChTicketsPage extends CerberusPageExtension {
 					$tpl->assign('last_ticket_mask', $ticket_mask);
 					$visit->set('compose.last_ticket',null); // clear
 				}
+				$default_ticket_send_status = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_TICKET_SEND_STATUS,1);
+				$tpl->assign('default_ticket_send_status', $default_ticket_send_status);
 				
 				// Groups (for custom fields)
 				$groups = DAO_Group::getAll();
@@ -203,6 +206,9 @@ class ChTicketsPage extends CerberusPageExtension {
 					$tpl->assign('last_ticket_mask', $ticket_mask);
 					$visit->set('compose.last_ticket',null); // clear
 				}
+
+				$default_ticket_open_status = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_TICKET_OPEN_STATUS,1);
+				$tpl->assign('default_ticket_open_status', $default_ticket_open_status);
 				
 				// Groups (for custom fields)
 				$groups = DAO_Group::getAll();

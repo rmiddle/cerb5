@@ -127,7 +127,9 @@ class ChGroupsPage extends CerberusPageExtension  {
 		@$tpl->assign('group_spam_threshold', $group_settings[DAO_GroupSettings::SETTING_SPAM_THRESHOLD]);
 		@$tpl->assign('group_spam_action', $group_settings[DAO_GroupSettings::SETTING_SPAM_ACTION]);
 		@$tpl->assign('group_spam_action_param', $group_settings[DAO_GroupSettings::SETTING_SPAM_ACTION_PARAM]);
-		
+		$ticket_reply_status = DAO_GroupSettings::get($group_id,DAO_GroupSettings::SETTING_TICKET_REPLY_STATUS,255);
+		@$tpl->assign('ticket_reply_status', $ticket_reply_status);
+ 		
 		// Signature
 		$worker_token_labels = array();
 		$worker_token_values = array();
@@ -591,7 +593,8 @@ class ChGroupsPage extends CerberusPageExtension  {
 	    @$spam_threshold = DevblocksPlatform::importGPC($_REQUEST['spam_threshold'],'integer',80);
 	    @$spam_action = DevblocksPlatform::importGPC($_REQUEST['spam_action'],'integer',0);
 	    @$spam_moveto = DevblocksPlatform::importGPC($_REQUEST['spam_action_moveto'],'integer',0);
-
+	    @$ticket_reply_status = DevblocksPlatform::importGPC($_REQUEST['ticket_reply_status'],'integer',255);
+ 
 	    // [TODO] Move this into DAO_GroupSettings
 	    DAO_Group::updateTeam($team_id, array(
 	        DAO_Group::TEAM_SIGNATURE => $signature
@@ -601,6 +604,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_REPLY_PERSONAL, $sender_personal);
 	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_REPLY_PERSONAL_WITH_WORKER, $sender_personal_with_worker);
 	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SUBJECT_HAS_MASK, $subject_has_mask);
+	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_TICKET_REPLY_STATUS, $ticket_reply_status);
 	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SUBJECT_PREFIX, $subject_prefix);
 	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SPAM_THRESHOLD, $spam_threshold);
 	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SPAM_ACTION, $spam_action);

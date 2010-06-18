@@ -697,8 +697,22 @@
 		<tu tuid='config.mail.smtp.failed'>
 			<tuv xml:lang="en_US"><seg>SMTP Connection Failed:</seg></tuv>
 		</tu>
+		<tu tuid='config.mail.message.status'>
+			<tuv xml:lang="en_US"><seg>Default Message Status:</seg></tuv>
+		</tu>
+		<tu tuid='config.mail.message.status.default'>
+			<tuv xml:lang="en_US"><seg>Site Wide Default</seg></tuv>
+		</tu>
+		<tu tuid='config.mail.message.status.reply'>
+			<tuv xml:lang="en_US"><seg>In Replies</seg></tuv>
+		</tu>
+		<tu tuid='config.mail.message.status.open'>
+			<tuv xml:lang="en_US"><seg>In Open Ticket</seg></tuv>
+		</tu>
+		<tu tuid='config.mail.message.status.send'>
+			<tuv xml:lang="en_US"><seg>In Send Mail</seg></tuv>
+		</tu>
 		
-
 		<!-- Contact orgs -->
 		<tu tuid='contact_org.city'>
 			<tuv xml:lang="en_US"><seg>City</seg></tuv>
