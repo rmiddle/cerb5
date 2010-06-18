@@ -142,6 +142,8 @@ class ChTicketsPage extends CerberusPageExtension {
 					$tpl->assign('last_ticket_mask', $ticket_mask);
 					$visit->set('compose.last_ticket',null); // clear
 				}
+				
+				// Pull in Default Ticket Send Status
 				$default_ticket_send_status = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_TICKET_SEND_STATUS,1);
 				$tpl->assign('default_ticket_send_status', $default_ticket_send_status);
 				
