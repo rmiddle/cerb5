@@ -11,7 +11,12 @@
 	<b>{$translate->_('portal.sc.public.history.reference')}</b> {$ticket.t_mask}
 	 &nbsp; 
 	<b>{$translate->_('ticket.updated')|capitalize}:</b> <abbr title="{$ticket.t_updated_date|devblocks_date}">{$ticket.t_updated_date|devblocks_prettytime}</abbr>
-	 &nbsp; 
+	&nbsp;
+	{if $display_next_assigned_to != 0}
+		<b>{$translate->_('portal.sc.cfg.history.next_assigned_to.label')|capitalize}:</b> 
+		{if $ticket.t_next_worker_id == 0}{$translate->_('portal.sc.cfg.history.next_assigned_to.unassigned')|capitalize}{else}{$cust_worker = DAO_Worker::getAgent($ticket.t_next_worker_id)}{if $display_next_assigned_to == 1}{$cust_worker->first_name}{else}{$cust_worker->getName()}{/if}{/if}
+		&nbsp; 	 
+	{/if}
 	<br>
 	
 	<div style="padding:5px;">
@@ -32,6 +37,113 @@
 	<textarea name="content" rows="10" cols="80" style="width:98%;"></textarea><br>
 	<button type="submit"><img src="{devblocks_url}c=resource&p=usermeet.core&f=images/check.gif{/devblocks_url}" align="top"> {$translate->_('portal.public.send_message')}</button>
 	</form>
+</div>
+
+{* Custom Fields *}
+<div id="custom_fields_div">
+<form action="{devblocks_url}c=history{/devblocks_url}" method="post" name="">
+<input type="hidden" name="a" value="saveTicketCustomProperties">
+<input type="hidden" name="mask" value="{$ticket.t_mask}">
+	<table cellpadding="2" cellspacing="1" border="0">
+		{foreach from=$ticket_fields item=f key=f_id}
+			{assign var=field_group_id value=$f->group_id}
+			{if $cf_select.$f_id != 0}
+				<script type="text/javascript">
+					$("#custom_fields_div").addClass("custom_fields");
+				</script>
+				{if $field_group_id == 0 || $field_group_id == $ticket.t_team_id}
+					<tr>
+						<td valign="top" width="1%" nowrap="nowrap">
+							<b>{$f->name}:</b>
+						</td>
+						<td valign="top" width="99%">
+							{if $cf_select.$f_id == 2} {* Read Write Version *}
+								<input type="hidden" name="field_ids[]" value="{$f_id}">
+								{assign var=display_submit value=1}
+								{if $f->type=='S'}
+									<input type="text" name="field_{$f_id}" size="45" maxlength="255" value="{$ticket_field_values.$f_id|escape}"><br>
+								{elseif $f->type=='U'}
+									<input type="text" name="field_{$f_id}" size="45" maxlength="255" value="{$ticket_field_values.$f_id|escape}">
+									{if !empty($ticket_field_values.$f_id)}<a href="{$ticket_field_values.$f_id|escape}" target="_blank">URL</a>{else}<i>(URL)</i>{/if}
+								{elseif $f->type=='N'}
+									<input type="text" name="field_{$f_id}" size="45" maxlength="255" value="{$ticket_field_values.$f_id|escape}"><br>
+								{elseif $f->type=='T'}
+									<textarea name="field_{$f_id}" rows="4" cols="50" style="width:98%;">{$ticket_field_values.$f_id}</textarea><br>
+								{elseif $f->type=='C'}
+									<input type="checkbox" name="field_{$f_id}" value="1" {if $ticket_field_values.$f_id}checked{/if}><br>
+								{elseif $f->type=='X'}
+									{foreach from=$f->options item=opt}
+										<label><input type="checkbox" name="field_{$f_id}[]" value="{$opt|escape}" {if isset($ticket_field_values.$f_id.$opt)}checked="checked"{/if}> {$opt}</label><br>
+									{/foreach}
+								{elseif $f->type=='D'}
+									<select name="field_{$f_id}">{* [TODO] Fix selected *}
+										<option value=""></option>
+										{foreach from=$f->options item=opt}
+											<option value="{$opt|escape}" {if $opt==$ticket_field_values.$f_id}selected{/if}>{$opt}</option>
+										{/foreach}
+									</select><br>
+								{elseif $f->type=='M'}
+									<select name="field_{$f_id}[]" size="5" multiple="multiple">
+										{foreach from=$f->options item=opt}
+											<option value="{$opt|escape}" {if isset($ticket_field_values.$f_id.$opt)}selected="selected"{/if}>{$opt}</option>
+										{/foreach}
+									</select><br>
+									<i><small>{$translate->_('common.tips.multi_select')}</small></i>
+								{elseif $f->type=='E'}
+									<input type="text" name="field_{$f_id}" id="field_{$f_id}" size="45" maxlength="255" value="{if !empty($ticket_field_values.$f_id)}{$ticket_field_values.$f_id|devblocks_date}{/if}">
+								{elseif $f->type=='W'}
+									{if empty($workers)}
+										{$workers = DAO_Worker::getAllActive()}
+									{/if}
+									<select name="field_{$f_id}">
+										<option value=""></option>
+										{foreach from=$workers item=worker}
+											<option value="{$worker->id}" {if $worker->id==$ticket_field_values.$f_id}selected="selected"{/if}>{$worker->getName()}</option>
+										{/foreach}
+									</select>
+								{/if}
+							{else}  {* Read Only Version *}
+								{if $f->type=='S'}
+									{$ticket_field_values.$f_id|escape}<br>
+								{elseif $f->type=='U'}
+									{if !empty($ticket_field_values.$f_id)}<a href="{$ticket_field_values.$f_id|escape}" target="_blank">{$ticket_field_values.$f_id|escape}</a>{else}<i>(URL)</i>{/if}
+								{elseif $f->type=='N'}
+									{$ticket_field_values.$f_id|escape}<br>
+								{elseif $f->type=='T'}
+									{nl2br($ticket_field_values.$f_id)}<br>
+								{elseif $f->type=='C'}
+									<input type="checkbox" disabled="disabled" name="field_{$f_id}" value="1" {if $ticket_field_values.$f_id}checked{/if}><br>
+								{elseif $f->type=='X'}
+									{foreach from=$f->options item=opt}
+										<label><input type="checkbox" disabled="disabled" name="field_{$f_id}[]" value="{$opt|escape}" {if isset($ticket_field_values.$f_id.$opt)}checked="checked"{/if}> {$opt}</label><br>
+									{/foreach}
+								{elseif $f->type=='D'}
+									{foreach from=$f->options item=opt}
+										{if $opt==$ticket_field_values.$f_id}{$opt}<br>{/if}
+									{/foreach}
+								{elseif $f->type=='M'}
+									{foreach from=$f->options item=opt}
+										{if isset($ticket_field_values.$f_id.$opt)}{$opt}<br>{/if}
+									{/foreach}
+								{elseif $f->type=='E'}
+									{if !empty($ticket_field_values.$f_id)}{$ticket_field_values.$f_id|devblocks_date}{/if}<br>
+								{elseif $f->type=='W'}
+									{if $ticket_field_values.$f_id != 0}
+										{$cust_worker = DAO_Worker::getAgent($ticket_field_values.$f_id)}
+										{$cust_worker->getName()}
+									{/if}
+								{/if}
+							{/if}  
+						</td>
+					</tr>
+				{/if}
+			{/if}
+		{/foreach}
+	</table>
+	{if $display_submit}
+		<button type="submit" id="btnSubmit">{$translate->_('common.save')|capitalize}</button>
+	{/if}
+</form>
 </div>
 
 {* Message History *}
