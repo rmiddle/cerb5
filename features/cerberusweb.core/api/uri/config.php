@@ -772,7 +772,16 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		}
 		$smtp_enc = $settings->get('cerberusweb.core',CerberusSettings::SMTP_ENCRYPTION_TYPE,CerberusSettingsDefaults::SMTP_ENCRYPTION_TYPE);
 		$smtp_max_sends = $settings->get('cerberusweb.core',CerberusSettings::SMTP_MAX_SENDS,CerberusSettingsDefaults::SMTP_MAX_SENDS);
-		
+	
+		$default_ticket_reply_status = $settings->get(CerberusSettings::DEFAULT_TICKET_REPLY_STATUS,1);
+		$tpl->assign('default_ticket_reply_status', $default_ticket_reply_status);
+
+		$default_ticket_open_status = $settings->get(CerberusSettings::DEFAULT_TICKET_OPEN_STATUS,1);
+		$tpl->assign('default_ticket_open_status', $default_ticket_open_status);
+
+		$default_ticket_send_status = $settings->get(CerberusSettings::DEFAULT_TICKET_SEND_STATUS,1);
+		$tpl->assign('default_ticket_send_status', $default_ticket_send_status);
+
 		// POP3
 		
 		$pop3_accounts = DAO_Mail::getPop3Accounts();
@@ -1873,11 +1882,18 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		    @$smtp_auth_pass = '';
 	    }
 	    
-	    $settings = DevblocksPlatform::getPluginSettingsService();
+	    @$default_ticket_reply_status = DevblocksPlatform::importGPC($_REQUEST['default_ticket_reply_status'],'integer',1);
+	    @$default_ticket_open_status = DevblocksPlatform::importGPC($_REQUEST['default_ticket_open_status'],'integer',1);
+	    @$default_ticket_send_status = DevblocksPlatform::importGPC($_REQUEST['default_ticket_send_status'],'integer',1);
+
+ 	    $settings = DevblocksPlatform::getPluginSettingsService();
 	    $settings->set('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, $default_reply_address);
 	    $settings->set('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL, $default_reply_personal);
 	    $settings->set('cerberusweb.core',CerberusSettings::DEFAULT_SIGNATURE, $default_signature);
 	    $settings->set('cerberusweb.core',CerberusSettings::DEFAULT_SIGNATURE_POS, $default_signature_pos);
+	    $settings->set('cerberusweb.core',CerberusSettings::DEFAULT_TICKET_REPLY_STATUS, $default_ticket_reply_status);
+	    $settings->set('cerberusweb.core',CerberusSettings::DEFAULT_TICKET_OPEN_STATUS, $default_ticket_open_status);
+	    $settings->set('cerberusweb.core',CerberusSettings::DEFAULT_TICKET_SEND_STATUS, $default_ticket_send_status);
 	    $settings->set('cerberusweb.core',CerberusSettings::SMTP_HOST, $smtp_host);
 	    $settings->set('cerberusweb.core',CerberusSettings::SMTP_PORT, $smtp_port);
 	    $settings->set('cerberusweb.core',CerberusSettings::SMTP_AUTH_ENABLED, $smtp_auth_enabled);
