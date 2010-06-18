@@ -174,7 +174,7 @@ class ChDisplayPage extends CerberusPageExtension {
 			$sql .= "AND tte.source_extension_id = 'timetracking.source.ticket' ";
 			$sql .= "GROUP BY tte.source_id ";
 
-			$rs = $db->Execute($sql);
+			$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
 			$row = mysql_fetch_assoc($rs)
 			if(intval($row['mins'])) {
