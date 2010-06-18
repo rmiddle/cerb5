@@ -539,7 +539,8 @@ class CerberusParser {
 						));
 					} else {
 						$result = CerberusMail::sendTicketMessage(array(
-							'message_id' => $msgid,
+					        'ticket_id' => $id,
+ 							'message_id' => $msgid,
 							'content' => $message->body,
 							'files' => $attachment_files,
 							'agent_id' => $worker_address->worker_id,
