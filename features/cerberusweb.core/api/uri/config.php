@@ -773,9 +773,11 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$smtp_enc = $settings->get('cerberusweb.core',CerberusSettings::SMTP_ENCRYPTION_TYPE,CerberusSettingsDefaults::SMTP_ENCRYPTION_TYPE);
 		$smtp_max_sends = $settings->get('cerberusweb.core',CerberusSettings::SMTP_MAX_SENDS,CerberusSettingsDefaults::SMTP_MAX_SENDS);
 		
-		// POP3
-		
-		$pop3_accounts = DAO_Mail::getPop3Accounts();
+		$disable_worker_email_to_customer = $settings->get('cerberusweb.core',CerberusSettings::DISABLE_WORKER_EMAIL_TO_CUSTOMER,'0');
+		$tpl->assign('disable_worker_email_to_customer', $disable_worker_email_to_customer);
+
+		// POP3		
+ 		$pop3_accounts = DAO_Mail::getPop3Accounts();
 		$tpl->assign('pop3_accounts', $pop3_accounts);
 		
 		// Signature
@@ -1878,7 +1880,8 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	    $settings->set('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL, $default_reply_personal);
 	    $settings->set('cerberusweb.core',CerberusSettings::DEFAULT_SIGNATURE, $default_signature);
 	    $settings->set('cerberusweb.core',CerberusSettings::DEFAULT_SIGNATURE_POS, $default_signature_pos);
-	    $settings->set('cerberusweb.core',CerberusSettings::SMTP_HOST, $smtp_host);
+	    $settings->set('cerberusweb.core',CerberusSettings::DISABLE_WORKER_EMAIL_TO_CUSTOMER, $disable_worker_email_to_customer);
+ 	    $settings->set('cerberusweb.core',CerberusSettings::SMTP_HOST, $smtp_host);
 	    $settings->set('cerberusweb.core',CerberusSettings::SMTP_PORT, $smtp_port);
 	    $settings->set('cerberusweb.core',CerberusSettings::SMTP_AUTH_ENABLED, $smtp_auth_enabled);
 	    $settings->set('cerberusweb.core',CerberusSettings::SMTP_AUTH_USER, $smtp_auth_user);

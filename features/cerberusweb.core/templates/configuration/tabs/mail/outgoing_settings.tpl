@@ -92,7 +92,9 @@
 					</select>
 					<br>
 					<br>
-				</div>
+					<label><input type="checkbox" name="disable_worker_email_to_customer" value="1" {if $settings->get('cerberusweb.core','disable_worker_email_to_customer')}checked{/if}> {$translate->_('config.mail.smtp.disable.email.outbound')|capitalize}</label><br>
+					<br>
+			</div>
 			</blockquote>
 			
 			<button type="submit"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>

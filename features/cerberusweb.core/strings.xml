@@ -697,8 +697,10 @@
 		<tu tuid='config.mail.smtp.failed'>
 			<tuv xml:lang="en_US"><seg>SMTP Connection Failed:</seg></tuv>
 		</tu>
+		<tu tuid='config.mail.smtp.disable.email.outbound'>
+			<tuv xml:lang="en_US"><seg>Disable worker replies thought email</seg></tuv>
+		</tu>
 		
-
 		<!-- Contact orgs -->
 		<tu tuid='contact_org.city'>
 			<tuv xml:lang="en_US"><seg>City</seg></tuv>
