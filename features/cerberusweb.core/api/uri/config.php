@@ -1,4 +1,52 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2010, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Cerberus Public License.
+| The latest version of this license can be found here:
+| http://www.cerberusweb.com/license.php
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+/*
+ * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
+ * 
+ * Sure, it would be so easy to just cheat and edit this file to use the 
+ * software without paying for it.  But we trust you anyway.  In fact, we're 
+ * writing this software for you! 
+ * 
+ * Quality software backed by a dedicated team takes money to develop.  We 
+ * don't want to be out of the office bagging groceries when you call up 
+ * needing a helping hand.  We'd rather spend our free time coding your 
+ * feature requests than mowing the neighbors' lawns for rent money. 
+ * 
+ * We've never believed in hiding our source code out of paranoia over not 
+ * getting paid.  We want you to have the full source code and be able to 
+ * make the tweaks your organization requires to get more done -- despite 
+ * having less of everything than you might need (time, people, money, 
+ * energy).  We shouldn't be your bottleneck.
+ * 
+ * We've been building our expertise with this project since January 2002.  We 
+ * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
+ * let us take over your shared e-mail headache is a worthwhile investment.  
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
+ * 
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
+ *
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ */
 class ChConfigurationPage extends CerberusPageExtension  {
 	private $_TPL_PATH = '';
 	
@@ -99,9 +147,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 		
-		$license = CerberusLicense::getInstance();
-		$tpl->assign('license', $license);
-		
 		$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/settings/index.tpl');
 	}
 	
@@ -191,6 +236,16 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		} else {
 			$storage_ext_id = 'devblocks.storage.engine.disk';
 		}
+
+		if(!empty($id)) {
+			$storage_schemas = DevblocksPlatform::getExtensions('devblocks.storage.schema', false, true);
+			$tpl->assign('storage_schemas', $storage_schemas);
+			
+			$storage_schema_stats = $profile->getUsageStats();
+			
+			if(!empty($storage_schema_stats))
+				$tpl->assign('storage_schema_stats', $storage_schema_stats);
+		}
 		
 		if(false !== ($storage_ext = DevblocksPlatform::getExtension($storage_ext_id, true))) {
 			$tpl->assign('storage_engine', $storage_ext);
@@ -222,34 +277,51 @@ class ChConfigurationPage extends CerberusPageExtension  {
 			|| null == ($ext = $ext = DevblocksPlatform::getExtension($extension_id, true)))
 			return false;
 			
+		$tpl = DevblocksPlatform::getTemplateService();
+			
 		/* @var $ext Extension_DevblocksStorageEngine */
 			
 		if($ext->testConfig()) {
-			echo "PASS!!";
+			$output = 'Your storage profile is configured properly.';
+			$success = true;
 		} else {
-			echo "FAIL!!!";
+			$output = 'Your storage profile is not configured properly.';
+			$success = false;
 		}
+		
+		$tpl->assign('success', $success);
+		$tpl->assign('output', $output);
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'internal/renderers/test_results.tpl');
 	}
 	
 	function saveStorageProfilePeekAction() {
 		$translate = DevblocksPlatform::getTranslationService();
-		//$active_worker = PortSensorApplication::getActiveWorker();
+		$active_worker = CerberusApplication::getActiveWorker();
+
+		// ACL
+		if(!$active_worker->is_superuser)
+			return;
 		
-		// [TODO] ACL
-		// return;
-		
+		if(ONDEMAND_MODE)
+			return;
+			
 		@$id = DevblocksPlatform::importGPC($_POST['id'],'integer');
 		@$view_id = DevblocksPlatform::importGPC($_POST['view_id'],'string');
 		@$name = DevblocksPlatform::importGPC($_POST['name'],'string');
 		@$extension_id = DevblocksPlatform::importGPC($_POST['extension_id'],'string');
-//		@$delete = DevblocksPlatform::importGPC($_POST['do_delete'],'integer',0);
+		@$delete = DevblocksPlatform::importGPC($_POST['do_delete'],'integer',0);
 
-		// [TODO] The superuser set bit here needs to be protected by ACL
-		
 		if(empty($name)) $name = "New Storage Profile";
 		
 		if(!empty($id) && !empty($delete)) {
-//			DAO_DevblocksStorageProfile::delete($id);
+			// Double check that the profile is empty
+			if(null != ($profile = DAO_DevblocksStorageProfile::get($id))) {
+				$stats = $profile->getUsageStats();
+				if(empty($stats)) {
+					DAO_DevblocksStorageProfile::delete($id);
+				}
+			}
 			
 		} else {
 		    $fields = array(
@@ -281,7 +353,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		}
 		
 		if(!empty($view_id)) {
-			$view = Ps_AbstractViewLoader::getView($view_id);
+			$view = C4_AbstractViewLoader::getView($view_id);
 			$view->render();
 		}		
 	}
@@ -321,6 +393,9 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	
 	function saveStorageSchemaPeekAction() {
 		@$ext_id = DevblocksPlatform::importGPC($_REQUEST['ext_id'],'string','');
+		
+		if(ONDEMAND_MODE)
+			return;
 		
 		$extension = DevblocksPlatform::getExtension($ext_id, true, true);
 		/* @var $extension Extension_DevblocksStorageSchema */
@@ -374,28 +449,35 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	}
 	
 	function doAttachmentsBulkUpdateAction() {
-		// Checked rows
-	    @$ids_str = DevblocksPlatform::importGPC($_REQUEST['ids'],'string');
-		$ids = DevblocksPlatform::parseCsvString($ids_str);
-
 		// Filter: whole list or check
 	    @$filter = DevblocksPlatform::importGPC($_REQUEST['filter'],'string','');
+	    $ids = array();
 	    
 	    // View
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
 		$view = C4_AbstractViewLoader::getView($view_id);
 		
 		// Attachment fields
-		@$deleted = trim(DevblocksPlatform::importGPC($_POST['deleted'],'integer',0));
+		@$deleted = DevblocksPlatform::importGPC($_POST['deleted'],'string');
 
 		$do = array();
 		
 		// Do: Deleted
 		if(0 != strlen($deleted))
-			$do['deleted'] = $deleted;
+			$do['deleted'] = intval($deleted);
 			
 		// Do: Custom fields
 //		$do = DAO_CustomFieldValue::handleBulkPost($do);
+		
+		switch($filter) {
+			// Checked rows
+			case 'checks':
+			    @$ids_str = DevblocksPlatform::importGPC($_REQUEST['ids'],'string');
+				$ids = DevblocksPlatform::parseCsvString($ids_str);
+				break;
+			default:
+				break;
+		}
 			
 		$view->doBulkUpdate($filter, $do, $ids);
 		
@@ -425,8 +507,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$tpl->assign('view_fields', View_Worker::getFields());
 		$tpl->assign('view_searchable_fields', View_Worker::getSearchFields());
 		
-		$tpl->assign('license',CerberusLicense::getInstance());
-		
 		$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/workers/index.tpl');
 	}
 	
@@ -439,7 +519,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 		$tpl->assign('view_id', $view_id);
 		
-		$worker = DAO_Worker::getAgent($id);
+		$worker = DAO_Worker::get($id);
 		$tpl->assign('worker', $worker);
 		
 		$teams = DAO_Group::getAll();
@@ -484,62 +564,63 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		if(!empty($id) && !empty($delete)) {
 			// Can't delete or disable self
 			if($active_worker->id != $id)
-				DAO_Worker::deleteAgent($id);
+				DAO_Worker::delete($id);
 			
 		} else {
 			if(empty($id) && null == DAO_Worker::lookupAgentEmail($email)) {
-				$workers = DAO_Worker::getAll();
-				$license = CerberusLicense::getInstance();
-				if ((!@empty($license['workers'])&&(@$license['workers']>=100||count($workers)<@$license['workers']))||(@empty($license['workers'])&&count($workers)<1)) {
-					// Creating new worker.  If password is empty, email it to them
-				    if(empty($password)) {
-				    	$settings = DevblocksPlatform::getPluginSettingsService();
-						$replyFrom = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
-						$replyPersonal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL,CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
-						$url = DevblocksPlatform::getUrlService();
-				    	
-						$password = CerberusApplication::generatePassword(8);
-				    	
-						try {
-					        $mail_service = DevblocksPlatform::getMailService();
-					        $mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
-					        $mail = $mail_service->createMessage();
-					        
-							$mail->setTo(array($email => $first_name . ' ' . $last_name));
-							$mail->setFrom(array($replyFrom => $replyPersonal));
-					        $mail->setSubject('Your new helpdesk login information!');
-					        $mail->generateId();
-							
-							$headers = $mail->getHeaders();
-							
-					        $headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
-					        
-						    $body = sprintf("Your new helpdesk login information is below:\r\n".
-								"\r\n".
-						        "URL: %s\r\n".
-						        "Login: %s\r\n".
-						        "Password: %s\r\n".
-						        "\r\n".
-						        "You should change your password from Preferences after logging in for the first time.\r\n".
-						        "\r\n",
-							        $url->write('',true),
-							        $email,
-							        $password
-						    );
-					        
-							$mail->setBody($body);
-	
-							if(!$mailer->send($mail)) {
-								throw new Exception('Password notification email failed to send.');
-							}
-						} catch (Exception $e) {
-							// [TODO] need to report to the admin when the password email doesn't send.  The try->catch
-							// will keep it from killing php, but the password will be empty and the user will never get an email.
+				// Creating new worker.  If password is empty, email it to them
+			    if(empty($password)) {
+			    	$settings = DevblocksPlatform::getPluginSettingsService();
+					$replyFrom = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
+					$replyPersonal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL,CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
+					$url = DevblocksPlatform::getUrlService();
+			    	
+					$password = CerberusApplication::generatePassword(8);
+			    	
+					try {
+				        $mail_service = DevblocksPlatform::getMailService();
+				        $mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+				        $mail = $mail_service->createMessage();
+				        
+						$mail->setTo(array($email => $first_name . ' ' . $last_name));
+						$mail->setFrom(array($replyFrom => $replyPersonal));
+				        $mail->setSubject('Your new helpdesk login information!');
+				        $mail->generateId();
+						
+						$headers = $mail->getHeaders();
+						
+				        $headers->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
+				        
+					    $body = sprintf("Your new helpdesk login information is below:\r\n".
+							"\r\n".
+					        "URL: %s\r\n".
+					        "Login: %s\r\n".
+					        "Password: %s\r\n".
+					        "\r\n".
+					        "You should change your password from Preferences after logging in for the first time.\r\n".
+					        "\r\n",
+						        $url->write('',true),
+						        $email,
+						        $password
+					    );
+				        
+						$mail->setBody($body);
+
+						if(!$mailer->send($mail)) {
+							throw new Exception('Password notification email failed to send.');
 						}
-				    }
-					
-					$id = DAO_Worker::create($email, $password, '', '', '');
-				}
+					} catch (Exception $e) {
+						// [TODO] need to report to the admin when the password email doesn't send.  The try->catch
+						// will keep it from killing php, but the password will be empty and the user will never get an email.
+					}
+			    }
+				
+			    $fields = array(
+			    	DAO_Worker::EMAIL => $email,
+			    	DAO_Worker::PASSWORD => md5($password),
+			    );
+			    
+				$id = DAO_Worker::create($fields);
 			} // end create worker
 		    
 		    // Update
@@ -558,7 +639,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 			}
 			
 			// Update worker
-			DAO_Worker::updateAgent($id, $fields);
+			DAO_Worker::update($id, $fields);
 			
 			// Update group memberships
 			if(is_array($group_ids) && is_array($group_roles))
@@ -621,12 +702,9 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	}
 	
 	function doWorkersBulkUpdateAction() {
-		// Checked rows
-	    @$ids_str = DevblocksPlatform::importGPC($_REQUEST['ids'],'string');
-		$ids = DevblocksPlatform::parseCsvString($ids_str);
-
 		// Filter: whole list or check
 	    @$filter = DevblocksPlatform::importGPC($_REQUEST['filter'],'string','');
+	    $ids = array();
 	    
 	    // View
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
@@ -643,6 +721,16 @@ class ChConfigurationPage extends CerberusPageExtension  {
 			
 		// Do: Custom fields
 		$do = DAO_CustomFieldValue::handleBulkPost($do);
+		
+		switch($filter) {
+			// Checked rows
+			case 'checks':
+			    @$ids_str = DevblocksPlatform::importGPC($_REQUEST['ids'],'string');
+				$ids = DevblocksPlatform::parseCsvString($ids_str);
+				break;
+			default:
+				break;
+		}
 		
 		$view->doBulkUpdate($filter, $do, $ids);
 		
@@ -924,6 +1012,42 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	    }
 		
 		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','preparser')));
+	}
+	
+	function showTabQueueAction() {
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('path', $this->_TPL_PATH);
+
+		$tpl->assign('response_uri', 'config/queue');
+		
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = 'config_mail_queue';
+		$defaults->name = 'Mail Queue';
+		$defaults->class_name = 'View_MailQueue';
+		$defaults->params = array(
+			SearchFields_MailQueue::IS_QUEUED => new DevblocksSearchCriteria(SearchFields_MailQueue::IS_QUEUED,'=', 1)
+		);
+		$defaults->view_columns = array(
+			SearchFields_MailQueue::HINT_TO,
+			SearchFields_MailQueue::UPDATED,
+			SearchFields_MailQueue::WORKER_ID,
+			SearchFields_MailQueue::QUEUE_FAILS,
+			SearchFields_MailQueue::QUEUE_PRIORITY,
+		);
+		
+		if(null != ($view = C4_AbstractViewLoader::getView($defaults->id, $defaults))) {
+			$view->params[SearchFields_MailQueue::IS_QUEUED] = new DevblocksSearchCriteria(SearchFields_MailQueue::IS_QUEUED,'=',1);
+			C4_AbstractViewLoader::setView($view->id, $view);
+			
+			$search_fields = View_MailQueue::getSearchFields();
+			unset($search_fields[SearchFields_MailQueue::IS_QUEUED]);
+			
+			$tpl->assign('view', $view);
+			$tpl->assign('view_fields', View_MailQueue::getFields());
+			$tpl->assign('view_searchable_fields', $search_fields);
+		} 
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/mail/queue/index.tpl');
 	}
 	
 	// Ajax
@@ -1229,12 +1353,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		unset($plugins['cerberusweb.core']);
 		$tpl->assign('plugins', $plugins);
 		
-//		$points = DevblocksPlatform::getExtensionPoints();
-//		$tpl->assign('points', $points);
-		
-		$license = CerberusLicense::getInstance();
-		$tpl->assign('license', $license);
-		
 		$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/plugins/index.tpl');
 	}
 	
@@ -1308,8 +1426,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 		$role_roster = DAO_WorkerRole::getRoleWorkers($id);
 		$tpl->assign('role_workers', $role_roster);
-		
-		$tpl->assign('license', CerberusLicense::getInstance());
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/acl/edit_role.tpl');
 	}
@@ -1469,6 +1585,9 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	function saveJobAction() {
 		$translate = DevblocksPlatform::getTranslationService();
 		
+		if(ONDEMAND_MODE)
+			return;
+		
 		$worker = CerberusApplication::getActiveWorker();
 		if(!$worker || !$worker->is_superuser) {
 			echo $translate->_('common.access_denied');
@@ -1510,8 +1629,10 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	// Post
 	function saveLicenseAction() {
 		$translate = DevblocksPlatform::getTranslationService();
-		$settings = DevblocksPlatform::getPluginSettingsService();
 		$worker = CerberusApplication::getActiveWorker();
+
+		if(ONDEMAND_MODE)
+			return;
 		
 		if(!$worker || !$worker->is_superuser) {
 			echo $translate->_('common.access_denied');
@@ -1528,7 +1649,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		@$do_delete = DevblocksPlatform::importGPC($_POST['do_delete'],'integer',0);
 
 		if(!empty($do_delete)) {
-			$settings->set('cerberusweb.core',CerberusSettings::LICENSE, '');
+			DevblocksPlatform::setPluginSetting('cerberusweb.core',CerberusSettings::LICENSE, '');
 			$tpl->assign('license', '');
 			$tpl->assign('success', "Your license has been deleted.");
 			$tpl->display('file:'.$this->_TPL_PATH.'configuration/tabs/settings/license.tpl');
@@ -1541,8 +1662,17 @@ class ChConfigurationPage extends CerberusPageExtension  {
 			return;
 		}
 		
+		// It takes time, skill, and money to develop software like this.
 		if(null==($valid = CerberusLicense::validate($key,$company,$email)) || empty($valid)) {
-			$tpl->assign('error', "Your license could not be verified.  Please double-check the company name and e-mail address and make sure they exactly match your order.");
+			$tpl->assign('error', "The provided license could not be verified.  Please double-check the company name and e-mail address and make sure they exactly match your order.");
+			$tpl->display('file:'.$this->_TPL_PATH.'configuration/tabs/settings/license.tpl');
+			return;
+		}
+
+		// Our prices are very reasonable.
+		if(intval(gmdate("Ymd99",@$valid['upgrades'])) < APP_BUILD) {
+			$tpl->assign('error', sprintf("The provided license is expired and does not activate version %s.", APP_VERSION));
+			$valid = null;
 			$tpl->display('file:'.$this->_TPL_PATH.'configuration/tabs/settings/license.tpl');
 			return;
 		}
@@ -1554,8 +1684,8 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		 * http://www.cerberusweb.com/
 		 */
 
-		$settings->set('cerberusweb.core', CerberusSettings::LICENSE, json_encode($valid));
-		
+		// Please be honest.
+		DevblocksPlatform::setPluginSetting('cerberusweb.core', CerberusSettings::LICENSE, json_encode($valid));
 		$tpl->assign('license', $valid);
 		
 		$tpl->assign('success', "Your license has been updated!");
@@ -1592,8 +1722,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$workers = DAO_Worker::getAllActive();
 		$tpl->assign('workers', $workers);
 		
-		$tpl->assign('license',CerberusLicense::getInstance());
-		
 		$tpl->display('file:' . $this->_TPL_PATH . 'configuration/tabs/groups/edit_group.tpl');
 	}
 	
@@ -1616,16 +1744,23 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 		if(!empty($id) && !empty($delete)) {
 			if(!empty($delete_move_id)) {
-				$fields = array(
-					DAO_Ticket::TEAM_ID => $delete_move_id
-				);
-				$where = sprintf("%s=%d",
-					DAO_Ticket::TEAM_ID,
-					$id
-				);
-				DAO_Ticket::updateWhere($fields, $where);
+				if(null != ($group = DAO_Group::getTeam($id))) {
+					$fields = array(
+						DAO_Ticket::TEAM_ID => $delete_move_id
+					);
+					$where = sprintf("%s=%d",
+						DAO_Ticket::TEAM_ID,
+						$id
+					);
+					DAO_Ticket::updateWhere($fields, $where);
+					
+					// If this was the default group, move it.
+					if($group->is_default)
+						DAO_Group::setDefaultGroup($delete_move_id);
+					
+					DAO_Group::deleteTeam($group->id);
+				}
 				
-				DAO_Group::deleteTeam($id);
 			}
 			
 		} elseif(!empty($id)) {
@@ -1671,7 +1806,6 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 	    @$title = DevblocksPlatform::importGPC($_POST['title'],'string','');
 	    @$logo = DevblocksPlatform::importGPC($_POST['logo'],'string');
-	    @$authorized_ips_str = DevblocksPlatform::importGPC($_POST['authorized_ips'],'string','');
 
 	    if(empty($title))
 	    	$title = 'Cerberus Helpdesk :: Team-based E-mail Management';
@@ -1679,7 +1813,11 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	    $settings = DevblocksPlatform::getPluginSettingsService();
 	    $settings->set('cerberusweb.core',CerberusSettings::HELPDESK_TITLE, $title);
 	    $settings->set('cerberusweb.core',CerberusSettings::HELPDESK_LOGO_URL, $logo); // [TODO] Enforce some kind of max resolution?
-	    $settings->set('cerberusweb.core',CerberusSettings::AUTHORIZED_IPS, $authorized_ips_str);
+	    
+	    if(!ONDEMAND_MODE) {
+		    @$authorized_ips_str = DevblocksPlatform::importGPC($_POST['authorized_ips'],'string','');
+	    	$settings->set('cerberusweb.core',CerberusSettings::AUTHORIZED_IPS, $authorized_ips_str);
+	    }
 	    
 	    DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','settings')));
 	}

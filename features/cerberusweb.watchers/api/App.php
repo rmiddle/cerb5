@@ -1,4 +1,53 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2010, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Cerberus Public License.
+| The latest version of this license can be found here:
+| http://www.cerberusweb.com/license.php
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+/*
+ * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
+ * 
+ * Sure, it would be so easy to just cheat and edit this file to use the 
+ * software without paying for it.  But we trust you anyway.  In fact, we're 
+ * writing this software for you! 
+ * 
+ * Quality software backed by a dedicated team takes money to develop.  We 
+ * don't want to be out of the office bagging groceries when you call up 
+ * needing a helping hand.  We'd rather spend our free time coding your 
+ * feature requests than mowing the neighbors' lawns for rent money. 
+ * 
+ * We've never believed in hiding our source code out of paranoia over not 
+ * getting paid.  We want you to have the full source code and be able to 
+ * make the tweaks your organization requires to get more done -- despite 
+ * having less of everything than you might need (time, people, money, 
+ * energy).  We shouldn't be your bottleneck.
+ * 
+ * We've been building our expertise with this project since January 2002.  We 
+ * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
+ * let us take over your shared e-mail headache is a worthwhile investment.  
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
+ * 
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
+ *
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ */
+
 class ChWatchersConfigTab extends Extension_ConfigTab {
 	const ID = 'watchers.config.tab';
 	
@@ -144,7 +193,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 		if(null == ($worker_addy = DAO_AddressToWorker::getByAddress($address->email)))
 			return;
 				
-		if(null == ($worker = DAO_Worker::getAgent($worker_addy->worker_id)))
+		if(null == ($worker = DAO_Worker::get($worker_addy->worker_id)))
 			return;
 			
 		$url_writer = DevblocksPlatform::getUrlService();
@@ -156,7 +205,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 		$default_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
 		$default_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL, CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
 
-		if(null == ($ticket = DAO_Ticket::getTicket($ticket_id)))
+		if(null == ($ticket = DAO_Ticket::get($ticket_id)))
 			return;
 
 		// Find all our matching filters
@@ -241,7 +290,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 					$comment
 				);
 				
-				$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+				$headers->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 				$headers->addTextHeader('Precedence','List');
 				$headers->addTextHeader('Auto-Submitted','auto-generated');
 				
@@ -360,7 +409,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 					    $headers->addTextHeader('In-Reply-To', $in_reply_to);
 					}
 					
-					$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+					$headers->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 					$headers->addTextHeader('Precedence','List');
 					$headers->addTextHeader('Auto-Submitted','auto-generated');
 					
@@ -396,7 +445,7 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
     	
 		$url_writer = DevblocksPlatform::getUrlService();
 		
-		$ticket = DAO_Ticket::getTicket($ticket_id);
+		$ticket = DAO_Ticket::get($ticket_id);
 
 		// Find all our matching filters
 		if(empty($ticket) || false == ($matches = Model_WatcherMailFilter::getMatches(
@@ -496,17 +545,22 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 					));
 
 					$hdrs = $mail->getHeaders();
-					
+
 					if(null !== (@$msgid = $headers['message-id'])) {
-						$hdrs->addTextHeader('Message-Id',$msgid);
+						$hdrs->removeAll('message-id');
+						
+						$hdrs->addTextHeader('Message-Id', $msgid);
 					}
 					
 					if(null !== (@$in_reply_to = $headers['in-reply-to'])) {
+						$hdrs->removeAll('references');
+						$hdrs->removeAll('in-reply-to');
+						
 					    $hdrs->addTextHeader('References', $in_reply_to);
 					    $hdrs->addTextHeader('In-Reply-To', $in_reply_to);
 					}
 					
-					$hdrs->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+					$hdrs->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 					$hdrs->addTextHeader('Precedence','List');
 					$hdrs->addTextHeader('Auto-Submitted','auto-generated');
 					
@@ -605,12 +659,9 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 	
 	// Ajax
 	function doWatcherBulkPanelAction() {
-		// Checked rows
-	    @$ids_str = DevblocksPlatform::importGPC($_REQUEST['ids'],'string');
-		$ids = DevblocksPlatform::parseCsvString($ids_str);
-
 		// Filter: whole list or check
 	    @$filter = DevblocksPlatform::importGPC($_REQUEST['filter'],'string','');
+	    $ids = array();
 	    
 	    // View
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
@@ -627,6 +678,16 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 			
 		// Do: Custom fields
 		//$do = DAO_CustomFieldValue::handleBulkPost($do);
+		
+		switch($filter) {
+			// Checked rows
+			case 'checks':
+			    @$ids_str = DevblocksPlatform::importGPC($_REQUEST['ids'],'string');
+				$ids = DevblocksPlatform::parseCsvString($ids_str);
+				break;
+			default:
+				break;
+		}
 			
 		$view->doBulkUpdate($filter, $do, $ids);
 		

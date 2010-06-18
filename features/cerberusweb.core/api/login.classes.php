@@ -2,7 +2,7 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2007, WebGroup Media LLC
+| All source code & content (c) Copyright 2010, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
 | This source code is released under the Cerberus Public License.
@@ -26,7 +26,7 @@
  * needing a helping hand.  We'd rather spend our free time coding your 
  * feature requests than mowing the neighbors' lawns for rent money. 
  * 
- * We've never believed in encoding our source code out of paranoia over not 
+ * We've never believed in hiding our source code out of paranoia over not 
  * getting paid.  We want you to have the full source code and be able to 
  * make the tweaks your organization requires to get more done -- despite 
  * having less of everything than you might need (time, people, money, 
@@ -35,21 +35,25 @@
  * We've been building our expertise with this project since January 2002.  We 
  * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
  * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your in-box that you probably 
- * haven't had since spammers found you in a game of "E-mail Address 
- * Battleship".  Miss. Miss. You sunk my in-box!
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
  * 
- * A legitimate license entitles you to support, access to the developer 
- * mailing list, the ability to participate in betas and the warm fuzzy 
- * feeling of feeding a couple obsessed developers who want to help you get 
- * more done than 'the other guy'.
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
  *
- * - Jeff Standen, Mike Fogg, Brenan Cavish, Darren Sugita, Dan Hildebrandt
- * 		and Joe Geck.
- *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class DefaultLoginModule extends Extension_LoginAuthenticator {
 	function renderLoginForm() {
+		$request = DevblocksPlatform::getHttpRequest();
+		$stack = $request->path;
+		
+		@array_shift($stack); // login
+		
 		// draws HTML form of controls needed for login information
 		$tpl = DevblocksPlatform::getTemplateService();
 		
@@ -59,6 +63,16 @@ class DefaultLoginModule extends Extension_LoginAuthenticator {
 		
 		@$redir_path = explode('/',urldecode(DevblocksPlatform::importGPC($_REQUEST["url"],"string","")));
 		$tpl->assign('original_path', (count($redir_path)==0) ? 'login' : implode(',',$redir_path));
+		
+		switch(array_shift($stack)) {
+			case 'too_many':
+				@$secs = array_shift($stack);
+				$tpl->assign('error', sprintf("The maximum number of simultaneous workers are currently signed on.  The next session expires in %s.", ltrim(_DevblocksTemplateManager::modifier_devblocks_prettytime($secs,true),'+')));
+				break;
+			case 'failed':
+				$tpl->assign('error', 'Login failed.');
+				break;
+		}
 		
 		$tpl->display('file:' . dirname(dirname(__FILE__)) . '/templates/login/login_form_default.tpl');
 	}

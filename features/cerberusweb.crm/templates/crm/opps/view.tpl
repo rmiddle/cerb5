@@ -17,7 +17,7 @@
 <div id="{$view->id}_tips" class="block" style="display:none;margin:10px;padding:5px;">Analyzing...</div>
 <form id="customize{$view->id}" name="customize{$view->id}" action="#" onsubmit="return false;" style="display:none;"></form>
 <form id="viewForm{$view->id}" name="viewForm{$view->id}" action="{devblocks_url}{/devblocks_url}" method="post">
-<button id="btnExplore{$view->id}" type="button" style="display:none;" onclick="this.form.a.value='viewOppsExplore';this.form.submit();"></button>
+<button id="btnExplore{$view->id}" type="button" style="display:none;" onclick="this.form.explore_from.value=$(this).closest('form').find('tbody input:checkbox:checked:first').val();this.form.a.value='viewOppsExplore';this.form.submit();"></button>
 <input type="hidden" name="view_id" value="{$view->id}">
 <input type="hidden" name="id" value="{$view->id}">
 <input type="hidden" name="c" value="crm">
@@ -48,18 +48,17 @@
 	{* Column Data *}
 	{foreach from=$data item=result key=idx name=results}
 
-	{assign var=rowIdPrefix value="row_"|cat:$view->id|cat:"_"|cat:$result.o_id}
 	{if $smarty.foreach.results.iteration % 2}
 		{assign var=tableRowClass value="even"}
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	
-		<tr class="{$tableRowClass}" id="{$rowIdPrefix}_s" onmouseover="$(this).addClass('hover');$('#{$rowIdPrefix}').addClass('hover');" onmouseout="$(this).removeClass('hover');$('#{$rowIdPrefix}').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { $('#{$rowIdPrefix}_s').find('input[type=checkbox]').first().click(); }">
-			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" value="{$result.o_id}" onclick="$(this).closest('form').find('input[name=explore_from]').first().val('{$result.o_id}');"></td>
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+		<tr class="{$tableRowClass}">
+			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" value="{$result.o_id}"></td>
 			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">{if $result.o_is_closed && $result.o_is_won}<img src="{devblocks_url}c=resource&p=cerberusweb.crm&f=images/up_plus_gray.gif{/devblocks_url}" align="top" title="Won"> {elseif $result.o_is_closed && !$result.o_is_won}<img src="{devblocks_url}c=resource&p=cerberusweb.crm&f=images/down_minus_gray.gif{/devblocks_url}" align="top" title="Lost"> {/if}<a href="{devblocks_url}c=crm&d=opps&id={$result.o_id}{/devblocks_url}" class="subject">{if !empty($result.o_name)}{$result.o_name|escape}{else}{'common.no_title'|devblocks_translate}{/if}</a> <a href="javascript:;" onclick="genericAjaxPanel('c=crm&a=showOppPanel&view_id={$view->id}&id={$result.o_id}', null, false, '500');"><span class="ui-icon ui-icon-newwin" style="display:inline-block;vertical-align:middle;" title="{$translate->_('views.peek')}"></span></a></td>
 		</tr>
-		<tr class="{$tableRowClass}" id="{$rowIdPrefix}" onmouseover="$(this).addClass('hover');$('#{$rowIdPrefix}_s').addClass('hover');" onmouseout="$(this).removeClass('hover');$('#{$rowIdPrefix}_s').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { $('#{$rowIdPrefix}_s').find('input[type=checkbox]').first().click(); }">
+		<tr class="{$tableRowClass}">
 		{foreach from=$view->view_columns item=column name=columns}
 			{if substr($column,0,3)=="cf_"}
 				{include file="file:$core_tpl/internal/custom_fields/view/cell_renderer.tpl"}
@@ -99,6 +98,7 @@
 			{/if}
 		{/foreach}
 		</tr>
+	</tbody>
 	{/foreach}
 	
 </table>

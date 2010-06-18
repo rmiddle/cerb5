@@ -36,11 +36,23 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 	
 	function postAction($stack) {
 		@$action = array_shift($stack);
-		
-		switch($action) {
-			case 'search':
-				$this->postSearch();
-				break;
+
+		if(is_numeric($action) && !empty($stack)) {
+			$id = intval($action);
+			$action = array_shift($stack);
+			
+			switch($action) {
+				case 'comment':
+					$this->postComment($id);
+					break;
+			}
+			
+		} else {
+			switch($action) {
+				case 'search':
+					$this->postSearch();
+					break;
+			}
 		}
 		
 		$this->error(self::ERRNO_NOT_IMPLEMENTED);
@@ -98,8 +110,14 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 		@$is_deleted = DevblocksPlatform::importGPC($_REQUEST['is_deleted'],'string','');
 		@$next_worker_id = DevblocksPlatform::importGPC($_REQUEST['next_worker_id'],'string','');
 		
-		// [TODO] Check group memberships
-
+		if(null == ($ticket = DAO_Ticket::get($id)))
+			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid ticket ID %d", $id));
+			
+		// Check group memberships
+		$memberships = $worker->getMemberships();
+		if(!$worker->is_superuser && !isset($memberships[$ticket->team_id]))
+			$this->error(self::ERRNO_ACL, 'Access denied to modify tickets in this group.');
+		
 		$fields = array(
 //			DAO_Ticket::UPDATED_DATE => time(),
 		);
@@ -144,13 +162,16 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 		}
 		
 		if(!empty($fields))
-			DAO_Ticket::updateTicket(intval($id), $fields);
+			DAO_Ticket::update($id, $fields);
 			
-		// [TODO] Set custom fields
-		
-		$result = array('id'=> $id);
-		
-		$this->success($result);
+		// Handle custom fields
+		$customfields = $this->_handleCustomFields($_POST);
+		if(is_array($customfields))
+			DAO_CustomFieldValue::formatAndSetFieldValues(ChCustomFieldSource_Ticket::ID, $id, $customfields, true, true, true);
+
+		// Update
+		DAO_Ticket::update($id, $fields);
+		$this->getId($id);
 	}
 	
 	private function deleteId($id) {
@@ -160,9 +181,15 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 		if(!$worker->hasPriv('core.ticket.actions.delete'))
 			$this->error(self::ERRNO_ACL, 'Access denied to delete tickets.');
 
-		// [TODO] Check group memberships
-		
-		DAO_Ticket::updateTicket(intval($id), array(
+		if(null == ($ticket = DAO_Ticket::get($id)))
+			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid ticket ID %d", $id));
+			
+		// Check group memberships
+		$memberships = $worker->getMemberships();
+		if(!$worker->is_superuser && !isset($memberships[$ticket->team_id]))
+			$this->error(self::ERRNO_ACL, 'Access denied to delete tickets in this group.');
+			
+		DAO_Ticket::update($ticket->id, array(
 			DAO_Ticket::IS_CLOSED => 1,
 			DAO_Ticket::IS_DELETED => 1,
 		));
@@ -260,6 +287,41 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 		$container = $this->_handlePostSearch();
 		
 		$this->success($container);
+	}
+	
+	private function postComment($id) {
+		$worker = $this->getActiveWorker();
+
+		@$comment = DevblocksPlatform::importGPC($_POST['comment'],'string','');
+		
+		if(null == ($ticket = DAO_Ticket::get($id)))
+			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid ticket ID %d", $id));
+			
+		// Check group memberships
+		$memberships = $worker->getMemberships();
+		if(!$worker->is_superuser && !isset($memberships[$ticket->team_id]))
+			$this->error(self::ERRNO_ACL, 'Access denied to delete tickets in this group.');
+		
+		// Worker address exists
+		if(null === ($address = CerberusApplication::hashLookupAddress($worker->email,true)))
+			$this->error(self::ERRNO_CUSTOM, 'Your worker does not have a valid e-mail address.');
+		
+		// Required fields
+		if(empty($comment))
+			$this->error(self::ERRNO_CUSTOM, "The 'comment' field is required.");
+			
+		$fields = array(
+			DAO_TicketComment::CREATED => time(),
+			DAO_TicketComment::TICKET_ID => $ticket->id,
+			DAO_TicketComment::ADDRESS_ID => $address->id,
+			DAO_TicketComment::COMMENT => $comment,
+		);
+		$comment_id = DAO_TicketComment::create($fields);
+
+		$this->success(array(
+			'ticket_id' => $ticket->id,
+			'comment_id' => $comment_id,
+		));
 	}
 	
 };

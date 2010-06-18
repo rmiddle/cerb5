@@ -26,7 +26,7 @@
  * needing a helping hand.  We'd rather spend our free time coding your 
  * feature requests than mowing the neighbors' lawns for rent money. 
  * 
- * We've never believed in encoding our source code out of paranoia over not 
+ * We've never believed in hiding our source code out of paranoia over not 
  * getting paid.  We want you to have the full source code and be able to 
  * make the tweaks your organization requires to get more done -- despite 
  * having less of everything than you might need (time, people, money, 
@@ -35,21 +35,20 @@
  * We've been building our expertise with this project since January 2002.  We 
  * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
  * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your in-box that you probably 
- * haven't had since spammers found you in a game of "E-mail Address 
- * Battleship".  Miss. Miss. You sunk my in-box!
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
  * 
- * A legitimate license entitles you to support, access to the developer 
- * mailing list, the ability to participate in betas and the warm fuzzy 
- * feeling of feeding a couple obsessed developers who want to help you get 
- * more done than 'the other guy'.
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
  *
- * - Jeff Standen, Mike Fogg, Brenan Cavish, Darren Sugita, Dan Hildebrandt
- * 		and Joe Geck.
- *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_VERSION", '5.0.0-rc1');
-define("APP_BUILD", 2010042501);
+define("APP_BUILD", 2010061702);
+define("APP_VERSION", '5.0.1');
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -67,6 +66,7 @@ DevblocksPlatform::registerClasses($path . 'Parser.php', array(
 	'CerberusParser',
 	'CerberusParserMessage',
 	'ParserFile',
+	'ParserFileBuffer',
 ));
 
 DevblocksPlatform::registerClasses($path . 'Update.php', array(
@@ -125,16 +125,6 @@ class CerberusApplication extends DevblocksApplication {
 	
 	static function checkRequirements() {
 		$errors = array();
-		
-		// License
-		// [TODO] 
-	    $license = CerberusLicense::getInstance();
-	    if(!empty($license)&&isset($license['expires'])&&intval(gmdate("Ymd99",$license['expires'])) < APP_BUILD) {
-	    	$errors[] = sprintf("Your Cerb5 license permits software updates through %s, and this update was released on %s.  Please renew your license or download a previous version.",
-	    		gmdate("F d, Y",$license['expires']),
-	    		gmdate("F d, Y",gmmktime(0,0,0,substr(APP_BUILD,4,2),substr(APP_BUILD,6,2),substr(APP_BUILD,0,4)))
-	    	);
-	    }
 		
 		// Privileges
 		
@@ -943,7 +933,7 @@ class CerberusContexts {
 		
 		// Polymorph
 		if(is_numeric($worker)) {
-			$worker = DAO_Worker::getAgent($worker);
+			$worker = DAO_Worker::get($worker);
 		} elseif($worker instanceof Model_Worker) {
 			// It's what we want already.
 		} else {
@@ -1339,7 +1329,7 @@ class CerberusContexts {
 			$prefix = 'Article:';
 		
 		$translate = DevblocksPlatform::getTranslationService();
-		//$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Address::ID);
+		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_KbArticle::ID);
 		
 		// Polymorph
 		if(is_numeric($article)) {
@@ -1354,25 +1344,23 @@ class CerberusContexts {
 		// Token labels
 		$token_labels = array(
 			'content' => $prefix.$translate->_('kb_article.content'),
-			'is_html' => $prefix.$translate->_('kb_article.format'),
 			'id' => $prefix.$translate->_('common.id'),
 			'title' => $prefix.$translate->_('kb_article.title'),
 			'updated|date' => $prefix.$translate->_('kb_article.updated'),
 			'views' => $prefix.$translate->_('kb_article.views'),
 		);
 		
-//		if(is_array($fields))
-//		foreach($fields as $cf_id => $field) {
-//			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
-//		}
+		if(is_array($fields))
+		foreach($fields as $cf_id => $field) {
+			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
+		}
 
 		// Token values
 		$token_values = array();
 		
 		// Token values
 		if(null != $article) {
-			$token_values['content'] = $article->content;
-			$token_values['is_html'] = $article->format;
+			$token_values['content'] = $article->getContent();
 			$token_values['id'] = $article->id;
 			$token_values['title'] = $article->title;
 			$token_values['updated'] = $article->updated;
@@ -1391,28 +1379,28 @@ class CerberusContexts {
 				}
 			}
 			
-			//$token_values['custom'] = array();
+			$token_values['custom'] = array();
 			
-//			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Address::ID, $address->id));
-//			if(is_array($field_values) && !empty($field_values)) {
-//				foreach($field_values as $cf_id => $cf_val) {
-//					if(!isset($fields[$cf_id]))
-//						continue;
-//					
-//					// The literal value
-//					if(null != $address)
-//						$token_values['custom'][$cf_id] = $cf_val;
-//					
-//					// Stringify
-//					if(is_array($cf_val))
-//						$cf_val = implode(', ', $cf_val);
-//						
-//					if(is_string($cf_val)) {
-//						if(null != $address)
-//							$token_values['custom_'.$cf_id] = $cf_val;
-//					}
-//				}
-//			}
+			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_KbArticle::ID, $article->id));
+			if(is_array($field_values) && !empty($field_values)) {
+				foreach($field_values as $cf_id => $cf_val) {
+					if(!isset($fields[$cf_id]))
+						continue;
+					
+					// The literal value
+					if(null != $article)
+						$token_values['custom'][$cf_id] = $cf_val;
+					
+					// Stringify
+					if(is_array($cf_val))
+						$cf_val = implode(', ', $cf_val);
+						
+					if(is_string($cf_val)) {
+						if(null != $article)
+							$token_values['custom_'.$cf_id] = $cf_val;
+					}
+				}
+			}
 		}
 		
 		return true;
@@ -1593,7 +1581,7 @@ class CerberusContexts {
 			$token_values['created'] = $org->created;
 			if(!empty($org->city))
 				$token_values['city'] = $org->city;
-			if(!empty($org->county))
+			if(!empty($org->country))
 				$token_values['country'] = $org->country;
 			if(!empty($org->phone))
 				$token_values['phone'] = $org->phone;
@@ -1913,7 +1901,7 @@ class CerberusContexts {
 		
 		if($task) {
 			$token_values['completed'] = $task->completed_date;
-			$token_values['due'] = $task->updated_date;
+			$token_values['due'] = $task->due_date;
 			$token_values['id'] = $task->id;
 			$token_values['is_completed'] = $task->is_completed;
 			$token_values['title'] = $task->title;
@@ -1928,7 +1916,7 @@ class CerberusContexts {
 						continue;
 					
 					// The literal value
-					if(null != $org)
+					if(null != $task)
 						$token_values['custom'][$cf_id] = $cf_val;
 					
 					// Stringify
@@ -1936,7 +1924,7 @@ class CerberusContexts {
 						$cf_val = implode(', ', $cf_val);
 						
 					if(is_string($cf_val)) {
-						if(null != $org)
+						if(null != $task)
 							$token_values['custom_'.$cf_id] = $cf_val;
 					}
 				}
@@ -2013,7 +2001,7 @@ class CerberusContexts {
 						continue;
 					
 					// The literal value
-					if(null != $org)
+					if(null != $feedback)
 						$token_values['custom'][$cf_id] = $cf_val;
 					
 					// Stringify
@@ -2021,7 +2009,7 @@ class CerberusContexts {
 						$cf_val = implode(', ', $cf_val);
 						
 					if(is_string($cf_val)) {
-						if(null != $org)
+						if(null != $feedback)
 							$token_values['custom_'.$cf_id] = $cf_val;
 					}
 				}
@@ -2064,25 +2052,39 @@ class CerberusContexts {
 };
 
 class CerberusLicense {
+	private static $instance = null;
+	private $data = array();
+
 	/**
-	 * @return array
+	 * Commercial open source is the most constructive business model for our project.
+	 * We trust you.
+	 */
+	private function __construct() {
+		/*																																																																																																																															*/try{$l=(null!=(@$data=json_decode(DevblocksPlatform::getPluginSetting('cerberusweb.core',CerberusSettings::LICENSE,''),true)))?$data:array();self::validate(base64_decode(@$l[base64_decode('ZGF0YQ==')]),@$l['company'],@$l['email'])?@$this->data=$l:@$this->data=array();}catch(Exception $e){@$this->data=array();}return;/*
+		 * We've spent many years working on this software.
+		 * Please be honest!
+		 * http://www.cerberusweb.com/buy
+		 */
+		$this->data = (null != ($data = json_decode(DevblocksPlatform::getPluginSetting('devblocks.core','license_info',array()),true)))?$data:array();
+	}
+	
+	/**																																																																																																																																*/public function __get($property) {switch($property){case 'w':return(max(1,@intval($this->seats)));break;default:return(isset($this->data[$property]))?$this->data[$property]:null;break;}}/*
+	 * @return CerberusLicense
 	 */
 	public static function getInstance() {
-		// [TODO] Move 'data' to another setting
-		$settings = DevblocksPlatform::getPluginSettingsService();
-		@$license = json_decode($settings->get('cerberusweb.core',CerberusSettings::LICENSE,array()),true);																																																																																																						  	try{$l=$license;return self::validate(base64_decode(@$l[base64_decode('ZGF0YQ==')]),@$l['company'],@$l['email']);}catch(Exception $e){}
-		if(empty($license) || !is_array($license))
-			$license = array();
-		return $license;
+		if(is_null(self::$instance)) {
+			self::$instance = new CerberusLicense();
+		}
+		return self::$instance;
 	}
-
+	
 	/*
 	 * Please purchase a legitimate license and help support the project.
-	 * http://www.cerberusweb.com/
+	 * http://www.cerberusweb.com/buy
 	 */
 	public static function validate($key, $company, $email) {
-		/*  																																																																																																																														*/try{foreach(array('L0tleTogKC4qKS8='=>'s','L0NyZWF0ZWQ6ICguKikv'=>'c','L1VwZGF0ZWQ6ICguKikv'=>'u','L0V4cGlyZXM6ICguKikv'=>'e','L1dvcmtlcnM6ICguKikv'=>'w') as $k=>$v)@preg_match(base64_decode($k),$key,$matches)?@$$v=trim($matches[1]):null;$r=array();@$w=intval($w);@$cp=base64_decode('Y29tcGFueQ==');@$em=base64_decode('ZW1haWw=');@$cd=preg_replace('/[^A-Z0-9]/','',$s);@$l=explode('-',$e);@$e=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$l=explode('-',$c);@$c=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$l=explode('-',$u);@$u=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$h=str_split(strtoupper(sha1(sha1('cerb5').sha1($$cp).sha1($$em).sha1(intval($w)).sha1(gmdate('Y-m-d',$c)).sha1(gmdate('Y-m-d',$e)))),1);if(0==@strcasecmp(sprintf("%02X",strlen($$cp)+intval($w)),substr($cd,3,2))&&@intval(hexdec(substr($cd,5,1))==@intval(bindec(sprintf("%d%d%d%d",(182<=gmdate('z',$e))?1:0,(5==gmdate('w',$e))?1:0,('th'==gmdate('S',$e))?1:0,(1==gmdate('w',$e))?1:0))))&&0==@strcasecmp($h[hexdec(substr($cd,1,2))-@hexdec(substr($cd,0,1))],substr($cd,0,1)))@$r=array(base64_decode('a2V5')=>$s,base64_decode('Y3JlYXRlZA==')=>$c,base64_decode('dXBkYXRlZA==')=>$u,base64_decode('ZXhwaXJlcw==')=>$e,@$cp=>$$cp,@$em=>$$em,base64_decode('d29ya2Vycw==')=>intval($w),base64_decode('ZGF0YQ==')=>base64_encode($key));return $r;}catch(Exception $e){return array();}/*
-		 * [TODO] This should probably do a little more checking
+		/*  																																																																																																																														*/try{foreach(array('L0tleTogKC4qKS8='=>'s','L0NyZWF0ZWQ6ICguKikv'=>'c','L1VwZGF0ZWQ6ICguKikv'=>'u','L1VwZ3JhZGVzOiAoLiopLw=='=>'e','L1NlYXRzOiAoLiopLw=='=>'w') as $k=>$v)@preg_match(base64_decode($k),$key,$matches)?@$$v=trim($matches[1]):null;$r=array();@$w=intval($w);@$cp=base64_decode('Y29tcGFueQ==');@$em=base64_decode('ZW1haWw=');@$cd=preg_replace('/[^A-Z0-9]/','',$s);@$l=explode('-',$e);@$e=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$l=explode('-',$c);@$c=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$l=explode('-',$u);@$u=gmmktime(0,0,0,$l[1],$l[2],$l[0]);@$h=str_split(strtoupper(sha1(sha1('cerb5').sha1($$cp).sha1($$em).sha1(intval($w)).sha1(gmdate('Y-m-d',$c)).sha1(gmdate('Y-m-d',$e)))),1);if(0==@strcasecmp(sprintf("%02X",strlen($$cp)+intval($w)),substr($cd,3,2))&&@intval(hexdec(substr($cd,5,1))==@intval(bindec(sprintf("%d%d%d%d",(182<=gmdate('z',$e))?1:0,(5==gmdate('w',$e))?1:0,('th'==gmdate('S',$e))?1:0,(1==gmdate('w',$e))?1:0))))&&0==@strcasecmp($h[hexdec(substr($cd,1,2))-@hexdec(substr($cd,0,1))],substr($cd,0,1)))@$r=array(base64_decode('a2V5')=>$s,base64_decode('Y3JlYXRlZA==')=>$c,base64_decode('dXBkYXRlZA==')=>$u,base64_decode('dXBncmFkZXM=')=>$e,@$cp=>$$cp,@$em=>$$em,base64_decode('c2VhdHM=')=>intval($w),base64_decode('ZGF0YQ==')=>base64_encode($key));return $r;}catch(Exception $e){return array();}/*
+		 * Simple, huh?
 		 */
 		$lines = explode("\n", $key);
 		
@@ -2097,8 +2099,8 @@ class CerberusLicense {
 				'key'     => (list($k,$v)=explode(":",$lines[1]))?trim($v):null,
 				'created' => (list($k,$v)=explode(":",$lines[2]))?trim($v):null,
 				'updated' => (list($k,$v)=explode(":",$lines[3]))?trim($v):null,
-				'expires' => (list($k,$v)=explode(":",$lines[4]))?trim($v):null,
-				'workers' => (list($k,$v)=explode(":",$lines[5]))?trim($v):null
+				'upgrades' => (list($k,$v)=explode(":",$lines[4]))?trim($v):null,
+				'seats' => (list($k,$v)=explode(":",$lines[5]))?trim($v):null
 			)
 			: array();
 	}
@@ -2158,6 +2160,8 @@ class C4_DevblocksExtensionDelegate implements DevblocksExtensionDelegate {
 	
 	static function shouldLoadExtension(DevblocksExtensionManifest $extension_manifest) {
 		// Always allow core
+		if("devblocks.core" == $extension_manifest->plugin_id)
+			return true;
 		if("cerberusweb.core" == $extension_manifest->plugin_id)
 			return true;
 			
