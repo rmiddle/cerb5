@@ -530,13 +530,21 @@ class CerberusParser {
 						$i++;
 					} 				
 					
-	        		$result = CerberusMail::sendTicketMessage(array(
-						'ticket_id' => $id,
-						'message_id' => $msgid,
-						'content' => $message->body,
-						'files' => $attachment_files,
-						'agent_id' => $worker_address->worker_id,
-					));
+					if ($settings->get('cerberusweb.core',CerberusSettings::DISABLE_WORKER_EMAIL_TO_CUSTOMER,'0')) {
+						$comment_id = DAO_TicketComment::create(array(
+							DAO_TicketComment::ADDRESS_ID => $fromAddressInst->id,
+							DAO_TicketComment::CREATED => time(),
+							DAO_TicketComment::TICKET_ID => $id,
+							DAO_TicketComment::COMMENT => $message->body,
+						));
+					} else {
+						$result = CerberusMail::sendTicketMessage(array(
+							'message_id' => $msgid,
+							'content' => $message->body,
+							'files' => $attachment_files,
+							'agent_id' => $worker_address->worker_id,
+						));
+					}
 					
 	        		return $id;
 	        		

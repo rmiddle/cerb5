@@ -2121,7 +2121,8 @@ class CerberusSettings {
 	const DEFAULT_AUTOREPLY_LIMITER = 'default_autoreply_limiter'; 
 	const HELPDESK_TITLE = 'helpdesk_title'; 
 	const HELPDESK_LOGO_URL = 'helpdesk_logo_url'; 
-	const SMTP_HOST = 'smtp_host'; 
+	const DISABLE_WORKER_EMAIL_TO_CUSTOMER = 'disable_worker_email_to_customer'; 
+ 	const SMTP_HOST = 'smtp_host'; 
 	const SMTP_AUTH_ENABLED = 'smtp_auth_enabled'; 
 	const SMTP_AUTH_USER = 'smtp_auth_user'; 
 	const SMTP_AUTH_PASS = 'smtp_auth_pass'; 

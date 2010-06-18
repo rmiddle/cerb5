@@ -697,6 +697,9 @@
 		<tu tuid='config.mail.smtp.failed'>
 			<tuv xml:lang="en_US"><seg>SMTP Connection Failed:</seg></tuv>
 		</tu>
+		<tu tuid='config.mail.smtp.disable.email.outbound'>
+			<tuv xml:lang="en_US"><seg>Disable worker replies thought email</seg></tuv>
+		</tu>
 		<tu tuid='config.mail.message.status'>
 			<tuv xml:lang="en_US"><seg>Default Message Status:</seg></tuv>
 		</tu>

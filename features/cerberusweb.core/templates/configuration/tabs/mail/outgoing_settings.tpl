@@ -96,7 +96,9 @@
 					</select>
 					<br>
 					<br>
-				</div>
+					<label><input type="checkbox" name="disable_worker_email_to_customer" value="1" {if $settings->get('cerberusweb.core','disable_worker_email_to_customer')}checked{/if}> {$translate->_('config.mail.smtp.disable.email.outbound')|capitalize}</label><br>
+					<br>
+			</div>
 				<b>{$translate->_('config.mail.message.status.reply')|capitalize} {$translate->_('config.mail.message.status')|capitalize}</b><br>
 				<label><input type="radio" name="default_ticket_reply_status" value="0" {if $default_ticket_reply_status eq 0}checked{/if}> {$translate->_('status.open')|capitalize}</label>
 				<label><input type="radio" name="default_ticket_reply_status" value="1" {if $default_ticket_reply_status eq 1}checked{/if}> {$translate->_('status.waiting')|capitalize}</label>
