@@ -2,7 +2,7 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2007, WebGroup Media LLC
+| All source code & content (c) Copyright 2010, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
 | This source code is released under the Cerberus Public License.
@@ -26,7 +26,7 @@
  * needing a helping hand.  We'd rather spend our free time coding your 
  * feature requests than mowing the neighbors' lawns for rent money. 
  * 
- * We've never believed in encoding our source code out of paranoia over not 
+ * We've never believed in hiding our source code out of paranoia over not 
  * getting paid.  We want you to have the full source code and be able to 
  * make the tweaks your organization requires to get more done -- despite 
  * having less of everything than you might need (time, people, money, 
@@ -35,18 +35,17 @@
  * We've been building our expertise with this project since January 2002.  We 
  * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
  * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your in-box that you probably 
- * haven't had since spammers found you in a game of "E-mail Address 
- * Battleship".  Miss. Miss. You sunk my in-box!
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
  * 
- * A legitimate license entitles you to support, access to the developer 
- * mailing list, the ability to participate in betas and the warm fuzzy 
- * feeling of feeding a couple obsessed developers who want to help you get 
- * more done than 'the other guy'.
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
  *
- * - Jeff Standen, Mike Fogg, Brenan Cavish, Darren Sugita, Dan Hildebrandt
- * 		and Joe Geck.
- *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
 class CerberusParserMessage {
@@ -85,6 +84,33 @@ class ParserFile {
 	static public function makeTempFilename() {
 		$path = APP_TEMP_PATH . DIRECTORY_SEPARATOR;
 		return tempnam($path,'mime');
+	}
+};
+
+class ParseFileBuffer extends ParserFile {
+	private $mime_filename = '';
+	private $section = null;
+	private $info = array();
+	private $fp = null;
+
+	function __construct($section, $info, $mime_filename) {
+		$this->mime_filename = $mime_filename;
+		$this->section = $section;
+		$this->info = $info;
+
+		$this->setTempFile(ParserFile::makeTempFilename(),@$info['content-type']);
+		$this->fp = fopen($this->getTempFile(),'wb');
+
+		if($this->fp && !empty($this->section) && !empty($this->mime_filename)) {
+			mailparse_msg_extract_part_file($this->section, $this->mime_filename, array($this, "writeCallback"));
+		}
+
+		@fclose($this->fp);
+	}
+
+	function writeCallback($chunk) {
+		$this->file_size += fwrite($this->fp, $chunk);
+		//        echo $chunk;
 	}
 };
 
@@ -196,7 +222,7 @@ class CerberusParser {
 	                if(!$is_attachments_enabled) {
 	                    break; // skip attachment
 	                }
-				    $attach = new ParseCronFileBuffer($section, $info, $full_filename);
+				    $attach = new ParseFileBuffer($section, $info, $full_filename);
 	                
 				    // [TODO] This could be more efficient by not even saving in the first place above:
                     // Make sure our attachment is under the max preferred size
@@ -205,9 +231,15 @@ class CerberusParser {
 				        break;
 				    }
 				    
+				    if(!isset($info['content-name']) || empty($info['content-name'])) {
+				    	if(isset($info['disposition-filename']))
+				    		$info['content-name'] = $info['disposition-filename'];
+				    	else
+				    		$info['content-name'] = '';
+				    }
+				    
 				    // if un-named, call it "unnamed message part"
-				    if (!isset($info['content-name']) // if not set 
-				    	|| (isset($info['content-name']) && empty($info['content-name']))) { // or blank 
+				    if (empty($info['content-name'])) { 
 				    	$info['content-name'] = 'unnamed_message_part';
 				    }
 				    
@@ -316,7 +348,6 @@ class CerberusParser {
 		 */
 		$logger = DevblocksPlatform::getConsoleLog();
 		$settings = DevblocksPlatform::getPluginSettingsService();
-		$helpdesk_senders = CerberusApplication::getHelpdeskSenders();
 		
         // Pre-parse mail filters
 		$pre_filters = Model_PreParseRule::getMatches($message);
@@ -394,6 +425,8 @@ class CerberusParser {
 			if(is_array($sSubject))
 				$sSubject = array_shift($sSubject);
 		}
+		// Remove tabs, returns, and linefeeds
+		$sSubject = str_replace(array("\t","\n","\r")," ",$sSubject);
 		// The subject can still end up empty after QP decode
 		if(empty($sSubject))
 			$sSubject = "(no subject)";
@@ -455,13 +488,13 @@ class CerberusParser {
 						
 						switch($command) {
 							case 'close':
-								DAO_Ticket::updateTicket($id,array(
+								DAO_Ticket::update($id,array(
 									DAO_Ticket::IS_CLOSED => CerberusTicketStatus::CLOSED
 								));
 								break;
 								
 							case 'take':
-								DAO_Ticket::updateTicket($id,array(
+								DAO_Ticket::update($id,array(
 									DAO_Ticket::NEXT_WORKER_ID => $worker_address->worker_id
 								));
 								break;
@@ -572,6 +605,20 @@ class CerberusParser {
 				DAO_Ticket::LAST_ACTION_CODE => CerberusTicketActionCode::TICKET_OPENED,
 			);
 			$id = DAO_Ticket::createTicket($fields);
+
+			// [JAS]: Add requesters to the ticket
+			if(!empty($fromAddressInst->id) && !empty($id))
+				DAO_Ticket::createRequester($fromAddressInst->email, $id);
+				
+			// Add the other TO/CC addresses to the ticket
+			if($settings->get('cerberusweb.core', CerberusSettings::PARSER_AUTO_REQ, CerberusSettingsDefaults::PARSER_AUTO_REQ)) {
+				$destinations = self::getDestinations($headers);
+				
+				if(is_array($destinations))
+				foreach($destinations as $dest) {
+					DAO_Ticket::createRequester($dest, $id);
+				}
+			}
 			
 			// Apply routing actions to our new ticket ID
 			if(isset($routing_rules) && is_array($routing_rules))
@@ -579,54 +626,7 @@ class CerberusParser {
 				$rule->run($id);
 			}
 		}
-
-		// [JAS]: Add requesters to the ticket
-		if(!empty($fromAddressInst->id) && !empty($id)) {
-			// Don't add a requester if the sender is a helpdesk address
-			if(isset($helpdesk_senders[$fromAddressInst->email])) {
-				$logger->info("[Parser] Not adding ourselves as a requester: " . $fromAddressInst->email);
-			} else {
-				DAO_Ticket::createRequester($fromAddressInst->id,$id);
-			}
-		}
-	    
-		// Add the other TO/CC addresses to the ticket
-		// [TODO] This should be cleaned up and optimized
-		if($settings->get('cerberusweb.core',CerberusSettings::PARSER_AUTO_REQ,CerberusSettingsDefaults::PARSER_AUTO_REQ)) {
-			@$autoreq_exclude_list = $settings->get('cerberusweb.core',CerberusSettings::PARSER_AUTO_REQ_EXCLUDE,CerberusSettingsDefaults::PARSER_AUTO_REQ_EXCLUDE);
-			$destinations = self::getDestinations($headers);
-			
-			if(is_array($destinations) && !empty($destinations)) {
-				
-				// Filter out any excluded requesters
-				if(!empty($autoreq_exclude_list)) {
-					@$autoreq_exclude = DevblocksPlatform::parseCrlfString($autoreq_exclude_list);
-					
-					if(is_array($autoreq_exclude) && !empty($autoreq_exclude))
-					foreach($autoreq_exclude as $excl_pattern) {
-						$excl_regexp = DevblocksPlatform::parseStringAsRegExp($excl_pattern);
-						
-						// Check all destinations for this pattern
-						foreach($destinations as $idx => $dest) {
-							if(@preg_match($excl_regexp, $dest)) {
-								unset($destinations[$idx]);
-							}
-						}
-					}
-				}
-				
-				foreach($destinations as $dest) {
-					if(null != ($destInst = CerberusApplication::hashLookupAddress($dest, true))) {
-						// Skip if the destination is one of our senders or the matching TO
-						if(isset($helpdesk_senders[$destInst->email]))
-							continue;
-					 	
-						DAO_Ticket::createRequester($destInst->id,$id);
-					}
-				}
-			}
-		}
-		
+	    		
         $fields = array(
             DAO_Message::TICKET_ID => $id,
             DAO_Message::CREATED_DATE => $iDate,
@@ -680,7 +680,7 @@ class CerberusParser {
 		// Finalize our new ticket details (post-message creation)
 		if($bIsNew && !empty($id) && !empty($email_id)) {
 			// First thread (needed for anti-spam)
-			DAO_Ticket::updateTicket($id, array(
+			DAO_Ticket::update($id, array(
 				 DAO_Ticket::FIRST_MESSAGE_ID => $email_id,
 				 DAO_Ticket::LAST_MESSAGE_ID => $email_id,
 			));
@@ -725,7 +725,7 @@ class CerberusParser {
 		
 			// Save properties
 			if(!empty($change_fields))
-				DAO_Ticket::updateTicket($id, $change_fields);
+				DAO_Ticket::update($id, $change_fields);
 		}
 
 		// Reply notifications (new messages are handled by 'move' listener)
@@ -744,7 +744,6 @@ class CerberusParser {
 
 		// New ticket processing
 		if($bIsNew) {
-			
 			// Auto reply
 			@$autoreply_enabled = DAO_GroupSettings::get($group_id, DAO_GroupSettings::SETTING_AUTO_REPLY_ENABLED, 0);
 			@$autoreply = DAO_GroupSettings::get($group_id, DAO_GroupSettings::SETTING_AUTO_REPLY, '');
@@ -785,7 +784,7 @@ class CerberusParser {
 		
 		// Re-open and update our date on new replies
 		if(!$bIsNew) {
-			DAO_Ticket::updateTicket($id,array(
+			DAO_Ticket::update($id,array(
 			    DAO_Ticket::UPDATED_DATE => time(),
 			    DAO_Ticket::IS_WAITING => 0,
 			    DAO_Ticket::IS_CLOSED => 0,

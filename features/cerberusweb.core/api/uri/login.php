@@ -1,4 +1,52 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2010, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Cerberus Public License.
+| The latest version of this license can be found here:
+| http://www.cerberusweb.com/license.php
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+/*
+ * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
+ * 
+ * Sure, it would be so easy to just cheat and edit this file to use the 
+ * software without paying for it.  But we trust you anyway.  In fact, we're 
+ * writing this software for you! 
+ * 
+ * Quality software backed by a dedicated team takes money to develop.  We 
+ * don't want to be out of the office bagging groceries when you call up 
+ * needing a helping hand.  We'd rather spend our free time coding your 
+ * feature requests than mowing the neighbors' lawns for rent money. 
+ * 
+ * We've never believed in hiding our source code out of paranoia over not 
+ * getting paid.  We want you to have the full source code and be able to 
+ * make the tweaks your organization requires to get more done -- despite 
+ * having less of everything than you might need (time, people, money, 
+ * energy).  We shouldn't be your bottleneck.
+ * 
+ * We've been building our expertise with this project since January 2002.  We 
+ * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
+ * let us take over your shared e-mail headache is a worthwhile investment.  
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
+ * 
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
+ *
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ */
 class ChSignInPage extends CerberusPageExtension {
     const KEY_FORGOT_EMAIL = 'login.recover.email';
     const KEY_FORGOT_SENTCODE = 'login.recover.sentcode';
@@ -66,6 +114,9 @@ class ChSignInPage extends CerberusPageExtension {
 
 		$url_service = DevblocksPlatform::getUrlService();
 		
+		$honesty = CerberusLicense::getInstance();
+		$online_workers = DAO_Worker::getAllOnline(86400, true);
+		
 		if($inst->authenticate()) {
 			//authentication passed
 			if($original_path[0]=='')
@@ -73,9 +124,26 @@ class ChSignInPage extends CerberusPageExtension {
 			
 			$devblocks_response = new DevblocksHttpResponse($original_path);
 
-			// Worker
 			$worker = CerberusApplication::getActiveWorker();
-
+			
+			// Please be honest
+			if(!isset($online_workers[$worker->id]) && $honesty->w <= count($online_workers) && 100 > $honesty->w) {
+				$online_workers = DAO_Worker::getAllOnline(600, true);
+				
+				if($honesty->w <= count($online_workers)) {
+					$longest_idle = time();
+					foreach($online_workers as $idle_worker) {
+						if($idle_worker->last_activity_date < $longest_idle)
+							$longest_idle = $idle_worker->last_activity_date; 
+					}
+					$session = DevblocksPlatform::getSessionService();
+					$session->clear();
+					$time = 600 - max(0,time()-$longest_idle);
+					DevblocksPlatform::redirect(new DevblocksHttpResponse(array('login','too_many',$time)));
+					exit;
+				}
+			}
+			
 			// Timezone
 			if(null != ($timezone = DAO_WorkerPref::get($worker->id,'timezone'))) {
 				$_SESSION['timezone'] = $timezone;
@@ -93,11 +161,12 @@ class ChSignInPage extends CerberusPageExtension {
 				$next_page = ($tour_enabled) ?  'welcome' : 'home';				
 				$devblocks_response = new DevblocksHttpResponse(array($next_page));
 			}
-		}
-		else {
+			
+		} else {
 			//authentication failed
 			$devblocks_response = new DevblocksHttpResponse(array('login','failed'));
 		}
+		
 		DevblocksPlatform::redirect($devblocks_response);
 	}
 	
@@ -145,7 +214,7 @@ class ChSignInPage extends CerberusPageExtension {
 			
 			$headers = $mail->getHeaders();
 			
-			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 	
 			$mail->setBody(vsprintf($translate->_('signin.forgot.mail.body'), $code));
 			
@@ -193,7 +262,7 @@ class ChSignInPage extends CerberusPageExtension {
 	        return;
         
 	    if(0 == strcmp($sentcode,$code)) { // passed
-	        DAO_Worker::updateAgent($worker_id, array(
+	        DAO_Worker::update($worker_id, array(
 	            DAO_Worker::PASSWORD => md5($password)
 	        ));
 	        

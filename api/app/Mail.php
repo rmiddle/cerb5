@@ -2,7 +2,7 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2007, WebGroup Media LLC
+| All source code & content (c) Copyright 2010, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
 | This source code is released under the Cerberus Public License.
@@ -26,7 +26,7 @@
  * needing a helping hand.  We'd rather spend our free time coding your 
  * feature requests than mowing the neighbors' lawns for rent money. 
  * 
- * We've never believed in encoding our source code out of paranoia over not 
+ * We've never believed in hiding our source code out of paranoia over not 
  * getting paid.  We want you to have the full source code and be able to 
  * make the tweaks your organization requires to get more done -- despite 
  * having less of everything than you might need (time, people, money, 
@@ -35,18 +35,17 @@
  * We've been building our expertise with this project since January 2002.  We 
  * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
  * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your in-box that you probably 
- * haven't had since spammers found you in a game of "E-mail Address 
- * Battleship".  Miss. Miss. You sunk my in-box!
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
  * 
- * A legitimate license entitles you to support, access to the developer 
- * mailing list, the ability to participate in betas and the warm fuzzy 
- * feeling of feeding a couple obsessed developers who want to help you get 
- * more done than 'the other guy'.
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
  *
- * - Jeff Standen, Mike Fogg, Brenan Cavish, Darren Sugita, Dan Hildebrandt
- * 		and Joe Geck.
- *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class CerberusMail {
 	private function __construct() {}
@@ -86,7 +85,7 @@ class CerberusMail {
 			
 			$headers = $mail->getHeaders();
 			
-			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 			
 			$mail->setBody($body);
 		
@@ -215,7 +214,7 @@ class CerberusMail {
 				
 				$headers = $email->getHeaders();
 				
-				$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+				$headers->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 				
 				$email->setBody($content);
 				
@@ -274,7 +273,7 @@ class CerberusMail {
 						DAO_MailQueue::BODY => $content,
 						DAO_MailQueue::PARAMS_JSON => json_encode($params),
 						DAO_MailQueue::IS_QUEUED => !empty($worker) ? 0 : 1,
-						DAO_MailQueue::PRIORITY => 0,
+						DAO_MailQueue::QUEUE_PRIORITY => 0,
 					);
 					DAO_MailQueue::create($fields);
 					
@@ -314,10 +313,6 @@ class CerberusMail {
 		
 		// "Next:" [TODO] This is highly redundant with CerberusMail::reply
 		
-		if(isset($closed) && 1==$closed)
-			$fields[DAO_Ticket::IS_CLOSED] = 1;
-		if(isset($closed) && 2==$closed)
-			$fields[DAO_Ticket::IS_WAITING] = 1;
 		if(!empty($move_bucket)) {
 	        list($team_id, $bucket_id) = CerberusApplication::translateTeamCategoryCode($move_bucket);
 		    $fields[DAO_Ticket::TEAM_ID] = $team_id;
@@ -348,20 +343,12 @@ class CerberusMail {
 	    );
 		$message_id = DAO_Message::create($fields);
 	    
-		// Link Message to Ticket
-		DAO_Ticket::updateTicket($ticket_id, array(
-			DAO_Ticket::FIRST_MESSAGE_ID => $message_id,
-		));
-		
 		// Content
 		Storage_MessageContent::put($message_id, $content);
 
 		// Set recipients to requesters
 		foreach($toList as $to) {
-			if(null != ($reqAddressInst = CerberusApplication::hashLookupAddress($to, true))) {
-				$reqAddressId = $reqAddressInst->id;
-				DAO_Ticket::createRequester($reqAddressId, $ticket_id);
-			}
+			DAO_Ticket::createRequester($to, $ticket_id);
 		}
 		
 		// Headers
@@ -390,6 +377,18 @@ class CerberusMail {
 				}
 			}
 		}
+
+		// Finalize ticket
+		$fields = array(
+			DAO_Ticket::FIRST_MESSAGE_ID => $message_id,
+		);
+		
+		if(isset($closed) && 1==$closed)
+			$fields[DAO_Ticket::IS_CLOSED] = 1;
+		if(isset($closed) && 2==$closed)
+			$fields[DAO_Ticket::IS_WAITING] = 1;
+		
+		DAO_Ticket::update($ticket_id, $fields);
 		
 		// Train as not spam
 		CerberusBayes::markTicketAsNotSpam($ticket_id);
@@ -432,9 +431,9 @@ class CerberusMail {
 	    // [TODO] If we still don't have a $from_addy we need a graceful failure. 
 		
 		/*
-	     * [TODO] Move these into constants?
 	    'draft_id'
 	    'message_id'
+	    'is_forward'
 	    -----'ticket_id'
 		'subject'
 	    'to'
@@ -473,14 +472,20 @@ class CerberusMail {
 		    @$reply_message_id = $properties['message_id'];
 		    @$content = $properties['content'];
 		    @$files = $properties['files'];
+		    @$is_forward = $properties['is_forward']; 
 		    @$forward_files = $properties['forward_files'];
 		    @$worker_id = $properties['agent_id'];
 		    @$subject = $properties['subject'];
 		    
-			$message = DAO_Message::get($reply_message_id);
-	        $message_headers = DAO_MessageHeader::getAll($reply_message_id);		
+			if(null == ($message = DAO_Message::get($reply_message_id)))
+				return;
+				
+	        $message_headers = DAO_MessageHeader::getAll($reply_message_id);
+
 			$ticket_id = $message->ticket_id;
-			$ticket = DAO_Ticket::getTicket($ticket_id);
+	        
+			if(null == ($ticket = DAO_Ticket::get($ticket_id)))
+				return;
 	
 			// [TODO] Check that message|ticket isn't NULL
 			
@@ -503,7 +508,7 @@ class CerberusMail {
 			
 			// Prefix the worker name on the personal line?
 			if(!empty($group_personal_with_worker)
-				&& null != ($reply_worker = DAO_Worker::getAgent($worker_id))) {
+				&& null != ($reply_worker = DAO_Worker::get($worker_id))) {
 					$from_personal = $reply_worker->getName() .
 						(!empty($from_personal) ? (', ' . $from_personal) : "");
 			}
@@ -514,12 +519,12 @@ class CerberusMail {
 			
 			$headers = $mail->getHeaders();
 			
-			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
+			$headers->addTextHeader('X-Mailer','Cerberus Helpdesk ' . APP_VERSION . ' (Build '.APP_BUILD.')');
 	
 			// Subject
 			if(empty($subject)) $subject = $ticket->subject;
 			
-			if(!empty($properties['to'])) { // forward
+			if(!empty($is_forward)) { // forward
 				$mail->setSubject($subject);
 				
 			} else { // reply
@@ -547,10 +552,20 @@ class CerberusMail {
 			if(isset($properties['is_autoreply']) && $properties['is_autoreply']) {
 				$headers->addTextHeader('Auto-Submitted','auto-replied');
 				
+			    // Recipients
+				$requesters = DAO_Ticket::getRequestersByTicket($ticket_id);
+			    if(!is_array($requesters))
+			    	return;
+
+				// Is the first sender still a requester?
+				if(!isset($requesters[$ticket->first_wrote_address_id]))
+					return;
+					
+				// A legit address?
 				if(null == ($first_address = DAO_Address::get($ticket->first_wrote_address_id)))
 					return;
 	
-				// Don't send e-mail to ourselves
+				// Ourselves?
 				if(isset($helpdesk_senders[$first_address->email]))
 					return;
 					
@@ -591,25 +606,25 @@ class CerberusMail {
 				
 			// Not an auto-reply
 			} else {
-				// Forwards
-				if(!empty($properties['to'])) {
-				    $aTo = DevblocksPlatform::parseCsvString(str_replace(';',',',$properties['to']));
-					
-					if(is_array($aTo))
-					foreach($aTo as $to_addy) {
-						$mail->addTo($to_addy);
-					}
-				    
-				// Replies
-				} else {
+				// Default requester reply
+				if(empty($properties['to']) && !$is_forward) {
 				    // Recipients
 					$requesters = DAO_Ticket::getRequestersByTicket($ticket_id);
 				    if(is_array($requesters))
 				    foreach($requesters as $requester) { /* @var $requester Model_Address */
 						$mail->addTo($requester->email);
 				    }
+					
+				// Forward or overload
+				} elseif(!empty($properties['to'])) {
+				    $aTo = DevblocksPlatform::parseCsvString(str_replace(';',',',$properties['to']));
+					
+					if(is_array($aTo))
+					foreach($aTo as $to_addy) {
+						$mail->addTo($to_addy);
+					}
 				}
-		
+				
 			    // Ccs
 			    if(!empty($properties['cc'])) {
 				    $aCc = DevblocksPlatform::parseCsvString(str_replace(';',',',$properties['cc']));
@@ -642,7 +657,7 @@ class CerberusMail {
 			}
 	
 			// Forward Attachments
-			if(!empty($forward_files) && is_array($forward_files)) {
+			if($is_forward && !empty($forward_files) && is_array($forward_files)) {
 				foreach($forward_files as $file_id) {
 					$attachment = DAO_Attachment::get($file_id);
 					if(false !== ($fp = DevblocksPlatform::getTempFile())) {
@@ -680,16 +695,15 @@ class CerberusMail {
 				if(isset($properties['bcc']))
 					$params['bcc'] = $properties['bcc'];
 				
-				$hint_to = '(requesters)';
 				
-				if(isset($properties['to'])) {
-					// .. forward
-				} else { // reply
+				if(empty($to)) {
+					$hint_to = '(requesters)';
+				} else {
 					$hint_to = implode(', ', array_keys($mail->getTo()));					
 				}
 				
 				$fields = array(
-					DAO_MailQueue::TYPE => Model_MailQueue::TYPE_TICKET_REPLY,
+					DAO_MailQueue::TYPE => empty($is_forward) ? Model_MailQueue::TYPE_TICKET_REPLY : Model_MailQueue::TYPE_TICKET_FORWARD,
 					DAO_MailQueue::TICKET_ID => $properties['ticket_id'],
 					DAO_MailQueue::WORKER_ID => intval($worker_id),
 					DAO_MailQueue::UPDATED => time()+5, // small offset
@@ -698,23 +712,10 @@ class CerberusMail {
 					DAO_MailQueue::BODY => $properties['content'],
 					DAO_MailQueue::PARAMS_JSON => json_encode($params),
 					DAO_MailQueue::IS_QUEUED => empty($worker_id) ? 1 : 0,
-					DAO_MailQueue::PRIORITY => 0,
+					DAO_MailQueue::QUEUE_PRIORITY => 0,
 				);
 				DAO_MailQueue::create($fields);
 			}
-			
-			// [TODO] Add note to the draft
-			// add note to message if email failed
-//			if ($mail_succeeded === false) {
-//				$fields = array(
-//					DAO_MessageNote::MESSAGE_ID => $message_id,
-//					DAO_MessageNote::CREATED => time(),
-//					DAO_MessageNote::WORKER_ID => 0,
-//					DAO_MessageNote::CONTENT => 'Exception thrown while sending email: ' . $e->getMessage(),
-//					DAO_MessageNote::TYPE => Model_MessageNote::TYPE_ERROR,
-//				);
-//				DAO_MessageNote::create($fields);
-//			}
 			
 			return false;
 		}
@@ -736,7 +737,7 @@ class CerberusMail {
 		    }
 		    
 		    // Only change the subject if not forwarding
-		    if(!empty($subject) && empty($properties['to'])) {
+		    if(!empty($subject) && !$is_forward) {
 		    	$change_fields[DAO_Ticket::SUBJECT] = $subject;
 		    }
 		    
@@ -843,7 +844,7 @@ class CerberusMail {
 		}
 			
 		if(!empty($ticket_id) && !empty($change_fields)) {
-		    DAO_Ticket::updateTicket($ticket_id, $change_fields);
+		    DAO_Ticket::update($ticket_id, $change_fields);
 		}
 		
 		// Outbound Reply Event (not automated reply, etc.)

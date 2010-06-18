@@ -16,37 +16,36 @@
  ***********************************************************************/
 /*
  * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- *
- * Sure, it would be so easy to just cheat and edit this file to use the
- * software without paying for it.  But we trust you anyway.  In fact, we're
- * writing this software for you!
- *
- * Quality software backed by a dedicated team takes money to develop.  We
- * don't want to be out of the office bagging groceries when you call up
- * needing a helping hand.  We'd rather spend our free time coding your
- * feature requests than mowing the neighbors' lawns for rent money.
- *
- * We've never believed in encoding our source code out of paranoia over not
- * getting paid.  We want you to have the full source code and be able to
- * make the tweaks your organization requires to get more done -- despite
- * having less of everything than you might need (time, people, money,
+ * 
+ * Sure, it would be so easy to just cheat and edit this file to use the 
+ * software without paying for it.  But we trust you anyway.  In fact, we're 
+ * writing this software for you! 
+ * 
+ * Quality software backed by a dedicated team takes money to develop.  We 
+ * don't want to be out of the office bagging groceries when you call up 
+ * needing a helping hand.  We'd rather spend our free time coding your 
+ * feature requests than mowing the neighbors' lawns for rent money. 
+ * 
+ * We've never believed in hiding our source code out of paranoia over not 
+ * getting paid.  We want you to have the full source code and be able to 
+ * make the tweaks your organization requires to get more done -- despite 
+ * having less of everything than you might need (time, people, money, 
  * energy).  We shouldn't be your bottleneck.
+ * 
+ * We've been building our expertise with this project since January 2002.  We 
+ * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
+ * let us take over your shared e-mail headache is a worthwhile investment.  
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
+ * 
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
  *
- * We've been building our expertise with this project since January 2002.  We
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to
- * let us take over your shared e-mail headache is a worthwhile investment.
- * It will give you a sense of control over your in-box that you probably
- * haven't had since spammers found you in a game of "E-mail Address
- * Battleship".  Miss. Miss. You sunk my in-box!
- *
- * A legitimate license entitles you to support, access to the developer
- * mailing list, the ability to participate in betas and the warm fuzzy
- * feeling of feeding a couple obsessed developers who want to help you get
- * more done than 'the other guy'.
- *
- * - Jeff Standen, Mike Fogg, Brenan Cavish, Darren Sugita, Dan Hildebrandt
- * 		and Joe Geck.
- *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 /*
  * PARAMS (overloads):
@@ -481,7 +480,6 @@ class ImportCron extends CerberusCronPageExtension {
 			DAO_KbArticle::TITLE => $title,
 			DAO_KbArticle::UPDATED => $created,
 			DAO_KbArticle::FORMAT => 1, // HTML
-			DAO_KbArticle::CONTENT_RAW => $content,
 			DAO_KbArticle::CONTENT => $content,
 			DAO_KbArticle::VIEWS => 0, // [TODO]
 		);
@@ -681,12 +679,7 @@ class ImportCron extends CerberusCronPageExtension {
 			$sRequesterAddy = (string) $eAddress; // [TODO] RFC822
 			
 			// Insert requesters
-			if(null == ($requesterAddyInst = CerberusApplication::hashLookupAddress($sRequesterAddy, true))) {
-				$logger->warning('[Importer] Ticket ' . $sMask . ' - Ignoring malformed requester: ' . $sRequesterAddy);
-				continue;				
-			}
-			
-			DAO_Ticket::createRequester($requesterAddyInst->id, $ticket_id);
+			DAO_Ticket::createRequester($sRequesterAddy, $ticket_id);
 		}
 		
 		// Create messages
@@ -725,14 +718,14 @@ class ImportCron extends CerberusCronPageExtension {
 				
 				// First thread
 				if(1==$seek_messages) {
-					DAO_Ticket::updateTicket($ticket_id,array(
+					DAO_Ticket::update($ticket_id,array(
 						DAO_Ticket::FIRST_MESSAGE_ID => $email_id
 					));
 				}
 				
 				// Last thread
 				if($count_messages==$seek_messages) {
-					DAO_Ticket::updateTicket($ticket_id,array(
+					DAO_Ticket::update($ticket_id,array(
 						DAO_Ticket::LAST_MESSAGE_ID => $email_id
 					));
 				}
@@ -859,12 +852,14 @@ class ImportCron extends CerberusCronPageExtension {
 			return true;
 		}
 		
-		$worker_id = DAO_Worker::create($sEmail, CerberusApplication::generatePassword(8), $sFirstName, $sLastName, '');
-		
-		DAO_Worker::updateAgent($worker_id,array(
+		$fields = array(
+			DAO_Worker::EMAIL => $sEmail,
 			DAO_Worker::PASSWORD => $sPassword, // pre-MD5'd
+			DAO_Worker::FIRST_NAME => $sFirstName,
+			DAO_Worker::LAST_NAME => $sLastName,
 			DAO_Worker::IS_SUPERUSER => intval($isSuperuser),
-		));
+		);
+		$worker_id = DAO_Worker::create($fields);
 		
 		// Address to Worker
 		DAO_AddressToWorker::assign($sEmail, $worker_id);
@@ -1180,33 +1175,6 @@ class Pop3Cron extends CerberusCronPageExtension {
 	}
 };
 
-class ParseCronFileBuffer extends ParserFile {
-	private $mime_filename = '';
-	private $section = null;
-	private $info = array();
-	private $fp = null;
-
-	function __construct($section, $info, $mime_filename) {
-		$this->mime_filename = $mime_filename;
-		$this->section = $section;
-		$this->info = $info;
-
-		$this->setTempFile(ParserFile::makeTempFilename(),@$info['content-type']);
-		$this->fp = fopen($this->getTempFile(),'wb');
-
-		if($this->fp && !empty($this->section) && !empty($this->mime_filename)) {
-			mailparse_msg_extract_part_file($this->section, $this->mime_filename, array($this, "writeCallback"));
-		}
-
-		@fclose($this->fp);
-	}
-
-	function writeCallback($chunk) {
-		$this->file_size += fwrite($this->fp, $chunk);
-		//        echo $chunk;
-	}
-};
-
 class StorageCron extends CerberusCronPageExtension {
 	function run() {
 		$logger = DevblocksPlatform::getConsoleLog();
@@ -1266,13 +1234,15 @@ class MailQueueCron extends CerberusCronPageExtension {
 		
 		do {
 			$messages = DAO_MailQueue::getWhere(
-				sprintf("%s = %d AND %s > %d",
+				sprintf("%s = %d AND %s > %d AND %s < %d",
 					DAO_MailQueue::IS_QUEUED,
 					1,
 					DAO_MailQueue::ID,
-					$last_id
+					$last_id,
+					DAO_MailQueue::QUEUE_FAILS,
+					10
 				),
-				array(DAO_MailQueue::PRIORITY, DAO_MailQueue::UPDATED),
+				array(DAO_MailQueue::QUEUE_PRIORITY, DAO_MailQueue::UPDATED),
 				array(false, true),
 				25
 			);
@@ -1283,6 +1253,9 @@ class MailQueueCron extends CerberusCronPageExtension {
 					
 					if(!$message->send()) {
 						$logger->error(sprintf("[Mail Queue] Failed sending message %d", $message->id));
+						DAO_MailQueue::update($message->id, array(
+							DAO_MailQueue::QUEUE_FAILS => min($message->queue_fails+1,255),
+						));
 					} else {
 						$logger->info(sprintf("[Mail Queue] Sent message %d", $message->id));
 					}

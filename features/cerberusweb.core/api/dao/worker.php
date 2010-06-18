@@ -1,4 +1,52 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2010, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Cerberus Public License.
+| The latest version of this license can be found here:
+| http://www.cerberusweb.com/license.php
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+/*
+ * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
+ * 
+ * Sure, it would be so easy to just cheat and edit this file to use the 
+ * software without paying for it.  But we trust you anyway.  In fact, we're 
+ * writing this software for you! 
+ * 
+ * Quality software backed by a dedicated team takes money to develop.  We 
+ * don't want to be out of the office bagging groceries when you call up 
+ * needing a helping hand.  We'd rather spend our free time coding your 
+ * feature requests than mowing the neighbors' lawns for rent money. 
+ * 
+ * We've never believed in hiding our source code out of paranoia over not 
+ * getting paid.  We want you to have the full source code and be able to 
+ * make the tweaks your organization requires to get more done -- despite 
+ * having less of everything than you might need (time, people, money, 
+ * energy).  We shouldn't be your bottleneck.
+ * 
+ * We've been building our expertise with this project since January 2002.  We 
+ * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
+ * let us take over your shared e-mail headache is a worthwhile investment.  
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
+ * 
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
+ *
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ */
 class DAO_Worker extends C4_ORMHelper {
 	private function DAO_Worker() {}
 	
@@ -16,25 +64,21 @@ class DAO_Worker extends C4_ORMHelper {
 	const LAST_ACTIVITY_DATE = 'last_activity_date';
 	const LAST_ACTIVITY_IP = 'last_activity_ip';
 	
-	// [TODO] Convert to ::create($id, $fields)
-	static function create($email, $password, $first_name, $last_name, $title) {
-		if(empty($email) || empty($password))
-			return null;
+	static function create($fields) {
+		if(empty($fields[DAO_Worker::EMAIL]) || empty($fields[DAO_Worker::PASSWORD]))
+			return NULL;
 			
 		$db = DevblocksPlatform::getDatabaseService();
 		$id = $db->GenID('generic_seq');
 		
 		$sql = sprintf("INSERT INTO worker (id, email, pass, first_name, last_name, title, is_superuser, is_disabled) ".
-			"VALUES (%d, %s, %s, %s, %s, %s,0,0)",
-			$id,
-			$db->qstr($email),
-			$db->qstr(md5($password)),
-			$db->qstr($first_name),
-			$db->qstr($last_name),
-			$db->qstr($title)
+			"VALUES (%d, '', '', '', '', '', 0, 0)",
+			$id
 		);
 		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 
+		self::update($id, $fields);
+		
 		self::clearCache();
 		
 		return $id;
@@ -53,24 +97,32 @@ class DAO_Worker extends C4_ORMHelper {
 		return self::getAll(false, true);
 	}
 	
-	static function getAllOnline() {
-		list($whos_online_workers, $null) = self::search(
-			array(),
-		    array(
-		        new DevblocksSearchCriteria(SearchFields_Worker::LAST_ACTIVITY_DATE,DevblocksSearchCriteria::OPER_GT,(time()-60*15)), // idle < 15 mins
-		        new DevblocksSearchCriteria(SearchFields_Worker::LAST_ACTIVITY,DevblocksSearchCriteria::OPER_NOT_LIKE,'%translation_code";N;%'), // translation code not null (not just logged out)
-		    ),
-		    -1,
-		    0,
-		    SearchFields_Worker::LAST_ACTIVITY_DATE,
-		    false,
-		    false
-		);
-		
-		if(!empty($whos_online_workers))
-			return self::getList(array_keys($whos_online_workers));
+	static function getAllOnline($idle_limit=600, $idle_kick=false) {
+		$session = DevblocksPlatform::getSessionService();
+
+		$workers = array();
+
+		foreach($session->getAll() as $sess) {
+			$key = $sess['session_key'];
+			$data = $session->decodeSession($sess['session_data']);
 			
-		return array();
+			@$visit = $data['db_visit']; /* @var $visit CerberusVisit */
+			if(is_null($visit))
+				continue;
+				
+			$worker = $visit->getWorker();
+			
+			// Check the last activity date (and log out as needed)
+			$idle_secs = time() - $worker->last_activity_date;
+			if($idle_secs > $idle_limit) {
+				if($idle_kick)
+					$session->clear($key);
+			} else {
+				$workers[$worker->id] = $worker;
+			}
+		}
+		
+		return $workers;
 	}
 	
 	static function getAll($nocache=false, $with_disabled=true) {
@@ -162,7 +214,7 @@ class DAO_Worker extends C4_ORMHelper {
 	/**
 	 * @return Model_Worker
 	 */
-	static function getAgent($id) {
+	static function get($id) {
 		if(empty($id)) return null;
 		
 		$workers = self::getAllWithDisabled();
@@ -193,7 +245,7 @@ class DAO_Worker extends C4_ORMHelper {
 		return null;		
 	}
 	
-	static function updateAgent($ids, $fields, $flush_cache=true) {
+	static function update($ids, $fields, $flush_cache=true) {
 		if(!is_array($ids)) $ids = array($ids);
 		
 		$db = DevblocksPlatform::getDatabaseService();
@@ -252,7 +304,7 @@ class DAO_Worker extends C4_ORMHelper {
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' worker_workspace_list records.');
 	}
 	
-	static function deleteAgent($id) {
+	static function delete($id) {
 		if(empty($id)) return;
 		
 		// [TODO] Delete worker notes, comments, etc.
@@ -315,7 +367,7 @@ class DAO_Worker extends C4_ORMHelper {
 		$worker_id = $db->GetOne($sql); // or die(__CLASS__ . ':' . $db->ErrorMsg()); 
 
 		if(!empty($worker_id)) {
-			return self::getAgent($worker_id);
+			return self::get($worker_id);
 		}
 		
 		return null;
@@ -381,10 +433,10 @@ class DAO_Worker extends C4_ORMHelper {
 
 		// Update activity once per 30 seconds
 		if($worker->last_activity_date < (time()-30)) {
-		    DAO_Worker::updateAgent($worker->id,array(
+		    DAO_Worker::update($worker->id,array(
 		        DAO_Worker::LAST_ACTIVITY_DATE => time(),
 		        DAO_Worker::LAST_ACTIVITY => serialize($activity),
-		        DAO_Worker::LAST_ACTIVITY_IP => ip2long($ip),
+		        DAO_Worker::LAST_ACTIVITY_IP => sprintf("%u",ip2long($ip)),
 		    ));
 		}
 	}
@@ -567,9 +619,7 @@ class Model_Worker {
 		$settings = DevblocksPlatform::getPluginSettingsService();
 		$acl_enabled = $settings->get('cerberusweb.core',CerberusSettings::ACL_ENABLED,CerberusSettingsDefaults::ACL_ENABLED);
 			
-		// ACL is a paid feature (please respect the licensing and support the project!)
-		$license = CerberusLicense::getInstance();
-		if(!$acl_enabled || !isset($license['key']) || empty($license['workers']))
+		if(!$acl_enabled)
 			return ("core.config"==substr($priv_id,0,11)) ? false : true;
 			
 		// Check the aggregated worker privs from roles
@@ -850,7 +900,7 @@ class View_Worker extends C4_AbstractView {
 		$batch_total = count($ids);
 		for($x=0;$x<=$batch_total;$x+=100) {
 			$batch_ids = array_slice($ids,$x,100);
-			DAO_Worker::updateAgent($batch_ids, $change_fields);
+			DAO_Worker::update($batch_ids, $change_fields);
 			
 			// Custom Fields
 			self::_doBulkSetCustomFields(ChCustomFieldSource_Worker::ID, $custom_fields, $batch_ids);
