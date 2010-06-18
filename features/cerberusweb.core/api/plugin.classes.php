@@ -361,40 +361,6 @@ XML;
 	}
 };
 
-class ChTaskSource_Org extends Extension_TaskSource {
-	function getSourceName() {
-		return "Orgs";
-	}
-	
-	function getSourceInfo($object_id) {
-		if(null == ($contact_org = DAO_ContactOrg::get($object_id)))
-			return;
-		
-		$url = DevblocksPlatform::getUrlService();
-		return array(
-			'name' => '[Org] '.$contact_org->name,
-			'url' => $url->write(sprintf('c=contacts&a=orgs&display=display&id=%d',$object_id), true),
-		);
-	}
-};
-
-class ChTaskSource_Ticket extends Extension_TaskSource {
-	function getSourceName() {
-		return "Tickets";
-	}
-	
-	function getSourceInfo($object_id) {
-		if(null == ($ticket = DAO_Ticket::get($object_id)))
-			return;
-		
-		$url = DevblocksPlatform::getUrlService();
-		return array(
-			'name' => '[Ticket] '.$ticket->subject,
-			'url' => $url->write(sprintf('c=display&mask=%s&tab=tasks',$ticket->mask), true),
-		);
-	}
-};
-
 class ChRssSource_Ticket extends Extension_RssSource {
 	function getSourceName() {
 		return "Tickets";
@@ -529,25 +495,13 @@ XML;
             $eItem = $channel->addChild('item');
             
             $escapedSubject = htmlspecialchars($task[SearchFields_Task::TITLE],null,LANG_CHARSET_CODE);
-            //filter out a couple non-UTF-8 characters (0xC and ESC)
-            $escapedSubject = preg_replace("/[]/", '', $escapedSubject);
+            $escapedSubject = mb_convert_encoding($escapedSubject, 'utf-8', LANG_CHARSET_CODE);
             $eTitle = $eItem->addChild('title', $escapedSubject);
 
-            //$eDesc = $eItem->addChild('description', htmlspecialchars($task[SearchFields_Task::CONTENT],null,LANG_CHARSET_CODE));
             $eDesc = $eItem->addChild('description', '');
 
-            if(isset($task_sources[$task[SearchFields_Task::SOURCE_EXTENSION]]) && isset($task[SearchFields_Task::SOURCE_ID])) {
-            	$source_ext =& $task_sources[$task[SearchFields_Task::SOURCE_EXTENSION]]; /* @var $source_ext Extension_TaskSource */
-            	$source_ext_info = $source_ext->getSourceInfo($task[SearchFields_Task::SOURCE_ID]);
-            	
-	            $link = $source_ext_info['url'];
-	            $eLink = $eItem->addChild('link', $link);
-	            
-            } else {
-	            $link = $url->write('c=activity&tab=tasks', true);
-	            $eLink = $eItem->addChild('link', $link);
-            	
-            }
+            $link = $url->write('c=tasks&a=display&id='.$task[SearchFields_Task::ID], true);
+            $eLink = $eItem->addChild('link', $link);
             	
             $eDate = $eItem->addChild('pubDate', gmdate('D, d M Y H:i:s T', $created));
             

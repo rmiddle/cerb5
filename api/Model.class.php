@@ -51,9 +51,15 @@
 abstract class C4_AbstractView {
 	public $id = 0;
 	public $name = "";
+	
 	public $view_columns = array();
+	public $columnsHidden = array();
+	
 	public $params = array();
-
+	public $paramsDefault = array();
+	public $paramsRequired = array();
+	public $paramsHidden = array();
+	
 	public $renderPage = 0;
 	public $renderLimit = 10;
 	public $renderTotal = true;
@@ -65,6 +71,26 @@ abstract class C4_AbstractView {
 	function getData() {
 	}
 
+	function getColumnsAvailable() {
+		$columns = $this->getFields();
+		
+		if(is_array($this->columnsHidden))
+		foreach($this->columnsHidden as $col)
+			unset($columns[$col]);
+			
+		return $columns;
+	}
+	
+	function getParamsAvailable() {
+		$params = $this->getFields();
+		
+		if(is_array($this->paramsHidden))
+		foreach($this->paramsHidden as $param)
+			unset($params[$param]);
+		
+		return $params;
+	}
+	
 	function render() {
 		echo ' '; // Expect Override
 	}
@@ -172,7 +198,7 @@ abstract class C4_AbstractView {
 	 *
 	 */
 	protected function _sanitize() {
-		$fields = $this->getColumns();
+		$fields = $this->getColumnsAvailable();
 		$custom_fields = DAO_CustomField::getAll();
 		$needs_save = false;
 		
@@ -258,27 +284,7 @@ abstract class C4_AbstractView {
 	 *
 	 * @return array
 	 */
-	static function getFields() {
-		// Expect Override
-		return array();
-	}
-
-	/**
-	 * All searchable fields
-	 *
-	 * @return array
-	 */
-	static function getSearchFields() {
-		// Expect Override
-		return array();
-	}
-
-	/**
-	 * All fields that can be displayed as columns in the view
-	 *
-	 * @return array
-	 */
-	static function getColumns() {
+	function getFields() {
 		// Expect Override
 		return array();
 	}
@@ -320,8 +326,22 @@ abstract class C4_AbstractView {
 	}
 
 	function doResetCriteria() {
-		$this->params = array();
+		$this->params = $this->paramsDefault;
 		$this->renderPage = 0;
+	}
+	
+	function getPresets() {
+		$active_worker = CerberusApplication::getActiveWorker();
+		
+		// Presets
+		return DAO_ViewFiltersPreset::getWhere(
+			sprintf("%s = %s AND %s = %d",
+				DAO_ViewFiltersPreset::VIEW_CLASS,
+				C4_ORMHelper::qstr(get_class($this)),
+				DAO_ViewFiltersPreset::WORKER_ID,
+				$active_worker->id
+			)
+		);
 	}
 	
 	public static function _doBulkSetCustomFields($source_extension,$custom_fields, $ids) {
@@ -386,8 +406,14 @@ class C4_AbstractViewModel {
 
 	public $id = 0;
 	public $name = "";
+	
 	public $view_columns = array();
+	public $columnsHidden = array();
+	
 	public $params = array();
+	public $paramsDefault = array();
+	public $paramsRequired = array();
+	public $paramsHidden = array();
 
 	public $renderPage = 0;
 	public $renderLimit = 10;
@@ -462,6 +488,14 @@ class C4_AbstractViewLoader {
 					$view->id = $view_label;
 					if(!empty($prefs->view_columns))
 						$view->view_columns = $prefs->view_columns;
+					if(!empty($prefs->columnsHidden))
+						$view->columnsHidden = $prefs->columnsHidden;
+					if(!empty($prefs->paramsDefault))
+						$view->paramsDefault = $prefs->paramsDefault;
+					if(!empty($prefs->paramsRequired))
+						$view->paramsRequired = $prefs->paramsRequired;
+					if(!empty($prefs->paramsHidden))
+						$view->paramsHidden = $prefs->paramsHidden;
 					if(!empty($prefs->renderLimit))
 						$view->renderLimit = $prefs->renderLimit;
 					if(null !== $prefs->renderSortBy)
@@ -513,9 +547,15 @@ class C4_AbstractViewLoader {
 
 		$model->id = $view->id;
 		$model->name = $view->name;
+		
 		$model->view_columns = $view->view_columns;
+		$model->columnsHidden = $view->columnsHidden;
+		
 		$model->params = $view->params;
-
+		$model->paramsDefault = $view->paramsDefault;
+		$model->paramsRequired = $view->paramsRequired;
+		$model->paramsHidden = $view->paramsHidden;
+		
 		$model->renderPage = $view->renderPage;
 		$model->renderLimit = $view->renderLimit;
 		$model->renderTotal = $view->renderTotal;
@@ -538,8 +578,14 @@ class C4_AbstractViewLoader {
 			
 		$inst->id = $model->id;
 		$inst->name = $model->name;
+		
 		$inst->view_columns = $model->view_columns;
+		$inst->columnsHidden = $model->columnsHidden;
+		
 		$inst->params = $model->params;
+		$inst->paramsDefault = $model->paramsDefault;
+		$inst->paramsRequired = $model->paramsRequired;
+		$inst->paramsHidden = $model->paramsHidden;
 
 		$inst->renderPage = $model->renderPage;
 		$inst->renderLimit = $model->renderLimit;
@@ -594,7 +640,6 @@ class View_DevblocksTemplate extends C4_AbstractView {
 //		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Worker::ID);
 //		$tpl->assign('custom_fields', $custom_fields);
 
-		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . APP_PATH . '/features/usermeet.core/templates/community/display/tabs/templates/view.tpl');
 	}
 
@@ -648,28 +693,10 @@ class View_DevblocksTemplate extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_DevblocksTemplate::getFields();
 	}
 
-	static function getSearchFields() {
-		$fields = self::getFields();
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		return $fields;
-	}
-
-	function doResetCriteria() {
-		parent::doResetCriteria();
-		
-//		$this->params = array(
-//			SearchFields_WorkerEvent::NUM_NONSPAM => new DevblocksSearchCriteria(SearchFields_WorkerEvent::NUM_NONSPAM,'>',0),
-//		);
-	}
-	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -791,14 +818,23 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 	function __construct() {
 		$this->id = self::DEFAULT_ID;
 		$this->name = 'Storage Profiles';
-		$this->renderLimit = 25;
-		$this->renderSortBy = SearchFields_DevblocksStorageProfile::ID;
-		$this->renderSortAsc = true;
 
 		$this->view_columns = array(
 			SearchFields_DevblocksStorageProfile::NAME,
 			SearchFields_DevblocksStorageProfile::EXTENSION_ID,
 		);
+		$this->columnsHidden = array(
+			SearchFields_DevblocksStorageProfile::PARAMS_JSON,
+		);
+		
+		$this->paramsHidden = array(
+			SearchFields_DevblocksStorageProfile::ID,
+			SearchFields_DevblocksStorageProfile::PARAMS_JSON,
+		);
+		
+		$this->renderLimit = 25;
+		$this->renderSortBy = SearchFields_DevblocksStorageProfile::ID;
+		$this->renderSortAsc = true;
 		
 		$this->doResetCriteria();
 	}
@@ -822,8 +858,6 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-		$tpl->assign('view_fields', $this->getColumns());
-		
 		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/configuration/tabs/storage/profiles/view.tpl');
 	}
 
@@ -862,31 +896,10 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_DevblocksStorageProfile::getFields();
 	}
 
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_DevblocksStorageProfile::ID]);
-		unset($fields[SearchFields_DevblocksStorageProfile::PARAMS_JSON]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_DevblocksStorageProfile::PARAMS_JSON]);
-		return $fields;
-	}
-
-	function doResetCriteria() {
-		parent::doResetCriteria();
-		
-		$this->params = array(
-			//SearchFields_DevblocksStorageProfile::ID => new DevblocksSearchCriteria(SearchFields_DevblocksStorageProfile::ID,'!=',0),
-		);
-	}
-	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 

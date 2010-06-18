@@ -1,3 +1,4 @@
+{$view_fields = $view->getColumnsAvailable()}
 {assign var=results value=$view->getData()}
 {assign var=total value=$results[1]}
 {assign var=data value=$results[0]}
@@ -73,7 +74,7 @@
 			{elseif $column=="po_name"}
 			<td><a href="javascript:;" onclick="genericAjaxPanel('c=contacts&a=showOrgPeek&id={$result.po_id}&view_id={$view->id}',null,false,'600');">{$result.po_name}</a> </td>
 			{else}
-			<td>{$result.$column}</td>
+			<td>{$result.$column|escape}</td>
 			{/if}
 		{/foreach}
 		</tr>

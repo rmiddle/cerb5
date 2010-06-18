@@ -37,8 +37,9 @@
 <div id="tasksTabs">
 	<ul>
 		<li><a href="{devblocks_url}ajax.php?c=tasks&a=showTaskNotesTab&id={$task->id}{/devblocks_url}">{'activity.tasks.tab.notes'|devblocks_translate|escape}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.task&id={$task->id}&return_uri={"tasks/display/{$task->id}/links"|escape:'url'}{/devblocks_url}">{'common.links'|devblocks_translate|escape}</a></li>
 
-		{$tabs = [notes]}
+		{$tabs = [notes, links]}
 		
 		{if ($active_worker->hasPriv('core.tasks.actions.create') && (empty($task) || $active_worker->id==$task->worker_id))
 			|| ($active_worker->hasPriv('core.tasks.actions.update_nobody') && empty($task->worker_id)) 

@@ -594,7 +594,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 		
-//		$db = DevblocksPlatform::getDatabaseService();
 		$visit = CerberusApplication::getVisit();
 		$active_worker = CerberusApplication::getActiveWorker();
 		
@@ -608,15 +607,9 @@ class ChTicketsPage extends CerberusPageExtension {
 		// Remember the tab
 		$visit->set(CerberusVisit::KEY_MAIL_MODE, 'search');		
 		
-		// Request path
-//		@$request = DevblocksPlatform::importGPC($_REQUEST['request'],'string','');
-//		$response_path = explode('/', $request);
-//		@array_shift($response_path); // tickets
-//		@array_shift($response_path); // overview
-
-		$tpl->assign('response_uri', 'tickets/search');
-		
 		$view = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_SEARCH);
+		
+		// [TODO] Convert to defaults
 		
 		if(null == $view) {
 			$view = View_Ticket::createSearchView();
@@ -624,7 +617,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		}
 		
 		$tpl->assign('view', $view);
-		$tpl->assign('params', $view->params);
 	
 		$teams = DAO_Group::getAll();
 		$tpl->assign('teams', $teams);
@@ -634,9 +626,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		$team_categories = DAO_Bucket::getTeams();
 		$tpl->assign('team_categories', $team_categories);
-		
-		$tpl->assign('view_fields', View_Ticket::getFields());
-		$tpl->assign('view_searchable_fields', View_Ticket::getSearchFields());
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'tickets/search/index.tpl');
 	}
@@ -653,15 +642,32 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		$view = C4_AbstractViewLoader::getView('mail_drafts');
 		
+		// [TODO] Use $defaults
+		
 		if(null == $view) {
 			$view = new View_MailQueue();
 			$view->id = 'mail_drafts';
 			$view->name = 'Drafts';
 		}
 		
-		$view->params = array(
+		$view->columnsHidden = array(
+			SearchFields_MailQueue::ID,
+			SearchFields_MailQueue::IS_QUEUED,
+			SearchFields_MailQueue::QUEUE_FAILS,
+			SearchFields_MailQueue::QUEUE_PRIORITY,
+			SearchFields_MailQueue::TICKET_ID,
+		);
+		
+		$view->paramsRequired = array(
 			SearchFields_MailQueue::WORKER_ID => new DevblocksSearchCriteria(SearchFields_MailQueue::WORKER_ID, DevblocksSearchCriteria::OPER_EQ, $active_worker->id),
 			SearchFields_MailQueue::IS_QUEUED => new DevblocksSearchCriteria(SearchFields_MailQueue::IS_QUEUED, DevblocksSearchCriteria::OPER_EQ, 0),
+		);
+		$view->paramsHidden = array(
+			SearchFields_MailQueue::ID,
+			SearchFields_MailQueue::IS_QUEUED,
+			SearchFields_MailQueue::QUEUE_FAILS,
+			SearchFields_MailQueue::QUEUE_PRIORITY,
+			SearchFields_MailQueue::TICKET_ID,
 		);
 		
 		C4_AbstractViewLoader::setView($view->id,$view);
@@ -873,6 +879,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		// Remember the tab
 		$visit->set(CerberusVisit::KEY_MAIL_MODE, 'snippets');
 		
+		// [TODO] Use $defaults
 		$view = C4_AbstractViewLoader::getView('mail_snippets');
 		
 		if(null == $view) {
@@ -881,11 +888,14 @@ class ChTicketsPage extends CerberusPageExtension {
 			$view->name = 'Mail Snippets';
 		}
 		
-		$view->params = array(
+		$view->columnsHidden[] = SearchFields_Snippet::ID;
+		$view->columnsHidden[] = SearchFields_Snippet::IS_PRIVATE;
+		
+		$view->paramsRequired = array(
 			SearchFields_Snippet::CONTEXT => new DevblocksSearchCriteria(SearchFields_Snippet::CONTEXT, DevblocksSearchCriteria::OPER_IN, array('cerberusweb.contexts.plaintext','cerberusweb.contexts.ticket','cerberusweb.contexts.worker')),
-//			SearchFields_MailQueue::WORKER_ID => new DevblocksSearchCriteria(SearchFields_MailQueue::WORKER_ID, DevblocksSearchCriteria::OPER_EQ, $active_worker->id),
-//			SearchFields_MailQueue::IS_QUEUED => new DevblocksSearchCriteria(SearchFields_MailQueue::IS_QUEUED, DevblocksSearchCriteria::OPER_EQ, 0),
 		);
+		$view->paramsHidden[] = SearchFields_Snippet::ID;
+		$view->paramsHidden[] = SearchFields_Snippet::IS_PRIVATE;
 		
 		C4_AbstractViewLoader::setView($view->id,$view);
 		$tpl->assign('view', $view);

@@ -82,8 +82,6 @@ class ChContactsPage extends CerberusPageExtension {
 		@array_shift($stack); // contacts
 		@$selected_tab = array_shift($stack); // orgs|addresses|*
 		
-		$tpl->assign('selected_tab', $selected_tab);
-		
 		// Allow a non-tab renderer
 		switch($selected_tab) {
 			case 'import':
@@ -125,9 +123,9 @@ class ChContactsPage extends CerberusPageExtension {
 						$tpl->assign('contact', $contact);
 						
 						// Tabs
-						
-						$task_count = DAO_Task::getCountBySourceObjectId('cerberusweb.tasks.org', $contact->id);
-						$tpl->assign('tasks_total', $task_count);
+
+						$selected_tab = array_shift($stack);
+						$tpl->assign('selected_tab', $selected_tab);
 						
 						$people_count = DAO_Address::getCountByOrgId($contact->id);
 						$tpl->assign('people_total', $people_count);
@@ -160,8 +158,6 @@ class ChContactsPage extends CerberusPageExtension {
 //				
 //				$tpl->assign('view', $view);
 //				$tpl->assign('contacts_page', 'people');
-//				$tpl->assign('view_fields', View_Address::getFields());
-//				$tpl->assign('view_searchable_fields', View_Address::getSearchFields());
 //				$tpl->display('file:' . $this->_TPL_PATH . 'contacts/people/index.tpl');
 //				break;
 	}
@@ -177,9 +173,6 @@ class ChContactsPage extends CerberusPageExtension {
 		$view = C4_AbstractViewLoader::getView(View_ContactOrg::DEFAULT_ID, $defaults);
 		$tpl->assign('view', $view);
 		$tpl->assign('contacts_page', 'orgs');
-		$tpl->assign('response_uri', 'contacts/orgs');
-		$tpl->assign('view_fields', View_ContactOrg::getFields());
-		$tpl->assign('view_searchable_fields', View_ContactOrg::getSearchFields());
 		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/index.tpl');
 	}
 	
@@ -194,9 +187,6 @@ class ChContactsPage extends CerberusPageExtension {
 		$view = C4_AbstractViewLoader::getView(View_Address::DEFAULT_ID, $defaults);
 		$tpl->assign('view', $view);
 		$tpl->assign('contacts_page', 'addresses');
-		$tpl->assign('response_uri', 'contacts/addresses');
-		$tpl->assign('view_fields', View_Address::getFields());
-		$tpl->assign('view_searchable_fields', View_Address::getSearchFields());
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/addresses/index.tpl');
 	}
@@ -560,43 +550,6 @@ class ChContactsPage extends CerberusPageExtension {
 		$tpl->assign('search_columns', SearchFields_Address::getFields());
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/tabs/people.tpl');
-		exit;
-	}
-	
-	function showTabTasksAction() {
-		$translate = DevblocksPlatform::getTranslationService();
-		@$org = DevblocksPlatform::importGPC($_REQUEST['org']);
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-		
-		$contact = DAO_ContactOrg::get($org);
-		$tpl->assign('contact', $contact);
-		
-		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'View_Task';
-		$defaults->id = 'org_tasks';
-		$defaults->view_columns = array(
-			SearchFields_Task::SOURCE_EXTENSION,
-			SearchFields_Task::DUE_DATE,
-			SearchFields_Task::WORKER_ID,
-			SearchFields_Task::COMPLETED_DATE,
-		);
-		
-		$view = C4_AbstractViewLoader::getView('org_tasks', $defaults);
-		$view->name = $translate->_('common.tasks') . ' ' . $contact->name;
-		$view->params = array(
-			new DevblocksSearchCriteria(SearchFields_Task::SOURCE_EXTENSION,'=','cerberusweb.tasks.org'),
-			new DevblocksSearchCriteria(SearchFields_Task::SOURCE_ID,'=',$org),
-		);
-		$tpl->assign('view', $view);
-		
-		C4_AbstractViewLoader::setView($view->id, $view);
-		
-		$tpl->assign('contacts_page', 'orgs');
-		$tpl->assign('search_columns', SearchFields_Address::getFields());
-		
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/tabs/tasks.tpl');
 		exit;
 	}
 	

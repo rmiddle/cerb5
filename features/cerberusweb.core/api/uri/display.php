@@ -140,10 +140,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		$comments_total = DAO_TicketComment::getCountByTicketId($id);
 		$tpl->assign('comments_total', $comments_total);
 		
-		// Tasks Total [TODO] Eventually this can be ticket.num_tasks
-		$tasks_total = DAO_Task::getCountBySourceObjectId('cerberusweb.tasks.ticket',$id);
-		$tpl->assign('tasks_total', $tasks_total);
-		
 		$requesters = DAO_Ticket::getRequestersByTicket($ticket->id);
 		$tpl->assign('requesters', $requesters);
 		
@@ -1394,35 +1390,13 @@ class ChDisplayPage extends CerberusPageExtension {
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket->mask,'tasks')));
 	}
 	
-	function showTasksAction() {
 		$visit = CerberusApplication::getVisit(); /* @var $visit CerberusVisit */
-		$translate = DevblocksPlatform::getTranslationService();
-		
-		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer');
-
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-		
-		$ticket = DAO_Ticket::get($ticket_id);
-		$tpl->assign('ticket', $ticket);
-		
 		// Scope
 		$scope = $visit->get('display.task.scope', '');
 		
 		// [TODO] Sanitize scope preference		
 		
 		// Defaults
-		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'View_Task';
-		$defaults->id = 'ticket_tasks';
-		$defaults->name = $translate->_('tasks.ticket.tab.view');
-		$defaults->view_columns = array(
-			SearchFields_Task::SOURCE_EXTENSION,
-			SearchFields_Task::DUE_DATE,
-			SearchFields_Task::WORKER_ID,
-		);
-		
-		$view = C4_AbstractViewLoader::getView('ticket_tasks', $defaults);
 		
 		switch($scope) {
 			case 'all':
@@ -1450,12 +1424,6 @@ class ChDisplayPage extends CerberusPageExtension {
 				break;
 		}
 		$tpl->assign('scope', $scope);
-		
-		C4_AbstractViewLoader::setView($view->id, $view);
-		
-		$tpl->display('file:' . $this->_TPL_PATH . 'display/modules/tasks/index.tpl');
-	}
-
 	function showSnippetsAction() {
 		@$text = DevblocksPlatform::importGPC($_REQUEST['text'],'string','');
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
@@ -1569,14 +1537,6 @@ class ChDisplayPage extends CerberusPageExtension {
 	
 	function saveRequestersPanelAction() {
 		@$ticket_id = DevblocksPlatform::importGPC($_POST['ticket_id'],'integer');
-		@$msg_id = DevblocksPlatform::importGPC($_POST['msg_id'],'integer');
-
-		// Dels
-		@$req_deletes = DevblocksPlatform::importGPC($_POST['req_deletes'],'array',array());
-		if(!empty($req_deletes))
-		foreach($req_deletes as $del_id) {
-			DAO_Ticket::deleteRequester($ticket_id, $del_id);
-		}		
 
 		// Adds
 		@$req_adds = DevblocksPlatform::parseCrlfString(DevblocksPlatform::importGPC($_POST['req_adds'],'string',''));

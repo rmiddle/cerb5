@@ -31,6 +31,7 @@
 		<patch version="5.0.0-beta" revision="856" file="patches/5.x/5.0.0_beta.php" />
 		<patch version="5.0.0-rc1" revision="861" file="patches/5.x/5.0.0_rc1.php" />
 		<patch version="5.0.1" revision="864" file="patches/5.x/5.0.1.php" />
+		<patch version="5.1.0" revision="882" file="patches/5.x/5.1.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -109,6 +110,11 @@
 			<class name="View_ContactOrg" />
 		</file>
 		
+		<file path="api/dao/context_link.php">
+			<class name="DAO_ContextLink" />
+			<class name="Model_ContextLink" />
+		</file>
+		
 		<file path="api/dao/explorer.php">
 			<class name="DAO_ExplorerSet" />
 			<class name="Model_ExplorerSet" />
@@ -177,6 +183,12 @@
 			<class name="Model_Ticket" />
 			<class name="SearchFields_Ticket" />
 			<class name="View_Ticket" />
+		</file>
+		
+		<file path="api/dao/view_filters_preset.php">
+			<class name="DAO_ViewFiltersPreset" />
+			<class name="Model_ViewFiltersPreset" />
+			<class name="SearchFields_ViewFiltersPreset" />
 		</file>
 		
 		<file path="api/dao/worker.php">
@@ -318,6 +330,63 @@
 	<!-- Extensions -->
 
 	<extensions>
+
+		<!-- Contexts -->
+		
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.address</id>
+			<name>Address</name>
+			<class>
+				<file>api/dao/address.php</file>
+				<name>Context_Address</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.org</id>
+			<name>Organization</name>
+			<class>
+				<file>api/dao/contact_org.php</file>
+				<name>Context_Org</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.task</id>
+			<name>Task</name>
+			<class>
+				<file>api/dao/task.php</file>
+				<name>Context_Task</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.ticket</id>
+			<name>Ticket</name>
+			<class>
+				<file>api/dao/ticket.php</file>
+				<name>Context_Ticket</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.worker</id>
+			<name>Worker</name>
+			<class>
+				<file>api/dao/worker.php</file>
+				<name>Context_Worker</name>
+			</class>
+			<params>
+			</params>
+		</extension>
 
 		<!-- Event Listeners -->
 		
@@ -960,30 +1029,6 @@
 			<params>
 			</params>
 		</extension>		
-		
-		<!-- Task Sources -->
-		
-		<extension point="cerberusweb.task.source">
-			<id>cerberusweb.tasks.org</id>
-			<name>Organization Task</name>
-			<class>
-				<file>api/plugin.classes.php</file>
-				<name>ChTaskSource_Org</name>
-			</class>
-			<params>
-			</params>
-		</extension>		
-		
-		<extension point="cerberusweb.task.source">
-			<id>cerberusweb.tasks.ticket</id>
-			<name>Ticket Task</name>
-			<class>
-				<file>api/plugin.classes.php</file>
-				<name>ChTaskSource_Ticket</name>
-			</class>
-			<params>
-			</params>
-		</extension>
 		
 		<!-- Explorer Toolbars -->
 		

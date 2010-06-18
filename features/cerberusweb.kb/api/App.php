@@ -314,6 +314,8 @@ class ChKbSearchTab extends Extension_KnowledgebaseTab {
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
 
+		// [TODO] Convert to $defaults
+		
 		if(null == ($view = C4_AbstractViewLoader::getView(self::VIEW_ID))) {
 			$view = new View_KbArticle();
 			$view->id = self::VIEW_ID;
@@ -322,11 +324,7 @@ class ChKbSearchTab extends Extension_KnowledgebaseTab {
 		}
 		
 		$tpl->assign('view', $view);
-		$tpl->assign('view_fields', View_KbArticle::getFields());
-		$tpl->assign('view_searchable_fields', View_KbArticle::getSearchFields());
 		
-		$tpl->assign('response_uri', 'kb/search');
-
 		$tpl->display($tpl_path . 'kb/tabs/search/index.tpl');
 	}
 }
@@ -1470,6 +1468,18 @@ class View_KbArticle extends C4_AbstractView {
 			SearchFields_KbArticle::UPDATED,
 			SearchFields_KbArticle::VIEWS,
 		);
+		$this->columnsHidden = array(
+			SearchFields_KbArticle::CONTENT,
+			SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT,
+		);
+		
+		$this->paramsHidden = array(
+			SearchFields_KbArticle::CONTENT,
+			SearchFields_KbArticle::FORMAT,
+			SearchFields_KbArticle::ID,
+		);
+		
+		$this->doResetCriteria();
 	}
 
 	function getData() {
@@ -1495,8 +1505,6 @@ class View_KbArticle extends C4_AbstractView {
 		$categories = DAO_KbCategory::getAll();
 		$tpl->assign('categories', $categories);
 
-		$tpl->assign('view_fields', $this->getColumns());
-		
 		switch($this->renderTemplate) {
 			case 'chooser':
 				$tpl->display('file:' . $this->_TPL_PATH . 'view/chooser.tpl');
@@ -1569,23 +1577,8 @@ class View_KbArticle extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_KbArticle::getFields();
-	}
-
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_KbArticle::ID]);
-		unset($fields[SearchFields_KbArticle::FORMAT]);
-		unset($fields[SearchFields_KbArticle::CONTENT]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_KbArticle::CONTENT]);
-		unset($fields[SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT]);
-		return $fields;
 	}
 
 	function doSetCriteria($field, $oper, $value) {
