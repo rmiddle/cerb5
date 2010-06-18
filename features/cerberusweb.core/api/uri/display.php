@@ -168,6 +168,28 @@ class ChDisplayPage extends CerberusPageExtension {
 			))
 		);
 		
+		if (class_exists('Extension_TimeTrackingSource',true)):
+			// Adds total time worked per ticket to the token list.
+			$db = DevblocksPlatform::getDatabaseService();
+
+			$sql = "SELECT sum(tte.time_actual_mins) mins ";
+			$sql .= "FROM timetracking_entry tte ";
+			$sql .= sprintf("WHERE tte.source_id =  %d ", $ticket->id);
+			$sql .= "AND tte.source_extension_id = 'timetracking.source.ticket' ";
+			$sql .= "GROUP BY tte.source_id ";
+
+			$rs = $db->Execute($sql);
+		
+			$row = mysql_fetch_assoc($rs)
+			if(intval($row['mins'])) {
+				$total_time_all = intval($row['mins']);			
+			} else {
+				$total_time_all = 0;			
+			}
+	    	mysql_free_result($rs);
+		endif;
+
+		$tpl->assign('total_time_all', $total_time_all);
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/index.tpl');
 	}
 	
