@@ -142,7 +142,15 @@ class ChTicketsPage extends CerberusPageExtension {
 					$visit->set('compose.last_ticket',null); // clear
 				}
 				
-				$tpl->display('file:' . $this->_TPL_PATH . 'tickets/compose/index.tpl');
+				// Groups (for custom fields)
+				$groups = DAO_Group::getAll();
+				$tpl->assign('groups', $groups);
+
+				// Custom fields
+				$ticket_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Ticket::ID);
+				$tpl->assign('ticket_fields', $ticket_fields);
+
+ 				$tpl->display('file:' . $this->_TPL_PATH . 'tickets/compose/index.tpl');
 				break;
 				
 			case 'create':
@@ -196,7 +204,15 @@ class ChTicketsPage extends CerberusPageExtension {
 					$visit->set('compose.last_ticket',null); // clear
 				}
 				
-				$tpl->display('file:' . $this->_TPL_PATH . 'tickets/create/index.tpl');
+				// Groups (for custom fields)
+				$groups = DAO_Group::getAll();
+				$tpl->assign('groups', $groups);
+
+				// Custom fields
+				$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Ticket::ID);
+				$tpl->assign('ticket_fields', $fields);
+
+ 				$tpl->display('file:' . $this->_TPL_PATH . 'tickets/create/index.tpl');
 				break;
 				
 			default:
@@ -1566,6 +1582,10 @@ class ChTicketsPage extends CerberusPageExtension {
 		);
 		
 		$ticket_id = CerberusMail::compose($properties);
+
+		// Custom field saves
+		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
+		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
 		
 		if(!empty($ticket_id)) {
 			if(!empty($draft_id))
@@ -1690,7 +1710,11 @@ class ChTicketsPage extends CerberusPageExtension {
 			$host = empty($requester->host) ? 'localhost' : $requester->host;
 			DAO_Ticket::createRequester($requester->mailbox . '@' . $host, $ticket_id);
 		}
-		
+
+		// Custom field saves
+		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
+		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
+ 		
 		// Worker reply
 		$properties = array(
 		    'draft_id' => $draft_id,
