@@ -18,6 +18,8 @@
 	
 	<patches>
 		<patch version="4.1.0" revision="4" file="patches/4.1.0.php" />
+		
+		<patch version="5.0.0-beta" revision="5" file="patches/5.0.0_beta.php" />
 	</patches>
 	
 	<!-- Exported Classes -->
