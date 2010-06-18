@@ -1551,6 +1551,27 @@ For example: *receipt*</seg></tuv>
 			<tuv xml:lang="en_US"><seg>Updated</seg></tuv>
 		</tu>
 
+		<!-- Tickets Comments -->
+
+		<tu tuid='ticket.comments.notify_workers'>
+			<tuv xml:lang="en_US"><seg>Notify workers</seg></tuv>
+		</tu>
+		<tu tuid='ticket.comments.email_workers'>
+			<tuv xml:lang="en_US"><seg>Email workers</seg></tuv>
+		</tu>
+		<tu tuid='ticket.comments.select_workers'>
+			<tuv xml:lang="en_US"><seg>(hold CTRL or CMD to select multiple)</seg></tuv>
+		</tu>
+		<tu tuid='ticket.comments.owner'>
+			<tuv xml:lang="en_US"><seg>(owner)</seg></tuv>
+		</tu>
+		<tu tuid='ticket.comments.comments'>
+			<tuv xml:lang="en_US"><seg>comments</seg></tuv>
+		</tu>
+		<tu tuid='ticket.comments.new_ticket_comment'>
+			<tuv xml:lang="en_US"><seg>New Ticket Comment</seg></tuv>
+		</tu>
+
 		<!-- Spam Training -->
 
 		<tu tuid='training.report_spam'>
