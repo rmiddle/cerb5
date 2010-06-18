@@ -1877,6 +1877,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 	    @$smtp_enc = DevblocksPlatform::importGPC($_REQUEST['smtp_enc'],'string','None');
 	    @$smtp_timeout = DevblocksPlatform::importGPC($_REQUEST['smtp_timeout'],'integer',30);
 	    @$smtp_max_sends = DevblocksPlatform::importGPC($_REQUEST['smtp_max_sends'],'integer',20);
+	    @$disable_worker_email_to_customer = DevblocksPlatform::importGPC($_REQUEST['disable_worker_email_to_customer'],'integer',0);
 
 	    @$smtp_auth_enabled = DevblocksPlatform::importGPC($_REQUEST['smtp_auth_enabled'],'integer', 0);
 	    if($smtp_auth_enabled) {
