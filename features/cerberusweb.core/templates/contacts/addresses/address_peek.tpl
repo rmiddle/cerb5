@@ -1,4 +1,4 @@
-<form action="{devblocks_url}{/devblocks_url}" method="POST" id="formAddressPeek" name="formAddressPeek" onsubmit="return false;">
+<form action="#" method="POST" id="formAddressPeek" name="formAddressPeek" onsubmit="return false;">
 <input type="hidden" name="c" value="contacts">
 <input type="hidden" name="a" value="saveContact">
 <input type="hidden" name="id" value="{$address.a_id}">
@@ -7,7 +7,7 @@
 
 <table cellpadding="0" cellspacing="2" border="0" width="98%">
 	<tr>
-		<td width="0%" nowrap="nowrap" align="right">{$translate->_('address.email')|capitalize}: </td>
+		<td width="0%" nowrap="nowrap" valign="top" align="right">{$translate->_('address.email')|capitalize}: </td>
 		<td width="100%">
 			{if $id == 0}
 				{if !empty($email)}
@@ -29,15 +29,15 @@
 	</tr>
 	
 	<tr>
-		<td width="0%" nowrap="nowrap" align="right">{$translate->_('address.first_name')|capitalize}: </td>
+		<td width="0%" nowrap="nowrap" valign="top" align="right">{$translate->_('address.first_name')|capitalize}: </td>
 		<td width="100%"><input type="text" name="first_name" value="{$address.a_first_name|escape}" style="width:98%;"></td>
 	</tr>
 	<tr>
-		<td width="0%" nowrap="nowrap" align="right">{$translate->_('address.last_name')|capitalize}: </td>
+		<td width="0%" nowrap="nowrap" valign="top" align="right">{$translate->_('address.last_name')|capitalize}: </td>
 		<td width="100%"><input type="text" name="last_name" value="{$address.a_last_name|escape}" style="width:98%;"></td>
 	</tr>
 	<tr>
-		<td width="0%" nowrap="nowrap" align="right" valign="top">{$translate->_('contact_org.name')|capitalize}: </td>
+		<td width="0%" nowrap="nowrap" valign="top" align="right" valign="top">{$translate->_('contact_org.name')|capitalize}: </td>
 		<td width="100%" valign="top">
 			{if !empty($address.a_contact_org_id)}
 				<b>{if !empty($address.o_name)}{$address.o_name}{else if !empty({$org_name})}{$org_name}{/if}</b>
@@ -51,7 +51,7 @@
 		</td>
 	</tr>
 	<tr>
-		<td width="0%" nowrap="nowrap" align="right">{$translate->_('common.password')|capitalize}: </td>
+		<td width="0%" nowrap="nowrap" valign="top" align="right">{$translate->_('common.password')|capitalize}: </td>
 		<td width="100%">
 			<input type="text" name="pass" value="" size="16">
 			{if $address.a_is_registered}
@@ -60,7 +60,7 @@
 		</td>
 	</tr>
 	<tr>
-		<td width="0%" nowrap="nowrap" align="right">{$translate->_('address.is_banned')|capitalize}: </td>
+		<td width="0%" nowrap="nowrap" valign="top" align="right">{$translate->_('address.is_banned')|capitalize}: </td>
 		<td width="100%">
 			<select name="is_banned">
 				<option value="0"></option>
@@ -75,15 +75,15 @@
 <br>
 
 {if $active_worker->hasPriv('core.addybook.addy.actions.update')}
-	<button type="button" onclick="if($(this.form).validate().form()) { genericAjaxPanelPostCloseReloadView('formAddressPeek', '{$view_id}'); } "><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
+	<button name="submit" type="button" onclick="if($('#formAddressPeek').validate().form()) { genericAjaxPanelPostCloseReloadView('formAddressPeek', '{$view_id}'); } "><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
 {else}
 	<div class="error">{$translate->_('error.core.no_acl.edit')}</div>	
 {/if}
 
 {if $id != 0}
 	&nbsp; 
-	{if $active_worker->hasPriv('core.mail.search')}<a href="javascript:;" onclick="document.formAddressPeek.a.value='showAddressTickets';document.formAddressPeek.closed.value='0';document.formAddressPeek.submit();">{'addy_book.peek.count.open_tickets'|devblocks_translate:$open_count}</a> &nbsp; {/if}
-	{if $active_worker->hasPriv('core.mail.search')}<a href="javascript:;" onclick="document.formAddressPeek.a.value='showAddressTickets';document.formAddressPeek.closed.value='1';document.formAddressPeek.submit();">{'addy_book.peek.count.closed_tickets'|devblocks_translate:$closed_count}</a> &nbsp; {/if}
+	{if $active_worker->hasPriv('core.mail.search')}<a href="javascript:;" onclick="$('#formAddressPeek input:hidden[name=a]').val('showAddressTickets');$('#formAddressPeek input:hidden[name=closed]').val('0');$('#formAddressPeek').submit();">{'addy_book.peek.count.open_tickets'|devblocks_translate:$open_count}</a> &nbsp; {/if}
+	{if $active_worker->hasPriv('core.mail.search')}<a href="javascript:;" onclick="$('#formAddressPeek input:hidden[name=a]').val('showAddressTickets');$('#formAddressPeek input:hidden[name=closed]').val('1');$('#formAddressPeek').submit();">{'addy_book.peek.count.closed_tickets'|devblocks_translate:$closed_count}</a> &nbsp; {/if}
 	{if $active_worker->hasPriv('core.mail.send')}<a href="javascript:;" onclick="genericAjaxPanel('c=tickets&a=showComposePeek&view_id=&to={$address.a_email|escape:'url'}',null,false,'600');"> {$translate->_('addy_book.peek.compose')}</a>{/if}
 {/if}
 

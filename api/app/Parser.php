@@ -2,7 +2,7 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2007, WebGroup Media LLC
+| All source code & content (c) Copyright 2010, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
 | This source code is released under the Cerberus Public License.
@@ -26,7 +26,7 @@
  * needing a helping hand.  We'd rather spend our free time coding your 
  * feature requests than mowing the neighbors' lawns for rent money. 
  * 
- * We've never believed in encoding our source code out of paranoia over not 
+ * We've never believed in hiding our source code out of paranoia over not 
  * getting paid.  We want you to have the full source code and be able to 
  * make the tweaks your organization requires to get more done -- despite 
  * having less of everything than you might need (time, people, money, 
@@ -35,18 +35,17 @@
  * We've been building our expertise with this project since January 2002.  We 
  * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
  * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your in-box that you probably 
- * haven't had since spammers found you in a game of "E-mail Address 
- * Battleship".  Miss. Miss. You sunk my in-box!
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
  * 
- * A legitimate license entitles you to support, access to the developer 
- * mailing list, the ability to participate in betas and the warm fuzzy 
- * feeling of feeding a couple obsessed developers who want to help you get 
- * more done than 'the other guy'.
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
  *
- * - Jeff Standen, Mike Fogg, Brenan Cavish, Darren Sugita, Dan Hildebrandt
- * 		and Joe Geck.
- *   WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
 class CerberusParserMessage {
@@ -85,6 +84,33 @@ class ParserFile {
 	static public function makeTempFilename() {
 		$path = APP_TEMP_PATH . DIRECTORY_SEPARATOR;
 		return tempnam($path,'mime');
+	}
+};
+
+class ParseFileBuffer extends ParserFile {
+	private $mime_filename = '';
+	private $section = null;
+	private $info = array();
+	private $fp = null;
+
+	function __construct($section, $info, $mime_filename) {
+		$this->mime_filename = $mime_filename;
+		$this->section = $section;
+		$this->info = $info;
+
+		$this->setTempFile(ParserFile::makeTempFilename(),@$info['content-type']);
+		$this->fp = fopen($this->getTempFile(),'wb');
+
+		if($this->fp && !empty($this->section) && !empty($this->mime_filename)) {
+			mailparse_msg_extract_part_file($this->section, $this->mime_filename, array($this, "writeCallback"));
+		}
+
+		@fclose($this->fp);
+	}
+
+	function writeCallback($chunk) {
+		$this->file_size += fwrite($this->fp, $chunk);
+		//        echo $chunk;
 	}
 };
 
@@ -196,7 +222,7 @@ class CerberusParser {
 	                if(!$is_attachments_enabled) {
 	                    break; // skip attachment
 	                }
-				    $attach = new ParseCronFileBuffer($section, $info, $full_filename);
+				    $attach = new ParseFileBuffer($section, $info, $full_filename);
 	                
 				    // [TODO] This could be more efficient by not even saving in the first place above:
                     // Make sure our attachment is under the max preferred size
@@ -205,9 +231,15 @@ class CerberusParser {
 				        break;
 				    }
 				    
+				    if(!isset($info['content-name']) || empty($info['content-name'])) {
+				    	if(isset($info['disposition-filename']))
+				    		$info['content-name'] = $info['disposition-filename'];
+				    	else
+				    		$info['content-name'] = '';
+				    }
+				    
 				    // if un-named, call it "unnamed message part"
-				    if (!isset($info['content-name']) // if not set 
-				    	|| (isset($info['content-name']) && empty($info['content-name']))) { // or blank 
+				    if (empty($info['content-name'])) { 
 				    	$info['content-name'] = 'unnamed_message_part';
 				    }
 				    
@@ -573,6 +605,20 @@ class CerberusParser {
 				DAO_Ticket::LAST_ACTION_CODE => CerberusTicketActionCode::TICKET_OPENED,
 			);
 			$id = DAO_Ticket::createTicket($fields);
+
+			// [JAS]: Add requesters to the ticket
+			if(!empty($fromAddressInst->id) && !empty($id))
+				DAO_Ticket::createRequester($fromAddressInst->email, $id);
+				
+			// Add the other TO/CC addresses to the ticket
+			if($settings->get('cerberusweb.core', CerberusSettings::PARSER_AUTO_REQ, CerberusSettingsDefaults::PARSER_AUTO_REQ)) {
+				$destinations = self::getDestinations($headers);
+				
+				if(is_array($destinations))
+				foreach($destinations as $dest) {
+					DAO_Ticket::createRequester($dest, $id);
+				}
+			}
 			
 			// Apply routing actions to our new ticket ID
 			if(isset($routing_rules) && is_array($routing_rules))
@@ -580,21 +626,7 @@ class CerberusParser {
 				$rule->run($id);
 			}
 		}
-
-		// [JAS]: Add requesters to the ticket
-		if(!empty($fromAddressInst->id) && !empty($id))
-			DAO_Ticket::createRequester($fromAddressInst->email, $id);
-	    
-		// Add the other TO/CC addresses to the ticket
-		if($settings->get('cerberusweb.core',CerberusSettings::PARSER_AUTO_REQ, CerberusSettingsDefaults::PARSER_AUTO_REQ)) {
-			$destinations = self::getDestinations($headers);
-			
-			if(is_array($destinations))
-			foreach($destinations as $dest) {
-				DAO_Ticket::createRequester($dest, $id);
-			}
-		}
-		
+	    		
         $fields = array(
             DAO_Message::TICKET_ID => $id,
             DAO_Message::CREATED_DATE => $iDate,
