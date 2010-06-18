@@ -773,6 +773,8 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$smtp_enc = $settings->get('cerberusweb.core',CerberusSettings::SMTP_ENCRYPTION_TYPE,CerberusSettingsDefaults::SMTP_ENCRYPTION_TYPE);
 		$smtp_max_sends = $settings->get('cerberusweb.core',CerberusSettings::SMTP_MAX_SENDS,CerberusSettingsDefaults::SMTP_MAX_SENDS);
 		
+		$autoreply_limiter = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_AUTOREPLY_LIMITER,CerberusSettingsDefaults::DEFAULT_AUTOREPLY_LIMITER);
+		$tpl->assign('autoreply_limiter', $autoreply_limiter);
 		// POP3
 		
 		$pop3_accounts = DAO_Mail::getPop3Accounts();
