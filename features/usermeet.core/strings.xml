@@ -92,6 +92,12 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		<tu tuid='portal.common.open_ticket'>
 			<tuv xml:lang="en_US"><seg>Open a Ticket</seg></tuv>
 		</tu>
+		<tu tuid='portal.public.open_ticket.additional_info'>
+			<tuv xml:lang="en_US"><seg>Additional Information</seg></tuv>
+		</tu>
+		<tu tuid='portal.public.open_ticket.message'>
+			<tuv xml:lang="en_US"><seg>Message</seg></tuv>
+		</tu>
 		<tu tuid='portal.public.captcha_instructions'>
 			<tuv xml:lang="en_US"><seg>Please type the characters from the image below:</seg></tuv>
 		</tu>
@@ -237,7 +243,7 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 			<tuv xml:lang="en_US"><seg>Change Password:</seg></tuv>
 		</tu>
 		<tu tuid='portal.sc.public.my_account.change_password_verify'>
-			<tuv xml:lang="en_US"><seg>Change Password (verify):</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Verify Password:</seg></tuv>
 		</tu>
 		<tu tuid='portal.sc.public.my_account.settings_saved'>
 			<tuv xml:lang="en_US"><seg>Account settings saved!</seg></tuv>

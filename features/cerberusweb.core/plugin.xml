@@ -29,7 +29,8 @@
 		
 		<patch version="5.0.0-alpha" revision="855" file="patches/5.x/5.0.0_alpha.php" />
 		<patch version="5.0.0-beta" revision="856" file="patches/5.x/5.0.0_beta.php" />
-		<patch version="5.0.0-rc1" revision="858" file="patches/5.x/5.0.0_rc1.php" />
+		<patch version="5.0.0-rc1" revision="861" file="patches/5.x/5.0.0_rc1.php" />
+		<patch version="5.0.1" revision="864" file="patches/5.x/5.0.1.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -286,9 +287,6 @@
 		<priv id="core.mail.overview" label="acl.core.mail.overview" />
 		<priv id="core.mail.search" label="acl.core.mail.search" />
 		<priv id="core.mail.send" label="acl.core.mail.send" />
-
-		<!-- Research -->
-		<priv id="core.research" label="acl.core.research" />
 
 		<!-- RSS -->
 		<priv id="core.rss" label="acl.core.rss" />
@@ -550,20 +548,6 @@
 			<params>
 				<param key="uri" value="activity" />
 				<param key="menutitle" value="core.menu.activity" />
-			</params>
-		</extension>
-
-		<extension point="cerberusweb.page">
-			<id>core.page.research</id>
-			<name>Research Page</name>
-			<class>
-				<file>api/uri/research.php</file>
-				<name>ChResearchPage</name>
-			</class>
-			<params>
-				<param key="uri" value="research" />
-				<param key="menutitle" value="core.menu.research" />
-				<param key="acl" value="core.research" />
 			</params>
 		</extension>
 

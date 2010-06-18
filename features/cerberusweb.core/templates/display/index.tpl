@@ -5,7 +5,11 @@
 	<td valign="top">
 		<table cellpadding="0" cellspacing="0" width="100%">
 			<tr>
-				<td>
+				<td valign="top">
+					<div style="float:right">
+					{include file="file:$core_tpl/tickets/quick_search_box.tpl"}
+					</div>
+					
 					<h1>{$ticket->subject|escape}</h1>
 					{assign var=ticket_team_id value=$ticket->team_id}
 					{assign var=ticket_team value=$teams.$ticket_team_id}
@@ -25,9 +29,12 @@
 						{if $ticket->unlock_date}(until {$ticket->unlock_date|devblocks_date}){/if} 
 						<br>
 					{/if}
-				</td>
-				<td align="right">
-					{include file="file:$core_tpl/tickets/quick_search_box.tpl"}				
+					
+					<b>{$translate->_('ticket.requesters')|capitalize}:</b>
+					<span id="displayTicketRequesterBubbles">
+						{include file="{$core_tpl}display/rpc/requester_list.tpl" ticket_id=$ticket->id}
+					</span>
+					(<a href="javascript:;" onclick="genericAjaxPanel('c=display&a=showRequestersPanel&ticket_id={$ticket->id}',null,false,'500');">{$translate->_('common.edit')|lower}</a>)
 				</td>
 			</tr>
 		</table>
@@ -46,7 +53,7 @@
 			<input type="hidden" name="next_worker_id" value="{$ticket->next_worker_id}">
 			<input type="hidden" name="unlock_date" value="{$ticket->unlock_date}">
 			
-			
+			<div style="padding-bottom:5px;">
 			{if !$ticket->is_deleted}
 				{if $ticket->is_closed}
 					<button type="button" onclick="this.form.closed.value='0';this.form.submit();"><span class="cerb-sprite sprite-folder_out"></span> {$translate->_('common.reopen')|capitalize}</button>
@@ -70,6 +77,16 @@
 			
 			{if !$expand_all}<button id="btnReadAll" title="{$translate->_('display.shortcut.read_all')}" type="button" onclick="document.location='{devblocks_url}c=display&id={$ticket->mask}&tab=conversation&opt=read_all{/devblocks_url}';"><span class="cerb-sprite sprite-document"></span> {$translate->_('display.button.read_all')|capitalize}</button>{/if} 
 			 
+		   	<button id="btnPrint" title="{$translate->_('display.shortcut.print')}" type="button" onclick="document.frmPrint.action='{devblocks_url}c=print&a=ticket&id={$ticket->mask}{/devblocks_url}';document.frmPrint.submit();">&nbsp;<span class="cerb-sprite sprite-printer"></span>&nbsp;</button>
+		   	<button type="button" title="{$translate->_('display.shortcut.refresh')}" onclick="document.location='{devblocks_url}c=display&id={$ticket->mask}{/devblocks_url}';">&nbsp;<span class="cerb-sprite sprite-refresh"></span>&nbsp;</button>
+		   	<button type="button" onclick="$('#divDisplayToolbarMore').toggle();">{$translate->_('common.more')|lower} &raquo;</button>
+			</div>
+			
+			<div id="divDisplayToolbarMore" style="padding-bottom:5px;display:none;">
+				{if $active_worker->hasPriv('core.ticket.view.actions.merge')}<button id="btnMerge" type="button" onclick="genericAjaxPanel('c=display&a=showMergePanel&ticket_id={$ticket->id|escape}',null,false,'500');"><span class="cerb-sprite sprite-folder_gear"></span> {$translate->_('mail.merge')|capitalize}</button>{/if}
+			</div>
+			
+			<div>
 			{if !$ticket->is_deleted}
 			{if $active_worker->hasPriv('core.ticket.actions.move')}
 		   	<select name="bucket_id" onchange="this.form.submit();">
@@ -93,18 +110,15 @@
 		  		{/foreach}
 		   	</select>
 		   	{/if}
-		   	{/if}
-		   	<button id="btnPrint" title="{$translate->_('display.shortcut.print')}" type="button" onclick="document.frmPrint.action='{devblocks_url}c=print&a=ticket&id={$ticket->mask}{/devblocks_url}';document.frmPrint.submit();">&nbsp;<span class="cerb-sprite sprite-printer"></span>&nbsp;</button>
-		   	<button type="button" title="{$translate->_('display.shortcut.refresh')}" onclick="document.location='{devblocks_url}c=display&id={$ticket->mask}{/devblocks_url}';">&nbsp;<span class="cerb-sprite sprite-refresh"></span>&nbsp;</button>
-			<br>
+		   	{/if}			
 			
 			{* Plugin Toolbar *}
 			{if !empty($ticket_toolbaritems)}
 				{foreach from=$ticket_toolbaritems item=renderer}
 					{if !empty($renderer)}{$renderer->render($ticket)}{/if}
 				{/foreach}
-				<br>
 			{/if}
+			</div>
 			
 			{if $pref_keyboard_shortcuts}
 			{$translate->_('common.keyboard')|lower}: 
@@ -124,6 +138,15 @@
 	</td>
 </tr>
 </table>
+
+{if empty($requesters)}
+<div class="ui-widget">
+	<div class="ui-state-error ui-corner-all" style="padding: 0 .7em; margin: 0.2em; "> 
+		<p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span> 
+		<strong>Warning:</strong> {$translate->_('ticket.recipients.empty')}</p>
+	</div>
+</div>
+{/if}
 
 <div id="displayTabs">
 	<ul>

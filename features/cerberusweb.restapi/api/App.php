@@ -1,4 +1,53 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2010, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Cerberus Public License.
+| The latest version of this license can be found here:
+| http://www.cerberusweb.com/license.php
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+/*
+ * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
+ * 
+ * Sure, it would be so easy to just cheat and edit this file to use the 
+ * software without paying for it.  But we trust you anyway.  In fact, we're 
+ * writing this software for you! 
+ * 
+ * Quality software backed by a dedicated team takes money to develop.  We 
+ * don't want to be out of the office bagging groceries when you call up 
+ * needing a helping hand.  We'd rather spend our free time coding your 
+ * feature requests than mowing the neighbors' lawns for rent money. 
+ * 
+ * We've never believed in hiding our source code out of paranoia over not 
+ * getting paid.  We want you to have the full source code and be able to 
+ * make the tweaks your organization requires to get more done -- despite 
+ * having less of everything than you might need (time, people, money, 
+ * energy).  We shouldn't be your bottleneck.
+ * 
+ * We've been building our expertise with this project since January 2002.  We 
+ * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
+ * let us take over your shared e-mail headache is a worthwhile investment.  
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
+ * 
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
+ *
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ */
+
 class Plugin_RestAPI {
 	public static function render($array, $format='json') {
 		if(!is_array($array))
@@ -207,6 +256,8 @@ abstract class Extension_RestController extends DevblocksExtension {
 		
 		$out = array(
 			'__status' => 'error',
+			'__version' => APP_VERSION,
+			'__build' => APP_BUILD,
 			'__error' => $code,
 			'message' => $message,
 		);
@@ -222,7 +273,13 @@ abstract class Extension_RestController extends DevblocksExtension {
 		if(!is_array($array))
 			return false;
 			
-		return Plugin_RestAPI::render(array('__status'=>'success') + $array, $this->_format);
+		$out = array(
+			'__status' => 'success',
+			'__version' => APP_VERSION,
+			'__build' => APP_BUILD,
+		);
+		
+		return Plugin_RestAPI::render($out + $array, $this->_format);
 	} 
 	
 	/**
@@ -260,6 +317,7 @@ abstract class Extension_RestController extends DevblocksExtension {
 			$_PUT = array();
 			parse_str($this->_payload, $_PUT);
 			foreach($_PUT as $k => $v) {
+				$_POST[$k] = $v;
 				$_REQUEST[$k] = $v;
 			}
 		}
@@ -342,10 +400,32 @@ abstract class Extension_RestController extends DevblocksExtension {
 		
 		return $this->search($filters, $sortToken, $sortAsc, $page, $limit);
 	}
+	
+	protected function _handleRequiredFields($required, $fields) {
+		// Check required fields
+		if(is_array($required))
+		foreach($required as $reqfield)
+			if(!isset($fields[$reqfield]))
+				$this->error(self::ERRNO_CUSTOM, sprintf("'%s' is a required field.", $reqfield));
+	}
+	
+	protected function _handleCustomFields($scope_array) {
+		$fields = array();
+		
+		if(is_array($scope_array))
+		foreach($scope_array as $k => $v) {
+			$parts = explode("_",$k,2);
+			if(2==count($parts) && 'custom'==$parts[0] && is_numeric($parts[1])) {
+				$fields[intval($parts[1])] = DevblocksPlatform::importGPC($scope_array[$k]);
+			}
+		}
+		
+		return $fields;
+	}
 };
 
 interface IExtensionRestController {
 	function getContext($id);
-	function search($filters, $sortToken, $sortAsc, $page, $limit);
+	function search($filters=array(), $sortToken='', $sortAsc=1, $page=1, $limit=10);
 	function translateToken($token, $type='dao');
 };

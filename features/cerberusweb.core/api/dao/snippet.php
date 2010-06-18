@@ -1,4 +1,52 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2010, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Cerberus Public License.
+| The latest version of this license can be found here:
+| http://www.cerberusweb.com/license.php
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+/*
+ * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
+ * 
+ * Sure, it would be so easy to just cheat and edit this file to use the 
+ * software without paying for it.  But we trust you anyway.  In fact, we're 
+ * writing this software for you! 
+ * 
+ * Quality software backed by a dedicated team takes money to develop.  We 
+ * don't want to be out of the office bagging groceries when you call up 
+ * needing a helping hand.  We'd rather spend our free time coding your 
+ * feature requests than mowing the neighbors' lawns for rent money. 
+ * 
+ * We've never believed in hiding our source code out of paranoia over not 
+ * getting paid.  We want you to have the full source code and be able to 
+ * make the tweaks your organization requires to get more done -- despite 
+ * having less of everything than you might need (time, people, money, 
+ * energy).  We shouldn't be your bottleneck.
+ * 
+ * We've been building our expertise with this project since January 2002.  We 
+ * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
+ * let us take over your shared e-mail headache is a worthwhile investment.  
+ * It will give you a sense of control over your inbox that you probably 
+ * haven't had since spammers found you in a game of 'E-mail Battleship'. 
+ * Miss. Miss. You sunk my inbox!
+ * 
+ * A legitimate license entitles you to support from the developers,  
+ * and the warm fuzzy feeling of feeding a couple of obsessed developers 
+ * who want to help you get more done.
+ *
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * 		and Jerry Kanoholani. 
+ *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
+ */
 class DAO_Snippet extends DevblocksORMHelper {
 	const ID = 'id';
 	const TITLE = 'title';
@@ -31,6 +79,25 @@ class DAO_Snippet extends DevblocksORMHelper {
 	
 	static function updateWhere($fields, $where) {
 		parent::_updateWhere('snippet', $fields, $where);
+	}
+	
+	static function incrementUse($id, $worker_id) {
+		$db = DevblocksPlatform::getDatabaseService();
+		
+		$sql = sprintf("UPDATE snippet_usage SET hits = hits + 1 WHERE snippet_id = %d AND worker_id = %d",
+			$id,
+			$worker_id
+		);
+		
+		if(!$db->Execute($sql) || 0==$db->Affected_Rows()) {
+			$sql = sprintf("INSERT INTO snippet_usage (snippet_id, worker_id, hits) VALUES (%d, %d, 1)",
+				$id,
+				$worker_id
+			);
+			return $db->Execute($sql);
+		}
+		
+		return TRUE;
 	}
 	
 	/**
@@ -97,6 +164,16 @@ class DAO_Snippet extends DevblocksORMHelper {
 		return $objects;
 	}
 	
+	static function maint() {
+		$db = DevblocksPlatform::getDatabaseService();
+		$logger = DevblocksPlatform::getConsoleLog();
+		
+		$sql = "DELETE QUICK snippet_usage FROM snippet_usage LEFT JOIN worker ON snippet_usage.worker_id = worker.id WHERE worker.id IS NULL";
+		$db->Execute($sql);
+		
+		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' snippet_usage records.');
+	}
+	
 	static function delete($ids) {
 		if(!is_array($ids)) $ids = array($ids);
 		$db = DevblocksPlatform::getDatabaseService();
@@ -107,6 +184,7 @@ class DAO_Snippet extends DevblocksORMHelper {
 		$ids_list = implode(',', $ids);
 		
 		$db->Execute(sprintf("DELETE FROM snippet WHERE id IN (%s)", $ids_list));
+		$db->Execute(sprintf("DELETE FROM snippet_usage WHERE snippet_id IN (%s)", $ids_list));
 		
 		return true;
 	}
@@ -127,6 +205,8 @@ class DAO_Snippet extends DevblocksORMHelper {
 		$db = DevblocksPlatform::getDatabaseService();
 		$fields = SearchFields_Snippet::getFields();
 		
+		$active_worker = CerberusApplication::getActiveWorker();
+		
 		// Sanitize
 		if(!isset($fields[$sortBy]))
 			$sortBy=null;
@@ -143,7 +223,7 @@ class DAO_Snippet extends DevblocksORMHelper {
 			"snippet.last_updated as %s, ".
 			"snippet.last_updated_by as %s, ".
 			"snippet.is_private as %s, ".
-			"snippet.content as %s ",
+			"snippet.content as %s",
 				SearchFields_Snippet::ID,
 				SearchFields_Snippet::TITLE,
 				SearchFields_Snippet::CONTEXT,
@@ -154,7 +234,17 @@ class DAO_Snippet extends DevblocksORMHelper {
 				SearchFields_Snippet::CONTENT
 			);
 			
-		$join_sql = "FROM snippet ";
+		if(isset($tables['snippet_usage']) && !empty($active_worker)) {
+			$select_sql .= sprintf(
+				", ".
+				"snippet_usage.hits as %s",
+				SearchFields_Snippet::USAGE_HITS
+			);
+		}
+			
+		$join_sql = " FROM snippet ".
+		((isset($tables['snippet_usage']) && !empty($active_worker)) ? sprintf("LEFT JOIN snippet_usage ON (snippet_usage.snippet_id=snippet.id AND snippet_usage.worker_id=%d) ",$active_worker->id) : " ")
+		;
 		
 		// Custom field joins
 		//list($select_sql, $join_sql, $has_multiple_values) = self::_appendSelectJoinSqlForCustomFieldTables(
@@ -222,6 +312,8 @@ class SearchFields_Snippet implements IDevblocksSearchFields {
 	const IS_PRIVATE = 's_is_private';
 	const CONTENT = 's_content';
 	
+	const USAGE_HITS = 'su_hits';
+	
 	/**
 	 * @return DevblocksSearchField[]
 	 */
@@ -237,6 +329,8 @@ class SearchFields_Snippet implements IDevblocksSearchFields {
 			self::LAST_UPDATED_BY => new DevblocksSearchField(self::LAST_UPDATED_BY, 'snippet', 'last_updated_by', $translate->_('dao.snippet.last_updated_by')),
 			self::IS_PRIVATE => new DevblocksSearchField(self::IS_PRIVATE, 'snippet', 'is_private', $translate->_('dao.snippet.is_private')),
 			self::CONTENT => new DevblocksSearchField(self::CONTENT, 'snippet', 'content', $translate->_('common.content')),
+			
+			self::USAGE_HITS => new DevblocksSearchField(self::USAGE_HITS, 'snippet_usage', 'hits', $translate->_('dao.snippet_usage.hits')),
 		);
 		
 		// Custom Fields
@@ -264,6 +358,10 @@ class Model_Snippet {
 	public $last_updated_by;
 	public $is_private;
 	public $content;
+	
+	public function incrementUse($worker_id) {
+		return DAO_Snippet::incrementUse($this->id, $worker_id);
+	}
 };
 
 class View_Snippet extends C4_AbstractView {
@@ -372,6 +470,7 @@ class View_Snippet extends C4_AbstractView {
 	static function getSearchFields() {
 		$fields = self::getFields();
 		unset($fields[SearchFields_Snippet::ID]);
+		unset($fields[SearchFields_Snippet::USAGE_HITS]);
 		return $fields;
 	}
 
