@@ -1415,6 +1415,9 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='tasks.add'>
 			<tuv xml:lang="en_US"><seg>Add Task</seg></tuv>
 		</tu>
+		<tu tuid='tasks.incomplete'>
+			<tuv xml:lang="en_US"><seg>Incomplete</seg></tuv>
+		</tu>
 		<tu tuid='tasks.complete'>
 			<tuv xml:lang="en_US"><seg>Complete</seg></tuv>
 		</tu>

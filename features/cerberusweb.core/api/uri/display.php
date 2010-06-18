@@ -1382,7 +1382,20 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/modules/history/index.tpl');
 	}
 
++	function doTicketTasksScopeAction() {
+		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer');
+		@$scope = DevblocksPlatform::importGPC($_REQUEST['scope'],'string','');
+		
+		$visit = CerberusApplication::getVisit();
+		$visit->set('display.task.scope', $scope);
+
+		$ticket = DAO_Ticket::get($ticket_id);
+
+		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket->mask,'tasks')));
+	}
+	
 	function showTasksAction() {
+		$visit = CerberusApplication::getVisit(); /* @var $visit CerberusVisit */
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer');
@@ -1393,6 +1406,12 @@ class ChDisplayPage extends CerberusPageExtension {
 		$ticket = DAO_Ticket::get($ticket_id);
 		$tpl->assign('ticket', $ticket);
 		
+		// Scope
+		$scope = $visit->get('display.task.scope', '');
+		
+		// [TODO] Sanitize scope preference		
+		
+		// Defaults
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'View_Task';
 		$defaults->id = 'ticket_tasks';
@@ -1404,11 +1423,33 @@ class ChDisplayPage extends CerberusPageExtension {
 		);
 		
 		$view = C4_AbstractViewLoader::getView('ticket_tasks', $defaults);
-		$view->params = array(
-			SearchFields_Task::SOURCE_EXTENSION => new DevblocksSearchCriteria(SearchFields_Task::SOURCE_EXTENSION,'=','cerberusweb.tasks.ticket'),
-			SearchFields_Task::SOURCE_ID => new DevblocksSearchCriteria(SearchFields_Task::SOURCE_ID,'=',$ticket_id),
-		);
-		$tpl->assign('view', $view);
+		
+		switch($scope) {
+			case 'all':
+				$view->params = array(
+					SearchFields_Task::SOURCE_EXTENSION => new DevblocksSearchCriteria(SearchFields_Task::SOURCE_EXTENSION,'=','cerberusweb.tasks.ticket'),
+					SearchFields_Task::SOURCE_ID => new DevblocksSearchCriteria(SearchFields_Task::SOURCE_ID,'=',$ticket_id),
+				);
+				break;
+				
+			case 'complete':
+				$view->params = array(
+					SearchFields_Task::SOURCE_EXTENSION => new DevblocksSearchCriteria(SearchFields_Task::SOURCE_EXTENSION,'=','cerberusweb.tasks.ticket'),
+					SearchFields_Task::SOURCE_ID => new DevblocksSearchCriteria(SearchFields_Task::SOURCE_ID,'=',$ticket_id),
+					SearchFields_Task::IS_COMPLETED => new DevblocksSearchCriteria(SearchFields_Task::IS_COMPLETED,'=',1),
+				);
+				break;
+				
+			default:
+			case 'incomplete':
+				$view->params = array(
+					SearchFields_Task::SOURCE_EXTENSION => new DevblocksSearchCriteria(SearchFields_Task::SOURCE_EXTENSION,'=','cerberusweb.tasks.ticket'),
+					SearchFields_Task::SOURCE_ID => new DevblocksSearchCriteria(SearchFields_Task::SOURCE_ID,'=',$ticket_id),
+					SearchFields_Task::IS_COMPLETED => new DevblocksSearchCriteria(SearchFields_Task::IS_COMPLETED,'=',0),
+				);
+				break;
+		}
+		$tpl->assign('scope', $scope);
 		
 		C4_AbstractViewLoader::setView($view->id, $view);
 		
@@ -1528,6 +1569,14 @@ class ChDisplayPage extends CerberusPageExtension {
 	
 	function saveRequestersPanelAction() {
 		@$ticket_id = DevblocksPlatform::importGPC($_POST['ticket_id'],'integer');
+		@$msg_id = DevblocksPlatform::importGPC($_POST['msg_id'],'integer');
+
+		// Dels
+		@$req_deletes = DevblocksPlatform::importGPC($_POST['req_deletes'],'array',array());
+		if(!empty($req_deletes))
+		foreach($req_deletes as $del_id) {
+			DAO_Ticket::deleteRequester($ticket_id, $del_id);
+		}		
 
 		// Adds
 		@$req_adds = DevblocksPlatform::parseCrlfString(DevblocksPlatform::importGPC($_POST['req_adds'],'string',''));
