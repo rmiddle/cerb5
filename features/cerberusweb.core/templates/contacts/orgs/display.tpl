@@ -9,7 +9,8 @@
 <table cellpadding="2" cellspacing="0" border="0" width="100%">
 <tr>
 	<td valign="top">
-		<h1>{$contact->name}</h1>
+		<h1>{$contact->name|escape}</h1>
+		
 		{if !empty($contact->street) || !empty($contact->country)}
 			{if !empty($contact->street)}{$contact->street}, {/if}
 			{if !empty($contact->city)}{$contact->city}, {/if}
@@ -22,8 +23,8 @@
 			{$translate->_('contact_org.phone')|capitalize}: {$contact->phone}
 			<br>
 		{/if}
-		{if !empty($contact->website)}<a href="{$contact->website}" target="_blank">{$contact->website}</a>{/if}
-		<br>
+		{if !empty($contact->website)}<a href="{$contact->website}" target="_blank">{$contact->website}</a><br>{/if}
+		
 		<br>
 	</td>
 	<td align="right" valign="top">

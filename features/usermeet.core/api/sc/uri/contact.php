@@ -36,7 +36,7 @@ class UmScContactController extends Extension_UmScController {
     	switch($section) {
     		case 'confirm':
     			$tpl->assign('last_opened',$umsession->getProperty('support.write.last_opened',''));
-    			$tpl->display("devblocks:usermeet.core:support_center/contact/confirm.tpl:portal_".UmPortalHelper::getCode());
+    			$tpl->display("devblocks:usermeet.core:portal_".UmPortalHelper::getCode() . ":support_center/contact/confirm.tpl");
     			break;
     		
     		default:
@@ -73,7 +73,7 @@ class UmScContactController extends Extension_UmScController {
 				        	$umsession->setProperty('support.write.last_nature', $sNature);
 				        	reset($dispatch);
 				        } else {
-				        	$tpl->display("devblocks:usermeet.core:support_center/contact/step1.tpl:portal_".UmPortalHelper::getCode());
+				        	$tpl->display("devblocks:usermeet.core:portal_".UmPortalHelper::getCode() . ":support_center/contact/step1.tpl");
 				        	break;
 				        }
 		        		
@@ -92,7 +92,7 @@ class UmScContactController extends Extension_UmScController {
 				        $ticket_fields = DAO_CustomField::getBySource('cerberusweb.fields.source.ticket');
 						$tpl->assign('ticket_fields', $ticket_fields);
 				        
-						$tpl->display("devblocks:usermeet.core:support_center/contact/step2.tpl:portal_".UmPortalHelper::getCode());
+						$tpl->display("devblocks:usermeet.core:portal_".UmPortalHelper::getCode() . ":support_center/contact/step2.tpl");
 		        		break;
 		        }
 		        break;
@@ -338,7 +338,7 @@ class UmScContactController extends Extension_UmScController {
 						
 						// Translate 'worker' fields into worker name (not ID)
 						case Model_CustomField::TYPE_WORKER:
-							if(null != ($worker = DAO_Worker::getAgent($answer))) {
+							if(null != ($worker = DAO_Worker::get($answer))) {
 								$aFollowUpA[$idx] = $worker->getName();
 							}
 							break;
@@ -523,7 +523,7 @@ class UmScContactController extends Extension_UmScController {
 		$ticket_id = CerberusParser::parseMessage($message);
 		
 		// It's possible for the parser to reject the message using pre-filters
-		if(!empty($ticket_id) && null != ($ticket = DAO_Ticket::getTicket($ticket_id))) {
+		if(!empty($ticket_id) && null != ($ticket = DAO_Ticket::get($ticket_id))) {
 			$umsession->setProperty('support.write.last_opened',$ticket->mask);			
 		} else {
 			$umsession->setProperty('support.write.last_opened',null);			

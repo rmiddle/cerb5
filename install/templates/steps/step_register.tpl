@@ -1,23 +1,25 @@
-<h2>Register now for a special one-time discount offer on a future purchase.</h2>
+<h2>Register now to receive your first 3 seats for FREE.</h2>
 
 <form action="index.php" method="POST">
 <input type="hidden" name="step" value="{$smarty.const.STEP_REGISTER}">
 <input type="hidden" name="form_submit" value="1">
 <input type="hidden" name="skip" value="0">
 
-<H3>You are now running the Community Edition</H3>
+<H3>You are now running the Evaluation Edition</H3>
 
-Each new Cerberus Helpdesk installation defaults to the Community Edition,
-which permits nearly full functionality with no expiration. Without a license, you are currently limited to 3
-workers and you can't enforce detailed permissions for them. If you're an organization with light requirements, 
-you may find that the Community Edition does everything you need. Go ahead, enjoy!<br>
+Each new Cerberus Helpdesk installation defaults to the Evaluation Edition,
+which provides full functionality for this version with no expiration. Without a license you are currently limited to 1
+simultaneous worker (a "seat").<br>
 <br>
 
-<b>If you answer a few questions below to introduce yourself, we'll send you a special 
-one-time discount coupon that you can apply to a future purchase.</b><br>
+<b>If you answer a few questions below to introduce yourself, we'll send you a FREE license for 3 seats to help you get started.  
+Your license will never expire for <u>this version</u> of the software.</b><br>
 <br>
 
-For organizations with more than 3 workers, <a href="http://www.cerberusweb.com/buy/" target="_blank">we offer affordable and flexible licensing
+We hope that you find the software useful, and we're looking forward to growing along with you.<br>
+<br>
+
+For organizations that require more than 3 seats, <a href="http://www.cerberusweb.com/buy/" target="_blank">we offer affordable and flexible licensing
 options</a>.<br>
 
 <H3>How can we help improve your e-mail management?</H3>
