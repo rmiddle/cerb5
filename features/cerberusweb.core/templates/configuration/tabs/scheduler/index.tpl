@@ -24,19 +24,21 @@
 		{/if}
 	{/if}
 	{*<a href="{devblocks_url}c=config&a=jobs&b=manage&id={$job_id}{/devblocks_url}">{$job->manifest->name}</a>*}
-	<a href="javascript:;" onclick="toggleDiv('job_{$job_id}');">{$job->manifest->name}</a>
+	<a href="javascript:;" onclick="toggleDiv('job_{$job_id}');">{if !$enabled}({$translate->_('common.disabled')|capitalize}) {/if}{$job->manifest->name}</a>
 	
 	<div id="" style="display:block;border:1px solid rgb(200,200,200);background-color:rgb(255,255,255);padding:5px;margin:5px;">
-		{assign var=duration value=$job->getParam('duration',5)}
-		{assign var=term value=$job->getParam('term','m')}
-		Runs every: {$duration}
-		{if $term=='d'}
-			days
-		{elseif $term=='m'}
-			minutes
-		{elseif $term=='h'}
-			hours
-		{/if}<br>
+		{if $enabled}
+			{assign var=duration value=$job->getParam('duration',5)}
+			{assign var=term value=$job->getParam('term','m')}
+			Runs every: {$duration}
+			{if $term=='d'}
+				days
+			{elseif $term=='m'}
+				minutes
+			{elseif $term=='h'}
+				hours
+			{/if}<br>
+		{/if}
 		
 		Last run: {if $lastrun}{$lastrun|devblocks_date}{else}Never{/if}
 		{if $enabled && !$locked}
