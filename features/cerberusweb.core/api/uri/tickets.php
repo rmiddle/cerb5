@@ -1657,6 +1657,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		$fromList = imap_rfc822_parse_adrlist(rtrim($reqs,', '),'');
 		
 		if(empty($fromList) || !is_array($fromList)) {
+			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('tickets','create')));
 			return; // abort with message
 		}
 		$from = array_shift($fromList);
