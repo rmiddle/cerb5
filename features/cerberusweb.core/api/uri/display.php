@@ -126,11 +126,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		
 		$tpl->assign('ticket', $ticket);
 
-	echo "<pre>";
-	echo print_r($ticket,true);
-	echo "</pre>";
-	return;
-	
 		// TicketToolbarItem Extensions
 		$ticketToolbarItems = DevblocksPlatform::getExtensions('cerberusweb.ticket.toolbaritem', true);
 		if(!empty($ticketToolbarItems))
@@ -139,6 +134,12 @@ class ChDisplayPage extends CerberusPageExtension {
 		$quick_search_type = $visit->get('quick_search_type');
 		$tpl->assign('quick_search_type', $quick_search_type);
 				
+	echo "<pre>";
+	echo print_r($ticket,true);
+	echo print_r($ticketToolbarItems,true);
+	echo "</pre>";
+	return;
+	
 		// Comments [TODO] Eventually this can be cached on ticket.num_comments
 		$comments_total = DAO_TicketComment::getCountByTicketId($id);
 		$tpl->assign('comments_total', $comments_total);
