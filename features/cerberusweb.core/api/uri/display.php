@@ -118,12 +118,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		// Permissions 
 		$active_worker_memberships = $active_worker->getMemberships();
 		
-	echo "<pre>";
-	echo print_r($ticket,true);
-	echo print_r($active_worker,true);
-	echo "</pre>";
-	return;
-	
 		// Check group membership ACL
 		if(!isset($active_worker_memberships[$ticket->team_id])) {
 			echo "<H1>".$translate->_('common.access_denied')."</H1>";
@@ -132,6 +126,11 @@ class ChDisplayPage extends CerberusPageExtension {
 		
 		$tpl->assign('ticket', $ticket);
 
+	echo "<pre>";
+	echo print_r($ticket,true);
+	echo "</pre>";
+	return;
+	
 		// TicketToolbarItem Extensions
 		$ticketToolbarItems = DevblocksPlatform::getExtensions('cerberusweb.ticket.toolbaritem', true);
 		if(!empty($ticketToolbarItems))
