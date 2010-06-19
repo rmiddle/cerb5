@@ -71,6 +71,9 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 
+	echo "<H1>Display SOMETHING</H1>";
+	return;
+	
 		$visit = CerberusApplication::getVisit(); /* @var $visit CerberusVisit */
 		$response = DevblocksPlatform::getHttpResponse();
 		$active_worker = CerberusApplication::getActiveWorker();
@@ -176,8 +179,7 @@ class ChDisplayPage extends CerberusPageExtension {
 
 			$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
-			$row = mysql_fetch_assoc($rs)
-			if(intval($row['mins'])) {
+			if($row = mysql_fetch_assoc($rs)) {
 				$total_time_all = intval($row['mins']);			
 			} else {
 				$total_time_all = 0;			
