@@ -77,13 +77,11 @@ class ChDisplayPage extends CerberusPageExtension {
 		$translate = DevblocksPlatform::getTranslationService();
 		$url = DevblocksPlatform::getUrlService();
 		
-	echo "<H1>Display SOMETHING3</H1>";
 		$stack = $response->path;
 		@array_shift($stack); // display
 		
 		@$id = array_shift($stack);
 		
-	echo "<H1>Display SOMETHING</H1><br>id = ".$id."<br>statck = ".print_r($stack,true)."<br>";
 		// [JAS]: Translate Masks
 		if(!is_numeric($id)) {
 			$id = DAO_Ticket::getTicketIdByMask($id);
@@ -95,10 +93,7 @@ class ChDisplayPage extends CerberusPageExtension {
 			return;
 		}
 		
-	echo print_r($ticket,true)."<br>";
-	return;
 		// Tabs
-		
 		$tab_manifests = DevblocksPlatform::getExtensions('cerberusweb.ticket.tab', false);
 		$tpl->assign('tab_manifests', $tab_manifests);
 
@@ -106,7 +101,13 @@ class ChDisplayPage extends CerberusPageExtension {
 		
 		if(empty($tab_selected))
 			$tab_selected = 'conversation';
-		
+	
+	echo "<pre>";
+	echo print_r($ticket,true);
+	echo print_r($tab_selected,true);
+	echo "</pre>";
+	return;
+	
 		switch($tab_selected) {
 			case 'conversation':
 				@$mail_always_show_all = DAO_WorkerPref::get($active_worker->id,'mail_always_show_all',0);
