@@ -102,12 +102,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		if(empty($tab_selected))
 			$tab_selected = 'conversation';
 	
-	echo "<pre>";
-	echo print_r($ticket,true);
-	echo print_r($tab_selected,true);
-	echo "</pre>";
-	return;
-	
 		switch($tab_selected) {
 			case 'conversation':
 				@$mail_always_show_all = DAO_WorkerPref::get($active_worker->id,'mail_always_show_all',0);
@@ -122,9 +116,14 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('tab_selected', $tab_selected);
 		
 		// Permissions 
-		
 		$active_worker_memberships = $active_worker->getMemberships();
 		
+	echo "<pre>";
+	echo print_r($ticket,true);
+	echo print_r($active_worker,true);
+	echo "</pre>";
+	return;
+	
 		// Check group membership ACL
 		if(!isset($active_worker_memberships[$ticket->team_id])) {
 			echo "<H1>".$translate->_('common.access_denied')."</H1>";
