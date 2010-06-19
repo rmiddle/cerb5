@@ -83,8 +83,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		
 		@$id = array_shift($stack);
 		
-	echo "<H1>Display SOMETHING</H1><br>id = ".$id."<br>statck = ".$stack."<br>";
-	return;
+	echo "<H1>Display SOMETHING</H1><br>id = ".$id."<br>statck = ".print_r($stack,true)."<br>";
 		// [JAS]: Translate Masks
 		if(!is_numeric($id)) {
 			$id = DAO_Ticket::getTicketIdByMask($id);
@@ -96,6 +95,8 @@ class ChDisplayPage extends CerberusPageExtension {
 			return;
 		}
 		
+	echo print_r($ticket,true)."<br>";
+	return;
 		// Tabs
 		
 		$tab_manifests = DevblocksPlatform::getExtensions('cerberusweb.ticket.tab', false);
