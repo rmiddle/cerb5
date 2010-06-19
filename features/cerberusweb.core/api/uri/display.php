@@ -183,12 +183,6 @@ class ChDisplayPage extends CerberusPageExtension {
 			$tpl->assign('total_time_all', $total_time_all);
 		endif;
 
-	echo "<pre>";
-	echo print_r($ticket,true);
-	echo print_r($total_time_all,true);
-	echo "</pre>";
-	return;
-	
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/index.tpl');
 	}
 	
