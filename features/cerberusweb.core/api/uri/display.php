@@ -78,7 +78,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		$url = DevblocksPlatform::getUrlService();
 		
 	echo "<H1>Display SOMETHING3</H1>";
-	return;
 		$stack = $response->path;
 		@array_shift($stack); // display
 		
