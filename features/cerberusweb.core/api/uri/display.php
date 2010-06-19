@@ -70,9 +70,6 @@ class ChDisplayPage extends CerberusPageExtension {
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
-
-	echo "<H1>Display SOMETHING</H1>";
-	return;
 	
 		$visit = CerberusApplication::getVisit(); /* @var $visit CerberusVisit */
 		$response = DevblocksPlatform::getHttpResponse();
@@ -80,6 +77,8 @@ class ChDisplayPage extends CerberusPageExtension {
 		$translate = DevblocksPlatform::getTranslationService();
 		$url = DevblocksPlatform::getUrlService();
 		
+	echo "<H1>Display SOMETHING</H1>";
+	return;
 		$stack = $response->path;
 		@array_shift($stack); // display
 		
