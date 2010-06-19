@@ -767,13 +767,13 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$disable_worker_email_to_customer = $settings->get('cerberusweb.core',CerberusSettings::DISABLE_WORKER_EMAIL_TO_CUSTOMER,'0');
 		$tpl->assign('disable_worker_email_to_customer', $disable_worker_email_to_customer);
 		
-		$default_ticket_reply_status = $settings->get(CerberusSettings::DEFAULT_TICKET_REPLY_STATUS,1);
+		$default_ticket_reply_status = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_TICKET_REPLY_STATUS,1);
 		$tpl->assign('default_ticket_reply_status', $default_ticket_reply_status);
 
-		$default_ticket_open_status = $settings->get(CerberusSettings::DEFAULT_TICKET_OPEN_STATUS,1);
+		$default_ticket_open_status = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_TICKET_OPEN_STATUS,1);
 		$tpl->assign('default_ticket_open_status', $default_ticket_open_status);
 
-		$default_ticket_send_status = $settings->get(CerberusSettings::DEFAULT_TICKET_SEND_STATUS,1);
+		$default_ticket_send_status = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_TICKET_SEND_STATUS,1);
 		$tpl->assign('default_ticket_send_status', $default_ticket_send_status);
 
 
