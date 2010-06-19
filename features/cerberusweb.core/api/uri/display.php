@@ -134,12 +134,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		$quick_search_type = $visit->get('quick_search_type');
 		$tpl->assign('quick_search_type', $quick_search_type);
 				
-	echo "<pre>";
-	echo print_r($ticket,true);
-	echo print_r($ticketToolbarItems,true);
-	echo "</pre>";
-	return;
-	
 		// Comments [TODO] Eventually this can be cached on ticket.num_comments
 		$comments_total = DAO_TicketComment::getCountByTicketId($id);
 		$tpl->assign('comments_total', $comments_total);
@@ -156,6 +150,11 @@ class ChDisplayPage extends CerberusPageExtension {
 		$team_categories = DAO_Bucket::getTeams();
 		$tpl->assign('team_categories', $team_categories);
 		
+	echo "<pre>";
+	echo print_r($ticket,true);
+	echo "</pre>";
+	return;
+	
 		// Log Activity
 		DAO_Worker::logActivity(
 			new Model_Activity('activity.display_ticket',array(
