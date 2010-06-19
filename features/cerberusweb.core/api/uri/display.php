@@ -77,13 +77,15 @@ class ChDisplayPage extends CerberusPageExtension {
 		$translate = DevblocksPlatform::getTranslationService();
 		$url = DevblocksPlatform::getUrlService();
 		
-	echo "<H1>Display SOMETHING</H1>";
+	echo "<H1>Display SOMETHING3</H1>";
 	return;
 		$stack = $response->path;
 		@array_shift($stack); // display
 		
 		@$id = array_shift($stack);
 		
+	echo "<H1>Display SOMETHING</H1><br>id = ".$id."<br>statck = ".$stack."<br>";
+	return;
 		// [JAS]: Translate Masks
 		if(!is_numeric($id)) {
 			$id = DAO_Ticket::getTicketIdByMask($id);
