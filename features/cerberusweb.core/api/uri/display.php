@@ -162,12 +162,6 @@ class ChDisplayPage extends CerberusPageExtension {
 			))
 		);
 		
-	echo "<pre>";
-	echo print_r($ticket,true);
-	echo print_r($teams[$ticket->team_id]->name,true);
-	echo "</pre>";
-	return;
-	
 		if (class_exists('Extension_TimeTrackingSource',true)):
 			// Adds total time worked per ticket to the token list.
 			$db = DevblocksPlatform::getDatabaseService();
@@ -189,6 +183,12 @@ class ChDisplayPage extends CerberusPageExtension {
 			$tpl->assign('total_time_all', $total_time_all);
 		endif;
 
+	echo "<pre>";
+	echo print_r($ticket,true);
+	echo print_r($total_time_all,true);
+	echo "</pre>";
+	return;
+	
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/index.tpl');
 	}
 	
