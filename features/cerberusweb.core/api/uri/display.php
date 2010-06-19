@@ -150,11 +150,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		$team_categories = DAO_Bucket::getTeams();
 		$tpl->assign('team_categories', $team_categories);
 		
-	echo "<pre>";
-	echo print_r($ticket,true);
-	echo "</pre>";
-	return;
-	
 		// Log Activity
 		DAO_Worker::logActivity(
 			new Model_Activity('activity.display_ticket',array(
@@ -167,6 +162,12 @@ class ChDisplayPage extends CerberusPageExtension {
 			))
 		);
 		
+	echo "<pre>";
+	echo print_r($ticket,true);
+	echo print_r($teams[$ticket->team_id]->name,true);
+	echo "</pre>";
+	return;
+	
 		if (class_exists('Extension_TimeTrackingSource',true)):
 			// Adds total time worked per ticket to the token list.
 			$db = DevblocksPlatform::getDatabaseService();
