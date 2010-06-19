@@ -183,9 +183,9 @@ class ChDisplayPage extends CerberusPageExtension {
 				$total_time_all = 0;			
 			}
 	    	mysql_free_result($rs);
+			$tpl->assign('total_time_all', $total_time_all);
 		endif;
 
-		$tpl->assign('total_time_all', $total_time_all);
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/index.tpl');
 	}
 	
