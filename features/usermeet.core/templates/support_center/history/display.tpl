@@ -14,7 +14,7 @@
 	&nbsp;
 	{if $display_next_assigned_to != 0}
 		<b>{$translate->_('portal.sc.cfg.history.next_assigned_to.label')|capitalize}:</b> 
-		{if $ticket.t_next_worker_id == 0}{$translate->_('portal.sc.cfg.history.next_assigned_to.unassigned')|capitalize}{else}{$cust_worker = DAO_Worker::getAgent($ticket.t_next_worker_id)}{if $display_next_assigned_to == 1}{$cust_worker->first_name}{else}{$cust_worker->getName()}{/if}{/if}
+		{if $ticket.t_next_worker_id == 0}{$translate->_('portal.sc.cfg.history.next_assigned_to.unassigned')|capitalize}{else}{$cust_worker = DAO_Worker::get($ticket.t_next_worker_id)}{if $display_next_assigned_to == 1}{$cust_worker->first_name}{else}{$cust_worker->getName()}{/if}{/if}
 		&nbsp; 	 
 	{/if}
 	<br>
@@ -129,7 +129,7 @@
 									{if !empty($ticket_field_values.$f_id)}{$ticket_field_values.$f_id|devblocks_date}{/if}<br>
 								{elseif $f->type=='W'}
 									{if $ticket_field_values.$f_id != 0}
-										{$cust_worker = DAO_Worker::getAgent($ticket_field_values.$f_id)}
+										{$cust_worker = DAO_Worker::get($ticket_field_values.$f_id)}
 										{$cust_worker->getName()}
 									{/if}
 								{/if}
