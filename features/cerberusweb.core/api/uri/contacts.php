@@ -706,26 +706,30 @@ class ChContactsPage extends CerberusPageExtension {
 		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/addresses/address_peek.tpl');
 	}
 	
-	function showAddressTicketsAction() {
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
-		@$closed = DevblocksPlatform::importGPC($_REQUEST['closed'],'integer',0);
+	function findTicketsAction() {
+		@$email = DevblocksPlatform::importGPC($_REQUEST['email'],'string','');
+		@$closed = DevblocksPlatform::importGPC($_REQUEST['closed'],'string','');
 		
-		if(null == ($address = DAO_Address::get($id)))
+		if(null == ($address = DAO_Address::lookupAddress($email, false)))
 			return;
 		
 		if(null == ($search_view = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_SEARCH))) {
 			$search_view = View_Ticket::createSearchView();
 		}
 		
-		$search_view->addParams(array(
-			SearchFields_Ticket::TICKET_CLOSED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',$closed),
-			SearchFields_Ticket::REQUESTER_ADDRESS => new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ADDRESS,'=',$address->email),
-		), true);
+		$search_view->removeAllParams();
+		
+		if(!empty($address))
+			$search_view->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ADDRESS,'=',$address->email));
+
+		if(0 != strlen($closed))
+			$search_view->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',$closed));
+			
 		$search_view->renderPage = 0;
 		
 		C4_AbstractViewLoader::setView(CerberusApplication::VIEW_SEARCH, $search_view);
 		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('tickets','search')));
+		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('tickets','search')));
 	}
 	
 	function showAddressBatchPanelAction() {
@@ -1280,20 +1284,39 @@ class ChContactsPage extends CerberusPageExtension {
 		$db = DevblocksPlatform::getDatabaseService();
 		@$query = DevblocksPlatform::importGPC($_REQUEST['term'],'string','');
 		
-		$starts_with = strtolower($query) . '%';
+		if(false !== (strpos($query,'@'))) { // email search
+			$sql = sprintf("SELECT first_name, last_name, email, num_nonspam ".
+				"FROM address ".
+				"WHERE is_banned = 0 ".
+				"AND email LIKE %s ".
+				"ORDER BY num_nonspam DESC ".
+				"LIMIT 0,25",
+				$db->qstr($query . '%')
+			);
+		} elseif(false !== (strpos($query,' '))) { // first+last
+			$sql = sprintf("SELECT first_name, last_name, email, num_nonspam ".
+				"FROM address ".
+				"WHERE is_banned = 0 ".
+				"AND concat(first_name,' ',last_name) LIKE %s ".
+				"ORDER BY num_nonspam DESC ".
+				"LIMIT 0,25",
+				$db->qstr($query . '%')
+			);
+		} else { // first, last, or email 
+			$sql = sprintf("SELECT first_name, last_name, email, num_nonspam ".
+				"FROM address ".
+				"WHERE is_banned = 0 ".
+				"AND (email LIKE %s ".
+				"OR first_name LIKE %s ".
+				"OR last_name LIKE %s) ".
+				"ORDER BY num_nonspam DESC ".
+				"LIMIT 0,25",
+				$db->qstr($query . '%'),
+				$db->qstr($query . '%'),
+				$db->qstr($query . '%')
+			);
+		}
 		
-		$sql = sprintf("SELECT first_name, last_name, email, num_nonspam ".
-			"FROM address ".
-			"WHERE is_banned = 0 ".
-			"AND (lower(email) LIKE %s ".
-			"OR lower(concat(first_name,' ',last_name)) LIKE %s ".
-			"OR lower(last_name) LIKE %s) ".
-			"ORDER BY num_nonspam DESC ".
-			"LIMIT 0,25",
-			$db->qstr($starts_with),
-			$db->qstr($starts_with),
-			$db->qstr($starts_with)
-		);
 		$rs = $db->Execute($sql);
 		
 		$list = array();
@@ -1301,8 +1324,8 @@ class ChContactsPage extends CerberusPageExtension {
 		while($row = mysql_fetch_assoc($rs)) {
 			$first = $row['first_name'];
 			$last = $row['last_name'];
-			$email = $row['email'];
-			$num_nonspam = $row['num_nonspam'];
+			$email = strtolower($row['email']);
+			$num_nonspam = intval($row['num_nonspam']);
 			
 			$personal = sprintf("%s%s%s",
 				(!empty($first)) ? $first : '',
