@@ -10,8 +10,9 @@
 </form>
 
 <script type="text/javascript" language="JavaScript1.2">
-	genericPanel.one('dialogopen', function(event,ui) {
-		genericPanel.dialog('option','title',"{$translate->_('common.import')|capitalize|escape:'quotes'}");
+	var $popup = genericAjaxPopupFetch('peek');
+	$popup.one('popup_open', function(event,ui) {
+		$popup.dialog('option','title',"{$translate->_('common.import')|capitalize|escape:'quotes'}");
 	} );
 </script>
 

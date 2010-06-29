@@ -29,8 +29,6 @@
 <input type="hidden" name="rules[]" value="event">
 <label><input type="checkbox" name="value_event[]" value="mail_outgoing" {if isset($crit_event.mail_outgoing)}checked="checked"{/if}> Outgoing</label>
 <label><input type="checkbox" name="value_event[]" value="mail_incoming" {if isset($crit_event.mail_incoming)}checked="checked"{/if}> Incoming</label>
-<label><input type="checkbox" name="value_event[]" value="ticket_assignment" {if isset($crit_event.ticket_assignment)}checked="checked"{/if}> Assigned to self</label>
-<label><input type="checkbox" name="value_event[]" value="ticket_comment" {if isset($crit_event.ticket_comment)}checked="checked"{/if}> Comment</label>
 <br>
 <br>
 
@@ -240,12 +238,13 @@
 
 <br>
 
-<button type="button" onclick="genericAjaxPanelPostCloseReloadView('frmWatcherFilter', '{$view_id}');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
+<button type="button" onclick="genericAjaxPopupPostCloseReloadView('peek','frmWatcherFilter', '{$view_id}');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
 </form>
 <br>
 
 <script type="text/javascript" language="JavaScript1.2">
-	genericPanel.one('dialogopen', function(event,ui) {
-		genericPanel.dialog('option','title',"Add Watcher Filter");
+	var $popup = genericAjaxPopupFetch('peek');
+	$popup.one('popup_open', function(event,ui) {
+		$popup.dialog('option','title',"Add Watcher Filter");
 	} );
 </script>
