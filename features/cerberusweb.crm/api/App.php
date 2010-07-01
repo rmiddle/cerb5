@@ -52,10 +52,6 @@ class CrmCustomFieldSource_Opportunity extends Extension_CustomFieldSource {
 	const ID = 'crm.fields.source.opportunity';
 };
 
-class CrmNotesSource_Opportunity extends Extension_NoteSource {
-	const ID = 'crm.notes.source.opportunity';
-};
-
 // Workspace Sources
 
 class CrmWorkspaceSource_Opportunity extends Extension_WorkspaceSource {
@@ -316,13 +312,13 @@ class CrmPage extends CerberusPageExtension {
 			// If we're adding a first comment
 			if(!empty($comment)) {
 				$fields = array(
-					DAO_Note::CREATED => time(),
-					DAO_Note::SOURCE_EXTENSION_ID => CrmNotesSource_Opportunity::ID,
-					DAO_Note::SOURCE_ID => $opp_id,
-					DAO_Note::CONTENT => $comment,
-					DAO_Note::WORKER_ID => $active_worker->id,
+					DAO_Comment::CREATED => time(),
+					DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_OPPORTUNITY,
+					DAO_Comment::CONTEXT_ID => $opp_id,
+					DAO_Comment::COMMENT => $comment,
+					DAO_Comment::ADDRESS_ID => $active_worker->getAddress()->id,
 				);
-				$comment_id = DAO_Note::create($fields);
+				$comment_id = DAO_Comment::create($fields);
 			}
 			
 		} else {
@@ -547,79 +543,6 @@ class CrmPage extends CerberusPageExtension {
 			
 			@$field_ids = DevblocksPlatform::importGPC($_REQUEST['field_ids'], 'array', array());
 			DAO_CustomFieldValue::handleFormPost(CrmCustomFieldSource_Opportunity::ID, $opp_id, $field_ids);
-		}
-		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('crm','opp',$opp_id)));
-	}
-	
-	function showOppNotesTabAction() {
-		@$opp_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer');
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $tpl_path);
-		
-		$visit = CerberusApplication::getVisit();
-		$visit->set(self::SESSION_OPP_TAB, 'notes');
-		
-		$opp = DAO_CrmOpportunity::get($opp_id);
-		$tpl->assign('opp', $opp);
-
-		list($notes, $null) = DAO_Note::search(
-			array(
-				new DevblocksSearchCriteria(SearchFields_Note::SOURCE_EXT_ID,'=',CrmNotesSource_Opportunity::ID),
-				new DevblocksSearchCriteria(SearchFields_Note::SOURCE_ID,'=',$opp->id),
-			),
-			25,
-			0,
-			SearchFields_Note::CREATED,
-			false,
-			false
-		);
-		$tpl->assign('notes', $notes);
-		
-		$active_workers = DAO_Worker::getAllActive();
-		$tpl->assign('active_workers', $active_workers);
-
-		$workers = DAO_Worker::getAllWithDisabled();
-		$tpl->assign('workers', $workers);
-				
-		$tpl->display('file:' . $tpl_path . 'crm/opps/display/tabs/notes.tpl');
-	}
-	
-	function saveOppNoteAction() {
-		@$opp_id = DevblocksPlatform::importGPC($_REQUEST['opp_id'],'integer', 0);
-		@$content = DevblocksPlatform::importGPC($_REQUEST['content'],'string','');
-		
-		$active_worker = CerberusApplication::getActiveWorker();
-		
-		if(!empty($opp_id) && 0 != strlen(trim($content))) {
-			$fields = array(
-				DAO_Note::SOURCE_EXTENSION_ID => CrmNotesSource_Opportunity::ID,
-				DAO_Note::SOURCE_ID => $opp_id,
-				DAO_Note::WORKER_ID => $active_worker->id,
-				DAO_Note::CREATED => time(),
-				DAO_Note::CONTENT => $content,
-			);
-			$note_id = DAO_Note::create($fields);
-		}
-		
-		$opp = DAO_CrmOpportunity::get($opp_id);
-		
-		// Worker notifications
-		$url_writer = DevblocksPlatform::getUrlService();
-		@$notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
-		if(is_array($notify_worker_ids) && !empty($notify_worker_ids))
-		foreach($notify_worker_ids as $notify_worker_id) {
-			$fields = array(
-				DAO_WorkerEvent::CREATED_DATE => time(),
-				DAO_WorkerEvent::WORKER_ID => $notify_worker_id,
-				DAO_WorkerEvent::URL => $url_writer->write('c=crm&a=opps&id='.$opp_id,true),
-				DAO_WorkerEvent::TITLE => 'New Opportunity Note', // [TODO] Translate
-				DAO_WorkerEvent::CONTENT => sprintf("%s\n%s notes: %s", $opp->name, $active_worker->getName(), $content), // [TODO] Translate
-				DAO_WorkerEvent::IS_READ => 0,
-			);
-			DAO_WorkerEvent::create($fields);
 		}
 		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('crm','opp',$opp_id)));
@@ -1308,7 +1231,7 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 		DAO_CustomFieldValue::deleteBySourceIds(CrmCustomFieldSource_Opportunity::ID, $ids);
 		
 		// Notes
-		DAO_Note::deleteBySourceIds(CrmNotesSource_Opportunity::ID, $ids);
+		DAO_Comment::deleteByContext(CerberusContexts::CONTEXT_OPPORTUNITY, $ids);
 		
 		return true;
 	}

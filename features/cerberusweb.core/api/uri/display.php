@@ -134,10 +134,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		$quick_search_type = $visit->get('quick_search_type');
 		$tpl->assign('quick_search_type', $quick_search_type);
 				
-		// Comments [TODO] Eventually this can be cached on ticket.num_comments
-		$comments_total = DAO_TicketComment::getCountByTicketId($id);
-		$tpl->assign('comments_total', $comments_total);
-		
 		$requesters = DAO_Ticket::getRequestersByTicket($ticket->id);
 		$tpl->assign('requesters', $requesters);
 		
@@ -254,14 +250,14 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('requesters', $ticket->getRequesters());
 		
 		if(empty($hide)) {
-			$notes = DAO_MessageNote::getByTicketId($message->ticket_id);
+			$notes = DAO_Comment::getByContext(CerberusContexts::CONTEXT_TICKET, $message->ticket_id);
 			$message_notes = array();
 			// Index notes by message id
 			if(is_array($notes))
 			foreach($notes as $note) {
-				if(!isset($message_notes[$note->message_id]))
-					$message_notes[$note->message_id] = array();
-				$message_notes[$note->message_id][$note->id] = $note;
+				if(!isset($message_notes[$note->context_id]))
+					$message_notes[$note->context_id] = array();
+				$message_notes[$note->context_id][$note->id] = $note;
 			}
 			$tpl->assign('message_notes', $message_notes);
 		}
@@ -359,13 +355,11 @@ class ChDisplayPage extends CerberusPageExtension {
 	
 	function saveMergePanelAction() {
 		@$src_ticket_id = DevblocksPlatform::importGPC($_REQUEST['src_ticket_id'],'integer',0);
-		@$dst_ticket_id = DevblocksPlatform::importGPC($_REQUEST['dst_ticket_id'],'string');
+		@$dst_ticket_ids = DevblocksPlatform::importGPC($_REQUEST['dst_ticket_id'],'array');
 		
 		$active_worker = CerberusApplication::getActiveWorker();
-		$dst_ticket = null;
 
 		$src_ticket = DAO_Ticket::get($src_ticket_id);
-		
 		$refresh_id = !empty($src_ticket) ? $src_ticket->mask : $src_ticket_id;
 		
 		// ACL
@@ -373,29 +367,33 @@ class ChDisplayPage extends CerberusPageExtension {
 			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$refresh_id)));
 			exit;
 		}
-			
-		// Check that the tickets exist
-		if(is_numeric($dst_ticket_id))
-			$dst_ticket = DAO_Ticket::get($dst_ticket_id);
-		else
-			$dst_ticket = DAO_Ticket::getTicketByMask($dst_ticket_id);
-			
-		if(empty($src_ticket) || empty($dst_ticket)) {
+		
+		// Load and filter by the current worker permissions
+		$active_worker_memberships = $active_worker->getMemberships();
+		
+		$dst_tickets = DAO_Ticket::getTickets($dst_ticket_ids);
+		foreach($dst_tickets as $dst_ticket_id => $dst_ticket) {
+			if($active_worker->is_superuser 
+				|| (isset($active_worker_memberships[$dst_ticket->team_id]))) {
+					// Permission
+			} else {
+				unset($dst_tickets[$dst_ticket_id]);
+			}
+		}
+		
+		// Load the merge IDs
+		$merge_ids = array_merge(array($src_ticket_id), array_keys($dst_tickets));
+
+		// Abort if we don't have a source and at least one target
+		if(count($merge_ids) < 2) {
 			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$refresh_id)));
 		}
 		
-		// Check the current worker permissions
-		$active_worker_memberships = $active_worker->getMemberships();
-			
-		if($active_worker->is_superuser 
-			|| (isset($active_worker_memberships[$src_ticket->team_id]) && isset($active_worker_memberships[$dst_ticket->team_id]))) {
-
-			if(false != ($oldest_id = DAO_Ticket::merge(array($src_ticket->id, $dst_ticket->id)))) {
-				if($oldest_id == $src_ticket->id)
-					$refresh_id = $src_ticket->mask;
-				elseif($oldest_id = $dst_ticket->id)
-					$refresh_id = $dst_ticket->mask;
-			}
+		if(false != ($oldest_id = DAO_Ticket::merge($merge_ids))) {
+			if($oldest_id == $src_ticket->id)
+				$refresh_id = $src_ticket->mask;
+			elseif(isset($dst_tickets[$oldest_id]))
+				$refresh_id = $dst_tickets[$oldest_id]->mask;
 		}
 		
 		// Redisplay
@@ -411,15 +409,15 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('path', $this->_TPL_PATH);
 		$tpl->assign('message_id', $message_id);
 		
-		$notes = DAO_MessageNote::getByMessageId($message_id);
+		$notes = DAO_Comment::getByContext(CerberusContexts::CONTEXT_MESSAGE, $message_id);
 		$message_notes = array();
 		
 		// [TODO] DAO-ize? (shared in render())
 		if(is_array($notes))
 		foreach($notes as $note) {
-			if(!isset($message_notes[$note->message_id]))
-				$message_notes[$note->message_id] = array();
-			$message_notes[$note->message_id][$note->id] = $note;
+			if(!isset($message_notes[$note->context_id]))
+				$message_notes[$note->context_id] = array();
+			$message_notes[$note->context_id][$note->id] = $note;
 		}
 		$tpl->assign('message_notes', $message_notes);
 				
@@ -461,12 +459,13 @@ class ChDisplayPage extends CerberusPageExtension {
 		$worker = CerberusApplication::getActiveWorker();
 		
 		$fields = array(
-			DAO_MessageNote::MESSAGE_ID => $id,
-			DAO_MessageNote::CREATED => time(),
-			DAO_MessageNote::WORKER_ID => $worker->id,
-			DAO_MessageNote::CONTENT => $content,
+			DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_MESSAGE,
+			DAO_Comment::CONTEXT_ID => $id,
+			DAO_Comment::CREATED => time(),
+			DAO_Comment::ADDRESS_ID => $worker->getAddress()->id,
+			DAO_Comment::COMMENT => $content,
 		);
-		$note_id = DAO_MessageNote::create($fields);
+		$note_id = DAO_Comment::create($fields);
 		
 		// [TODO] This really should use an anchor to go back to the message (#r100)
 //		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('display',$ticket_id)));
@@ -491,16 +490,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		}
 		
 		$this->_renderNotes($id);
-	}
-	
-	function deleteNoteAction() {
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
-		
-		$note = DAO_MessageNote::get($id);
-		$message_id = $note->message_id;
-		DAO_MessageNote::delete($id);
-		
-		$this->_renderNotes($message_id);
 	}
 	
 	function replyAction() {
@@ -820,12 +809,12 @@ class ChDisplayPage extends CerberusPageExtension {
 		@$mail_inline_comments = DAO_WorkerPref::get($active_worker->id,'mail_inline_comments',1);
 		
 		if($mail_inline_comments) { // if inline comments are enabled
-			$comments = DAO_TicketComment::getByTicketId($id);
+			$comments = DAO_Comment::getByContext(CerberusContexts::CONTEXT_TICKET, $id);
 			arsort($comments);
 			$tpl->assign('comments', $comments);
 			
 			// build a chrono index of comments
-			foreach($comments as $comment_id => $comment) { /* @var $comment Model_TicketComment */
+			foreach($comments as $comment_id => $comment) { /* @var $comment Model_Comment */
 				$key = $comment->created . '_c' . $comment_id;
 				$convo_timeline[$key] = array('c',$comment_id);
 			}
@@ -848,14 +837,14 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('convo_timeline', $convo_timeline);
 		
 		// Message Notes
-		$notes = DAO_MessageNote::getByTicketId($id);
+		$notes = DAO_Comment::getByContext(CerberusContexts::CONTEXT_MESSAGE, array_keys($messages));
 		$message_notes = array();
 		// Index notes by message id
 		if(is_array($notes))
 		foreach($notes as $note) {
-			if(!isset($message_notes[$note->message_id]))
-				$message_notes[$note->message_id] = array();
-			$message_notes[$note->message_id][$note->id] = $note;
+			if(!isset($message_notes[$note->context_id]))
+				$message_notes[$note->context_id] = array();
+			$message_notes[$note->context_id][$note->id] = $note;
 		}
 		$tpl->assign('message_notes', $message_notes);
 		
@@ -869,163 +858,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('workers', $workers);
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/modules/conversation/index.tpl');
-	}
-	
-	function showCommentsAction() {
-		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer');
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-
-		$tpl->assign('ticket_id', $ticket_id);
-		
-		$ticket = DAO_Ticket::get($ticket_id);
-		$tpl->assign('ticket', $ticket);
-
-		$workers = DAO_Worker::getAll();
-		$tpl->assign('workers', $workers);
-
-		$active_workers = DAO_Worker::getAllActive();
-		$tpl->assign('active_workers', $active_workers);
-		
-		$comments = DAO_TicketComment::getByTicketId($ticket_id);
-		arsort($comments);
-		$tpl->assign('comments', $comments);
-
-		// Comment parent addresses
-		$comment_addresses = array();
-		foreach($comments as $comment) { /* @var $comment Model_TicketComment */
-			$address_id = intval($comment->address_id);
-			if(!isset($comment_addresses[$address_id])) {
-				$address = DAO_Address::get($address_id);
-				$comment_addresses[$address_id] = $address;
-			}
-		}
-		$tpl->assign('comment_addresses', $comment_addresses);
-		
-		$tpl->display('file:' . $this->_TPL_PATH . 'display/modules/comments/index.tpl');
-	}
-	
-	function saveCommentAction() {
-		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer');
-		@$comment = DevblocksPlatform::importGPC($_REQUEST['comment'],'string','');
-		$mail_service = DevblocksPlatform::getMailService();
-		$mailer = null; // lazy load
-		$translate = DevblocksPlatform::getTranslationService();
-		
-		// Worker is logged in
-		if(null === ($active_worker = CerberusApplication::getActiveWorker()))
-			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket_id)));
-		
-		$worker_email = $active_worker->email;
-		
-		// Worker address exists
-		if(null === ($address = CerberusApplication::hashLookupAddress($active_worker->email,true)))
-			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket_id)));
-		
-		// Form was filled in
-		if(empty($ticket_id) || empty($comment))
-			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket_id)));
-			
-		$fields = array(
-			DAO_TicketComment::CREATED => time(),
-			DAO_TicketComment::TICKET_ID => $ticket_id,
-			DAO_TicketComment::ADDRESS_ID => $address->id,
-			DAO_TicketComment::COMMENT => $comment,
-		);
-		$comment_id = DAO_TicketComment::create($fields);
-		
-		@$ticket = DAO_Ticket::get($ticket_id);
-		
-		// Notifications
-		$url_writer = DevblocksPlatform::getUrlService();
-		@$enable_notify_workers = DevblocksPlatform::importGPC($_REQUEST['enable_notify_workers'],'integer',0);
-		if ($enable_notify_workers) {
-			@$notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
-			if(is_array($notify_worker_ids) && !empty($notify_worker_ids))
-			foreach($notify_worker_ids as $notify_worker_id) {
-				$fields = array(
-					DAO_WorkerEvent::CREATED_DATE => time(),
-					DAO_WorkerEvent::WORKER_ID => $notify_worker_id,
-					DAO_WorkerEvent::URL => $url_writer->write('c=display&id='.$ticket->mask,true),
-					DAO_WorkerEvent::TITLE => $translate->_('ticket.comments.new_ticket_comment'), // [TODO] Translate
-					DAO_WorkerEvent::CONTENT => sprintf("#%s: %s\n%s %s: %s", $ticket->mask, $ticket->subject, $active_worker->getName(), $translate->_('ticket.comments.comments'), $comment), // [TODO] Translate
-					DAO_WorkerEvent::IS_READ => 0,
-				);
-				DAO_WorkerEvent::create($fields);
-			}
-		}
-		
-		// Email Notifications
-		@$enable_email_workers = DevblocksPlatform::importGPC($_REQUEST['enable_email_workers'],'integer',0);
-		if ($enable_email_workers) {
-			$workers = DAO_Worker::getAll();
-			@$email_worker_ids = DevblocksPlatform::importGPC($_REQUEST['email_worker_ids'],'array',array());
-			if(is_array($email_worker_ids) && !empty($email_worker_ids)) {
-				@$active_worker = CerberusApplication::getActiveWorker();
-				$settings = CerberusSettings::getInstance();
-				$default_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, '');
-				$default_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL, '');
-				// See if we need a group-specific reply-to
-				if(!empty($ticket->team_id)) {
-					@$group_from = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_FROM);
-					if(!empty($group_from))
-						$default_from = $group_from;
-					
-					@$group_personal = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_PERSONAL);
-					if(!empty($group_personal))
-						$default_personal = $group_personal;
-				}
-
-				foreach($email_worker_ids as $email_worker_id) {
-					try {
-						if(null == $mailer)
-							$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
-							
-				 		// Create the message
-						$mail = $mail_service->createMessage();
-						$mail->setTo(array($workers[$email_worker_id]->email));
-						$mail->setFrom(array($default_from => $default_personal));
-						$mail->setReplyTo($default_from);
-						$mail->setSubject(sprintf("[%s #%s]: %s [%s]",
-							$translate->_('ticket.comments.comments'),
-							$ticket->mask,
-							$ticket->subject,
-							$translate->_('ticket.comments.comments')
-						));
-				
-						$headers = $mail->getHeaders();
-						$headers->addTextHeader('X-Mailer','Cerberus Helpdesk (Build '.APP_BUILD.')');
-						$headers->addTextHeader('Precedence','List');
-						$headers->addTextHeader('Auto-Submitted','auto-generated');
-				
-						$mail->setBody(sprintf("#%s: %s\n%s %s: %s\n%s", $ticket->mask, $ticket->subject, $active_worker->getName(), $translate->_('ticket.comments.comments'), $comment, $url_writer->write('c=display&mask=' . $ticket->mask, true, false))); // [TODO] Translate);
-				
-						$result = $mailer->send($mail);
-				
-					} catch(Exception $e) {
-						//
-					}
-				}
-			}
-		}
-
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket->mask,'comments')));
-	}
-	
-	function deleteCommentAction() {
-		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer',0);
-		@$comment_id = DevblocksPlatform::importGPC($_REQUEST['comment_id'],'integer',0);
-		
-		if(empty($ticket_id) || empty($comment_id)) 
-			return;
-		
-		@$active_worker = CerberusApplication::getActiveWorker();
-
-		$comment = DAO_TicketComment::get($comment_id);
-		
-		if(!empty($active_worker) && ($active_worker->is_superuser || $comment->getAddress()->email==$active_worker->email))
-			DAO_TicketComment::delete($comment_id);
 	}
 	
 	function showPropertiesAction() {

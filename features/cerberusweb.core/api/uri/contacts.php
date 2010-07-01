@@ -533,38 +533,6 @@ class ChContactsPage extends CerberusPageExtension {
 		exit;
 	}
 	
-	function showTabNotesAction() {
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-		
-		@$org_id = DevblocksPlatform::importGPC($_REQUEST['org']);
-		
-		$org = DAO_ContactOrg::get($org_id);
-		$tpl->assign('org', $org);
-		
-		list($notes, $null) = DAO_Note::search(
-			array(
-				new DevblocksSearchCriteria(SearchFields_Note::SOURCE_EXT_ID,'=',ChNotesSource_Org::ID),
-				new DevblocksSearchCriteria(SearchFields_Note::SOURCE_ID,'=',$org->id),
-			),
-			25,
-			0,
-			SearchFields_Note::CREATED,
-			false,
-			false
-		);
-
-		$tpl->assign('notes', $notes);
-		
-		$active_workers = DAO_Worker::getAllActive();
-		$tpl->assign('active_workers', $active_workers);
-
-		$workers = DAO_Worker::getAllWithDisabled();
-		$tpl->assign('workers', $workers);
-
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/tabs/notes.tpl');
-	}
-	
 	function showTabHistoryAction() {
 		$translate = DevblocksPlatform::getTranslationService();
 		
@@ -930,44 +898,6 @@ class ChContactsPage extends CerberusPageExtension {
 		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('contacts','orgs','display',$id))); //,'fields'
 	}	
-	
-	function saveOrgNoteAction() {
-		@$org_id = DevblocksPlatform::importGPC($_REQUEST['org_id'],'integer', 0);
-		@$content = DevblocksPlatform::importGPC($_REQUEST['content'],'string','');
-		
-		$active_worker = CerberusApplication::getActiveWorker();
-		
-		if(!empty($org_id) && 0 != strlen(trim($content))) {
-			$fields = array(
-				DAO_Note::SOURCE_EXTENSION_ID => ChNotesSource_Org::ID,
-				DAO_Note::SOURCE_ID => $org_id,
-				DAO_Note::WORKER_ID => $active_worker->id,
-				DAO_Note::CREATED => time(),
-				DAO_Note::CONTENT => $content,
-			);
-			$note_id = DAO_Note::create($fields);
-		}
-		
-		$org = DAO_ContactOrg::get($org_id);
-		
-		// Worker notifications
-		$url_writer = DevblocksPlatform::getUrlService();
-		@$notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
-		if(is_array($notify_worker_ids) && !empty($notify_worker_ids))
-		foreach($notify_worker_ids as $notify_worker_id) {
-			$fields = array(
-				DAO_WorkerEvent::CREATED_DATE => time(),
-				DAO_WorkerEvent::WORKER_ID => $notify_worker_id,
-				DAO_WorkerEvent::URL => $url_writer->write('c=contacts&a=orgs&d=display&id='.$org_id,true),
-				DAO_WorkerEvent::TITLE => 'New Organization Note', // [TODO] Translate
-				DAO_WorkerEvent::CONTENT => sprintf("%s\n%s notes: %s", $org->name, $active_worker->getName(), $content), // [TODO] Translate
-				DAO_WorkerEvent::IS_READ => 0,
-			);
-			DAO_WorkerEvent::create($fields);
-		}
-		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('contacts','orgs','display',$org_id)));
-	}
 	
 	function saveOrgPeekAction() {
 		$active_worker = CerberusApplication::getActiveWorker();

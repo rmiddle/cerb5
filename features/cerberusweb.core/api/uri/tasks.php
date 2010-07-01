@@ -174,18 +174,8 @@ class ChTasksPage extends CerberusPageExtension {
 		$tpl->assign('types', $types);
 
 		// Notes
-		list($notes, $null) = DAO_Note::search(
-			array(
-				new DevblocksSearchCriteria(SearchFields_Note::SOURCE_EXT_ID,'=',ChNotesSource_Task::ID),
-				new DevblocksSearchCriteria(SearchFields_Note::SOURCE_ID,'=',$id),
-			),
-			-1,
-			0,
-			SearchFields_Note::CREATED,
-			false,
-			false
-		);
-		$tpl->assign('notes', $notes);
+		$comments = DAO_Comment::getByContext(CerberusContexts::CONTEXT_TASK, $id);
+		$tpl->assign('comments', $comments);
 
 		// View
 		$tpl->assign('id', $id);
@@ -251,13 +241,13 @@ class ChTasksPage extends CerberusPageExtension {
 				// Append a note from the first content block, if provided				
 				if(!empty($content) && !empty($id)) {
 					$fields = array(
-						DAO_Note::SOURCE_EXTENSION_ID => ChNotesSource_Task::ID,
-						DAO_Note::SOURCE_ID => $id,
-						DAO_Note::WORKER_ID => $active_worker->id,
-						DAO_Note::CREATED => time(),
-						DAO_Note::CONTENT => $content,
+						DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_TASK,
+						DAO_Comment::CONTEXT_ID => $id,
+						DAO_Comment::ADDRESS_ID => $active_worker->getAddress()->id,
+						DAO_Comment::CREATED => time(),
+						DAO_Comment::COMMENT => $content,
 					);
-					$note_id = DAO_Note::create($fields);
+					$note_id = DAO_Comment::create($fields);
 				}
 				
 				// Write a notification (if not assigned to ourselves)
@@ -446,79 +436,6 @@ class ChTasksPage extends CerberusPageExtension {
 		}
 		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('tasks','display',$id,'properties')));
-	}
-	
-	function showTaskNotesTabAction() {
-		@$task_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer');
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(dirname(__FILE__))) . '/templates/';
-		$tpl->assign('path', $tpl_path);
-		
-		$visit = CerberusApplication::getVisit();
-//		$visit->set(self::SESSION_OPP_TAB, 'notes');
-		
-		$task = DAO_Task::get($task_id);
-		$tpl->assign('task', $task);
-
-		list($notes, $null) = DAO_Note::search(
-			array(
-				new DevblocksSearchCriteria(SearchFields_Note::SOURCE_EXT_ID,'=',ChNotesSource_Task::ID),
-				new DevblocksSearchCriteria(SearchFields_Note::SOURCE_ID,'=',$task->id),
-			),
-			25,
-			0,
-			SearchFields_Note::CREATED,
-			false,
-			false
-		);
-		$tpl->assign('notes', $notes);
-		
-		$active_workers = DAO_Worker::getAllActive();
-		$tpl->assign('active_workers', $active_workers);
-
-		$workers = DAO_Worker::getAllWithDisabled();
-		$tpl->assign('workers', $workers);
-				
-		$tpl->display('file:' . $tpl_path . 'tasks/display/tabs/notes.tpl');
-	}
-	
-	function saveTaskNoteAction() {
-		@$task_id = DevblocksPlatform::importGPC($_REQUEST['task_id'],'integer', 0);
-		@$content = DevblocksPlatform::importGPC($_REQUEST['content'],'string','');
-		
-		$active_worker = CerberusApplication::getActiveWorker();
-		
-		if(!empty($task_id) && 0 != strlen(trim($content))) {
-			$fields = array(
-				DAO_Note::SOURCE_EXTENSION_ID => ChNotesSource_Task::ID,
-				DAO_Note::SOURCE_ID => $task_id,
-				DAO_Note::WORKER_ID => $active_worker->id,
-				DAO_Note::CREATED => time(),
-				DAO_Note::CONTENT => $content,
-			);
-			$note_id = DAO_Note::create($fields);
-		}
-		
-		$task = DAO_Task::get($task_id);
-		
-		// Worker notifications
-		$url_writer = DevblocksPlatform::getUrlService();
-		@$notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
-		if(is_array($notify_worker_ids) && !empty($notify_worker_ids))
-		foreach($notify_worker_ids as $notify_worker_id) {
-			$fields = array(
-				DAO_WorkerEvent::CREATED_DATE => time(),
-				DAO_WorkerEvent::WORKER_ID => $notify_worker_id,
-				DAO_WorkerEvent::URL => $url_writer->write('c=tasks&a=display&id='.$task_id,true),
-				DAO_WorkerEvent::TITLE => 'New Task Note', // [TODO] Translate
-				DAO_WorkerEvent::CONTENT => sprintf("%s\n%s notes: %s", $task->title, $active_worker->getName(), $content), // [TODO] Translate
-				DAO_WorkerEvent::IS_READ => 0,
-			);
-			DAO_WorkerEvent::create($fields);
-		}
-		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('tasks','display',$task_id)));
 	}
 	
 	function viewTasksExploreAction() {

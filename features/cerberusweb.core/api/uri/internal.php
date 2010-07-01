@@ -113,7 +113,6 @@ class ChInternalController extends DevblocksControllerExtension {
 	function showTabContextLinksAction() {
 		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string');
 		@$context_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer');
-		@$return_uri = DevblocksPlatform::importGPC($_REQUEST['return_uri'],'string');
 		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl_path = dirname(dirname(dirname(__FILE__))) . '/templates/';
@@ -121,7 +120,6 @@ class ChInternalController extends DevblocksControllerExtension {
 		
 		$tpl->assign('context', $context);
 		$tpl->assign('context_id', $context_id);
-		$tpl->assign('return_uri', $return_uri);
 		
 		// Contexts
 		
@@ -685,16 +683,90 @@ class ChInternalController extends DevblocksControllerExtension {
 				break;
 		}
 	}
+
+	// Comments
 	
-	function deleteNoteAction() {
-		$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+	function showTabContextCommentsAction() {
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer');
 		
-		$active_worker = CerberusApplication::getActiveWorker();
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl_path = dirname(dirname(dirname(__FILE__))) . '/templates/';
+		$tpl->assign('path', $tpl_path);
 		
-		if(null != ($note = DAO_Note::get($id))) {
-			if($note->worker_id == $active_worker->id || $active_worker->is_superuser) {
-				DAO_Note::delete($id);
-			}
+		$tpl->assign('context', $context);
+		$tpl->assign('context_id', $context_id);
+
+		$comments = DAO_Comment::getByContext($context, $context_id);
+		$tpl->assign('comments', $comments);
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'internal/comments/tab.tpl');
+	}
+	
+	function commentShowPopupAction() {
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('path', $this->_TPL_PATH . '');
+		
+		$tpl->assign('context', $context);
+		$tpl->assign('context_id', $context_id);
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'internal/comments/peek.tpl');
+	}
+	
+	function commentSavePopupAction() {
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
+		@$comment = DevblocksPlatform::importGPC($_REQUEST['comment'],'string','');
+		
+		// Worker is logged in
+		if(null === ($active_worker = CerberusApplication::getActiveWorker()))
+			return;
+		
+		
+		// Form was filled in
+		if(empty($context) || empty($context_id) || empty($comment))
+			return;
+			
+		$fields = array(
+			DAO_Comment::CONTEXT => $context,
+			DAO_Comment::CONTEXT_ID => $context_id,
+			DAO_Comment::ADDRESS_ID => $active_worker->getAddress()->id,
+			DAO_Comment::COMMENT => $comment,
+			DAO_Comment::CREATED => time(),
+		);
+		$comment_id = DAO_Comment::create($fields);
+		
+//		// Worker address exists
+//		if(null === ($address = CerberusApplication::hashLookupAddress($active_worker->email,true)))
+//			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket_id)));
+			
+//		@$ticket = DAO_Ticket::get($ticket_id);
+		
+		
+		// Notifications
+		$url_writer = DevblocksPlatform::getUrlService();
+		@$notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
+		if(is_array($notify_worker_ids) && !empty($notify_worker_ids))
+		foreach($notify_worker_ids as $notify_worker_id) {
+			$fields = array(
+				DAO_WorkerEvent::CREATED_DATE => time(),
+				DAO_WorkerEvent::WORKER_ID => $notify_worker_id,
+				//DAO_WorkerEvent::URL => $url_writer->write('c=display&id='.$ticket->mask,true),
+				DAO_WorkerEvent::TITLE => 'New Comment', // [TODO] Translate
+				DAO_WorkerEvent::CONTENT => sprintf("%s comments: %s", $active_worker->getName(), $comment), // [TODO] Translate
+			);
+			DAO_WorkerEvent::create($fields);
 		}
+		
+//		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket->mask,'comments')));		
+		
+	}
+	
+	function commentDeleteAction() {
+		@$comment_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+		DAO_Comment::delete($comment_id);
 	}
 };
