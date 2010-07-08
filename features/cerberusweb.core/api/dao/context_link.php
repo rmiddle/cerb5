@@ -29,6 +29,8 @@ class DAO_ContextLink {
 			);
 			$db->Execute($sql);
 		}
+		
+		return $db->Affected_Rows();
 	}
 	
 	static public function getLinks($context, $context_id) {
