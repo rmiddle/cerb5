@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2010070701);
+define("APP_BUILD", 2010070901);
 define("APP_VERSION", '5.1.0-dev');
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
@@ -792,13 +792,13 @@ class CerberusContexts {
 		if(is_array($current_workers))
 		foreach($current_workers as $current_worker_id => $current_worker) {
 			if(false === array_search($current_worker_id, $worker_ids))
-				DAO_ContextLink::deleteLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $current_worker_id, true);
+				DAO_ContextLink::deleteLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $current_worker_id);
 		}
 		
 		// Add
 		if(is_array($worker_ids))
 		foreach($worker_ids as $worker_id) {
-			if(true == DAO_ContextLink::setLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $worker_id, true)) {
+			if(true == DAO_ContextLink::setLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $worker_id)) {
 				// [TODO] Trigger 'context.assigned' notification
 			}
 		}

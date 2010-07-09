@@ -318,6 +318,22 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 	function handleEvent(Model_DevblocksEvent $event) {
 		// Cerberus Helpdesk Workflow
 		switch($event->id) {
+			case 'context_link.set':
+				$this->_handleContextLink($event);
+				break;
+				
+			case 'context_link.assigned':
+				$this->_handleContextLinkAssigned($event);
+				break;
+				
+			case 'cron.heartbeat':
+				$this->_handleCronHeartbeat($event);
+				break;
+				
+			case 'cron.maint':
+				$this->_handleCronMaint($event);
+				break;
+				
 			case 'dao.ticket.update':
 				$this->_handleDaoTicketUpdate($event);
 				break;
@@ -334,16 +350,80 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 				$this->_handleTicketMoved($event);
 				break;
 
-			case 'cron.heartbeat':
-				$this->_handleCronHeartbeat($event);
-				break;
-				
-			case 'cron.maint':
-				$this->_handleCronMaint($event);
-				break;
 		}
 	}
 
+	// Handle context link assignment
+	private function _handleContextLink($event) {
+		$events = DevblocksPlatform::getEventService();
+		
+		// Assignment
+		if(CerberusContexts::CONTEXT_WORKER == $event->params['to_context']) {
+			// Trigger a context->worker assignment notification
+			$events->trigger(
+		        new Model_DevblocksEvent(
+		            'context_link.assigned',
+	                array(
+	                    'context' => $event->params['from_context'],
+	                    'context_id' => $event->params['from_context_id'],
+	                    'worker_id' => $event->params['to_context_id'],
+	                )
+	            )
+			);
+		}
+	}
+	
+	private function _handleContextLinkAssigned($event) {
+		$translate = DevblocksPlatform::getTranslationService();
+		$events = DevblocksPlatform::getEventService();
+		
+		$worker_id = $event->params['worker_id'];
+		$context = $event->params['context'];
+		$context_id = $event->params['context_id'];
+		
+		// Abstract context assigned notifications
+		if(null != ($mft = DevblocksPlatform::getExtension($context, false, true))) {
+			@$string_assigned = $mft->params['events'][0]['context.assigned'];
+			
+			if(!empty($string_assigned) 
+				&& null != ($ext = $mft->createInstance())	
+				&& null != ($url = $ext->getPermalink($context_id))) {
+				/* @var $ext Extension_DevblocksContext */
+
+				if(null != ($active_worker = CerberusApplication::getActiveWorker())) {
+					$worker_name = $active_worker->getName();
+				} else {
+					$worker_name = 'The system'; 
+				}
+					
+				// Assignment Notification
+				$fields = array(
+					DAO_WorkerEvent::CREATED_DATE => time(),
+					DAO_WorkerEvent::WORKER_ID => $worker_id,
+					DAO_WorkerEvent::URL => $url,
+					DAO_WorkerEvent::MESSAGE => vsprintf($translate->_($string_assigned), $worker_name),
+				);
+				DAO_WorkerEvent::create($fields);
+			}
+		}
+		
+		// Per-context itemized notifications
+		switch($context) {
+			// Task
+			case CerberusContexts::CONTEXT_TASK:
+				$events->trigger(
+			        new Model_DevblocksEvent(
+			            'task.assigned',
+		                array(
+		                    'task_id' => $context_id,
+		                	'worker_id' => $worker_id,
+		                )
+		            )
+				);
+				break;
+		}
+	}
+	
 	private function _handleDaoTicketUpdate($event) {
     	@$objects = $event->params['objects'];
 

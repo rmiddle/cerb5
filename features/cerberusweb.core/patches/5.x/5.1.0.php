@@ -224,10 +224,33 @@ if(isset($columns['content'])) {
 }
 
 if(isset($columns['title']) && !isset($columns['message'])) {
-	$db->Execute('ALTER TABLE worker_event CHANGE COLUMN title message TEXT');
+	$db->Execute('ALTER TABLE worker_event CHANGE COLUMN title message VARCHAR(255)');
 	
 	// Clear view customizations since fields changed significantly
 	$db->Execute("DELETE FROM worker_pref WHERE setting = 'viewhome_myevents'");
+}
+
+if(isset($columns['message']) && 0 != strcasecmp('varchar(255)',$columns['message']['type'])) {
+	$db->Execute("ALTER TABLE worker_event MODIFY COLUMN message VARCHAR(255) NOT NULL DEFAULT ''");
+}
+
+// ===========================================================================
+// Convert task assignments to contexts
+
+if(!isset($tables['task']))
+	return FALSE;
+
+list($columns, $indexes) = $db->metaTable('task');
+
+if(isset($columns['worker_id'])) {
+	$db->Execute("INSERT IGNORE INTO context_link (from_context, from_context_id, to_context, to_context_id) ".
+		"SELECT 'cerberusweb.contexts.task', id, 'cerberus.contexts.worker', worker_id FROM task WHERE worker_id > 0"
+	);
+	$db->Execute("INSERT IGNORE INTO context_link (from_context, from_context_id, to_context, to_context_id) ".
+		"SELECT 'cerberus.contexts.worker', worker_id, 'cerberusweb.contexts.task', id FROM task WHERE worker_id > 0"
+	);
+	
+	$db->Execute('ALTER TABLE task DROP COLUMN worker_id');
 }
 
 return TRUE;
