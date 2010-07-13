@@ -61,23 +61,8 @@
 		</td>
 	</tr>
 </table>
-<<<<<<< HEAD
-<br>
-
-<b>{$translate->_('timetracking.ui.entry_panel.note')}</b> {$translate->_('timetracking.ui.entry_panel.note_hint')}<br>
-<TEXTAREA name="notes" ROWS=4 style="width:98%;" >{$model->notes|escape}</TEXTAREA>
-<br>
-
-<b>{$translate->_('timetracking.ui.entry_panel.debit_time_client')}</b> {$translate->_('timetracking.ui.entry_panel.debit_time_client_hint')}<br>
-<input type="text" name="org" id="orginput" value="{$org->name|escape}" style="width:98%;">
-<br>
 
 {include file="file:$core_tpl/internal/custom_fields/bulk/form.tpl" bulk=false}
-<br>
-=======
-
-{include file="file:$core_tpl/internal/custom_fields/bulk/form.tpl" bulk=false}
->>>>>>> 5.1
 
 {* Comment *}
 {if !empty($last_comment)}
