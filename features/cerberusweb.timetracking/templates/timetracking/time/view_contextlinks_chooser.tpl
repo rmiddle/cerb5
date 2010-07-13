@@ -38,16 +38,32 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
+	
+	{assign var=worker_id value=$result.tt_worker_id}
+	{assign var=activity_id value=$result.tt_activity_id}
+	
+	{assign var=generic_worker value='timetracking.ui.generic_worker'|devblocks_translate}
+	{if isset($workers.$worker_id)}
+		{assign var=worker_name value=$workers.$worker_id->getName()}
+	{else}
+		{assign var=worker_name value=$generic_worker}
+	{/if}
+	
 	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
 		<tr class="{$tableRowClass}">
-			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" title="{$result.o_name|escape}" value="{$result.o_id}"></td>
+			{if isset($activities.$activity_id->name)}
+				{$title = 'timetracking.ui.tracked_desc'|devblocks_translate:$worker_name:$result.tt_time_actual_mins:$activities.$activity_id->name}
+			{else}
+				{$title = '%s tracked %s mins'|devblocks_translate:$worker_name:$result.tt_time_actual_mins}
+			{/if}					
+			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" title="{$title|escape}" value="{$result.tt_id}"></td>
 			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">
-				{if $result.o_is_closed && $result.o_is_won}<img src="{devblocks_url}c=resource&p=cerberusweb.crm&f=images/up_plus_gray.gif{/devblocks_url}" align="top" title="Won"> {elseif $result.o_is_closed && !$result.o_is_won}<img src="{devblocks_url}c=resource&p=cerberusweb.crm&f=images/down_minus_gray.gif{/devblocks_url}" align="top" title="Lost"> {/if}<a href="{devblocks_url}c=crm&d=opps&id={$result.o_id}{/devblocks_url}" class="subject" target="_blank">{if !empty($result.o_name)}{$result.o_name|escape}{else}{'common.no_title'|devblocks_translate}{/if}</a>
+				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=timetracking&a=showEntry&id={$result.tt_id}&view_id={$view->id}',null,false,'500');" class="subject">{$title}</a>
 				
-				{$object_workers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_OPPORTUNITY, array_keys($data), CerberusContexts::CONTEXT_WORKER)}
-				{if isset($object_workers.{$result.o_id})}
+				{$object_workers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_TIMETRACKING, array_keys($data), CerberusContexts::CONTEXT_WORKER)}
+				{if isset($object_workers.{$result.tt_id})}
 				<div style="display:inline;padding-left:5px;">
-				{foreach from=$object_workers.{$result.o_id} key=worker_id item=worker name=workers}
+				{foreach from=$object_workers.{$result.tt_id} key=worker_id item=worker name=workers}
 					{if isset($workers.{$worker_id})}
 						<span style="color:rgb(150,150,150);">
 						{$workers.{$worker_id}->getName()}{if !$smarty.foreach.workers.last}, {/if}
@@ -62,39 +78,23 @@
 		{foreach from=$view->view_columns item=column name=columns}
 			{if substr($column,0,3)=="cf_"}
 				{include file="file:$core_tpl/internal/custom_fields/view/cell_renderer.tpl"}
-			{elseif $column=="o_id"}
-				<td>{$result.o_id}&nbsp;</td>
-			{elseif $column=="org_name"}
-				<td>
-					{if !empty($result.org_id)}
-						{$result.org_name}
-					{/if}
-				</td>
-			{elseif $column=="o_amount"}
-				<td>{$result.o_amount|number_format:2}&nbsp;</td>
-			{elseif $column=="a_email"}
-				<td>
-					{if !empty($result.a_email)}
-						{$result.a_email}&nbsp;
-					{else}
-						<!-- [<a href="javascript:;">assign</a>]  -->
-					{/if}
-				</td>
-			{elseif $column=="o_created_date"}
-				<td><abbr title="{$result.$column|devblocks_date}">{$result.o_created_date|devblocks_prettytime}</abbr>&nbsp;</td>
-			{elseif $column=="o_updated_date"}
-				<td><abbr title="{$result.$column|devblocks_date}">{$result.o_updated_date|devblocks_prettytime}</abbr>&nbsp;</td>
-			{elseif $column=="o_closed_date"}
-				<td><abbr title="{$result.$column|devblocks_date}">{$result.o_closed_date|devblocks_prettytime}</abbr>&nbsp;</td>
-			{elseif $column=="o_worker_id"}
-				<td>
-					{assign var=o_worker_id value=$result.o_worker_id}
-					{if isset($workers.$o_worker_id)}
-						{$workers.$o_worker_id->getName()}&nbsp;
-					{/if}
+			{elseif $column=="tt_id"}
+			<td>{$result.tt_id}&nbsp;</td>
+			{elseif $column=="tt_log_date"}
+			<td title="{$result.tt_log_date|devblocks_date}">{$result.tt_log_date|devblocks_prettytime}&nbsp;</td>
+			{elseif $column=="tt_worker_id"}
+				<td>{if isset($workers.$worker_id)}{$workers.$worker_id->getName()}{/if}&nbsp;</td>
+			{elseif $column=="tt_activity_id"}
+				<td>{if isset($activities.$activity_id)}{$activities.$activity_id->name}{if $activities.$activity_id->rate > 0} ($){/if}{/if}&nbsp;</td>
+			{elseif $column=="tt_source_extension_id"}
+				{assign var=source_ext_id value=$result.tt_source_extension_id}
+				{assign var=source_id value=$result.tt_source_id}
+				<td>{if isset($sources.$source_ext_id)}
+					{assign var=source value=$sources.$source_ext_id}
+					<a href="{$source->getLink($source_id)}">{$source->getLinkText($source_id)}</a>{/if}&nbsp;
 				</td>
 			{else}
-				<td>{$result.$column}</td>
+			<td>{$result.$column}&nbsp;</td>
 			{/if}
 		{/foreach}
 		</tr>

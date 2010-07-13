@@ -18,15 +18,19 @@
 	
 	<patches>
 		<patch version="4.1.0" revision="4" file="patches/4.1.0.php" />
+<<<<<<< HEAD
 		
 		<patch version="5.0.0-beta" revision="5" file="patches/5.0.0_beta.php" />
+=======
+		<patch version="5.1.0-dev" revision="7" file="patches/5.1.0.php" />
+>>>>>>> 5.1
 	</patches>
 	
 	<!-- Exported Classes -->
 	
 	<class_loader>
 		<file path="api/App.php">
-			<class name="C4_TimeTrackingEntryView" />
+			<class name="View_TimeTracking" />
 			<class name="DAO_TimeTrackingEntry" />
 			<class name="Model_TimeTrackingEntry" />
 			<class name="SearchFields_TimeTrackingEntry" />
@@ -42,20 +46,24 @@
 	
 	<extensions>
 	
-		<!-- Http Listeners -->
+		<!-- Contexts -->
 		
-		<!-- 
-		<extension point="devblocks.listener.http">
-			<id>simulator.listeners.tour</id>
-			<name>Simulator Tour</name>
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.timetracking</id>
+			<name>Time Tracking</name>
 			<class>
-				<file>listeners.classes.php</file>
-				<name>ChSimulatorTour</name>
+				<file>api/App.php</file>
+				<name>Context_TimeTracking</name>
 			</class>
 			<params>
+				<param key="events">
+					<value>
+						<data key="context.assigned" value="context.timetracking.assigned" />
+						<data key="context.commented" value="context.timetracking.commented" />
+					</value>
+				</param>
 			</params>
 		</extension>
-		 -->
 	
 		<!-- Event Listeners -->
 
@@ -75,19 +83,6 @@
 			</params>
 		</extension>
 
-		<!-- Time Tracking Sources -->
-		
-		<extension point="timetracking.source">
-			<id>timetracking.source.ticket</id>
-			<name>Ticket</name>
-			<class>
-				<file>api/App.php</file>
-				<name>ChTimeTrackingTicketSource</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-
 		<!-- Workspace Sources -->
 		
 		<extension point="cerberusweb.workspace.source">
@@ -98,7 +93,7 @@
 				<name>ChWorkspaceSource_TimeEntry</name>
 			</class>
 			<params>
-				<param key="view_class" value="C4_TimeTrackingEntryView" />
+				<param key="view_class" value="View_TimeTracking" />
 			</params>
 		</extension>
 
@@ -140,7 +135,7 @@
 			<params>
 			</params>
 		</extension>
-	
+		
 		<!-- Log Mail Toolbar -->
 		<!-- 
 		<extension point="cerberusweb.mail.log.toolbaritem">
@@ -168,6 +163,19 @@
 			</params>
 		</extension>
 	 	-->
+	 
+		<!-- Task Toolbar -->
+			
+		<extension point="cerberusweb.task.toolbaritem">
+			<id>timetracking.task.toolbaritem.timer</id>
+			<name>Task Toolbar Timer</name>
+			<class>
+				<file>api/App.php</file>
+				<name>ChTimeTrackingTaskToolbarTimer</name>
+			</class>
+			<params>
+			</params>
+		</extension>
 	 
 		<!-- Activity Tabs -->
 		
@@ -201,15 +209,16 @@
 		
 		<!-- Controllers -->
 		
- 		<extension point="devblocks.controller">
-			<id>timetracking.controller.ajax</id>
-			<name>Time Tracking Ajax Controller</name>
+ 		<extension point="cerberusweb.page">
+			<id>timetracking.page</id>
+			<name>Time Tracking Page</name>
 			<class>
 				<file>api/App.php</file>
-				<name>ChTimeTrackingAjaxController</name>
+				<name>ChTimeTrackingPage</name>
 			</class>
 			<params>
 				<param key="uri" value="timetracking" />
+				<param key="menutitle" value="" />
 			</params>
 		</extension>
 		 

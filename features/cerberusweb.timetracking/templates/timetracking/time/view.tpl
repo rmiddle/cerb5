@@ -64,11 +64,21 @@
 		<tr class="{$tableRowClass}">
 			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" value="{$result.tt_id}"></td>
 			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">
-				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=timetracking&a=showEntry&id={$result.tt_id}&view_id={$view->id}',null,false,'500');" class="subject">
-				{'timetracking.ui.tracked_desc'|devblocks_translate:$worker_name:$result.tt_time_actual_mins:$activities.$activity_id->name}
-				</a>
-				<br>
-				{if !empty($result.tt_notes)}{$result.tt_notes}{/if}
+				<a href="{devblocks_url}c=timetracking&a=display&id={$result.tt_id}{/devblocks_url}" class="subject">{if isset($activities.$activity_id->name)}{'timetracking.ui.tracked_desc'|devblocks_translate:$worker_name:$result.tt_time_actual_mins:$activities.$activity_id->name}{else}{'%s tracked %s mins'|devblocks_translate:$worker_name:$result.tt_time_actual_mins}{/if}</a>
+				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=timetracking&a=showEntry&id={$result.tt_id}&view_id={$view->id}',null,false,'500');"><span class="ui-icon ui-icon-newwin" style="display:inline-block;vertical-align:middle;" title="{$translate->_('views.peek')}"></span></a>
+				
+				{$object_workers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_TIMETRACKING, array_keys($data), CerberusContexts::CONTEXT_WORKER)}
+				{if isset($object_workers.{$result.tt_id})}
+				<div style="display:inline;padding-left:5px;">
+				{foreach from=$object_workers.{$result.tt_id} key=worker_id item=worker name=workers}
+					{if isset($workers.{$worker_id})}
+						<span style="color:rgb(150,150,150);">
+						{$workers.{$worker_id}->getName()}{if !$smarty.foreach.workers.last}, {/if}
+						</span>
+					{/if}
+				{/foreach}
+				</div>
+				{/if}
 			</td>
 		</tr>
 		<tr class="{$tableRowClass}">
@@ -77,12 +87,6 @@
 				{include file="file:$core_tpl/internal/custom_fields/view/cell_renderer.tpl"}
 			{elseif $column=="tt_id"}
 			<td>{$result.tt_id}&nbsp;</td>
-			{elseif $column=="o_name"}
-			<td>
-				{if !empty($result.o_name)}
-				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=contacts&a=showOrgPeek&id={$result.tt_debit_org_id}&view_id={$view->id}',null,false,'500');">{$result.o_name}</a>
-				{/if}
-			</td>
 			{elseif $column=="tt_log_date"}
 			<td title="{$result.tt_log_date|devblocks_date}">{$result.tt_log_date|devblocks_prettytime}&nbsp;</td>
 			{elseif $column=="tt_worker_id"}
@@ -109,6 +113,7 @@
 	{if $total}
 	<tr>
 		<td colspan="2">
+			{if 'context'==$view->renderTemplate}<button type="button" onclick="removeSelectedContextLinks('{$view->id}');">Unlink</button>{/if}
 			{if !empty($custom_fields)}
 			<button type="button" onclick="genericAjaxPopup('peek','c=timetracking&a=showBulkPanel&view_id={$view->id}&ids=' + Devblocks.getFormEnabledCheckboxValues('viewForm{$view->id}','row_id[]'),null,false,'500');"><span class="cerb-sprite sprite-folder_gear"></span> {'common.bulk_update'|devblocks_translate|lower}</button>
 			{/if}
