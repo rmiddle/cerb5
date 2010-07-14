@@ -19,7 +19,7 @@
 {/foreach}
 {/if}
 
-<script language="JavaScript" type="text/javascript">
+<script type="text/javascript">
 function chooserOpen(ref) {
 	$select = $(ref);
 	$form = $select.closest('form');
@@ -31,6 +31,7 @@ function chooserOpen(ref) {
 	
 	$popup = genericAjaxPopup('chooser','c=internal&a=chooserOpen&context='+encodeURIComponent($context),null,true,'750');
 	$popup.one('chooser_save', function(event) {
+		event.stopPropagation();
 		$id = $context.replace(/\./g,'_');
 		$view = $('#view' + encodeURIComponent($id));
 		
