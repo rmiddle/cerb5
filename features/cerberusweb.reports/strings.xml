@@ -90,7 +90,7 @@
 			<tuv xml:lang="en_US"><seg>Group Reports</seg></tuv>
 		</tu>
 		<tu tuid='reports.ui.group.replies'>
-			<tuv xml:lang="en_US"><seg>Group Replies by Date</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Group Replies over Date Range</seg></tuv>
 		</tu>
 		<tu tuid='reports.ui.group.roster'>
 			<tuv xml:lang="en_US"><seg>Group Rosters</seg></tuv>
@@ -179,33 +179,33 @@
 		</tu>
 
 		<tu tuid='reports.ui.ticket.closed'>
-			<tuv xml:lang="en_US"><seg>Closed Tickets By Group</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Closed Tickets by Group over Date Range</seg></tuv>
 		</tu>
 		
 		<tu tuid='reports.ui.ticket.new_tickets'>
-			<tuv xml:lang="en_US"><seg>Created Tickets By Group</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Created Tickets by Group over Date Range</seg></tuv>
 		</tu>
 
 		<tu tuid='reports.ui.ticket.oldest_open'>
-			<tuv xml:lang="en_US"><seg>Oldest Open Tickets By Group</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Oldest Open Tickets by Group</seg></tuv>
 		</tu>
 
 		<tu tuid='reports.ui.ticket.open_tickets'>
-			<tuv xml:lang="en_US"><seg>Open Tickets By Group</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Currently Open Tickets by Group</seg></tuv>
 		</tu>
 
 		<tu tuid='reports.ui.ticket.top_contacts'>
-			<tuv xml:lang="en_US"><seg>Top Created Tickets By Contact</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Tickets Created by Top Contacts over Date Range</seg></tuv>
 		</tu>
 		<tu tuid='reports.ui.ticket.top_contacts.by_org'>
-			<tuv xml:lang="en_US"><seg>By Organization</seg></tuv>
+			<tuv xml:lang="en_US"><seg>by Organization</seg></tuv>
 		</tu>
 		<tu tuid='reports.ui.ticket.top_contacts.by_address'>
-			<tuv xml:lang="en_US"><seg>By Address</seg></tuv>
+			<tuv xml:lang="en_US"><seg>by Address</seg></tuv>
 		</tu>
 		
 		<tu tuid='reports.ui.ticket.waiting_tickets'>
-			<tuv xml:lang="en_US"><seg>Waiting Tickets By Group</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Currently Waiting Tickets By Group</seg></tuv>
 		</tu>
 		
 		<!-- Worker Reports -->
@@ -215,7 +215,7 @@
 		</tu>
 	
 		<tu tuid='reports.ui.worker.response_time'>
-			<tuv xml:lang="en_US"><seg>Average Response Time</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Average Response Time over Date Range</seg></tuv>
 		</tu>
 		<tu tuid='reports.ui.worker.response_time.date_range'>
 			<tuv xml:lang="en_US"><seg>Date Range:</seg></tuv>
@@ -227,13 +227,13 @@
 			<tuv xml:lang="en_US"><seg>Worker Responses</seg></tuv>
 		</tu>
 		<tu tuid='reports.ui.worker.ticket_assignment'>
-			<tuv xml:lang="en_US"><seg>Ticket Assignments</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Current Ticket Assignments</seg></tuv>
 		</tu>
 		<tu tuid='reports.ui.worker.worker_history'>
-			<tuv xml:lang="en_US"><seg>Worker History</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Worker History over Date Range</seg></tuv>
 		</tu>
 		<tu tuid='reports.ui.worker.worker_replies'>
-			<tuv xml:lang="en_US"><seg>Worker Replies by Date</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Worker Replies over Date Range</seg></tuv>
 		</tu>
 		<tu tuid='reports.ui.worker.worker_replies.average'>
 			<tuv xml:lang="en_US"><seg>(avg: %s/day)</seg></tuv>
