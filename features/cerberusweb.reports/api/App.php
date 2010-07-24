@@ -298,7 +298,8 @@ class ChReportNewTickets extends Extension_Report {
 		$time = strtotime(sprintf("-1 %s", $date_increment), $start_time);
 		while($time < $end_time) {
 			$time = strtotime(sprintf("+1 %s", $date_increment), $time);
-			$ticks[strftime($date_group, $time)] = 0;
+			if($time <= $end_time)
+				$ticks[strftime($date_group, $time)] = 0;
 		}
 		
 		// Chart
@@ -381,6 +382,9 @@ class ChReportWorkerReplies extends Extension_Report {
 
 		$tpl->assign('path', $this->tpl_path);
 		
+		@$filter_worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
+		$tpl->assign('filter_worker_ids', $filter_worker_ids);
+		
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
 		
@@ -389,7 +393,7 @@ class ChReportWorkerReplies extends Extension_Report {
 		
 		// Years
 		$years = array();
-		$sql = "SELECT date_format(from_unixtime(created_date),'%Y') as year FROM message WHERE created_date > 0 AND is_outgoing = 1 GROUP BY year having year <= date_format(now(),'%Y') ORDER BY year desc limit 0,10";
+		$sql = "SELECT DATE_FORMAT(FROM_UNIXTIME(created_date),'%Y') AS year FROM message WHERE created_date > 0 AND is_outgoing = 1 GROUP BY year HAVING year <= date_format(now(),'%Y') ORDER BY year desc limit 0,10";
 		$rs = $db->Execute($sql);
 		
 		while($row = mysql_fetch_assoc($rs)) {
@@ -434,64 +438,60 @@ class ChReportWorkerReplies extends Extension_Report {
 		$tpl->assign('end', $end);
 		$tpl->assign('age_dur', abs(floor(($start_time - $end_time)/86400)));		
 		
-		// Table
-		
-		$sql = sprintf("SELECT count(*) AS hits, t.team_id, m.worker_id ".
-			"FROM message m ".
-			"INNER JOIN ticket t ON (t.id=m.ticket_id) ".
-			"WHERE m.created_date > %d AND m.created_date <= %d ".
-			"AND m.is_outgoing = 1 ".
-			"AND t.is_deleted = 0 ".
-			"GROUP BY t.team_id, m.worker_id ",
-			$start_time,
-			$end_time
-		);
-		$rs = $db->Execute($sql);
-		
-		$worker_counts = array();
-		while($row = mysql_fetch_assoc($rs)) {
-			$hits = intval($row['hits']);
-			$team_id = intval($row['team_id']);
-			$worker_id = intval($row['worker_id']);
-			
-			if(!isset($worker_counts[$worker_id]))
-				$worker_counts[$worker_id] = array();
-			
-			$worker_counts[$worker_id][$team_id] = $hits;
-			@$worker_counts[$worker_id]['total'] = intval($worker_counts[$worker_id]['total']) + $hits;
-		}
-		$tpl->assign('worker_counts', $worker_counts);
-		
-		mysql_free_result($rs);
-		
 		// Calculate the # of ticks between the dates (and the scale -- day, month, etc)
 		$range = $end_time - $start_time;
 		$range_days = $range/86400;
 		$plots = $range/15;
 		
 		$ticks = array();
+
+		@$report_date_grouping = DevblocksPlatform::importGPC($_REQUEST['report_date_grouping'],'string','');
+		$date_group = '';
+		$date_increment = '';
 		
-		if($range_days > 365) {
-			$date_group = '%Y';
-			$date_increment = 'year';
-		} elseif($range_days > 32) {
-			$date_group = '%Y-%m';
-			$date_increment = 'month';
-		} elseif($range_days > 1) {
-			$date_group = '%Y-%m-%d';
-			$date_increment = 'day';
-		} else {
-			$date_group = '%Y-%m-%d %H';
-			$date_increment = 'hour';
+		// Did the user choose a specific grouping?
+		switch($report_date_grouping) {
+			case 'year':
+				$date_group = '%Y';
+				$date_increment = 'year';
+				break;
+			case 'month':
+				$date_group = '%Y-%m';
+				$date_increment = 'month';
+				break;
+			case 'day':
+				$date_group = '%Y-%m-%d';
+				$date_increment = 'day';
+				break;
 		}
+		
+		// Fallback to automatic grouping
+		if(empty($date_group) || empty($date_increment)) {
+			if($range_days > 365) {
+				$date_group = '%Y';
+				$date_increment = 'year';
+			} elseif($range_days > 32) {
+				$date_group = '%Y-%m';
+				$date_increment = 'month';
+			} elseif($range_days > 1) {
+				$date_group = '%Y-%m-%d';
+				$date_increment = 'day';
+			} else {
+				$date_group = '%Y-%m-%d %H';
+				$date_increment = 'hour';
+			}
+		}
+		
+		$tpl->assign('report_date_grouping', $date_increment);
 		
 		// Find unique values
 		$time = strtotime(sprintf("-1 %s", $date_increment), $start_time);
 		while($time < $end_time) {
 			$time = strtotime(sprintf("+1 %s", $date_increment), $time);
-			$ticks[strftime($date_group, $time)] = 0;
-		}		
-
+			if($time <= $end_time)
+				$ticks[strftime($date_group, $time)] = 0;
+		}
+		
 		// Chart
 		
 		$sql = sprintf("SELECT m.worker_id, DATE_FORMAT(FROM_UNIXTIME(m.created_date),'%s') as date_plot, count(*) AS hits ".
@@ -499,13 +499,15 @@ class ChReportWorkerReplies extends Extension_Report {
 			"INNER JOIN ticket t ON (t.id=m.ticket_id) ".
 			"INNER JOIN worker w ON (w.id=m.worker_id) ".
 			"WHERE m.created_date > %d AND m.created_date <= %d ".
+			"%s ".
 			"AND m.is_outgoing = 1 ".
 			"AND t.is_deleted = 0 ".
 			"GROUP BY m.worker_id, date_plot ".
 			"ORDER BY w.last_name DESC ",
 			$date_group,
 			$start_time,
-			$end_time
+			$end_time,
+			(is_array($filter_worker_ids) && !empty($filter_worker_ids) ? sprintf("AND m.worker_id IN (%s)", implode(',', $filter_worker_ids)) : "")
 		);
 		$rs = $db->Execute($sql);
 		
@@ -520,7 +522,8 @@ class ChReportWorkerReplies extends Extension_Report {
 			$data[$worker_id][$date_plot] = intval($row['hits']);
 		}
 		
-		$tpl->assign('xaxis_ticks', array_keys($ticks));
+		$xaxis_ticks = array_keys($ticks);
+		$tpl->assign('xaxis_ticks', $xaxis_ticks);
 		$tpl->assign('data', $data);
 		
 		mysql_free_result($rs);		
@@ -909,7 +912,8 @@ class ChReportGroupReplies extends Extension_Report {
 		$time = strtotime(sprintf("-1 %s", $date_increment), $start_time);
 		while($time < $end_time) {
 			$time = strtotime(sprintf("+1 %s", $date_increment), $time);
-			$ticks[strftime($date_group, $time)] = 0;
+			if($time <= $end_time)
+				$ticks[strftime($date_group, $time)] = 0;
 		}		
 		
 		// Table
@@ -1383,7 +1387,8 @@ class ChReportClosedTickets extends Extension_Report {
 		$time = strtotime(sprintf("-1 %s", $date_increment), $start_time);
 		while($time < $end_time) {
 			$time = strtotime(sprintf("+1 %s", $date_increment), $time);
-			$ticks[strftime($date_group, $time)] = 0;
+			if($time <= $end_time)
+				$ticks[strftime($date_group, $time)] = 0;
 		}
 		
 		$sql = sprintf("SELECT team.id as group_id, DATE_FORMAT(FROM_UNIXTIME(t.updated_date),'%s') as date_plot, ".
@@ -1585,7 +1590,8 @@ class ChReportTopTicketsByContact extends Extension_Report {
 		$time = strtotime(sprintf("-1 %s", $date_increment), $start_time);
 		while($time < $end_time) {
 			$time = strtotime(sprintf("+1 %s", $date_increment), $time);
-			$ticks[strftime($date_group, $time)] = 0;
+			if($time <= $end_time)
+				$ticks[strftime($date_group, $time)] = 0;
 		}		
 		
 		// Table
@@ -1848,7 +1854,8 @@ class ChReportWorkerHistory extends Extension_Report {
 		$time = strtotime(sprintf("-1 %s", $date_increment), $start_time);
 		while($time < $end_time) {
 			$time = strtotime(sprintf("+1 %s", $date_increment), $time);
-			$ticks[strftime($date_group, $time)] = 0;
+			if($time <= $end_time)
+				$ticks[strftime($date_group, $time)] = 0;
 		}		
 		
 		@$worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);
@@ -1896,7 +1903,8 @@ class ChReportWorkerHistory extends Extension_Report {
 		$time = strtotime(sprintf("-1 %s", $date_increment), $start_time);
 		while($time < $end_time) {
 			$time = strtotime(sprintf("+1 %s", $date_increment), $time);
-			$ticks[strftime($date_group, $time)] = 0;
+			if($time <= $end_time)
+				$ticks[strftime($date_group, $time)] = 0;
 		}		
 		
 		// Table
