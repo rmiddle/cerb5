@@ -1,6 +1,6 @@
 <?php
 if (class_exists('Extension_Report',true)):
-class ChReportTimeSpentWorker extends Extension_Report {
+class ChReportTimeSpentOrg extends Extension_Report {
 	function __construct($manifest) {
 		parent::__construct($manifest);
 	}
@@ -8,15 +8,18 @@ class ChReportTimeSpentWorker extends Extension_Report {
 	function render() {
 		$db = DevblocksPlatform::getDatabaseService();
 		$tpl = DevblocksPlatform::getTemplateService();
-		
+
 		@$filter_worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
 		$tpl->assign('filter_worker_ids', $filter_worker_ids);
 		
+		@$filter_org_ids = DevblocksPlatform::importGPC($_REQUEST['org_id'],'array',array());
+		if(!empty($filter_org_ids)) {
+			$tpl->assign('orgs', DAO_ContactOrg::getWhere(sprintf("%s IN (%s)", DAO_ContactOrg::ID, implode(',', $filter_org_ids))));
+			$tpl->assign('filter_org_ids', $filter_org_ids);
+		}
+		
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
-
-		@$sel_worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);
-		$tpl->assign('sel_worker_id', $sel_worker_id);
 		
 		// Dates
 		
@@ -49,7 +52,7 @@ class ChReportTimeSpentWorker extends Extension_Report {
 		
 		// reload variables in template
 		$tpl->assign('start', $start);
-		$tpl->assign('end', $end);
+		$tpl->assign('end', $end);		
 		
 		// Calculate the # of ticks between the dates (and the scale -- day, month, etc)
 		$range = $end_time - $start_time;
@@ -108,7 +111,7 @@ class ChReportTimeSpentWorker extends Extension_Report {
 		// Table
 		
 		$defaults = new C4_AbstractViewModel();
-		$defaults->id = 'report_timetracking_worker';
+		$defaults->id = 'report_timetracking_org';
 		$defaults->class_name = 'View_TimeTracking';
 		
 		if(null != ($view = C4_AbstractViewLoader::getView($defaults->id, $defaults))) {
@@ -123,6 +126,14 @@ class ChReportTimeSpentWorker extends Extension_Report {
 			} else {
 				$view->addParam(new DevblocksSearchCriteria(SearchFields_TimeTrackingEntry::WORKER_ID,DevblocksSearchCriteria::OPER_NEQ, 0));
 			}
+
+			if(!empty($filter_org_ids)) {
+				$view->addParam(array(
+					DevblocksSearchCriteria::GROUP_AND,
+					new DevblocksSearchCriteria(SearchFields_TimeTrackingEntry::CONTEXT_LINK,DevblocksSearchCriteria::OPER_EQ, CerberusContexts::CONTEXT_ORG),
+					new DevblocksSearchCriteria(SearchFields_TimeTrackingEntry::CONTEXT_LINK_ID,DevblocksSearchCriteria::OPER_IN, $filter_org_ids),
+				),'context_orgs');
+			}
 			
 			$view->renderPage = 0;
 			$view->renderSortBy = SearchFields_TimeTrackingEntry::LOG_DATE;
@@ -131,37 +142,40 @@ class ChReportTimeSpentWorker extends Extension_Report {
 			C4_AbstractViewLoader::setView($view->id, $view);
 			
 			$tpl->assign('view', $view);
-		}
+		}		
 
 		// Chart
-		
-		$sql = sprintf("SELECT tte.worker_id, DATE_FORMAT(FROM_UNIXTIME(tte.log_date),'%s') AS date_plot, ".
-			"SUM(tte.time_actual_mins) AS mins ".
+		// [TODO] Limit to top 5-10, or aggregate non-top "Other"
+		$sql = sprintf("SELECT contact_org.id AS org_id, DATE_FORMAT(FROM_UNIXTIME(tte.log_date),'%s') as date_plot, ".
+			"SUM(tte.time_actual_mins) AS mins, contact_org.name AS org_name ".
 			"FROM timetracking_entry tte ".
+			"INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.timetracking' AND tte.id = context_link.to_context_id AND context_link.from_context = 'cerberusweb.contexts.org') ". 
+			"INNER JOIN contact_org ON (context_link.from_context_id = contact_org.id) ". 
 			"WHERE 1 ".
 			"AND log_date > %d ".
 			"AND log_date <= %d ".
 			"%s ".
-			"GROUP BY tte.worker_id, date_plot ",
+			"%s ".
+			"GROUP BY contact_org.id, date_plot ".
+			"ORDER BY contact_org.name asc",
 			$date_group,
 			$start_time,
 			$end_time,
-			(is_array($filter_worker_ids) && !empty($filter_worker_ids) ? sprintf("AND tte.worker_id IN (%s)", implode(',', $filter_worker_ids)) : "")
+			(is_array($filter_worker_ids) && !empty($filter_worker_ids) ? sprintf("AND tte.worker_id IN (%s)", implode(',', $filter_worker_ids)) : ""),
+			(is_array($filter_org_ids) && !empty($filter_org_ids) ? sprintf("AND context_link.to_context_id IN (%s)", implode(',', $filter_org_ids)) : "")
 		);
 		$rs = $db->Execute($sql);
 		
 		$data = array();
+		
 		while($row = mysql_fetch_assoc($rs)) {
-			$worker_id = intval($row['worker_id']);
+			$org_id = intval($row['org_id']);
 			$date_plot = $row['date_plot'];
 			
-			if(!isset($workers[$worker_id]))
-				continue;
-			
-			if(!isset($data[$worker_id]))
-				$data[$worker_id] = $ticks;
-			
-			$data[$worker_id][$date_plot] = intval($row['mins']);
+			if(!isset($data[$org_id]))
+				$data[$org_id] = $ticks;
+				
+			$data[$org_id][$date_plot] = intval($row['mins']);
 		}
 		
 		// Sort the data in descending order
@@ -170,11 +184,11 @@ class ChReportTimeSpentWorker extends Extension_Report {
 		$tpl->assign('xaxis_ticks', array_keys($ticks));
 		$tpl->assign('data', $data);
 		
-		mysql_free_result($rs);		
+		mysql_free_result($rs);
 		
 		// Template
 		
-		$tpl->display('devblocks:cerberusweb.timetracking::reports/time_spent_worker/index.tpl');
+		$tpl->display('devblocks:cerberusweb.timetracking::reports/time_spent_org/index.tpl');
 	}
 };
 endif;

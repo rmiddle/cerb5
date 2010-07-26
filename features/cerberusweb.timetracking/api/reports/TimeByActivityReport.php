@@ -1,6 +1,6 @@
 <?php
 if (class_exists('Extension_Report',true)):
-class ChReportTimeSpentWorker extends Extension_Report {
+class ChReportTimeSpentActivity extends Extension_Report {
 	function __construct($manifest) {
 		parent::__construct($manifest);
 	}
@@ -8,18 +8,15 @@ class ChReportTimeSpentWorker extends Extension_Report {
 	function render() {
 		$db = DevblocksPlatform::getDatabaseService();
 		$tpl = DevblocksPlatform::getTemplateService();
-		
+
 		@$filter_worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
 		$tpl->assign('filter_worker_ids', $filter_worker_ids);
 		
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
-
-		@$sel_worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);
-		$tpl->assign('sel_worker_id', $sel_worker_id);
 		
 		// Dates
-		
+
 		// import dates from form
 		@$start = DevblocksPlatform::importGPC($_REQUEST['start'],'string','');
 		@$end = DevblocksPlatform::importGPC($_REQUEST['end'],'string','');
@@ -51,7 +48,7 @@ class ChReportTimeSpentWorker extends Extension_Report {
 		$tpl->assign('start', $start);
 		$tpl->assign('end', $end);
 		
-		// Calculate the # of ticks between the dates (and the scale -- day, month, etc)
+			// Calculate the # of ticks between the dates (and the scale -- day, month, etc)
 		$range = $end_time - $start_time;
 		$range_days = $range/86400;
 		$plots = $range/15;
@@ -95,20 +92,20 @@ class ChReportTimeSpentWorker extends Extension_Report {
 			}
 		}
 		
-		$tpl->assign('report_date_grouping', $date_increment);	
-				
+		$tpl->assign('report_date_grouping', $date_increment);
+		
 		// Find unique values
 		$time = strtotime(sprintf("-1 %s", $date_increment), $start_time);
 		while($time < $end_time) {
 			$time = strtotime(sprintf("+1 %s", $date_increment), $time);
 			if($time <= $end_time)
 				$ticks[strftime($date_group, $time)] = 0;
-		}
-		
+		}		
+
 		// Table
 		
 		$defaults = new C4_AbstractViewModel();
-		$defaults->id = 'report_timetracking_worker';
+		$defaults->id = 'report_timetracking_activity';
 		$defaults->class_name = 'View_TimeTracking';
 		
 		if(null != ($view = C4_AbstractViewLoader::getView($defaults->id, $defaults))) {
@@ -132,17 +129,18 @@ class ChReportTimeSpentWorker extends Extension_Report {
 			
 			$tpl->assign('view', $view);
 		}
-
-		// Chart
 		
-		$sql = sprintf("SELECT tte.worker_id, DATE_FORMAT(FROM_UNIXTIME(tte.log_date),'%s') AS date_plot, ".
-			"SUM(tte.time_actual_mins) AS mins ".
+		// Chart
+		$sql = sprintf("SELECT tta.id AS activity_id, tta.name activity_name, DATE_FORMAT(FROM_UNIXTIME(tte.log_date),'%s') as date_plot, ".
+			"sum(tte.time_actual_mins) AS mins ".
 			"FROM timetracking_entry tte ".
+			"LEFT JOIN timetracking_activity tta ON tte.activity_id = tta.id ".
 			"WHERE 1 ".
 			"AND log_date > %d ".
 			"AND log_date <= %d ".
 			"%s ".
-			"GROUP BY tte.worker_id, date_plot ",
+			"GROUP BY activity_id, date_plot ".
+			"ORDER BY activity_name ASC ",
 			$date_group,
 			$start_time,
 			$end_time,
@@ -151,31 +149,33 @@ class ChReportTimeSpentWorker extends Extension_Report {
 		$rs = $db->Execute($sql);
 		
 		$data = array();
+		$activities = array();
+		
 		while($row = mysql_fetch_assoc($rs)) {
-			$worker_id = intval($row['worker_id']);
+			$activity_id = intval($row['activity_id']);
 			$date_plot = $row['date_plot'];
 			
-			if(!isset($workers[$worker_id]))
-				continue;
+			if(!isset($data[$activity_id]))
+				$data[$activity_id] = $ticks;
+				
+			if(!isset($activities[$activity_id]))
+				$activities[$activity_id] = !empty($row['activity_name']) ? $row['activity_name'] : '(no activity)';
 			
-			if(!isset($data[$worker_id]))
-				$data[$worker_id] = $ticks;
-			
-			$data[$worker_id][$date_plot] = intval($row['mins']);
+			$data[$activity_id][$date_plot] = intval($row['mins']);
 		}
 		
 		// Sort the data in descending order
 		uasort($data, array('ChReportSorters','sortDataDesc'));
 		
 		$tpl->assign('xaxis_ticks', array_keys($ticks));
+		$tpl->assign('activities', $activities);
 		$tpl->assign('data', $data);
 		
 		mysql_free_result($rs);		
 		
 		// Template
 		
-		$tpl->display('devblocks:cerberusweb.timetracking::reports/time_spent_worker/index.tpl');
+		$tpl->display('devblocks:cerberusweb.timetracking::reports/time_spent_activity/index.tpl');
 	}
 };
 endif;
-
