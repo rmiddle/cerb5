@@ -404,7 +404,6 @@ class CrmPage extends CerberusPageExtension {
 			SearchFields_Ticket::TICKET_UPDATED_DATE,
 			SearchFields_Ticket::TICKET_TEAM_ID,
 			SearchFields_Ticket::TICKET_CATEGORY_ID,
-			SearchFields_Ticket::TICKET_NEXT_WORKER_ID,
 		);
 		
 		$view = C4_AbstractViewLoader::getView('opp_tickets', $defaults);
@@ -1451,7 +1450,7 @@ class View_CrmOpportunity extends C4_AbstractView {
 		switch($key) {
 			case SearchFields_CrmOpportunity::VIRTUAL_WORKERS:
 				if(empty($param->value)) {
-					echo "Workers <b>are not assigned</b>";
+					echo "Owners <b>are not assigned</b>";
 					
 				} elseif(is_array($param->value)) {
 					$workers = DAO_Worker::getAll();
@@ -1462,7 +1461,7 @@ class View_CrmOpportunity extends C4_AbstractView {
 							$strings[] = '<b>'.$workers[$worker_id]->getName().'</b>';
 					}
 					
-					echo sprintf("Worker is %s", implode(' or ', $strings));
+					echo sprintf("Owner is %s", implode(' or ', $strings));
 				}
 				break;
 		}

@@ -1,4 +1,4 @@
-<form action="{devblocks_url}{/devblocks_url}" method="post" id="frmTicketPeek" onsubmit="ajax.postAndReloadView('frmTicketPeek','view{$view_id}');return false;">
+<form action="{devblocks_url}{/devblocks_url}" method="post" id="frmTicketPeek" onsubmit="return false;">
 <input type="hidden" name="c" value="tickets">
 <input type="hidden" name="a" value="savePreview">
 <input type="hidden" name="id" value="{$ticket->id}">
@@ -38,22 +38,19 @@
 					<input type="text" name="subject" size="45" maxlength="255" value="{$ticket->subject|escape}">
 				</td>
 			</tr>
+			
+			{* Owners *}
 			<tr>
-				<td width="0%" nowrap="nowrap" align="right">Next Worker: </td>
+				<td width="0%" nowrap="nowrap" valign="top" align="right">{$translate->_('common.owners')|capitalize}: </td>
 				<td width="100%">
-					<select name="next_worker_id">
-						{if $active_worker->id==$ticket->next_worker_id || 0==$ticket->next_worker_id || $active_worker->hasPriv('core.ticket.actions.assign')}<option value="0" {if 0==$ticket->next_worker_id}selected{/if}>Anybody{/if}
-						{foreach from=$workers item=worker key=worker_id name=workers}
-							{if $worker_id==$ticket->next_worker_id || $active_worker->hasPriv('core.ticket.actions.assign')}
-							{if $worker_id==$active_worker->id}{assign var=next_worker_id_sel value=$smarty.foreach.workers.iteration}{/if}
-							<option value="{$worker_id}" {if $worker_id==$ticket->next_worker_id}selected{/if}>{$worker->getName()}
-							{/if}
+					<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-add"></span></button>
+					{if !empty($context_workers)}
+					<span class="chooser-container">
+						{foreach from=$context_workers item=context_worker}
+						<div class="bubble" style="padding-right:5px;">{$context_worker->getName()|escape}<input type="hidden" name="worker_id[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></div>
 						{/foreach}
-					</select>
-				   	{if $active_worker->hasPriv('core.ticket.actions.assign') && !empty($next_worker_id_sel)}
-				   		<button type="button" onclick="this.form.next_worker_id.selectedIndex = {$next_worker_id_sel};toggleDiv('ticketPropsUnlockDate','block');">{$translate->_('common.me')|lower}</button>
-				   		<button type="button" onclick="this.form.next_worker_id.selectedIndex = 0;toggleDiv('ticketPropsUnlockDate','none');">{$translate->_('common.anybody')|lower}</button>
-				   	{/if}
+					</span>
+					{/if}
 				</td>
 			</tr>
 			
@@ -166,7 +163,7 @@
 </div> 
 <br>
 
-<button type="submit"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>
+<button type="button" onclick="genericAjaxPopupClose('peek', 'ticket_save');genericAjaxPost('frmTicketPeek', 'view{$view_id}');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
 </form>
 
 <script type="text/javascript">
@@ -177,5 +174,8 @@
 		$("#ticketPeekContent").css('width','100%');
 		$("#ticketPeekTab2").show();
 		$(this).focus();
-	} );
+	});
+	$('#frmTicketPeek button.chooser_worker').each(function() {
+		ajax.chooser(this, 'cerberusweb.contexts.worker', 'worker_id')
+	});
 </script>

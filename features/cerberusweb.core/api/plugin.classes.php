@@ -313,12 +313,8 @@ XML;
 
             $eItem = $channel->addChild('item');
             
-            $escapedSubject = htmlspecialchars($event[SearchFields_WorkerEvent::TITLE],null,LANG_CHARSET_CODE);
-            //filter out a couple non-UTF-8 characters (0xC and ESC)
-            $escapedSubject = preg_replace("/[]/", '', $escapedSubject);
-            $eTitle = $eItem->addChild('title', $escapedSubject);
-
-            $eDesc = $eItem->addChild('description', htmlspecialchars($event[SearchFields_WorkerEvent::CONTENT],null,LANG_CHARSET_CODE));
+            $escapedSubject = htmlspecialchars($event[SearchFields_WorkerEvent::MESSAGE],null,LANG_CHARSET_CODE);
+            $eDesc = $eItem->addChild('description', '');
 
             if(isset($event[SearchFields_WorkerEvent::URL])) {
 //	            $link = $event[SearchFields_WorkerEvent::URL];
@@ -380,8 +376,6 @@ XML;
             $eItem = $channel->addChild('item');
             
             $escapedSubject = htmlspecialchars($ticket[SearchFields_Ticket::TICKET_SUBJECT],null,LANG_CHARSET_CODE);
-            //filter out a couple non-UTF-8 characters (0xC and ESC)
-            $escapedSubject = preg_replace("/[]/", '', $escapedSubject);
             $eTitle = $eItem->addChild('title', $escapedSubject);
 
             $eDesc = $eItem->addChild('description', $this->_getTicketLastAction($ticket));
@@ -399,13 +393,9 @@ XML;
 	}
 	
 	private function _getTicketLastAction($ticket) {
-		static $workers = null;
 		$action_code = $ticket[SearchFields_Ticket::TICKET_LAST_ACTION_CODE];
 		$output = '';
 		
-		if(is_null($workers))
-			$workers = DAO_Worker::getAll();
-
 		// [TODO] Translate
 		switch($action_code) {
 			case CerberusTicketActionCode::TICKET_OPENED:
@@ -414,17 +404,13 @@ XML;
 				);
 				break;
 			case CerberusTicketActionCode::TICKET_CUSTOMER_REPLY:
-				@$worker_id = $ticket[SearchFields_Ticket::TICKET_NEXT_WORKER_ID];
-				@$worker = $workers[$worker_id];
-				$output = sprintf("Incoming for %s",
-					(!empty($worker) ? $worker->getName() : "Helpdesk")
+				$output = sprintf("Incoming from %s",
+					$ticket[SearchFields_Ticket::TICKET_LAST_WROTE]
 				);
 				break;
 			case CerberusTicketActionCode::TICKET_WORKER_REPLY:
-				@$worker_id = $ticket[SearchFields_Ticket::TICKET_LAST_WORKER_ID];
-				@$worker = $workers[$worker_id];
 				$output = sprintf("Outgoing from %s",
-					(!empty($worker) ? $worker->getName() : "Helpdesk")
+					$ticket[SearchFields_Ticket::TICKET_LAST_WROTE]
 				);
 				break;
 		}

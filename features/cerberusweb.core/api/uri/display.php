@@ -137,8 +137,9 @@ class ChDisplayPage extends CerberusPageExtension {
 		$requesters = DAO_Ticket::getRequestersByTicket($ticket->id);
 		$tpl->assign('requesters', $requesters);
 		
-		$workers = DAO_Worker::getAll();
-		$tpl->assign('workers', $workers);
+		// Workers
+		$context_workers = CerberusContexts::getWorkers(CerberusContexts::CONTEXT_TICKET, $ticket->id);
+		$tpl->assign('context_workers', $context_workers);
 		
 		$teams = DAO_Group::getAll();
 		$tpl->assign('teams', $teams);
@@ -275,13 +276,15 @@ class ChDisplayPage extends CerberusPageExtension {
 	}
 
 	function updatePropertiesAction() {
+		$active_worker = CerberusApplication::getActiveWorker();
+		
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id']); // ticket id
 		@$closed = DevblocksPlatform::importGPC($_REQUEST['closed'],'integer',0);
 		@$spam = DevblocksPlatform::importGPC($_REQUEST['spam'],'integer',0);
 		@$deleted = DevblocksPlatform::importGPC($_REQUEST['deleted'],'integer',0);
+		@$do_take = DevblocksPlatform::importGPC($_REQUEST['do_take'],'integer',0);
+		@$do_surrender = DevblocksPlatform::importGPC($_REQUEST['do_surrender'],'integer',0);
 		@$bucket = DevblocksPlatform::importGPC($_REQUEST['bucket_id'],'string');
-		@$next_worker_id = DevblocksPlatform::importGPC($_REQUEST['next_worker_id'],'integer',0);
-		@$unlock_date = DevblocksPlatform::importGPC($_REQUEST['unlock_date'],'integer',0);
 		
 		@$ticket = DAO_Ticket::get($id);
 		
@@ -319,18 +322,17 @@ class ChDisplayPage extends CerberusPageExtension {
 			}
 		}
 		
-		if($next_worker_id != $ticket->next_worker_id) {
-			$properties[DAO_Ticket::NEXT_WORKER_ID] = $next_worker_id;
-		}
-		
-		// Reset the unlock date (next worker "until")
-		$properties[DAO_Ticket::UNLOCK_DATE] = $unlock_date;
-		
 		// Don't double set the closed property (auto-close replies)
 		if(isset($properties[DAO_Ticket::IS_CLOSED]) && $properties[DAO_Ticket::IS_CLOSED]==$ticket->is_closed)
 			unset($properties[DAO_Ticket::IS_CLOSED]);
 		
 		DAO_Ticket::update($id, $properties);
+		
+		// Context workers
+		if($do_take)
+			CerberusContexts::addWorkers(CerberusContexts::CONTEXT_TICKET, $id, array($active_worker->id));
+		if($do_surrender)
+			CerberusContexts::removeWorkers(CerberusContexts::CONTEXT_TICKET, $id, array($active_worker->id));
 
 		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('display',$id)));
 	}
@@ -427,6 +429,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/modules/conversation/notes.tpl');
 	}
 	
+	// [TODO] Merge w/ the new comments functionality?
 	function addNoteAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
 
@@ -451,6 +454,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/rpc/add_note.tpl');
 	}
 	
+	// [TODO] Merge w/ the new comments functionality?
 	function doAddNoteAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
 		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer',0);
@@ -511,6 +515,10 @@ class ChDisplayPage extends CerberusPageExtension {
 		$ticket = DAO_Ticket::get($message->ticket_id);
 		$tpl->assign('ticket',$ticket);
 
+		// Workers
+		$context_workers = CerberusContexts::getWorkers(CerberusContexts::CONTEXT_TICKET, $ticket->id);
+		$tpl->assign('context_workers', $context_workers);
+		
 		// Are we continuing a draft?
 		@$draft_id = DevblocksPlatform::importGPC($_REQUEST['draft_id'],'integer',0);
 		if(!empty($draft_id)) {
@@ -596,6 +604,7 @@ class ChDisplayPage extends CerberusPageExtension {
 	    @$ticket_mask = DevblocksPlatform::importGPC($_REQUEST['ticket_mask'],'string');
 	    @$draft_id = DevblocksPlatform::importGPC($_REQUEST['draft_id'],'integer');
 	    @$is_forward = DevblocksPlatform::importGPC($_REQUEST['is_forward'],'integer',0);
+	    @$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
 	    
 	    $worker = CerberusApplication::getActiveWorker();
 	    
@@ -610,11 +619,10 @@ class ChDisplayPage extends CerberusPageExtension {
 		    'subject' => DevblocksPlatform::importGPC(@$_REQUEST['subject'],'string'),
 		    'content' => DevblocksPlatform::importGPC(@$_REQUEST['content']),
 		    'files' => @$_FILES['attachment'],
-		    'next_worker_id' => DevblocksPlatform::importGPC(@$_REQUEST['next_worker_id'],'integer',0),
 		    'closed' => DevblocksPlatform::importGPC(@$_REQUEST['closed'],'integer',0),
 		    'bucket_id' => DevblocksPlatform::importGPC(@$_REQUEST['bucket_id'],'string',''),
 		    'ticket_reopen' => DevblocksPlatform::importGPC(@$_REQUEST['ticket_reopen'],'string',''),
-		    'unlock_date' => DevblocksPlatform::importGPC(@$_REQUEST['unlock_date'],'string',''),
+		    'context_workers' => $worker_ids,
 		    'agent_id' => @$worker->id,
 		    'forward_files' => DevblocksPlatform::importGPC(@$_REQUEST['forward_files'],'array',array()),
 		);
@@ -859,158 +867,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('workers', $workers);
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'display/modules/conversation/index.tpl');
-	}
-	
-	function showPropertiesAction() {
-		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer');
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-
-		$tpl->assign('ticket_id', $ticket_id);
-		
-		$ticket = DAO_Ticket::get($ticket_id);
-		$tpl->assign('ticket', $ticket);
-
-		$requesters = DAO_Ticket::getRequestersByTicket($ticket_id);
-		$tpl->assign('requesters', $requesters);
-		
-		$workers = DAO_Worker::getAllActive();
-		$tpl->assign('workers', $workers);
-		
-		// Groups (for custom fields)
-		$groups = DAO_Group::getAll();
-		$tpl->assign('groups', $groups);
-
-		// Custom fields
-		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Ticket::ID);
-		$tpl->assign('ticket_fields', $fields);
-		
-		$field_values = DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Ticket::ID, $ticket_id);
-		
-		if(isset($field_values[$ticket->id]))
-			$tpl->assign('ticket_field_values', $field_values[$ticket->id]);
-		
-		$tpl->display('file:' . $this->_TPL_PATH . 'display/modules/properties/index.tpl');
-	}
-	
-	// Post
-	function savePropertiesAction() {
-		@$ticket_id = DevblocksPlatform::importGPC($_POST['ticket_id'],'integer',0);
-		@$remove = DevblocksPlatform::importGPC($_POST['remove'],'array',array());
-		@$next_worker_id = DevblocksPlatform::importGPC($_POST['next_worker_id'],'integer',0);
-		@$ticket_reopen = DevblocksPlatform::importGPC($_POST['ticket_reopen'],'string','');
-		@$unlock_date = DevblocksPlatform::importGPC($_POST['unlock_date'],'string','');
-		@$subject = DevblocksPlatform::importGPC($_POST['subject'],'string','');
-		@$closed = DevblocksPlatform::importGPC($_POST['closed'],'closed',0);
-		
-		@$ticket = DAO_Ticket::get($ticket_id);
-		
-		if(empty($ticket_id) || empty($ticket))
-			return;
-		
-		$fields = array();
-		
-		// Properties
-
-		if(empty($next_worker_id))
-			$unlock_date = "";
-		
-		// Status
-		if(isset($closed)) {
-			switch($closed) {
-				case 0: // open
-					if(array(0,0,0)!=array($ticket->is_waiting,$ticket->is_closed,$ticket->is_deleted)) {
-						$fields[DAO_Ticket::IS_WAITING] = 0;
-						$fields[DAO_Ticket::IS_CLOSED] = 0;
-						$fields[DAO_Ticket::IS_DELETED] = 0;
-						$fields[DAO_Ticket::DUE_DATE] = 0;
-					}
-					break;
-				case 1: // closed
-					if(array(0,1,0)!=array($ticket->is_waiting,$ticket->is_closed,$ticket->is_deleted)) {
-						$fields[DAO_Ticket::IS_WAITING] = 0;
-						$fields[DAO_Ticket::IS_CLOSED] = 1;
-						$fields[DAO_Ticket::IS_DELETED] = 0;
-					}
-					
-					if(isset($ticket_reopen)) {
-						@$time = intval(strtotime($ticket_reopen));
-						$fields[DAO_Ticket::DUE_DATE] = $time;
-					}
-					break;
-				case 2: // waiting
-					if(array(1,0,0)!=array($ticket->is_waiting,$ticket->is_closed,$ticket->is_deleted)) {
-						$fields[DAO_Ticket::IS_WAITING] = 1;
-						$fields[DAO_Ticket::IS_CLOSED] = 0;
-						$fields[DAO_Ticket::IS_DELETED] = 0;
-					}
-					
-					if(isset($ticket_reopen)) {
-						@$time = intval(strtotime($ticket_reopen));
-						$fields[DAO_Ticket::DUE_DATE] = $time;
-					}
-					break;
-				case 3: // deleted
-					if(array(0,1,1)!=array($ticket->is_waiting,$ticket->is_closed,$ticket->is_deleted)) {
-						$fields[DAO_Ticket::IS_WAITING] = 0;
-						$fields[DAO_Ticket::IS_CLOSED] = 1;
-						$fields[DAO_Ticket::IS_DELETED] = 1;
-					}
-					$fields[DAO_Ticket::DUE_DATE] = 0;
-					break;
-			}
-		}
-			
-		if(isset($next_worker_id))
-			$fields[DAO_Ticket::NEXT_WORKER_ID] = $next_worker_id;
-			
-		if(isset($unlock_date)) {
-			@$time = intval(strtotime($unlock_date));
-			$fields[DAO_Ticket::UNLOCK_DATE] = $time;
-		}
-
-		if(!empty($subject))
-			$fields[DAO_Ticket::SUBJECT] = $subject;
-
-		if(!empty($fields)) {
-			DAO_Ticket::update($ticket_id, $fields);
-		}
-
-		// Custom field saves
-		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
-		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
-		
-		// Requesters
-		@$req_list = DevblocksPlatform::importGPC($_POST['add'],'string','');
-		if(!empty($req_list)) {
-			$req_list = DevblocksPlatform::parseCrlfString($req_list);
-			$req_list = array_unique($req_list);
-			
-			// [TODO] This is redundant with the Requester Peek on Reply
-			if(is_array($req_list) && !empty($req_list)) {
-				foreach($req_list as $req) {
-					if(empty($req))
-						continue;
-						
-					$rfc_addys = imap_rfc822_parse_adrlist($req, 'localhost');
-					
-					foreach($rfc_addys as $rfc_addy) {
-						$addy = $rfc_addy->mailbox . '@' . $rfc_addy->host;
-						DAO_Ticket::createRequester($addy, $ticket_id);
-					}
-				}
-			}
-		}
-		
-		if(!empty($remove) && is_array($remove)) {
-			foreach($remove as $address_id) {
-				$addy = DAO_Address::get($address_id);
-				DAO_Ticket::deleteRequester($ticket_id, $address_id);
-			}
-		}
-		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket->mask)));
 	}
 	
 	function doSplitMessageAction() {
