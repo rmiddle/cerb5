@@ -1816,9 +1816,6 @@ class ChTicketsPage extends CerberusPageExtension {
         $tpl->assign('mode', $mode);
 
         if($mode == "headers" && empty($mode_param)) {
-            $headers = DAO_MessageHeader::getUnique();
-            $tpl->assign('headers', $headers);
-            
 	        $tpl->display($tpl_path.'tickets/rpc/ticket_view_assist_headers.tpl');
 	        
         } else {
@@ -1842,6 +1839,7 @@ class ChTicketsPage extends CerberusPageExtension {
 			$params[] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID, 'in', array_keys($memberships)); 
 			
 	        // [JAS]: Calculate statistics about the current view (top unique senders/subjects/domains)
+	        
 		    $biggest = DAO_Ticket::analyze($params, 15, $mode, $mode_param);
 		    $tpl->assign('biggest', $biggest);
 	        
@@ -1948,8 +1946,8 @@ class ChTicketsPage extends CerberusPageExtension {
             		
             		if(!empty($w_id))
 	            	$doActions = array(
-	            		'assign' => array(
-	            			'worker_id' => $w_id,
+	            		'owner' => array(
+	            			'add' => array($w_id),
 	            		)
 	            	);
 	                break;
