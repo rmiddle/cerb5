@@ -323,7 +323,7 @@ if(isset($columns['parent_org_id']))
 	$db->Execute("ALTER TABLE contact_org DROP COLUMN parent_org_id");
 
 // ===========================================================================
-// Convert ticket 'next_worker' assignments to contexts, drop unlock_date
+// Convert ticket 'next_worker' assignments to contexts, drop unlock_date, drop last_worker_id
 
 if(!isset($tables['ticket']))
 	return FALSE;
@@ -332,6 +332,10 @@ list($columns, $indexes) = $db->metaTable('ticket');
 
 if(isset($columns['unlock_date'])) {
 	$db->Execute("ALTER TABLE ticket DROP COLUMN unlock_date");
+}
+
+if(isset($columns['last_worker_id'])) {
+	$db->Execute("ALTER TABLE ticket DROP COLUMN last_worker_id");
 }
 
 if(isset($columns['next_worker_id'])) {
@@ -386,6 +390,11 @@ while($row = mysql_fetch_assoc($rs)) {
 }
 
 mysql_free_result($rs);
+
+
+// ===========================================================================
+// Nuke the 'inbox_is_assignable' preference since they always are now
+$db->Execute("DELETE FROM group_setting WHERE setting = 'inbox_is_assignable'");
 
 // ===========================================================================
 // Convert sequences to MySQL AUTO_INCREMENT, make UNSIGNED

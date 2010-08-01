@@ -519,7 +519,6 @@ class DAO_GroupSettings {
     const SETTING_AUTO_REPLY_ENABLED = 'auto_reply_enabled';
     const SETTING_CLOSE_REPLY = 'close_reply';
     const SETTING_CLOSE_REPLY_ENABLED = 'close_reply_enabled';
-    const SETTING_INBOX_IS_ASSIGNABLE = 'inbox_is_assignable';
 	const SETTING_SMTP_IS_ENABLED = 'smtp_is_enabled';
 	const SETTING_SMTP_HOST = 'smtp_host';
 	const SETTING_SMTP_PORT = 'smtp_port';
@@ -940,7 +939,7 @@ class Context_Group extends Extension_DevblocksContext {
 		return $view;
 	}
 	
-	function getView($context, $context_id) {
+	function getView($context, $context_id, $options=array()) {
 		$view_id = str_replace('.','_',$this->id);
 		
 		$defaults = new C4_AbstractViewModel();
@@ -948,10 +947,17 @@ class Context_Group extends Extension_DevblocksContext {
 		$defaults->class_name = 'View_Group';
 		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
 		$view->name = 'Groups';
-		$view->addParams(array(
-			new DevblocksSearchCriteria(SearchFields_Worker::CONTEXT_LINK,'=',$context),
-			new DevblocksSearchCriteria(SearchFields_Worker::CONTEXT_LINK_ID,'=',$context_id),
-		), true);
+		
+		$params = array(
+			new DevblocksSearchCriteria(SearchFields_Group::CONTEXT_LINK,'=',$context),
+			new DevblocksSearchCriteria(SearchFields_Group::CONTEXT_LINK_ID,'=',$context_id),
+		);
+		
+		if(isset($options['filter_open']))
+			true; // Do nothing
+		
+		$view->addParams($params, true);
+		
 		$view->renderTemplate = 'context';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;

@@ -179,7 +179,7 @@ class Context_TimeTracking extends Extension_DevblocksContext {
 		return $view;
 	}
 	
-	function getView($context, $context_id) {
+	function getView($context, $context_id, $options=array()) {
 		$view_id = str_replace('.','_',$this->id);
 		
 		$defaults = new C4_AbstractViewModel();
@@ -187,10 +187,17 @@ class Context_TimeTracking extends Extension_DevblocksContext {
 		$defaults->class_name = 'View_TimeTracking';
 		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
 		$view->name = 'Time Tracking';
-		$view->addParams(array(
+		
+		$params = array(
 			new DevblocksSearchCriteria(SearchFields_TimeTrackingEntry::CONTEXT_LINK,'=',$context),
 			new DevblocksSearchCriteria(SearchFields_TimeTrackingEntry::CONTEXT_LINK_ID,'=',$context_id),
-		), true);
+		);
+
+		if(isset($options['filter_open']))
+			$params[] = new DevblocksSearchCriteria(SearchFields_TimeTrackingEntry::IS_CLOSED,'=',0);
+		
+		$view->addParams($params, true);
+		
 		$view->renderTemplate = 'context';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;
@@ -467,10 +474,12 @@ class DAO_TimeTrackingEntry extends C4_ORMHelper {
 			settype($param_key, 'string');
 			switch($param_key) {
 				case SearchFields_TimeTrackingEntry::VIRTUAL_OWNERS:
+					$has_multiple_values = true;
 					if(empty($param->value)) { // empty
-						$where_sql .= "AND (SELECT GROUP_CONCAT(context_link.to_context_id) FROM context_link WHERE context_link.from_context = 'cerberusweb.contexts.timetracking' AND context_link.from_context_id = tt.id AND context_link.to_context = 'cerberusweb.contexts.worker') IS NULL ";
+						$join_sql .= "LEFT JOIN context_link AS context_owner ON (context_owner.from_context = 'cerberusweb.contexts.timetracking' AND context_owner.from_context_id = tt.id AND context_owner.to_context = 'cerberusweb.contexts.worker') ";
+						$where_sql .= "AND context_owner.to_context_id IS NULL ";
 					} else {
-						$where_sql .= sprintf("AND (SELECT GROUP_CONCAT(context_link.to_context_id) FROM context_link WHERE context_link.from_context = 'cerberusweb.contexts.timetracking' AND context_link.from_context_id = tt.id AND context_link.to_context = 'cerberusweb.contexts.worker' AND context_link.to_context_id IN (%s)) IS NOT NULL ",
+						$join_sql .= sprintf("INNER JOIN context_link AS context_owner ON (context_owner.from_context = 'cerberusweb.contexts.timetracking' AND context_owner.from_context_id = tt.id AND context_owner.to_context = 'cerberusweb.contexts.worker' AND context_owner.to_context_id IN (%s)) ",
 							implode(',', $param->value)
 						);
 					}
@@ -689,7 +698,7 @@ class View_TimeTracking extends C4_AbstractView {
 				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
 				break;
 			case SearchFields_TimeTrackingEntry::WORKER_ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__worker.tpl');
+				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_worker.tpl');
 				break;
 			case SearchFields_TimeTrackingEntry::VIRTUAL_OWNERS:
 				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_worker.tpl');

@@ -198,6 +198,9 @@
 		<tu tuid='common.me'>
 			<tuv xml:lang="en_US"><seg>me</seg></tuv>
 		</tu>
+		<tu tuid='common.messages'>
+			<tuv xml:lang="en_US"><seg>Messages</seg></tuv>
+		</tu>
 		<tu tuid='common.minimize'>
 			<tuv xml:lang="en_US"><seg>minimize</seg></tuv>
 		</tu>
@@ -1540,6 +1543,9 @@ For example: *receipt*</seg></tuv>
 
 		<!-- Tickets -->
 
+		<tu tuid='ticket.assignable'>
+			<tuv xml:lang="en_US"><seg>Assignable</seg></tuv>
+		</tu>
 		<tu tuid='ticket.created'>
 			<tuv xml:lang="en_US"><seg>Created</seg></tuv>
 		</tu>
@@ -1557,9 +1563,6 @@ For example: *receipt*</seg></tuv>
 		</tu>
 		<tu tuid='ticket.last_action'>
 			<tuv xml:lang="en_US"><seg>Last Action</seg></tuv>
-		</tu>
-		<tu tuid='ticket.last_worker'>
-			<tuv xml:lang="en_US"><seg>Last Worker</seg></tuv>
 		</tu>
 		<tu tuid='ticket.last_wrote'>
 			<tuv xml:lang="en_US"><seg>Last Wrote</seg></tuv>

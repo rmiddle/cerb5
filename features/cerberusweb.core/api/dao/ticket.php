@@ -67,7 +67,6 @@ class DAO_Ticket extends C4_ORMHelper {
 	const SPAM_SCORE = 'spam_score';
 	const INTERESTING_WORDS = 'interesting_words';
 	const LAST_ACTION_CODE = 'last_action_code';
-	const LAST_WORKER_ID = 'last_worker_id';
 	
 	private function DAO_Ticket() {}
 	
@@ -322,7 +321,6 @@ class DAO_Ticket extends C4_ORMHelper {
 				DAO_Ticket::LAST_ACTION_CODE => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_LAST_ACTION_CODE], 
 				DAO_Ticket::LAST_MESSAGE_ID => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_LAST_MESSAGE_ID], 
 				DAO_Ticket::LAST_WROTE_ID => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_LAST_WROTE_ID], 
-				DAO_Ticket::LAST_WORKER_ID => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_LAST_WORKER_ID], 
 				DAO_Ticket::UPDATED_DATE => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_UPDATED_DATE],
 				DAO_Ticket::IS_CLOSED => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_CLOSED],
 				DAO_Ticket::IS_WAITING => $most_recent_updated_ticket[SearchFields_Ticket::TICKET_WAITING],
@@ -400,7 +398,7 @@ class DAO_Ticket extends C4_ORMHelper {
 		
 		$sql = "SELECT t.id , t.mask, t.subject, t.is_waiting, t.is_closed, t.is_deleted, t.team_id, t.category_id, t.first_message_id, t.last_message_id, ".
 			"t.first_wrote_address_id, t.last_wrote_address_id, t.created_date, t.updated_date, t.due_date, t.spam_training, ". 
-			"t.spam_score, t.interesting_words, t.last_worker_id ".
+			"t.spam_score, t.interesting_words ".
 			"FROM ticket t ".
 			(!empty($ids) ? sprintf("WHERE t.id IN (%s) ",implode(',',$ids)) : " ").
 			"ORDER BY t.updated_date DESC"
@@ -427,7 +425,6 @@ class DAO_Ticket extends C4_ORMHelper {
 			$ticket->spam_score = floatval($row['spam_score']);
 			$ticket->spam_training = $row['spam_training'];
 			$ticket->interesting_words = $row['interesting_words'];
-			$ticket->last_worker_id = intval($row['last_worker_id']);
 			$tickets[$ticket->id] = $ticket;
 		}
 		
@@ -900,7 +897,6 @@ class DAO_Ticket extends C4_ORMHelper {
 			"t.spam_training as %s, ".
 			"t.spam_score as %s, ".
 			"t.last_action_code as %s, ".
-			"t.last_worker_id as %s, ".
 			"t.team_id as %s, ".
 			"t.category_id as %s ",
 			    SearchFields_Ticket::TICKET_ID,
@@ -924,7 +920,6 @@ class DAO_Ticket extends C4_ORMHelper {
 			    SearchFields_Ticket::TICKET_SPAM_TRAINING,
 			    SearchFields_Ticket::TICKET_SPAM_SCORE,
 			    SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
-			    SearchFields_Ticket::TICKET_LAST_WORKER_ID,
 			    SearchFields_Ticket::TICKET_TEAM_ID,
 			    SearchFields_Ticket::TICKET_CATEGORY_ID
 			);
@@ -967,6 +962,7 @@ class DAO_Ticket extends C4_ORMHelper {
 			settype($param_key, 'string');
 			switch($param_key) {
 				case SearchFields_Ticket::VIRTUAL_WORKERS:
+					$has_multiple_values = true;
 					if(empty($param->value)) { // empty
 						$join_sql .= "LEFT JOIN context_link AS context_owner ON (context_owner.from_context = 'cerberusweb.contexts.ticket' AND context_owner.from_context_id = t.id AND context_owner.to_context = 'cerberusweb.contexts.worker') ";
 						$where_sql .= "AND context_owner.to_context_id IS NULL ";
@@ -974,6 +970,16 @@ class DAO_Ticket extends C4_ORMHelper {
 						$join_sql .= sprintf("INNER JOIN context_link AS context_owner ON (context_owner.from_context = 'cerberusweb.contexts.ticket' AND context_owner.from_context_id = t.id AND context_owner.to_context = 'cerberusweb.contexts.worker' AND context_owner.to_context_id IN (%s)) ",
 							implode(',', $param->value)
 						);
+					}
+					break;
+				case SearchFields_Ticket::VIRTUAL_ASSIGNABLE:
+					$assignable_buckets = DAO_Bucket::getAssignableBuckets();
+					$assignable_bucket_ids = array_keys($assignable_buckets);
+					array_unshift($assignable_bucket_ids, 0);
+					if($param->value) { // true
+						$where_sql .= sprintf("AND t.category_id IN (%s) ", implode(',', $assignable_bucket_ids));	
+					} else { // false
+						$where_sql .= sprintf("AND t.category_id NOT IN (%s) ", implode(',', $assignable_bucket_ids));	
 					}
 					break;
 			}
@@ -985,7 +991,6 @@ class DAO_Ticket extends C4_ORMHelper {
 			$where_sql.
 			($has_multiple_values ? 'GROUP BY t.id ' : '').
 			$sort_sql;
-
 		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
 		$results = array();
@@ -1002,7 +1007,7 @@ class DAO_Ticket extends C4_ORMHelper {
 		// [JAS]: Count all
 		if($withCounts) {
 			$count_sql = 
-				"SELECT COUNT(DISTINCT t.id) ".
+				(($has_multiple_values) ? "SELECT COUNT(DISTINCT t.id) " : "SELECT COUNT(t.id) ").
 				$join_sql.
 				$where_sql;
 			$total = $db->GetOne($count_sql);
@@ -1039,7 +1044,6 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 	const TICKET_SPAM_TRAINING = 't_spam_training';
 	const TICKET_INTERESTING_WORDS = 't_interesting_words';
 	const TICKET_LAST_ACTION_CODE = 't_last_action_code';
-	const TICKET_LAST_WORKER_ID = 't_last_worker_id';
 	const TICKET_TEAM_ID = 't_team_id';
 	const TICKET_CATEGORY_ID = 't_category_id';
 	
@@ -1064,6 +1068,7 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 	const CONTEXT_LINK_ID = 'cl_context_from_id';
 	
 	// Virtuals
+	const VIRTUAL_ASSIGNABLE = '*_assignable';
 	const VIRTUAL_WORKERS = '*_workers';
 	
 	/**
@@ -1097,7 +1102,6 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 			self::TICKET_DELETED => new DevblocksSearchField(self::TICKET_DELETED, 't', 'is_deleted',$translate->_('status.deleted')),
 
 			self::TICKET_LAST_ACTION_CODE => new DevblocksSearchField(self::TICKET_LAST_ACTION_CODE, 't', 'last_action_code',$translate->_('ticket.last_action')),
-			self::TICKET_LAST_WORKER_ID => new DevblocksSearchField(self::TICKET_LAST_WORKER_ID, 't', 'last_worker_id',$translate->_('ticket.last_worker')),
 			self::TICKET_SPAM_TRAINING => new DevblocksSearchField(self::TICKET_SPAM_TRAINING, 't', 'spam_training',$translate->_('ticket.spam_training')),
 			self::TICKET_SPAM_SCORE => new DevblocksSearchField(self::TICKET_SPAM_SCORE, 't', 'spam_score',$translate->_('ticket.spam_score')),
 			self::TICKET_FIRST_WROTE_SPAM => new DevblocksSearchField(self::TICKET_FIRST_WROTE_SPAM, 'a1', 'num_spam',$translate->_('address.num_spam')),
@@ -1116,6 +1120,7 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 			self::CONTEXT_LINK => new DevblocksSearchField(self::CONTEXT_LINK, 'context_link', 'from_context', null),
 			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
 			
+			self::VIRTUAL_ASSIGNABLE => new DevblocksSearchField(self::VIRTUAL_ASSIGNABLE, '*', 'assignable', $translate->_('ticket.assignable')),
 			self::VIRTUAL_WORKERS => new DevblocksSearchField(self::VIRTUAL_WORKERS, '*', 'workers', $translate->_('common.owners')),
 		);
 
@@ -1160,7 +1165,6 @@ class Model_Ticket {
 	public $spam_training;
 	public $interesting_words;
 	public $last_action_code;
-	public $last_worker_id;
 
 	function Model_Ticket() {}
 
@@ -1316,6 +1320,7 @@ class View_Ticket extends C4_AbstractView {
 			case SearchFields_Ticket::TICKET_WAITING:
 			case SearchFields_Ticket::TICKET_DELETED:
 			case SearchFields_Ticket::TICKET_CLOSED:
+			case SearchFields_Ticket::VIRTUAL_ASSIGNABLE:
 				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__bool.tpl');
 				break;
 					
@@ -1337,12 +1342,6 @@ class View_Ticket extends C4_AbstractView {
 				$tpl->display('file:' . $tpl_path . 'tickets/search/criteria/ticket_last_action.tpl');
 				break;
 
-			case SearchFields_Ticket::TICKET_LAST_WORKER_ID:
-				$workers = DAO_Worker::getAll();
-				$tpl->assign('workers', $workers);
-				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__worker.tpl');
-				break;
-					
 			case SearchFields_Ticket::TICKET_TEAM_ID:
 				$teams = DAO_Group::getAll();
 				$tpl->assign('teams', $teams);
@@ -1376,6 +1375,14 @@ class View_Ticket extends C4_AbstractView {
 		$key = $param->field;
 		
 		switch($key) {
+			case SearchFields_Ticket::VIRTUAL_ASSIGNABLE:
+				if(empty($param->value)) {
+					echo "Tickets <b>are not assignable</b>";
+				} else { 
+					echo "Tickets <b>are assignable</b>";
+				}
+				break;
+				
 			case SearchFields_Ticket::VIRTUAL_WORKERS:
 				if(empty($param->value)) {
 					echo "Owners <b>are not assigned</b>";
@@ -1400,21 +1407,6 @@ class View_Ticket extends C4_AbstractView {
 		$values = !is_array($param->value) ? array($param->value) : $param->value;
 
 		switch($field) {
-			case SearchFields_Ticket::TICKET_LAST_WORKER_ID:
-				$workers = DAO_Worker::getAll();
-				$strings = array();
-
-				foreach($values as $val) {
-					if(empty($val))
-					$strings[] = "Nobody";
-					elseif(!isset($workers[$val]))
-					continue;
-					else
-					$strings[] = $workers[$val]->getName();
-				}
-				echo implode(", ", $strings);
-				break;
-
 			case SearchFields_Ticket::TICKET_TEAM_ID:
 				$teams = DAO_Group::getAll();
 				$strings = array();
@@ -1515,6 +1507,7 @@ class View_Ticket extends C4_AbstractView {
 			case SearchFields_Ticket::TICKET_WAITING:
 			case SearchFields_Ticket::TICKET_DELETED:
 			case SearchFields_Ticket::TICKET_CLOSED:
+			case SearchFields_Ticket::VIRTUAL_ASSIGNABLE:
 				@$bool = DevblocksPlatform::importGPC($_REQUEST['bool'],'integer',1);
 				$criteria = new DevblocksSearchCriteria($field,$oper,$bool);
 				break;
@@ -1554,12 +1547,6 @@ class View_Ticket extends C4_AbstractView {
 				@$last_action_code = DevblocksPlatform::importGPC($_REQUEST['last_action'],'array',array());
 				$criteria = new DevblocksSearchCriteria($field,$oper,$last_action_code);
 				break;
-
-			case SearchFields_Ticket::TICKET_LAST_WORKER_ID:
-				@$worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
-				$criteria = new DevblocksSearchCriteria($field,$oper,$worker_id);
-				break;
-				
 
 			case SearchFields_Ticket::TICKET_TEAM_ID:
 				@$team_ids = DevblocksPlatform::importGPC($_REQUEST['team_id'],'array');
@@ -1954,7 +1941,7 @@ class Context_Ticket extends Extension_DevblocksContext {
 		return $view;		
 	}
 	
-	function getView($context, $context_id) {
+	function getView($context, $context_id, $options=array()) {
 		$view_id = str_replace('.','_',$this->id);
 		
 		$defaults = new C4_AbstractViewModel();
@@ -1962,10 +1949,19 @@ class Context_Ticket extends Extension_DevblocksContext {
 		$defaults->class_name = 'View_Ticket';
 		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
 		$view->name = 'Tickets';
-		$view->addParams(array(
+		
+		$params = array(
 			new DevblocksSearchCriteria(SearchFields_Ticket::CONTEXT_LINK,'=',$context),
 			new DevblocksSearchCriteria(SearchFields_Ticket::CONTEXT_LINK_ID,'=',$context_id),
-		), true);
+		);
+
+		if(isset($options['filter_open'])) {
+			$params[] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',0);
+			$params[] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',0);
+		}
+		
+		$view->addParams($params, true);
+		
 		$view->renderTemplate = 'context';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;
