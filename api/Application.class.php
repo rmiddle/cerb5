@@ -86,7 +86,6 @@ class CerberusApplication extends DevblocksApplication {
 	const VIEW_SEARCH = 'search';
 	const VIEW_MAIL_WORKFLOW = 'mail_workflow';
 	const VIEW_MAIL_MESSAGES = 'mail_messages';
-	const VIEW_OVERVIEW_ALL = 'overview_all';
 	
 	const CACHE_HELPDESK_FROMS = 'ch_helpdesk_froms';
 	
@@ -703,20 +702,22 @@ class CerberusContexts {
 				$values
 			);
 			
-			// Current worker
-			$active_worker = CerberusApplication::getActiveWorker();
-			$merge_token_labels = array();
-			$merge_token_values = array();
-			self::getContext(self::CONTEXT_WORKER, $active_worker, $merge_token_labels, $merge_token_values, '', true);
-	
-			CerberusContexts::merge(
-				'worker_',
-				'Current:Worker:',
-				$merge_token_labels,
-				$merge_token_values,
-				$labels,
-				$values
-			);
+			// Current worker (Don't add to worker context)
+			if($context != CerberusContexts::CONTEXT_WORKER) {
+				$active_worker = CerberusApplication::getActiveWorker();
+				$merge_token_labels = array();
+				$merge_token_values = array();
+				self::getContext(self::CONTEXT_WORKER, $active_worker, $merge_token_labels, $merge_token_values, '', true);
+		
+				CerberusContexts::merge(
+					'worker_',
+					'Current:Worker:',
+					$merge_token_labels,
+					$merge_token_values,
+					$labels,
+					$values
+				);
+			}
 			
 			// Plugin-provided tokens
 			$token_extension_mfts = DevblocksPlatform::getExtensions('cerberusweb.snippet.token', false);

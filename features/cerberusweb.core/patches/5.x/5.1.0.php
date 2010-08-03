@@ -397,6 +397,14 @@ mysql_free_result($rs);
 $db->Execute("DELETE FROM group_setting WHERE setting = 'inbox_is_assignable'");
 
 // ===========================================================================
+// Collapse redundant worker tokens
+
+if(!isset($tables['snippet']))
+	return FALSE;
+	
+$db->Execute("UPDATE snippet SET content=REPLACE(content,'{{worker_','{{') WHERE context='cerberusweb.snippets.worker'");
+
+// ===========================================================================
 // Convert sequences to MySQL AUTO_INCREMENT, make UNSIGNED
 
 // Drop sequence tables
@@ -458,7 +466,7 @@ foreach($tables_autoinc as $table) {
 		&& ('int(10) unsigned' != $columns['id']['type'] 
 		|| 'auto_increment' != $columns['id']['extra'])
 	) {
-		$db->Execute(sprintf("ALTER TABLE %s MODIFY COLUMN id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE", $table));
+		$db->Execute(sprintf("ALTER TABLE %s MODIFY COLUMN id INT UNSIGNED NOT NULL AUTO_INCREMENT", $table));
 	}
 }
 

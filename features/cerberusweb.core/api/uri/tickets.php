@@ -79,8 +79,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 
-		$settings = DevblocksPlatform::getPluginSettingsService();
- 		$visit = CerberusApplication::getVisit();
+		$visit = CerberusApplication::getVisit();
 		$active_worker = $visit->getWorker();
 		
 		$response = DevblocksPlatform::getHttpResponse();
@@ -296,6 +295,19 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		$workflowView = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_MAIL_WORKFLOW, $defaults);
 		
+		$workflowView->paramsRequired = array(
+			SearchFields_Ticket::TICKET_CLOSED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',CerberusTicketStatus::OPEN),
+			SearchFields_Ticket::TICKET_WAITING => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',0),
+			SearchFields_Ticket::VIRTUAL_ASSIGNABLE => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_ASSIGNABLE,null,true),
+			SearchFields_Ticket::VIRTUAL_WORKERS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_WORKERS,null,array()),
+		);
+		$workflowView->paramsHidden = array(
+			SearchFields_Ticket::TICKET_CLOSED,
+			SearchFields_Ticket::TICKET_WAITING,
+			SearchFields_Ticket::VIRTUAL_ASSIGNABLE,
+			SearchFields_Ticket::VIRTUAL_WORKERS,
+		);
+		
 		$workflowView->renderPage = 0;
 		
 		// Filter persistence
@@ -311,12 +323,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		switch($filter) {
 			case 'group':
 				@$filter_group_id = array_shift($response_path);
-
-				$workflowView->addParams(array(
-					SearchFields_Ticket::TICKET_CLOSED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',CerberusTicketStatus::OPEN),
-					SearchFields_Ticket::TICKET_WAITING => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',0),
-					SearchFields_Ticket::VIRTUAL_WORKERS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_WORKERS,null,array()),
-				), true);
 				
 				if(!is_null($filter_group_id) && isset($groups[$filter_group_id])) {
 					$tpl->assign('filter_group_id', $filter_group_id);
@@ -329,14 +335,6 @@ class ChTicketsPage extends CerberusPageExtension {
 						@$title .= ': '.
 							(($filter_bucket_id == 0) ? $translate->_('common.inbox') : $group_buckets[$filter_group_id][$filter_bucket_id]->name);
 						$workflowView->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CATEGORY_ID,'=',$filter_bucket_id));
-					} else {
-						$assignable_buckets = DAO_Bucket::getAssignableBuckets($filter_group_id);
-						$assignable_bucket_ids = array_keys($assignable_buckets);
-						
-						// Inbox is always assignable
-						array_unshift($assignable_bucket_ids,0);
-						
-						$workflowView->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CATEGORY_ID,'in',$assignable_bucket_ids));
 					}
 				}
 
@@ -344,15 +342,8 @@ class ChTicketsPage extends CerberusPageExtension {
 				
 			case 'all':
 			default:
-				$assignable_buckets = DAO_Bucket::getAssignableBuckets(array_keys($memberships));
-				
-				$workflowView->addParams(array(
-					SearchFields_Ticket::TICKET_CLOSED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',CerberusTicketStatus::OPEN),
-					SearchFields_Ticket::TICKET_WAITING => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',0),
-					SearchFields_Ticket::VIRTUAL_ASSIGNABLE => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_ASSIGNABLE,null,true),
-					SearchFields_Ticket::VIRTUAL_WORKERS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_WORKERS,null,array()),
-				), true);
-
+				$workflowView->removeParam(SearchFields_Ticket::TICKET_TEAM_ID);
+				$workflowView->removeParam(SearchFields_Ticket::TICKET_CATEGORY_ID);
 				break;
 		}
 		
@@ -360,6 +351,13 @@ class ChTicketsPage extends CerberusPageExtension {
 		C4_AbstractViewLoader::setView($workflowView->id, $workflowView);
 		
 		$tpl->assign('view', $workflowView);
+		
+		// Totals (only drill down as deep as a group)
+		$original_params = $workflowView->getEditableParams();
+		$workflowView->removeParam(SearchFields_Ticket::TICKET_CATEGORY_ID);
+		$counts = $workflowView->getCounts('group');
+		$workflowView->addParams($original_params, true);
+		$tpl->assign('counts', $counts);
 		
 		// Log activity
 		DAO_Worker::logActivity(
@@ -382,188 +380,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		}
 		
         $tpl->display('file:' . $this->_TPL_PATH . 'tickets/workflow/index.tpl');
-	}
-	
-	function showOverviewTabAction() {
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-		
-		$db = DevblocksPlatform::getDatabaseService();
-		$visit = CerberusApplication::getVisit();
-		$translate = DevblocksPlatform::getTranslationService();
-
-		// Remember the tab
-		$visit->set(CerberusVisit::KEY_MAIL_MODE, 'overview');		
-		
-		$views = array();
-
-		// Request path
-		@$request = DevblocksPlatform::importGPC($_REQUEST['request'],'string','');
-		$response_path = explode('/', $request);
-		@array_shift($response_path); // tickets
-		@$controller = array_shift($response_path); // overview
-
-		// Make sure the global URL was for us
-		if(0!=strcasecmp('overview',$controller))
-			$response_path = null;
-		
-		$workers = DAO_Worker::getAll();
-		$tpl->assign('workers', $workers);
-		
-		$active_worker = CerberusApplication::getActiveWorker();
-		
-		$groups = DAO_Group::getAll();
-		$tpl->assign('groups', $groups);
-		
-		$group_buckets = DAO_Bucket::getTeams();
-		$tpl->assign('group_buckets', $group_buckets);
-		
-		$workers = DAO_Worker::getAll();
-		$tpl->assign('workers', $workers);
-		
-		$memberships = $active_worker->getMemberships();
-
-		// Totals
-		
-		$group_counts = DAO_Overview::getGroupTotals();
-		$tpl->assign('group_counts', $group_counts);
-
-		$waiting_counts = DAO_Overview::getWaitingTotals();
-		$tpl->assign('waiting_counts', $waiting_counts);
-		
-		$worker_counts = DAO_Overview::getWorkerTotals();
-		$tpl->assign('worker_counts', $worker_counts);
-		
-		// All Open
-		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'View_Ticket';
-		$defaults->id = CerberusApplication::VIEW_OVERVIEW_ALL;
-		$defaults->name = $translate->_('mail.overview.all_groups');
-		$defaults->view_columns = array(
-			SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
-			SearchFields_Ticket::TICKET_UPDATED_DATE,
-			SearchFields_Ticket::TICKET_TEAM_ID,
-			SearchFields_Ticket::TICKET_CATEGORY_ID,
-		);
-		$defaults->renderLimit = 10;
-		$defaults->renderSortBy = SearchFields_Ticket::TICKET_UPDATED_DATE;
-		$defaults->renderSortAsc = 0;
-		
-		$title = $translate->_('mail.overview.all_groups');
-		$overView = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_OVERVIEW_ALL, $defaults);
-		
-		$overView->renderPage = 0;
-		
-		// Filter persistence
-		if(empty($response_path)) {
-			@$response_path = explode('/',$visit->get(CerberusVisit::KEY_OVERVIEW_FILTER, 'all'));
-		} else {
-			// View Filter
-			$visit->set(CerberusVisit::KEY_OVERVIEW_FILTER, implode('/',$response_path));
-		}
-		
-		@$filter = array_shift($response_path);
-		
-		switch($filter) {
-			case 'group':
-				@$filter_group_id = array_shift($response_path);
-				
-				$overView->addParams(array(
-					SearchFields_Ticket::TICKET_CLOSED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',CerberusTicketStatus::OPEN),
-					SearchFields_Ticket::TICKET_WAITING => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',0),
-				), true);
-				
-				if(!is_null($filter_group_id) && isset($groups[$filter_group_id])) {
-					$tpl->assign('filter_group_id', $filter_group_id);
-					$title = $groups[$filter_group_id]->name;
-					$overView->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'=',$filter_group_id));
-					
-					@$filter_bucket_id = array_shift($response_path);
-					if(!is_null($filter_bucket_id)) {
-						$tpl->assign('filter_bucket_id', $filter_bucket_id);
-						@$title .= ': '.
-							(($filter_bucket_id == 0) ? $translate->_('common.inbox') : $group_buckets[$filter_group_id][$filter_bucket_id]->name);
-						$overView->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CATEGORY_ID,'=',$filter_bucket_id));
-					}
-				}
-
-				break;
-				
-			case 'waiting':
-				@$filter_group_id = array_shift($response_path);
-				
-				$overView->addParams(array(
-					SearchFields_Ticket::TICKET_CLOSED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',CerberusTicketStatus::OPEN),
-					SearchFields_Ticket::TICKET_WAITING => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',1),
-				), true);
-				
-				if(!is_null($filter_group_id) && isset($groups[$filter_group_id])) {
-					$tpl->assign('filter_group_id', $filter_group_id);
-					$title = vsprintf($translate->_('mail.overview.waiting.title'), $groups[$filter_group_id]->name);
-					$overView->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'=',$filter_group_id));
-				}
-
-				break;
-				
-			case 'worker':
-				@$filter_worker_id = array_shift($response_path);
-
-				$overView->addParams(array(
-					SearchFields_Ticket::TICKET_CLOSED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',CerberusTicketStatus::OPEN),
-					SearchFields_Ticket::TICKET_WAITING => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',0),
-					SearchFields_Ticket::TICKET_TEAM_ID => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'in',array_keys($memberships)), // censor
-				), true);
-
-				if(!is_null($filter_worker_id)) {
-					$title = vsprintf($translate->_('mail.overview.assigned.title'), $workers[$filter_worker_id]->getName());
-					$overView->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_WORKERS,null,array($filter_worker_id)));
-					
-					@$filter_group_id = array_shift($response_path);
-					if(!is_null($filter_group_id) && isset($groups[$filter_group_id])) {
-						$overView->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'=',$filter_group_id));
-					}
-				}
-				
-				break;
-				
-			case 'all':
-			default:
-				$overView->addParams(array(
-					SearchFields_Ticket::TICKET_CLOSED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',CerberusTicketStatus::OPEN),
-					SearchFields_Ticket::TICKET_WAITING => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',0),
-					SearchFields_Ticket::TICKET_TEAM_ID => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'in',array_keys($memberships)),
-				), true);
-				
-				break;
-		}
-		
-		$overView->name = $title;
-		C4_AbstractViewLoader::setView($overView->id, $overView);
-		$views[] = $overView;
-		
-		$tpl->assign('views', $views);
-		
-		// Log activity
-		DAO_Worker::logActivity(
-			new Model_Activity(
-				'activity.mail.overview',
-				array(
-					'<i>'.$overView->name.'</i>'
-				)
-			)
-		);
-		
-		// ====== Who's Online
-		@$active_worker = CerberusApplication::getActiveWorker();
-		if($active_worker->hasPriv('core.ticket.view.whos_online')) {
-			$whos_online = DAO_Worker::getAllOnline();
-			if(!empty($whos_online)) {
-				$tpl->assign('whos_online', $whos_online);
-				$tpl->assign('whos_online_count', count($whos_online));
-			}
-		}
-		
-        $tpl->display('file:' . $this->_TPL_PATH . 'tickets/overview/index.tpl');		
 	}
 	
 	function showMessagesTabAction() {
@@ -605,15 +421,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		$tpl->assign('view', $view);
 	
-//		$teams = DAO_Group::getAll();
-//		$tpl->assign('teams', $teams);
-//		
-//		$buckets = DAO_Bucket::getAll();
-//		$tpl->assign('buckets', $buckets);
-//		
-//		$team_categories = DAO_Bucket::getTeams();
-//		$tpl->assign('team_categories', $team_categories);
-		
 		$tpl->display('file:' . $this->_TPL_PATH . 'tickets/messages/index.tpl');
 	}
 	
@@ -655,6 +462,25 @@ class ChTicketsPage extends CerberusPageExtension {
 		$tpl->assign('team_categories', $team_categories);
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'tickets/search/index.tpl');
+	}
+	
+	function viewSidebarAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['id'],'string','');
+		@$field = DevblocksPlatform::importGPC($_REQUEST['field'],'string');
+
+		if(empty($field))
+			$field = 'group';
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('view_id', $view_id);
+		$tpl->assign('field', $field);
+		
+		if(null != ($view = C4_AbstractViewLoader::getView($view_id))) {
+			$counts = $view->getCounts($field);
+			$tpl->assign('counts', $counts);
+		}
+		
+		$tpl->display('devblocks:cerberusweb.core::tickets/view_sidebar.tpl');
 	}
 	
 	function showDraftsTabAction() {
@@ -1166,38 +992,14 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		switch($section) {
 			case 'workflow':
-				$groups = DAO_Group::getAll();
-				$tpl->assign('groups', $groups);
-				
-				$group_buckets = DAO_Bucket::getTeams();
-				$tpl->assign('group_buckets', $group_buckets);
-				
-				$group_counts = DAO_WorkflowView::getGroupTotals();
-				$tpl->assign('group_counts', $group_counts);
+				$view = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_MAIL_WORKFLOW);
+				$original_params = $view->getEditableParams();
+				$view->removeParam(SearchFields_Ticket::TICKET_CATEGORY_ID);
+				$counts = $view->getCounts('group');
+				$view->addParams($original_params, true);
+				$tpl->assign('counts', $counts);
 				
 				$tpl->display('file:' . $this->_TPL_PATH . 'tickets/workflow/sidebar.tpl');
-				break;
-				
-			case 'overview':
-				$groups = DAO_Group::getAll();
-				$tpl->assign('groups', $groups);
-				
-				$group_buckets = DAO_Bucket::getTeams();
-				$tpl->assign('group_buckets', $group_buckets);
-				
-				$workers = DAO_Worker::getAll();
-				$tpl->assign('workers', $workers);
-				
-				$group_counts = DAO_Overview::getGroupTotals();
-				$tpl->assign('group_counts', $group_counts);
-				
-				$waiting_counts = DAO_Overview::getWaitingTotals();
-				$tpl->assign('waiting_counts', $waiting_counts);
-				
-				$worker_counts = DAO_Overview::getWorkerTotals();
-				$tpl->assign('worker_counts', $worker_counts);
-				
-				$tpl->display('file:' . $this->_TPL_PATH . 'tickets/overview/sidebar.tpl');
 				break;
 		}
 	}
