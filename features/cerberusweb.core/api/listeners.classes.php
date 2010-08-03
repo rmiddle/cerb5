@@ -345,7 +345,11 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 			case 'ticket.action.moved':
 				$this->_handleTicketMoved($event);
 				break;
-
+				
+            case 'ticket.reply.inbound':
+            case 'ticket.reply.outbound':
+				$this->_handleTicketReply($event);
+            	break;
 		}
 	}
 
@@ -372,13 +376,21 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 	private function _handleContextLinkAssigned($event) {
 		$translate = DevblocksPlatform::getTranslationService();
 		$events = DevblocksPlatform::getEventService();
-		
+
 		$worker_id = $event->params['worker_id'];
 		$context = $event->params['context'];
 		$context_id = $event->params['context_id'];
 		
+		$notifying_ourself = false;
+		
+		// Don't notify ourself
+		if(null != ($active_worker = CerberusApplication::getActiveWorker())) {
+			if($active_worker->id == $worker_id)
+				$notifying_ourself = true;
+		}
+		
 		// Abstract context assigned notifications
-		if(null != ($mft = DevblocksPlatform::getExtension($context, false, true))) {
+		if(!$notifying_ourself && null != ($mft = DevblocksPlatform::getExtension($context, false, true))) {
 			@$string_assigned = $mft->params['events'][0]['context.assigned'];
 			
 			if(!empty($string_assigned) 
@@ -386,7 +398,7 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 				&& null != ($url = $ext->getPermalink($context_id))) {
 				/* @var $ext Extension_DevblocksContext */
 
-				if(null != ($active_worker = CerberusApplication::getActiveWorker())) {
+				if(null != $active_worker) {
 					$worker_name = $active_worker->getName();
 				} else {
 					$worker_name = 'The system'; 
@@ -472,6 +484,79 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
     	}
 	}
 	
+	private function _handleTicketReply($event) {
+		@$ticket_id = $event->params['ticket_id'];
+		
+		$context_owners = CerberusContexts::getWorkers(CerberusContexts::CONTEXT_TICKET, $ticket_id);
+		$url_writer = DevblocksPlatform::getUrlService();
+		
+		if(empty($context_owners))
+			return;
+		
+		switch($event->id) {
+			case 'ticket.reply.inbound':
+				// Don't trigger on move events
+				if(isset($event->params['is_move']))
+					return;
+				
+				$who = 'A contact';
+					
+				// If we can resolve the address into a real name (or e-mail address)...
+				if(null != ($address = @$event->params['address_model'])) {
+					$name = $address->getName();
+					$who = sprintf("%s%s",
+						(!empty($name) ? ($name . ' ') : ''), 
+						$address->email
+					);
+				}
+				
+				$message = sprintf("%s replied to a ticket assigned to you.",
+					$who
+				);
+				break;
+				
+			case 'ticket.reply.outbound':
+				$active_worker = CerberusApplication::getActiveWorker();
+				$workers = DAO_Worker::getAll();
+
+				// Make sure we know the sending worker
+				if(null == ($worker_id = @$event->params['worker_id']))
+					return;
+				
+				$who = 'A worker';
+					
+				if(isset($workers[$worker_id]))
+					$who = $workers[$worker_id]->getName();
+					
+				// Don't tell a worker about a reply they did
+				unset($context_owners[$worker_id]);
+				
+				$message = sprintf("%s sent a reply on a ticket assigned to you.",
+					$who
+				);
+				
+				break;
+		}
+
+		// We may have fewer workers than we started with
+		if(empty($context_owners))
+			return;
+		
+		$url = $url_writer->write(sprintf("c=display&id=%s", $ticket_id));
+			
+		// Send notifications to all owners of the ticket
+		foreach($context_owners as $owner_id => $owner) {
+			// Assignment Notification
+			$fields = array(
+				DAO_WorkerEvent::CREATED_DATE => time(),
+				DAO_WorkerEvent::WORKER_ID => $owner_id,
+				DAO_WorkerEvent::URL => $url,
+				DAO_WorkerEvent::MESSAGE => $message,
+			);
+			DAO_WorkerEvent::create($fields);
+		}
+	}
+	
 	private function _handleTicketMoved($event) {
 		@$ticket_id = $event->params['ticket_id'];
 		@$group_id = $event->params['group_id'];
@@ -493,13 +578,15 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 			}
 		}
 
-		// Trigger an inbound event			
+		// Trigger an inbound event
+		// [TODO] This really should be a different event to run inbox filters	
 	    $eventMgr = DevblocksPlatform::getEventService();
 	    $eventMgr->trigger(
 	        new Model_DevblocksEvent(
 	            'ticket.reply.inbound',
                 array(
                     'ticket_id' => $ticket_id,
+                    'is_move' => true,
                 )
             )
 	    );
