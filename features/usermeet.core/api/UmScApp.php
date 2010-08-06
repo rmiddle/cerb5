@@ -519,7 +519,7 @@ class UmScAbstractViewLoader {
 		$model->id = $view->id;
 		$model->name = $view->name;
 		$model->view_columns = $view->view_columns;
-		$model->params = $view->params;
+		$model->paramsEditable = $view->getEditableParams();
 
 		$model->renderPage = $view->renderPage;
 		$model->renderLimit = $view->renderLimit;
@@ -541,7 +541,7 @@ class UmScAbstractViewLoader {
 		$inst->id = $model->id;
 		$inst->name = $model->name;
 		$inst->view_columns = $model->view_columns;
-		$inst->params = $model->params;
+		$inst->addParams($model->paramsEditable, true);
 
 		$inst->renderPage = $model->renderPage;
 		$inst->renderLimit = $model->renderLimit;
@@ -635,7 +635,7 @@ class UmScAjaxController extends Extension_UmScController {
 		@$sort_by = DevblocksPlatform::importGPC($_REQUEST['sort_by'],'string','');
 		
 		if(null != ($view = UmScAbstractViewLoader::getView('', $view_id))) {
-			$fields = $view->getColumns();
+			$fields = $view->getColumnsAvailable();
 			if(isset($fields[$sort_by])) {
 				if(0==strcasecmp($view->renderSortBy,$sort_by)) { // clicked same col?
 					$view->renderSortAsc = !(bool)$view->renderSortAsc; // flip order

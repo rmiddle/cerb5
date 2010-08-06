@@ -28,11 +28,11 @@ class UmScHistoryController extends Extension_UmScController {
 			}
 			
 			// Lock to current visitor and open tickets
-			$open_view->params = array(
+			$open_view->addParams(array(
 				new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_FIRST_WROTE_ID,'=',$active_user->id),
 				new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',0),
 				new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_DELETED,'=',0),
-			);
+			), true);
 
 			$open_view->name = "";
 			$open_view->renderSortBy = SearchFields_Ticket::TICKET_UPDATED_DATE;
@@ -50,11 +50,11 @@ class UmScHistoryController extends Extension_UmScController {
 			}
 			
 			// Lock to current visitor and closed tickets
-			$closed_view->params = array(
+			$closed_view->addParams(array(
 				new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_FIRST_WROTE_ID,'=',$active_user->id),
 				new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',1),
 				new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_DELETED,'=',0),
-			);
+			), true);
 
 			$closed_view->name = "";
 			$closed_view->renderSortBy = SearchFields_Ticket::TICKET_UPDATED_DATE;
@@ -82,7 +82,7 @@ class UmScHistoryController extends Extension_UmScController {
 				SearchFields_Ticket::TICKET_UPDATED_DATE,
 				SearchFields_Ticket::TICKET_CLOSED,
 			);
-			$view->params = array(
+			$view->addParams(array(
 				array(
 					DevblocksSearchCriteria::GROUP_OR,
 					new DevblocksSearchCriteria(SearchFields_Ticket::FULLTEXT_MESSAGE_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,array($q,'all')),
@@ -90,7 +90,7 @@ class UmScHistoryController extends Extension_UmScController {
 				),
 				new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_FIRST_WROTE_ID,'=',$active_user->id),
 				new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_DELETED,'=',0),
-			);
+			), true);
 			
 			UmScAbstractViewLoader::setView($view->id, $view);
 			$tpl->assign('view', $view);
@@ -267,12 +267,20 @@ class UmSc_TicketHistoryView extends C4_AbstractView {
 			SearchFields_Ticket::TICKET_SUBJECT,
 			SearchFields_Ticket::TICKET_UPDATED_DATE,
 		);
+		$this->columnsHidden = array(
+		);
+		
+		$this->paramsHidden = array(
+			SearchFields_Ticket::TICKET_ID,
+		);
+		
+		$this->doResetCriteria();
 	}
 
 	function getData() {
 		$objects = DAO_Ticket::search(
 			array(),
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -289,22 +297,10 @@ class UmSc_TicketHistoryView extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-		$tpl->assign('view_fields', $this->getColumns());
-		
 		$tpl->display("devblocks:usermeet.core:portal_".UmPortalHelper::getCode() . ":support_center/history/view.tpl");
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_Ticket::getFields();
-	}
-
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_Ticket::ID]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		return self::getFields();
 	}
 };

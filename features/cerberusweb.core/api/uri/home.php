@@ -121,32 +121,41 @@ class ChHomePage extends CerberusPageExtension {
 		$visit->set(CerberusVisit::KEY_HOME_SELECTED_TAB, 'events');
 		
 		// My Events
-		$myEventsView = C4_AbstractViewLoader::getView(self::VIEW_MY_EVENTS);
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = self::VIEW_MY_EVENTS;
+		$defaults->class_name = 'View_WorkerEvent';
+		$defaults->renderLimit = 25;
+		$defaults->renderPage = 0;
+		$defaults->renderSortBy = SearchFields_WorkerEvent::CREATED_DATE;
+		$defaults->renderSortAsc = false;
 		
-		$title = vsprintf($translate->_('home.my_notifications.view.title'), $active_worker->getName());
+		$myEventsView = C4_AbstractViewLoader::getView(self::VIEW_MY_EVENTS, $defaults);
 		
-		if(null == $myEventsView) {
-			$myEventsView = new View_WorkerEvent();
-			$myEventsView->id = self::VIEW_MY_EVENTS;
-			$myEventsView->name = $title;
-			$myEventsView->renderLimit = 25;
-			$myEventsView->renderPage = 0;
-			$myEventsView->renderSortBy = SearchFields_WorkerEvent::CREATED_DATE;
-			$myEventsView->renderSortAsc = 0;
-		}
-
-		// Overload criteria
-		$myEventsView->name = $title;
-		$myEventsView->params = array(
-			SearchFields_WorkerEvent::WORKER_ID => new DevblocksSearchCriteria(SearchFields_WorkerEvent::WORKER_ID,'=',$active_worker->id),
-			SearchFields_WorkerEvent::IS_READ => new DevblocksSearchCriteria(SearchFields_WorkerEvent::IS_READ,'=',0),
+		$myEventsView->name = vsprintf($translate->_('home.my_notifications.view.title'), $active_worker->getName());
+		
+		$myEventsView->columnsHidden = array(
+			SearchFields_WorkerEvent::ID,
+			SearchFields_WorkerEvent::IS_READ,
+			SearchFields_WorkerEvent::WORKER_ID,
 		);
+		
+		$myEventsView->paramsHidden = array(
+			SearchFields_WorkerEvent::ID,
+			SearchFields_WorkerEvent::IS_READ,
+			SearchFields_WorkerEvent::WORKER_ID,
+		);
+		$myEventsView->paramsDefault = $defaults->paramsDefault;
+		$myEventsView->paramsRequired = array(
+			SearchFields_WorkerEvent::IS_READ => new DevblocksSearchCriteria(SearchFields_WorkerEvent::IS_READ,'=',0),
+			SearchFields_WorkerEvent::WORKER_ID => new DevblocksSearchCriteria(SearchFields_WorkerEvent::WORKER_ID,'=',$active_worker->id),
+		);
+		
 		/*
 		 * [TODO] This doesn't need to save every display, but it was possible to 
 		 * lose the params in the saved version of the view in the DB w/o recovery.
 		 * This should be moved back into the if(null==...) check in a later build.
 		 */
-		C4_AbstractViewLoader::setView($myEventsView->id,$myEventsView);
+		C4_AbstractViewLoader::setView($myEventsView->id, $myEventsView);
 		
 		$tpl->assign('view', $myEventsView);
 		$tpl->display('file:' . $this->_TPL_PATH . 'home/tabs/my_events/index.tpl');
@@ -251,8 +260,8 @@ class ChHomePage extends CerberusPageExtension {
 		);
 		$list->params = array(
 			SearchFields_Ticket::TICKET_CLOSED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',0), 
-			SearchFields_Ticket::TICKET_WAITING => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',0), 
-			SearchFields_Ticket::TICKET_NEXT_WORKER_ID => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_NEXT_WORKER_ID,'=',$active_worker->id), 
+			SearchFields_Ticket::TICKET_WAITING => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',0),
+			SearchFields_Ticket::VIRTUAL_WORKERS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_WORKERS,null,array($active_worker->id))
 		);
 		$list->num_rows = 5;
 		
@@ -262,29 +271,6 @@ class ChHomePage extends CerberusPageExtension {
 			DAO_WorkerWorkspaceList::LIST_VIEW => serialize($list),
 			DAO_WorkerWorkspaceList::WORKSPACE => $workspace,
 			DAO_WorkerWorkspaceList::SOURCE_EXTENSION => ChWorkspaceSource_Ticket::ID,
-		);
-		DAO_WorkerWorkspaceList::create($fields);
-		
-		// My Tasks
-		
-		$list = new Model_WorkerWorkspaceListView();
-		$list->title = 'My Tasks';
-		$list->columns = array(
-			SearchFields_Task::SOURCE_EXTENSION,
-			SearchFields_Task::DUE_DATE,
-		);
-		$list->params = array(
-			SearchFields_Task::IS_COMPLETED => new DevblocksSearchCriteria(SearchFields_Task::IS_COMPLETED,'=',0), 
-			SearchFields_Task::WORKER_ID => new DevblocksSearchCriteria(SearchFields_Task::WORKER_ID,'=',$active_worker->id), 
-		);
-		$list->num_rows = 5;
-		
-		$fields = array(
-			DAO_WorkerWorkspaceList::WORKER_ID => $active_worker->id,
-			DAO_WorkerWorkspaceList::LIST_POS => 2,
-			DAO_WorkerWorkspaceList::LIST_VIEW => serialize($list),
-			DAO_WorkerWorkspaceList::WORKSPACE => $workspace,
-			DAO_WorkerWorkspaceList::SOURCE_EXTENSION => ChWorkspaceSource_Task::ID,
 		);
 		DAO_WorkerWorkspaceList::create($fields);
 		
@@ -341,7 +327,7 @@ class ChHomePage extends CerberusPageExtension {
 				$list = new Model_WorkerWorkspaceListView();
 				$list->title = $name;
 				$list->columns = $view->view_columns;
-				$list->params = $view->params;
+				$list->params = $view->getEditableParams();
 				$list->num_rows = 5;
 				$list->sort_by = $view->renderSortBy;
 				$list->sort_asc = $view->renderSortAsc;
@@ -501,7 +487,7 @@ class ChHomePage extends CerberusPageExtension {
 					$view->renderLimit = $list_view->num_rows;
 					$view->renderPage = 0;
 					$view->view_columns = $list_view->columns;
-					$view->params = $list_view->params;
+					$view->addParams($list_view->params, true);
 					$view->renderSortBy = $list_view->sort_by;
 					$view->renderSortAsc = $list_view->sort_asc;
 					C4_AbstractViewLoader::setView($view_id, $view);

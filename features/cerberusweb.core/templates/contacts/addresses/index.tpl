@@ -3,7 +3,7 @@
 	<td width="1%" nowrap="nowrap" valign="top" style="padding-right:5px;">
 		<form action="{devblocks_url}{/devblocks_url}" style="margin-bottom:5px;">
 		{if $active_worker->hasPriv('core.addybook.addy.actions.update')}
-			<button type="button" onclick="genericAjaxPanel('c=contacts&a=showAddressPeek&id=0&org_id={$contact->id}&view_id={$view->id}',null,false,'500');"><span class="cerb-sprite sprite-add"></span> {$translate->_('addy_book.address.add')}</button>
+			<button type="button" onclick="genericAjaxPopup('peek','c=contacts&a=showAddressPeek&id=0&org_id={$contact->id}&view_id={$view->id}',null,false,'500');"><span class="cerb-sprite sprite-add"></span> {$translate->_('addy_book.address.add')}</button>
 		{/if}
 		</form>
 	</td>
@@ -22,15 +22,4 @@
 </tr>
 </table>
 
-<table cellpadding="0" cellspacing="0" border="0">
-	<tr>
-		<td valign="top" width="0%" nowrap="nowrap">
-			{include file="file:$core_tpl/internal/views/criteria_list.tpl" divName="addySearchFilters"}
-			<div id="addySearchFilters" style="visibility:visible;"></div>
-		</td>
-		<td valign="top" width="0%" nowrap="nowrap" style="padding-right:5px;"></td>
-		<td valign="top" width="100%">
-			<div id="view{$view->id}">{$view->render()}</div>
-		</td>
-	</tr>
-</table>
+{include file="$core_tpl/internal/views/search_and_view.tpl" view=$view}

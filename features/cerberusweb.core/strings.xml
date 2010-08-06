@@ -32,7 +32,7 @@
 			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
 		</tu>
 		<tu tuid='display.tab.tasks'>
-			<tuv xml:lang="en_US"><seg>Tasks (%s)</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Tasks</seg></tuv>
 		</tu>
 
 		<tu tuid='home.tab.my_notifications'>
@@ -105,6 +105,9 @@
 		<tu tuid='common.comment'>
 			<tuv xml:lang="en_US"><seg>comment</seg></tuv>
 		</tu>
+		<tu tuid='common.comments'>
+			<tuv xml:lang="en_US"><seg>comments</seg></tuv>
+		</tu>
 		<tu tuid='common.content'>
 			<tuv xml:lang="en_US"><seg>Content</seg></tuv>
 		</tu>
@@ -136,7 +139,7 @@
 			<tuv xml:lang="en_US"><seg>discard</seg></tuv>
 		</tu>
 		<tu tuid='common.email'>
-			<tuv xml:lang="en_US"><seg>E-mail</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Email</seg></tuv>
 		</tu>
 		<tu tuid='common.enabled'>
 			<tuv xml:lang="en_US"><seg>Enabled</seg></tuv>
@@ -195,6 +198,9 @@
 		<tu tuid='common.me'>
 			<tuv xml:lang="en_US"><seg>me</seg></tuv>
 		</tu>
+		<tu tuid='common.messages'>
+			<tuv xml:lang="en_US"><seg>Messages</seg></tuv>
+		</tu>
 		<tu tuid='common.minimize'>
 			<tuv xml:lang="en_US"><seg>minimize</seg></tuv>
 		</tu>
@@ -240,8 +246,17 @@
 		<tu tuid='common.order'>
 			<tuv xml:lang="en_US"><seg>order</seg></tuv>
 		</tu>		
+		<tu tuid='common.owner'>
+			<tuv xml:lang="en_US"><seg>Owner</seg></tuv>
+		</tu>		
+		<tu tuid='common.owners'>
+			<tuv xml:lang="en_US"><seg>Owners</seg></tuv>
+		</tu>		
 		<tu tuid='common.languages'>
 			<tuv xml:lang="en_US"><seg>Languages</seg></tuv>
+		</tu>
+		<tu tuid='common.links'>
+			<tuv xml:lang="en_US"><seg>Links</seg></tuv>
 		</tu>
 		<tu tuid='common.load'>
 			<tuv xml:lang="en_US"><seg>Load</seg></tuv>
@@ -314,6 +329,9 @@
 		</tu>
 		<tu tuid='common.status'>
 			<tuv xml:lang="en_US"><seg>Status</seg></tuv>
+		</tu>
+		<tu tuid='common.summary'>
+			<tuv xml:lang="en_US"><seg>Summary</seg></tuv>
 		</tu>
 		<tu tuid='common.synchronize'>
 			<tuv xml:lang="en_US"><seg>Synchronize</seg></tuv>
@@ -422,13 +440,13 @@
 			<tuv xml:lang="en_US"><seg>[Address Book] Can import/upload records into the address book</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.addybook.addy.actions.update'>
-			<tuv xml:lang="en_US"><seg>[Address Book] Can modify e-mail address contacts</seg></tuv>
+			<tuv xml:lang="en_US"><seg>[Address Book] Can modify email address contacts</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.addybook.addy.view.actions.broadcast'>
-			<tuv xml:lang="en_US"><seg>[Address Book] Can broadcast compose e-mail to address lists</seg></tuv>
+			<tuv xml:lang="en_US"><seg>[Address Book] Can broadcast compose email to address lists</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.addybook.addy.view.actions.export'>
-			<tuv xml:lang="en_US"><seg>[Address Book] Can export e-mail address lists to CSV/XML</seg></tuv>
+			<tuv xml:lang="en_US"><seg>[Address Book] Can export email address lists to CSV/XML</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.addybook.org.actions.update'>
 			<tuv xml:lang="en_US"><seg>[Address Book] Can modify organizations</seg></tuv>
@@ -448,7 +466,7 @@
 			<tuv xml:lang="en_US"><seg>[Display Ticket] Can comment on tickets</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.display.actions.forward'>
-			<tuv xml:lang="en_US"><seg>[Display Ticket] Can forward tickets to third-party e-mail addresses</seg></tuv>
+			<tuv xml:lang="en_US"><seg>[Display Ticket] Can forward tickets to third-party email addresses</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.display.actions.note'>
 			<tuv xml:lang="en_US"><seg>[Display Ticket] Can add sticky notes to tickets</seg></tuv>
@@ -474,9 +492,6 @@
 		</tu>
 		<tu tuid='acl.core.mail.log_ticket'>
 			<tuv xml:lang="en_US"><seg>[Mail] Can open tickets on behalf of customers</seg></tuv>
-		</tu>
-		<tu tuid='acl.core.mail.overview'>
-			<tuv xml:lang="en_US"><seg>[Mail] Can use the Overview tab on the Mail page</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.mail.search'>
 			<tuv xml:lang="en_US"><seg>[Mail] Can use the Search tab on the Mail page</seg></tuv>
@@ -538,9 +553,6 @@
 
 		<!-- Activity -->
 		
-		<tu tuid='activity.tasks.tab.notes'>
-			<tuv xml:lang="en_US"><seg>Notes</seg></tuv>
-		</tu>
 		<tu tuid='activity.tasks.tab.properties'>
 			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
 		</tu>
@@ -622,20 +634,11 @@
 		<tu tuid='addy_book.org.tabs.mail_history'>
 			<tuv xml:lang="en_US"><seg>Mail History</seg></tuv>
 		</tu>
-		<tu tuid='addy_book.org.tabs.notes'>
-			<tuv xml:lang="en_US"><seg>Notes</seg></tuv>
-		</tu>
-		<tu tuid='addy_book.org.tabs.notes.add'>
-			<tuv xml:lang="en_US"><seg>Add a note about %s</seg></tuv>
-		</tu>
 		<tu tuid='addy_book.org.tabs.people'>
 			<tuv xml:lang="en_US"><seg>People (%s)</seg></tuv>
 		</tu>
 		<tu tuid='addy_book.org.tabs.properties'>
 			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
-		</tu>
-		<tu tuid='addy_book.org.tabs.tasks'>
-			<tuv xml:lang="en_US"><seg>Tasks (%s)</seg></tuv>
 		</tu>
 		<tu tuid='addy_book.peek.compose'>
 			<tuv xml:lang="en_US"><seg>compose</seg></tuv>
@@ -647,7 +650,7 @@
 			<tuv xml:lang="en_US"><seg>%s closed ticket(s)</seg></tuv>
 		</tu>
 		<tu tuid='addy_book.peek.title'>
-			<tuv xml:lang="en_US"><seg>E-mail Contact</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Email Contact</seg></tuv>
 		</tu>
 		<tu tuid='addy_book.peek.view_full'>
 			<tuv xml:lang="en_US"><seg>view full record</seg></tuv>
@@ -681,6 +684,9 @@
 		</tu>
 		<tu tuid='attachment.storage_key'>
 			<tuv xml:lang="en_US"><seg>Storage Key</seg></tuv>
+		</tu>
+		<tu tuid='attachment.storage_profile_id'>
+			<tuv xml:lang="en_US"><seg>Storage Profile</seg></tuv>
 		</tu>
 		<tu tuid='attachment.storage_size'>
 			<tuv xml:lang="en_US"><seg>Size (bytes)</seg></tuv>
@@ -756,6 +762,53 @@
 			<tuv xml:lang="en_US"><seg>Title</seg></tuv>
 		</tu>
 
+		<!-- Contexts -->
+		
+		<tu tuid='context.default.assigned'>
+			<tuv xml:lang="en_US"><seg>%s assigned something to you.</seg></tuv>
+		</tu>
+		<tu tuid='context.default.commented'>
+			<tuv xml:lang="en_US"><seg>%s left a comment for you.</seg></tuv>
+		</tu>
+		<tu tuid='context.address.assigned'>
+			<tuv xml:lang="en_US"><seg>%s assigned a contact to you.</seg></tuv>
+		</tu>
+		<tu tuid='context.address.commented'>
+			<tuv xml:lang="en_US"><seg>%s commented on a contact.</seg></tuv>
+		</tu>
+		<!--
+		<tu tuid='context.group.assigned'>
+			<tuv xml:lang="en_US"><seg>%s assigned a group to you.</seg></tuv>
+		</tu>
+		<tu tuid='context.group.commented'>
+			<tuv xml:lang="en_US"><seg>%s commented on a group.</seg></tuv>
+		</tu>
+		-->
+		<tu tuid='context.org.assigned'>
+			<tuv xml:lang="en_US"><seg>%s assigned an organization to you.</seg></tuv>
+		</tu>
+		<tu tuid='context.org.commented'>
+			<tuv xml:lang="en_US"><seg>%s commented on an organization.</seg></tuv>
+		</tu>
+		<tu tuid='context.task.assigned'>
+			<tuv xml:lang="en_US"><seg>%s assigned a task to you.</seg></tuv>
+		</tu>
+		<tu tuid='context.task.commented'>
+			<tuv xml:lang="en_US"><seg>%s commented on a task.</seg></tuv>
+		</tu>
+		<tu tuid='context.ticket.assigned'>
+			<tuv xml:lang="en_US"><seg>%s assigned a ticket to you.</seg></tuv>
+		</tu>
+		<tu tuid='context.ticket.commented'>
+			<tuv xml:lang="en_US"><seg>%s commented on a ticket.</seg></tuv>
+		</tu>
+		<tu tuid='context.worker.assigned'>
+			<tuv xml:lang="en_US"><seg>%s assigned a worker to you.</seg></tuv>
+		</tu>
+		<tu tuid='context.worker.commented'>
+			<tuv xml:lang="en_US"><seg>%s commented on another worker.</seg></tuv>
+		</tu>
+
 		<!-- Cron -->
 
 		<tu tuid='cron.ip_unauthorized'>
@@ -784,9 +837,6 @@
 		</tu>
 		<tu tuid='activity.home'>
 			<tuv xml:lang="en_US"><seg>%s is browsing their assigned work</seg></tuv>
-		</tu>
-		<tu tuid='activity.mail.overview'>
-			<tuv xml:lang="en_US"><seg>%s is browsing %s in Overview</seg></tuv>
 		</tu>
 		<tu tuid='activity.mail.search'>
 			<tuv xml:lang="en_US"><seg>%s is searching tickets</seg></tuv>
@@ -998,7 +1048,7 @@
 			<tuv xml:lang="en_US"><seg>(The maximum attachment size is %s)</seg></tuv>
 		</tu>
 		<tu tuid='display.reply.email_templates'>
-			<tuv xml:lang="en_US"><seg>E-mail Templates</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Email Templates</seg></tuv>
 		</tu>
 		<tu tuid='display.reply.forward.banner'>
 			<tuv xml:lang="en_US"><seg>---- Forwarded message ----</seg></tuv>
@@ -1011,15 +1061,6 @@
 		</tu>
 		<tu tuid='display.reply.next.handle_reply'>
 			<tuv xml:lang="en_US"><seg>Who should handle the next reply?</seg></tuv>
-		</tu>
-		<tu tuid='display.reply.next.handle_reply_after'>
-			<tuv xml:lang="en_US"><seg>Allow anybody to handle the next reply after:</seg></tuv>
-		</tu>
-		<tu tuid='display.reply.next.handle_reply_after_2hrs'>
-			<tuv xml:lang="en_US"><seg>+2 hours</seg></tuv>
-		</tu>
-		<tu tuid='display.reply.next.handle_reply_after_eg'>
-			<tuv xml:lang="en_US"><seg>(e.g. "2 hours", "5pm", or leave blank to keep assigned)</seg></tuv>
 		</tu>
 		<tu tuid='display.reply.next.move'>
 			<tuv xml:lang="en_US"><seg>Would you like to move this conversation?</seg></tuv>
@@ -1122,9 +1163,6 @@
 			<tuv xml:lang="en_US"><seg>Not Waiting</seg></tuv>
 		</tu>
 		
-		<tu tuid='mail.overview'>
-			<tuv xml:lang="en_US"><seg>Overview</seg></tuv>
-		</tu>
 		<tu tuid='mail.overview.all_done'>
 			<tuv xml:lang="en_US"><seg>All Done!</seg></tuv>
 		</tu>
@@ -1137,14 +1175,8 @@
 		<tu tuid='mail.overview.assigned.title'>
 			<tuv xml:lang="en_US"><seg>For %s</seg></tuv>
 		</tu>
-		<tu tuid='mail.overview.expand_list'>
-			<tuv xml:lang="en_US"><seg>expand list</seg></tuv>
-		</tu>
 		<tu tuid='mail.overview.my_mail'>
 			<tuv xml:lang="en_US"><seg>my mail</seg></tuv>
-		</tu>
-		<tu tuid='mail.overview.waiting.title'>
-			<tuv xml:lang="en_US"><seg>[Waiting] %s</seg></tuv>
 		</tu>
 		
 		<tu tuid='mail.piles'>
@@ -1165,6 +1197,14 @@
 		<tu tuid='mail.sent'>
 			<tuv xml:lang="en_US"><seg>Sent</seg></tuv>
 		</tu>
+		
+		<tu tuid='mail.search.messages'>
+			<tuv xml:lang="en_US"><seg>Search Messages</seg></tuv>
+		</tu>
+		<tu tuid='mail.search.tickets'>
+			<tuv xml:lang="en_US"><seg>Search Tickets</seg></tuv>
+		</tu>
+		
 		<tu tuid='mail.surrender'>
 			<tuv xml:lang="en_US"><seg>Surrender</seg></tuv>
 		</tu>
@@ -1269,7 +1309,7 @@
 			<tuv xml:lang="en_US"><seg>The confirmation code you provided is not valid.</seg></tuv>
 		</tu>
 		<tu tuid='prefs.address.confirm.mail.body'>
-			<tuv xml:lang="en_US"><seg>%s has just added this e-mail address to their helpdesk account.
+			<tuv xml:lang="en_US"><seg>%s has just added this email address to their helpdesk account.
 
 To approve and continue, click the following link:
 %s
@@ -1278,13 +1318,13 @@ If you did not request this, do not click the link above.  The request will expi
 		</seg></tuv>
 		</tu>
 		<tu tuid='prefs.address.confirm.mail.subject'>
-			<tuv xml:lang="en_US"><seg>Confirm New Worker E-mail (%s)</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Confirm New Worker Email (%s)</seg></tuv>
 		</tu>
 		<tu tuid='prefs.address.confirm.mail.sent'>
-			<tuv xml:lang="en_US"><seg>A confirmation e-mail has been sent to %s</seg></tuv>
+			<tuv xml:lang="en_US"><seg>A confirmation email has been sent to %s</seg></tuv>
 		</tu>
 		<tu tuid='prefs.address.invalid'>
-			<tuv xml:lang="en_US"><seg>%s is not a valid e-mail address.</seg></tuv>
+			<tuv xml:lang="en_US"><seg>%s is not a valid email address.</seg></tuv>
 		</tu>
 
 		<!-- RSS -->
@@ -1406,9 +1446,6 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='tasks.postpone'>
 			<tuv xml:lang="en_US"><seg>+24hrs</seg></tuv>
 		</tu>
-		<tu tuid='tasks.tab.notes.add_note'>
-			<tuv xml:lang="en_US"><seg>Add a note about this task</seg></tuv>
-		</tu>
 		<tu tuid='tasks.ticket.tab.view'>
 			<tuv xml:lang="en_US"><seg>Ticket Tasks</seg></tuv>
 		</tu>
@@ -1478,6 +1515,9 @@ For example: *receipt*</seg></tuv>
 
 		<!-- Tickets -->
 
+		<tu tuid='ticket.assignable'>
+			<tuv xml:lang="en_US"><seg>Assignable</seg></tuv>
+		</tu>
 		<tu tuid='ticket.created'>
 			<tuv xml:lang="en_US"><seg>Created</seg></tuv>
 		</tu>
@@ -1496,17 +1536,11 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='ticket.last_action'>
 			<tuv xml:lang="en_US"><seg>Last Action</seg></tuv>
 		</tu>
-		<tu tuid='ticket.last_worker'>
-			<tuv xml:lang="en_US"><seg>Last Worker</seg></tuv>
-		</tu>
 		<tu tuid='ticket.last_wrote'>
 			<tuv xml:lang="en_US"><seg>Last Wrote</seg></tuv>
 		</tu>
 		<tu tuid='ticket.mask'>
 			<tuv xml:lang="en_US"><seg>Mask</seg></tuv>
-		</tu>
-		<tu tuid='ticket.next_worker'>
-			<tuv xml:lang="en_US"><seg>Next Worker</seg></tuv>
 		</tu>
 		<tu tuid='ticket.recipients.empty'>
 			<tuv xml:lang="en_US"><seg>This ticket has no recipients.</seg></tuv>
@@ -1528,9 +1562,6 @@ For example: *receipt*</seg></tuv>
 		</tu>
 		<tu tuid='ticket.subject'>
 			<tuv xml:lang="en_US"><seg>Subject</seg></tuv>
-		</tu>
-		<tu tuid='ticket.unlock_date'>
-			<tuv xml:lang="en_US"><seg>Auto-Surrender Date</seg></tuv>
 		</tu>
 		<tu tuid='ticket.updated'>
 			<tuv xml:lang="en_US"><seg>Updated</seg></tuv>
@@ -1604,17 +1635,14 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='worker_event.id'>
 			<tuv xml:lang="en_US"><seg>ID</seg></tuv>
 		</tu>
-		<tu tuid='worker_event.content'>
-			<tuv xml:lang="en_US"><seg>Content</seg></tuv>
-		</tu>
 		<tu tuid='worker_event.created_date'>
 			<tuv xml:lang="en_US"><seg>Created</seg></tuv>
 		</tu>
 		<tu tuid='worker_event.is_read'>
-			<tuv xml:lang="en_US"><seg>Read</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Is Read</seg></tuv>
 		</tu>
-		<tu tuid='worker_event.title'>
-			<tuv xml:lang="en_US"><seg>Title</seg></tuv>
+		<tu tuid='worker_event.message'>
+			<tuv xml:lang="en_US"><seg>Message</seg></tuv>
 		</tu>
 		<tu tuid='worker_event.worker_id'>
 			<tuv xml:lang="en_US"><seg>Worker</seg></tuv>
@@ -1659,7 +1687,7 @@ For example: *receipt*</seg></tuv>
 			<tuv xml:lang="en_US"><seg>Language:</seg></tuv>
 	    </tu>
 	    <tu tuid='preferences.account.email'>
-			<tuv xml:lang="en_US"><seg>E-mail Addresses</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Email Addresses</seg></tuv>
 	    </tu>
 	    <tu tuid='preferences.account.email.associated'>
 			<tuv xml:lang="en_US"><seg>These addresses will be associated with your helpdesk account.</seg></tuv>
@@ -1674,7 +1702,7 @@ For example: *receipt*</seg></tuv>
 			<tuv xml:lang="en_US"><seg>resend confirmation</seg></tuv>
 	    </tu>
 	    <tu tuid='preferences.account.email.address.add'>
-			<tuv xml:lang="en_US"><seg>Add e-mail address:</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Add email address:</seg></tuv>
 	    </tu>
 	    <tu tuid='preferences.account.preferences'>
 			<tuv xml:lang="en_US"><seg>Preferences</seg></tuv>

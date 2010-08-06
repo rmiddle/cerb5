@@ -6,24 +6,6 @@
 <input type="hidden" name="do_delete" value="0">
 
 <table cellpadding="0" cellspacing="2" border="0" width="98%">
-	{if !empty($link_namespace) && !empty($link_object_id)}
-	<tr>
-		<td width="0%" nowrap="nowrap" align="right" valign="top">Link: </td>
-		<td width="100%">
-			<input type="hidden" name="link_namespace" value="{$link_namespace}">
-			<input type="hidden" name="link_object_id" value="{$link_object_id}">
-			{$link_namespace}={$link_object_id}
-		</td>
-	</tr>
-	{/if}
-	{if !empty($source_info)}
-	<tr>
-		<td width="0%" nowrap="nowrap" align="right" valign="top">{'task.source_extension'|devblocks_translate|capitalize}: </td>
-		<td width="100%">
-			<a href="{$source_info.url}" title="{$source_info.name|escape}">{$source_info.name|truncate:75:'...':true}</a>
-		</td>
-	</tr>
-	{/if}
 	<tr>
 		<td width="0%" nowrap="nowrap" align="right">{'task.title'|devblocks_translate|capitalize}: </td>
 		<td width="100%">
@@ -38,15 +20,22 @@
 		</td>
 	</tr>
 	<tr>
-		<td width="0%" nowrap="nowrap" align="right">{'common.worker'|devblocks_translate|capitalize}: </td>
+		<td width="0%" nowrap="nowrap" align="right" valign="top"><label for="checkTaskCompleted">{'task.is_completed'|devblocks_translate|capitalize}:</label> </td>
 		<td width="100%">
-			<select name="worker_id">
-				<option value="0">- {'common.anybody'|devblocks_translate|lower} -</option>
-				{foreach from=$workers item=worker key=worker_id name=workers}
-				{if $worker_id==$active_worker->id}{assign var=active_worker_sel_id value=$smarty.foreach.workers.iteration}{/if}
-				<option value="{$worker_id}" {if $worker_id==$task->worker_id}selected{/if}>{$worker->getName()}</option>
+			<input id="checkTaskCompleted" type="checkbox" name="completed" value="1" {if $task->is_completed}checked{/if}>
+		</td>
+	</tr>
+	<tr>
+		<td width="0%" nowrap="nowrap" valign="top" align="right">{'common.owners'|devblocks_translate|capitalize}: </td>
+		<td width="100%">
+			<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-add"></span></button>
+			{if !empty($context_workers)}
+			<ul class="chooser-container bubbles">
+				{foreach from=$context_workers item=context_worker}
+				<li>{$context_worker->getName()|escape}<input type="hidden" name="worker_id[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
 				{/foreach}
-			</select>{if !empty($active_worker_sel_id)}<button type="button" onclick="this.form.worker_id.selectedIndex = {$active_worker_sel_id};">{'common.me'|devblocks_translate|lower}</button>{/if}
+			</ul>
+			{/if}
 		</td>
 	</tr>
 	{if empty($task->id)}
@@ -57,34 +46,37 @@
 		</td>
 	</tr>
 	{/if}
-	<tr>
-		<td width="0%" nowrap="nowrap" align="right" valign="top"><label for="checkTaskCompleted">{'task.is_completed'|devblocks_translate|capitalize}:</label> </td>
-		<td width="100%">
-			<input id="checkTaskCompleted" type="checkbox" name="completed" value="1" {if $task->is_completed}checked{/if}>
-		</td>
-	</tr>
 </table>
 
 {include file="file:$core_tpl/internal/custom_fields/bulk/form.tpl" bulk=false}
 
-{include file="file:$core_tpl/tasks/display/tabs/notes.tpl" readonly=true}
-
+{* Comment *}
+{if !empty($last_comment)}
+	<br>
+	{include file="file:$core_tpl/internal/comments/comment.tpl" readonly=true comment=$last_comment}
+{/if}
 <br>
 
-{if ($active_worker->hasPriv('core.tasks.actions.create') && (empty($task) || $active_worker->id==$task->worker_id))
-	|| ($active_worker->hasPriv('core.tasks.actions.update_nobody') && empty($task->worker_id)) 
-	|| $active_worker->hasPriv('core.tasks.actions.update_all')}
-	<button type="button" onclick="genericPanel.dialog('close');genericAjaxPost('formTaskPeek', 'view{$view_id}');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
-	{if !empty($task)}<button type="button" onclick="if(confirm('Are you sure you want to permanently delete this task?')) { $('#formTaskPeek input[name=do_delete]').val('1'); genericAjaxPost('formTaskPeek', 'view{$view_id}'); genericPanel.dialog('close'); } "><span class="cerb-sprite sprite-delete2"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
+{if $active_worker->hasPriv('core.tasks.actions.create')}
+	<button type="button" onclick="genericAjaxPopupClose('peek', 'task_save');genericAjaxPost('formTaskPeek', 'view{$view_id}');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
+	{if !empty($task)}<button type="button" onclick="if(confirm('Are you sure you want to permanently delete this task?')) { $('#formTaskPeek input[name=do_delete]').val('1'); genericAjaxPost('formTaskPeek', 'view{$view_id}'); genericAjaxPopupClose('peek'); } "><span class="cerb-sprite sprite-delete2"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
 {else}
 	<div class="error">{'error.core.no_acl.edit'|devblocks_translate}</div>
 {/if}
-<br>
+{if !empty($task)}
+<div style="float:right;">
+	<a href="{devblocks_url}c=tasks&a=display&id={$task->id}{/devblocks_url}">view full record</a>
+</div>
+{/if}
 </form>
 
-<script language="JavaScript1.2" type="text/javascript">
-	genericPanel.one('dialogopen',function(event,ui) {
-		genericPanel.dialog('option','title','Tasks');
+<script type="text/javascript">
+	$popup = genericAjaxPopupFetch('peek');
+	$popup.one('popup_open',function(event,ui) {
+		$(this).dialog('option','title','Tasks');
 		$('#formTaskPeek :input:text:first').focus().select();
-	} );
+	});
+	$('#formTaskPeek button.chooser_worker').each(function() {
+		ajax.chooser(this,'cerberusweb.contexts.worker','worker_id');
+	});
 </script>
