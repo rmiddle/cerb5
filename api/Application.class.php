@@ -468,7 +468,11 @@ class CerberusApplication extends DevblocksApplication {
 			$category_id = $t_or_c_id; 
 		} else {
 			$team_id = $t_or_c_id;
-			$category_id = 0;
+            if($t_or_c=='a') {
+                $category_id = -1;
+            } else {
+                $category_id = 0;
+            }
 		}
 		
 		return array($team_id, $category_id);
