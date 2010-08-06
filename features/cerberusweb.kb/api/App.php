@@ -273,15 +273,15 @@ class ChKbBrowseTab extends Extension_KnowledgebaseTab {
 				
 				// Articles
 				if(empty($root_id)) {
-					$view->params = array(
+					$view->addParams(array(
 						new DevblocksSearchCriteria(SearchFields_KbArticle::CATEGORY_ID,DevblocksSearchCriteria::OPER_IS_NULL,true),
-					);
+					), true);
 					$view->name = $translate->_('kb.view.uncategorized');
 					
 				} else {
-					$view->params = array(
+					$view->addParams(array(
 						new DevblocksSearchCriteria(SearchFields_KbArticle::CATEGORY_ID,'=',$root_id),
-					);
+					), true);
 					$view->name = vsprintf($translate->_('kb.view.articles'), $categories[$root_id]->name);
 				}
 		
@@ -314,6 +314,8 @@ class ChKbSearchTab extends Extension_KnowledgebaseTab {
 		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
 		$tpl->assign('path', $tpl_path);
 
+		// [TODO] Convert to $defaults
+		
 		if(null == ($view = C4_AbstractViewLoader::getView(self::VIEW_ID))) {
 			$view = new View_KbArticle();
 			$view->id = self::VIEW_ID;
@@ -322,11 +324,7 @@ class ChKbSearchTab extends Extension_KnowledgebaseTab {
 		}
 		
 		$tpl->assign('view', $view);
-		$tpl->assign('view_fields', View_KbArticle::getFields());
-		$tpl->assign('view_searchable_fields', View_KbArticle::getSearchFields());
 		
-		$tpl->assign('response_uri', 'kb/search');
-
 		$tpl->display($tpl_path . 'kb/tabs/search/index.tpl');
 	}
 }
@@ -628,7 +626,7 @@ class ChKbAjaxController extends DevblocksControllerExtension {
                 break;
         }
         
-        $searchView->params = $params;
+        $searchView->addParams($params, true);
         $searchView->renderPage = 0;
         $searchView->renderSortBy = null;
         
@@ -768,7 +766,6 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = 'display_kb_search';
 		$defaults->class_name = 'View_KbArticle'; 
-		$defaults->params = array();
 		$defaults->renderLimit = 10;
 		$defaults->renderTemplate = 'chooser';
 		
@@ -777,7 +774,7 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 			$view->renderSortBy = SearchFields_KbArticle::VIEWS;
 			$view->renderSortAsc = false;
 			$view->renderTemplate = 'chooser';
-			$view->params = $params;
+			$view->addParams($params);
 			C4_AbstractViewLoader::setView($view->id, $view);
 			
 			$view->render();
@@ -887,14 +884,13 @@ class DAO_KbArticle extends C4_ORMHelper {
 	
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
-		$id = $db->GenID('kb_seq');
 		
-		$sql = sprintf("INSERT INTO kb_article (id,title,views,updated,format,content) ".
-			"VALUES (%d,'',0,%d,0,'')",
-			$id,
+		$sql = sprintf("INSERT INTO kb_article (updated) ".
+			"VALUES (%d)",
 			time()
 		);
 		$db->Execute($sql);
+		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
 		
@@ -1110,16 +1106,17 @@ class DAO_KbArticle extends C4_ORMHelper {
 		);
 		
 		$where_sql = "".
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "");
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
 
+		$has_multiple_values = true;
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
 			$where_sql.
-			//($has_multiple_values ? 'GROUP BY kb.id ' : '').
-			'GROUP BY kb.id '.
+			($has_multiple_values ? 'GROUP BY kb.id ' : '').
 			$sort_sql;
 		
 		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
@@ -1138,8 +1135,11 @@ class DAO_KbArticle extends C4_ORMHelper {
 		// [JAS]: Count all
 		$total = -1;
 		if($withCounts) {
-		    $rs = $db->Execute($sql);
-		    $total = mysql_num_rows($rs);
+			$count_sql = 
+				($has_multiple_values ? "SELECT COUNT(DISTINCT kb.id) " : "SELECT COUNT(kb.id) ").
+				$join_sql.
+				$where_sql;
+			$total = $db->GetOne($count_sql);
 		}
 		
 		mysql_free_result($rs);
@@ -1211,13 +1211,11 @@ class DAO_KbCategory extends DevblocksORMHelper {
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$id = $db->GenID('generic_seq');
-		
-		$sql = sprintf("INSERT INTO kb_category (id) ".
-			"VALUES (%d)",
-			$id
+		$sql = sprintf("INSERT INTO kb_category () ".
+			"VALUES ()"
 		);
 		$db->Execute($sql);
+		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
 		
@@ -1470,12 +1468,24 @@ class View_KbArticle extends C4_AbstractView {
 			SearchFields_KbArticle::UPDATED,
 			SearchFields_KbArticle::VIEWS,
 		);
+		$this->columnsHidden = array(
+			SearchFields_KbArticle::CONTENT,
+			SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT,
+		);
+		
+		$this->paramsHidden = array(
+			SearchFields_KbArticle::CONTENT,
+			SearchFields_KbArticle::FORMAT,
+			SearchFields_KbArticle::ID,
+		);
+		
+		$this->doResetCriteria();
 	}
 
 	function getData() {
 		$objects = DAO_KbArticle::search(
 			$this->view_columns,
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -1495,8 +1505,6 @@ class View_KbArticle extends C4_AbstractView {
 		$categories = DAO_KbCategory::getAll();
 		$tpl->assign('categories', $categories);
 
-		$tpl->assign('view_fields', $this->getColumns());
-		
 		switch($this->renderTemplate) {
 			case 'chooser':
 				$tpl->display('file:' . $this->_TPL_PATH . 'view/chooser.tpl');
@@ -1569,23 +1577,8 @@ class View_KbArticle extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_KbArticle::getFields();
-	}
-
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_KbArticle::ID]);
-		unset($fields[SearchFields_KbArticle::FORMAT]);
-		unset($fields[SearchFields_KbArticle::CONTENT]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_KbArticle::CONTENT]);
-		unset($fields[SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT]);
-		return $fields;
 	}
 
 	function doSetCriteria($field, $oper, $value) {
@@ -1627,7 +1620,7 @@ class View_KbArticle extends C4_AbstractView {
 		}
 
 		if(!empty($criteria)) {
-			$this->params[$field] = $criteria;
+			$this->addParam($criteria);
 			$this->renderPage = 0;
 		}
 	}
@@ -1668,7 +1661,7 @@ class View_KbArticle extends C4_AbstractView {
 				array(
 					SearchFields_KbArticle::ID
 				),
-				$this->params,
+				$this->getParams(),
 				100,
 				$pg++,
 				SearchFields_KbArticle::ID,

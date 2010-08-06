@@ -1,5 +1,5 @@
 <form action="{devblocks_url}{/devblocks_url}" style="margin-bottom:5px;">
-	<button type="button" onclick="genericAjaxPanel('c=groups&a=showInboxFilterPanel&id=0&group_id={$group_id}',null,false,'550');"><span class="cerb-sprite sprite-funnel"></span> Add Inbox Routing Rule</button>
+	<button type="button" onclick="genericAjaxPopup('peek','c=groups&a=showInboxFilterPanel&id=0&group_id={$group_id}',null,false,'550');"><span class="cerb-sprite sprite-funnel"></span> Add Inbox Routing Rule</button>
 </form>
 
 <form action="{devblocks_url}{/devblocks_url}" method="post">
@@ -28,7 +28,7 @@
 				{/if}
 			</td>
 			<td style="{if $rule->is_sticky}background-color:rgb(255,255,221);border:2px solid rgb(255,215,0);{else}{/if}padding:5px;">
-				<a href="javascript:;" onclick="genericAjaxPanel('c=groups&a=showInboxFilterPanel&id={$rule_id}&group_id={$group_id}',null,false,'550');" style="color:rgb(0,120,0);font-weight:bold;">{$rule->name|escape}</a>
+				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=groups&a=showInboxFilterPanel&id={$rule_id}&group_id={$group_id}',null,false,'550');" style="color:rgb(0,120,0);font-weight:bold;">{$rule->name|escape}</a>
 				{if $rule->is_stackable}<span style="font-size:90%;padding-left:5px;color:rgb(0,120,0);">(Stackable)</span>{/if}
 				<br>
 				
@@ -83,10 +83,16 @@
 								<b>{if 0==$b_id}Inbox{else}{$buckets.$b_id->name}{/if}</b>
 							{/if}
 							<br>
-						{elseif $action_key=="assign"}
-							{assign var=worker_id value=$action.worker_id}
-							{if isset($workers.$worker_id)}
-								Assign to <b>{$workers.$worker_id->getName()}</b><br>
+						{elseif $action_key=="owner"}
+							{if isset($action.add)}
+							Add owner 
+							{foreach from=$action.add item=worker_id name=worker_ids}
+								{if isset($workers.$worker_id)}
+									<b>{$workers.$worker_id->getName()}</b>
+									{if !$smarty.foreach.worker_ids.last} and {/if}
+								{/if}
+							{/foreach}
+							<br>
 							{/if}
 						{elseif $action_key=="spam"}
 							{if $action.is_spam}Report Spam{else}Mark Not Spam{/if}<br>

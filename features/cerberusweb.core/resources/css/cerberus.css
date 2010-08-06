@@ -18,13 +18,13 @@ optgroup {
 }
 
 a {
-	color: rgb(102, 102, 102);
+	color: rgb(80, 80, 80);
 }
 
 h1 {
 	font-weight: bold;
 	font-size: 1.5em;
-	color: rgb(0, 102, 255);
+	color: rgb(0,150,0);
 	margin-top: 0px;
 	margin-bottom: 0px;
 }
@@ -60,6 +60,7 @@ button {
 	background-color: rgb(209,209,209);
 	margin-right:1px;
 	vertical-align:middle;
+	-moz-border-radius: 5px; -webkit-border-radius: 5px; border-radius: 5px;
 }
 
 button:hover {
@@ -130,17 +131,15 @@ table.worklist td span.title {
 }
 
 table.worklistBody th {
-	border-right: 1px solid rgb(150, 150, 150);
-	border-bottom: 1px solid rgb(150, 150, 150);
-	background-color: rgb(200, 200, 200);
-	padding: 2px 2px 2px 5px;
+	background-color: rgb(200,200,200);
+	padding-bottom:2px;
 	text-align: left;
 }
 
 table.worklistBody th a {
 	font-size: 12px;
 	font-weight: bold;
-	color: rgb(68, 68, 68);
+	color: rgb(80,80,80);
 }
 
 table.worklistBody td {
@@ -150,13 +149,13 @@ table.worklistBody td {
 table.worklistBody td b.subject {
 	font-size: 12px;
 	font-weight: bold;
-	color: rgb(75, 75, 75);
+	color: rgb(80,80,80);
 }
 
 table.worklistBody td a.subject {
 	font-size: 12px;
 	font-weight: bold;
-	color: rgb(75, 75, 75);
+	color: rgb(80,80,80);
 }
 table.worklistBody tr.even {
 	background-color:rgb(254,254,254); 
@@ -199,14 +198,14 @@ DIV.block {
 	background-image: url(bg_block.jpg);
 	background-repeat: repeat-x;
 	background-color: rgb(255, 255, 255);
-	border: 1px solid rgb(180,180,180);
+	border: 1px solid rgb(180, 180, 180);
 }
 
 DIV.block H2 {
 	font-weight: bold;
 	font-size: 18px;
 	margin: 0px;
-	color: rgb(0, 150, 0);
+	color: rgb(0,150,0);
 }
 
 DIV.block H3 {
@@ -249,8 +248,9 @@ DIV.subtle2 {
 DIV.bubble {
 	line-height:1.9em;
 	white-space:nowrap;
-	padding:0.2em;
-	display:inline;
+	padding:0 0.2em 0 0.2em;
+	margin:2px;
+	display:inline-block;
 	color:rgb(74,110,158);
 	background-color:rgb(232,242,254);
 	border:1px solid rgb(197,219,236);	
@@ -263,6 +263,95 @@ DIV.bubble A {
 
 DIV.bubble A:hover {
 	text-decoration:underline;
+}
+
+UL.bubbles {
+	display:inline;
+	margin:0px;
+	padding:0px;
+}
+
+UL.bubbles LI {
+	list-style:none;
+	line-height:1.9em;
+	white-space:nowrap;
+	padding:0 0.2em 0 0.2em;
+	margin:2px;
+	display:inline-block;
+	color:rgb(74,110,158);
+	border:1px solid rgb(197,219,236);
+	border-radius: 5px;	
+	-moz-border-radius: 5px;
+	-webkit-border-radius: 5px;
+	
+	background: rgb(232,242,254);
+	background: -webkit-gradient(linear, left top, left bottom, from(rgb(232,242,254)), to(rgb(255,255,255)));
+	background: -moz-linear-gradient(top,  rgb(232,242,254),  rgb(255,255,255));
+	filter:  progid:DXImageTransform.Microsoft.gradient(startColorstr='rgb(232,242,254)', endColorstr='rgb(255,255,255)');
+}
+
+UL.bubbles LI.bubble-blue {
+	color:rgb(74,110,158);
+	background-color:rgb(232,242,254);
+	border:1px solid rgb(197,219,236);
+}
+
+/*
+UL.bubbles LI.bubble-red {
+	color:rgb(220,50,50);
+	background-color:rgb(255,230,230);
+	border:1px solid rgb(220,120,120);
+}
+*/
+
+UL.bubbles LI  A {
+	color:rgb(74,110,158);
+	text-decoration:none;
+}
+
+UL.bubbles LI A:hover {
+	text-decoration:underline;
+}
+
+DIV.badge {
+	display:inline-block;
+
+	background:rgb(175,175,175);
+	background: -webkit-gradient(linear, left top, left bottom, from(rgb(185,185,185)), to(rgb(165,165,165)));
+	background: -moz-linear-gradient(top,  rgb(185,185,185),  rgb(165,165,165));
+	filter:  progid:DXImageTransform.Microsoft.gradient(startColorstr='rgb(185,185,185)', endColorstr='rgb(165,165,165)');
+
+	color:rgb(255,255,255);
+	border:1px solid rgba(150,150,150,0.9);
+	font-weight:normal;
+	padding:1px 4px 1px 4px;
+	border-radius:5px;
+	-moz-border-radius:5px;
+	-webkit-border-radius:5px;
+
+	/*
+	text-shadow:1px 1px 1px rgba(0,0,0,0.2);
+	box-shadow: 0px 0px 3px #bbb;
+	-moz-box-shadow: 0px 0px 3px #bbb;
+	-webkit-box-shadow: 0px 0px 3px #bbb;
+	*/
+}
+
+DIV.badge-lightgray {
+	background-color:rgb(230,230,230);
+	background: -webkit-gradient(linear, left top, left bottom, from(rgb(240,240,240)), to(rgb(230,230,230)));
+	background: -moz-linear-gradient(top,  rgb(240,240,240),  rgb(230,230,230));
+	filter:  progid:DXImageTransform.Microsoft.gradient(startColorstr='rgb(240,240,240)', endColorstr='rgb(230,230,230)');
+	
+	color:rgb(120,120,120);
+	border:1px solid rgba(200,200,200,0.9);
+	
+	/*
+	text-shadow:1px 1px 1px rgba(180,180,180,0.2);
+	box-shadow: 0px 0px 3px #ccc;
+	-moz-box-shadow: 0px 0px 3px #ccc;
+	-webkit-box-shadow: 0px 0px 3px #ccc;
+	*/
 }
 
 /* Sprite container */
@@ -512,7 +601,7 @@ button span.cerb-sprite { display:inline-block; }
 
 /* jQueryUI (Redmond theme) */
 
-.ui-widget-content { background: #fcfdfd none; }
+.ui-widget-content { background: #ffffff none; } /* #fcfdfd none; */
 .ui-widget-header { background: #5c9ccc none; }
 .ui-state-default, .ui-widget-content .ui-state-default { background: rgb(232,242,254) none; font-weight: normal; }
 .ui-state-hover, .ui-widget-content .ui-state-hover, .ui-state-focus, .ui-widget-content .ui-state-focus { background: #d0e5f5 none; }

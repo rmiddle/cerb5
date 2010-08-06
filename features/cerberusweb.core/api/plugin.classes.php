@@ -55,22 +55,6 @@ class ChPageController extends DevblocksControllerExtension {
 		parent::__construct($manifest);
 	}
 
-	/**
-	 * Enter description here...
-	 *
-	 * @param string $uri
-	 * @return string $id
-	 */
-	public function _getPageIdByUri($uri) {
-        $pages = DevblocksPlatform::getExtensions('cerberusweb.page', false);
-        foreach($pages as $manifest) { /* @var $manifest DevblocksExtensionManifest */
-            if(0 == strcasecmp($uri,$manifest->params['uri'])) {
-                return $manifest->id;
-            }
-        }
-        return NULL;
-	}
-	
 	// [TODO] We probably need a CerberusApplication scope for getting content that has ACL applied
 	private function _getAllowedPages() {
 		$active_worker = CerberusApplication::getActiveWorker();
@@ -96,9 +80,10 @@ class ChPageController extends DevblocksControllerExtension {
 	    $path = $request->path;
 		$controller = array_shift($path);
 
-		// [TODO] _getAllowedPages() should take over, but it currently blocks hidden stubs
-        $page_id = $this->_getPageIdByUri($controller);
-		@$page = DevblocksPlatform::getExtension($page_id, true); /* @var $page CerberusPageExtension */
+		$page = null;
+        if(null != ($page_manifest = CerberusApplication::getPageManifestByUri($controller))) {
+			$page = $page_manifest->createInstance(); /* @var $page CerberusPageExtension */
+        }
 
         if(empty($page)) {
 	        switch($controller) {
@@ -160,13 +145,18 @@ class ChPageController extends DevblocksControllerExtension {
 	    // [JAS]: Require us to always be logged in for Cerberus pages
 		if(empty($visit) && 0 != strcasecmp($controller,'login')) {
 			$query = array();
-			if(!empty($response->path))
-				$query = array('url'=> urlencode(implode('/',$response->path)));
+			// Must be a valid page controller
+			if(!empty($response->path)) {
+				if(is_array($response->path) && !empty($response->path) && CerberusApplication::getPageManifestByUri(current($response->path)))
+					$query = array('url'=> urlencode(implode('/',$response->path)));
+			}
 			DevblocksPlatform::redirect(new DevblocksHttpRequest(array('login'),$query));
 		}
-
-	    $page_id = $this->_getPageIdByUri($controller);
-		@$page = DevblocksPlatform::getExtension($page_id, true); /* @var $page CerberusPageExtension */
+		
+		$page = null;
+	    if(null != ($page_manifest = CerberusApplication::getPageManifestByUri($controller))) {
+			@$page = $page_manifest->createInstance(); /* @var $page CerberusPageExtension */
+	    }
         
         if(empty($page)) {
    		    header("Status: 404");
@@ -235,16 +225,6 @@ class ChPageController extends DevblocksControllerExtension {
 //		$cache = DevblocksPlatform::getCacheService();
 //		$cache->printStatistics();
 	}
-};
-
-// Note Sources
-
-class ChNotesSource_Org extends Extension_NoteSource {
-	const ID = 'cerberusweb.notes.source.org';
-};
-
-class ChNotesSource_Task extends Extension_NoteSource {
-	const ID = 'cerberusweb.notes.source.task';
 };
 
 // Custom Field Sources
@@ -319,7 +299,7 @@ XML;
         // View
         $view = new View_WorkerEvent();
         $view->name = $feed->title;
-        $view->params = $feed->params['params'];
+        $view->addParams($feed->params['params'], true);
         $view->renderLimit = 100;
         $view->renderSortBy = $feed->params['sort_by'];
         $view->renderSortAsc = $feed->params['sort_asc'];
@@ -333,12 +313,8 @@ XML;
 
             $eItem = $channel->addChild('item');
             
-            $escapedSubject = htmlspecialchars($event[SearchFields_WorkerEvent::TITLE],null,LANG_CHARSET_CODE);
-            //filter out a couple non-UTF-8 characters (0xC and ESC)
-            $escapedSubject = preg_replace("/[]/", '', $escapedSubject);
-            $eTitle = $eItem->addChild('title', $escapedSubject);
-
-            $eDesc = $eItem->addChild('description', htmlspecialchars($event[SearchFields_WorkerEvent::CONTENT],null,LANG_CHARSET_CODE));
+            $escapedSubject = htmlspecialchars($event[SearchFields_WorkerEvent::MESSAGE],null,LANG_CHARSET_CODE);
+            $eDesc = $eItem->addChild('description', '');
 
             if(isset($event[SearchFields_WorkerEvent::URL])) {
 //	            $link = $event[SearchFields_WorkerEvent::URL];
@@ -358,40 +334,6 @@ XML;
         }
 
         return $xml->asXML();
-	}
-};
-
-class ChTaskSource_Org extends Extension_TaskSource {
-	function getSourceName() {
-		return "Orgs";
-	}
-	
-	function getSourceInfo($object_id) {
-		if(null == ($contact_org = DAO_ContactOrg::get($object_id)))
-			return;
-		
-		$url = DevblocksPlatform::getUrlService();
-		return array(
-			'name' => '[Org] '.$contact_org->name,
-			'url' => $url->write(sprintf('c=contacts&a=orgs&display=display&id=%d',$object_id), true),
-		);
-	}
-};
-
-class ChTaskSource_Ticket extends Extension_TaskSource {
-	function getSourceName() {
-		return "Tickets";
-	}
-	
-	function getSourceInfo($object_id) {
-		if(null == ($ticket = DAO_Ticket::get($object_id)))
-			return;
-		
-		$url = DevblocksPlatform::getUrlService();
-		return array(
-			'name' => '[Ticket] '.$ticket->subject,
-			'url' => $url->write(sprintf('c=display&mask=%s&tab=tasks',$ticket->mask), true),
-		);
 	}
 };
 
@@ -419,7 +361,7 @@ XML;
         // View
         $view = new View_Ticket();
         $view->name = $feed->title;
-        $view->params = $feed->params['params'];
+        $view->addParams($feed->params['params'], true);
         $view->renderLimit = 100;
         $view->renderSortBy = $feed->params['sort_by'];
         $view->renderSortAsc = $feed->params['sort_asc'];
@@ -434,8 +376,6 @@ XML;
             $eItem = $channel->addChild('item');
             
             $escapedSubject = htmlspecialchars($ticket[SearchFields_Ticket::TICKET_SUBJECT],null,LANG_CHARSET_CODE);
-            //filter out a couple non-UTF-8 characters (0xC and ESC)
-            $escapedSubject = preg_replace("/[]/", '', $escapedSubject);
             $eTitle = $eItem->addChild('title', $escapedSubject);
 
             $eDesc = $eItem->addChild('description', $this->_getTicketLastAction($ticket));
@@ -453,13 +393,9 @@ XML;
 	}
 	
 	private function _getTicketLastAction($ticket) {
-		static $workers = null;
 		$action_code = $ticket[SearchFields_Ticket::TICKET_LAST_ACTION_CODE];
 		$output = '';
 		
-		if(is_null($workers))
-			$workers = DAO_Worker::getAll();
-
 		// [TODO] Translate
 		switch($action_code) {
 			case CerberusTicketActionCode::TICKET_OPENED:
@@ -468,17 +404,13 @@ XML;
 				);
 				break;
 			case CerberusTicketActionCode::TICKET_CUSTOMER_REPLY:
-				@$worker_id = $ticket[SearchFields_Ticket::TICKET_NEXT_WORKER_ID];
-				@$worker = $workers[$worker_id];
-				$output = sprintf("Incoming for %s",
-					(!empty($worker) ? $worker->getName() : "Helpdesk")
+				$output = sprintf("Incoming from %s",
+					$ticket[SearchFields_Ticket::TICKET_LAST_WROTE]
 				);
 				break;
 			case CerberusTicketActionCode::TICKET_WORKER_REPLY:
-				@$worker_id = $ticket[SearchFields_Ticket::TICKET_LAST_WORKER_ID];
-				@$worker = $workers[$worker_id];
 				$output = sprintf("Outgoing from %s",
-					(!empty($worker) ? $worker->getName() : "Helpdesk")
+					$ticket[SearchFields_Ticket::TICKET_LAST_WROTE]
 				);
 				break;
 		}
@@ -512,7 +444,7 @@ XML;
         // View
         $view = new View_Task();
         $view->name = $feed->title;
-        $view->params = $feed->params['params'];
+        $view->addParams($feed->params['params'], true);
         $view->renderLimit = 100;
         $view->renderSortBy = $feed->params['sort_by'];
         $view->renderSortAsc = $feed->params['sort_asc'];
@@ -529,25 +461,13 @@ XML;
             $eItem = $channel->addChild('item');
             
             $escapedSubject = htmlspecialchars($task[SearchFields_Task::TITLE],null,LANG_CHARSET_CODE);
-            //filter out a couple non-UTF-8 characters (0xC and ESC)
-            $escapedSubject = preg_replace("/[]/", '', $escapedSubject);
+            $escapedSubject = mb_convert_encoding($escapedSubject, 'utf-8', LANG_CHARSET_CODE);
             $eTitle = $eItem->addChild('title', $escapedSubject);
 
-            //$eDesc = $eItem->addChild('description', htmlspecialchars($task[SearchFields_Task::CONTENT],null,LANG_CHARSET_CODE));
             $eDesc = $eItem->addChild('description', '');
 
-            if(isset($task_sources[$task[SearchFields_Task::SOURCE_EXTENSION]]) && isset($task[SearchFields_Task::SOURCE_ID])) {
-            	$source_ext =& $task_sources[$task[SearchFields_Task::SOURCE_EXTENSION]]; /* @var $source_ext Extension_TaskSource */
-            	$source_ext_info = $source_ext->getSourceInfo($task[SearchFields_Task::SOURCE_ID]);
-            	
-	            $link = $source_ext_info['url'];
-	            $eLink = $eItem->addChild('link', $link);
-	            
-            } else {
-	            $link = $url->write('c=activity&tab=tasks', true);
-	            $eLink = $eItem->addChild('link', $link);
-            	
-            }
+            $link = $url->write('c=tasks&a=display&id='.$task[SearchFields_Task::ID], true);
+            $eLink = $eItem->addChild('link', $link);
             	
             $eDate = $eItem->addChild('pubDate', gmdate('D, d M Y H:i:s T', $created));
             
