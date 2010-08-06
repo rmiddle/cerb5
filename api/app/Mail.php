@@ -114,9 +114,7 @@ class CerberusMail {
 		
 		@$closed = $properties['closed'];
 		@$move_bucket = $properties['move_bucket'];
-		@$next_worker_id = $properties['next_worker_id'];
 		@$ticket_reopen = $properties['ticket_reopen'];
-		@$unlock_date = $properties['unlock_date'];
 		
 		$worker = CerberusApplication::getActiveWorker();
 		
@@ -256,18 +254,6 @@ class CerberusMail {
 						DAO_MailQueue::QUEUE_PRIORITY => 0,
 					);
 					DAO_MailQueue::create($fields);
-					
-//					// if email sending failed, add an error note to the message
-//					if ($mail_succeeded === false) {
-//						$fields = array(
-//							DAO_MessageNote::MESSAGE_ID => $message_id,
-//							DAO_MessageNote::CREATED => time(),
-//							DAO_MessageNote::WORKER_ID => 0,
-//							DAO_MessageNote::CONTENT => 'Exception thrown while sending email: ' . $e->getMessage(),
-//							DAO_MessageNote::TYPE => Model_MessageNote::TYPE_ERROR,
-//						);
-//						DAO_MessageNote::create($fields);
-//					}
 				}
 				
 				return false;
@@ -286,8 +272,6 @@ class CerberusMail {
 			DAO_Ticket::FIRST_WROTE_ID => $fromAddressId,
 			DAO_Ticket::LAST_WROTE_ID => $fromAddressId,
 			DAO_Ticket::LAST_ACTION_CODE => CerberusTicketActionCode::TICKET_WORKER_REPLY,
-			DAO_Ticket::LAST_WORKER_ID => $worker->id,
-			DAO_Ticket::NEXT_WORKER_ID => 0,
 			DAO_Ticket::TEAM_ID => $team_id,
 		);
 		
@@ -298,22 +282,15 @@ class CerberusMail {
 		    $fields[DAO_Ticket::TEAM_ID] = $team_id;
 		    $fields[DAO_Ticket::CATEGORY_ID] = $bucket_id;
 		}
-		if(isset($next_worker_id))
-			$fields[DAO_Ticket::NEXT_WORKER_ID] = intval($next_worker_id);
+		
 		if(isset($ticket_reopen) && !empty($ticket_reopen)) {
 			$due = strtotime($ticket_reopen);
 			if($due) $fields[DAO_Ticket::DUE_DATE] = $due;
 		}
-        // Allow anybody to reply after 
-		if(!empty($unlock_date)) {
-		    $unlock = strtotime($unlock_date);
-		    if(intval($unlock) > 0)
-	            $fields[DAO_Ticket::UNLOCK_DATE] = $unlock;
-		}
 		// End "Next:"
 		
 		$ticket_id = DAO_Ticket::createTicket($fields);
-		
+
 	    $fields = array(
 	        DAO_Message::TICKET_ID => $ticket_id,
 	        DAO_Message::CREATED_DATE => time(),
@@ -373,6 +350,11 @@ class CerberusMail {
 		// Train as not spam
 		CerberusBayes::markTicketAsNotSpam($ticket_id);
 		
+        // Owners?
+        if(isset($properties['context_workers'])) {
+        	CerberusContexts::setWorkers(CerberusContexts::CONTEXT_TICKET, $ticket_id, $properties['context_workers']);
+        }
+		
 		// Inbound/Outbound Reply Event
 		// [TODO] This pivots on $no_mail for now, but this functionality may change
 	    $eventMgr = DevblocksPlatform::getEventService();
@@ -382,6 +364,7 @@ class CerberusMail {
 		            'ticket.reply.inbound',
 	                array(
 	                    'ticket_id' => $ticket_id,
+	                    'address_model' => $fromAddressInst,
 	                )
 	            )
 		    );
@@ -423,7 +406,7 @@ class CerberusMail {
 	    'files'
 	    'closed'
 	    'ticket_reopen'
-	    'unlock_date'
+	    'context_workers'
 	    'bucket_id'
 	    'agent_id',
 		'is_autoreply',
@@ -697,7 +680,6 @@ class CerberusMail {
 			$change_fields[DAO_Ticket::UPDATED_DATE] = time();
 			
 		    if(!empty($worker_id)) {
-		        $change_fields[DAO_Ticket::LAST_WORKER_ID] = $worker_id;
 		        $change_fields[DAO_Ticket::LAST_ACTION_CODE] = CerberusTicketActionCode::TICKET_WORKER_REPLY;
 		    }
 		    
@@ -789,16 +771,10 @@ class CerberusMail {
 		}
 
         // Who should handle the followup?
-		if(isset($properties['next_worker_id']))
-        	$change_fields[DAO_Ticket::NEXT_WORKER_ID] = $properties['next_worker_id'];
-
-        // Allow anybody to reply after 
-		if(isset($properties['unlock_date']) && !empty($properties['unlock_date'])) {
-		    $unlock = strtotime($properties['unlock_date']);
-		    if(intval($unlock) > 0)
-	            $change_fields[DAO_Ticket::UNLOCK_DATE] = $unlock;
-		}
-
+        if(isset($properties['context_workers'])) {
+        	CerberusContexts::setWorkers(CerberusContexts::CONTEXT_TICKET, $ticket_id, $properties['context_workers']);
+        }
+		
 		// Move
 		if(!empty($properties['bucket_id'])) {
 		    // [TODO] Use API to move, or fire event

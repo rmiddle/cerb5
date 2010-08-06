@@ -1,28 +1,5 @@
 <?php
 abstract class DevblocksORMHelper {
-	/**
-	 * @return integer new id
-	 */
-	// [TODO] Phase this out for create($fields);
-	static protected function _createId($properties) {
-		$sequence = !empty($properties['sequence']) ? $properties['sequence'] : 'generic_seq';
-		
-		if(empty($properties['table']) || empty($properties['id_column']))
-			return FALSE;
-		
-		$db = DevblocksPlatform::getDatabaseService();
-		$id = $db->GenID($sequence);
-		
-		$sql = sprintf("INSERT INTO %s (%s) VALUES (%d)",
-			$properties['table'],
-			$properties['id_column'],
-			$id
-		);
-		$db->Execute($sql); 
-		
-		return $id;
-	}
-	
 	static protected function _getWhereSQL($where=null, $sortBy=null, $sortAsc=true, $limit=null) {
 		// Where
 		$where_sql = !empty($where) ? sprintf("WHERE %s ", $where) : '';
@@ -116,9 +93,6 @@ abstract class DevblocksORMHelper {
 		$db->Execute($sql); 
 	}
 	
-	/**
-	 * [TODO]: Import the searchDAO functionality + combine the extraneous classes
-	 */
 	static protected function _parseSearchParams($params,$columns=array(),$fields,$sortBy='') {
 		$db = DevblocksPlatform::getDatabaseService();
 		
@@ -133,7 +107,13 @@ abstract class DevblocksORMHelper {
 		// Columns
 		if(is_array($columns))
 		foreach($columns as $column) {
-			$tables[$fields[$column]->db_table] = $fields[$column]->db_table;
+			$table_name = $fields[$column]->db_table;
+			$tables[$fields[$column]->db_table] = $table_name;
+			
+			// Skip virtuals
+			if('*' == $table_name)
+				continue;
+			
 			$selects[] = sprintf("%s.%s AS %s",
 				$fields[$column]->db_table,
 				$fields[$column]->db_column,
@@ -143,7 +123,10 @@ abstract class DevblocksORMHelper {
 		
 		// Params
 		if(is_array($params))
-		foreach($params as $param) {
+		foreach($params as $param_key => $param) {
+			// Skip virtuals
+			if('*_' == substr($param_key,0,2))
+				continue;
 			
 			// Is this a criteria group (OR, AND)?
 			if(is_array($param)) {
@@ -516,13 +499,11 @@ class DAO_DevblocksTemplate extends DevblocksORMHelper {
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$id = $db->GenID('generic_seq');
-		
-		$sql = sprintf("INSERT INTO devblocks_template (id) ".
-			"VALUES (%d)",
-			$id
+		$sql = sprintf("INSERT INTO devblocks_template () ".
+			"VALUES ()"
 		);
 		$db->Execute($sql);
+		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
 		
@@ -654,7 +635,7 @@ class DAO_DevblocksTemplate extends DevblocksORMHelper {
 		//);
 				
 		$where_sql = "".
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "");
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
 			
@@ -792,13 +773,11 @@ class DAO_Translation extends DevblocksORMHelper {
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$id = $db->GenID('generic_seq');
-		
-		$sql = sprintf("INSERT INTO translation (id) ".
-			"VALUES (%d)",
-			$id
+		$sql = sprintf("INSERT INTO translation () ".
+			"VALUES ()"
 		);
 		$db->Execute($sql);
+		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
 		
@@ -1080,7 +1059,7 @@ class DAO_Translation extends DevblocksORMHelper {
 //			(isset($tables['mc']) ? "INNER JOIN message_content mc ON (mc.message_id=m.id)" : " ").
 
 		$where_sql = "".
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "");
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sql = $select_sql . $join_sql . $where_sql .  
 			(!empty($sortBy) ? sprintf("ORDER BY %s %s",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : "");
@@ -1142,13 +1121,11 @@ class DAO_DevblocksStorageProfile extends DevblocksORMHelper {
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$id = $db->GenID('generic_seq');
-		
-		$sql = sprintf("INSERT INTO devblocks_storage_profile (id) ".
-			"VALUES (%d)",
-			$id
+		$sql = sprintf("INSERT INTO devblocks_storage_profile () ".
+			"VALUES ()"
 		);
 		$db->Execute($sql);
+		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
 		
@@ -1312,7 +1289,7 @@ class DAO_DevblocksStorageProfile extends DevblocksORMHelper {
 		//);
 				
 		$where_sql = "".
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "");
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
 			

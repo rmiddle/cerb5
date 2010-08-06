@@ -4,8 +4,8 @@
 		<form action="{devblocks_url}{/devblocks_url}" method="post" style="padding-bottom:5px;">
 			<input type="hidden" name="c" value="crm">
 			<input type="hidden" name="a" value="">
-			{if $active_worker->hasPriv('crm.opp.actions.create')}<button type="button" onclick="genericAjaxPanel('c=crm&a=showOppPanel&id=0&view_id={$view->id}',null,false,'500');"><span class="cerb-sprite sprite-add"></span> {$translate->_('crm.opp.add')}</button>{/if}
-			{if $active_worker->hasPriv('crm.opp.actions.import')}<button type="button" onclick="genericAjaxPanel('c=crm&a=showImportPanel',null,false,'500');"><span class="cerb-sprite sprite-import"></span> {$translate->_('common.import')|capitalize}</button>{/if}
+			{if $active_worker->hasPriv('crm.opp.actions.create')}<button type="button" onclick="genericAjaxPopup('peek','c=crm&a=showOppPanel&id=0&view_id={$view->id}',null,false,'500');"><span class="cerb-sprite sprite-add"></span> {$translate->_('crm.opp.add')}</button>{/if}
+			{if $active_worker->hasPriv('crm.opp.actions.import')}<button type="button" onclick="genericAjaxPopup('peek','c=crm&a=showImportPanel',null,false,'500');"><span class="cerb-sprite sprite-import"></span> {$translate->_('common.import')|capitalize}</button>{/if}
 		</form>
 	</td>
 	<td width="98%" valign="middle"></td>
@@ -23,20 +23,4 @@
 </tr>
 </table>
 
-<table cellpadding="0" cellspacing="0" width="100%">
-<tr>
-	<td width="0%" nowrap="nowrap" valign="top">
-		<div style="width:220px;">
-			{include file="file:$core_tpl/internal/views/criteria_list.tpl" divName="oppSearchFilters"}
-			<div id="oppSearchFilters" style="visibility:visible;"></div>
-		</div>
-	</td>
-	
-	<td nowrap="nowrap" width="0%" style="padding-right:5px;"></td>
-	
-	<td width="100%" valign="top">
-		<div id="view{$view->id}">{$view->render()}</div>
-	</td>
-	
-</tr>
-</table>
+{include file="$core_tpl/internal/views/search_and_view.tpl" view=$view}

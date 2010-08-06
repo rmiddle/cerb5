@@ -31,6 +31,7 @@
 		<patch version="5.0.0-beta" revision="856" file="patches/5.x/5.0.0_beta.php" />
 		<patch version="5.0.0-rc1" revision="861" file="patches/5.x/5.0.0_rc1.php" />
 		<patch version="5.0.1" revision="864" file="patches/5.x/5.0.1.php" />
+		<patch version="5.1.0" revision="893" file="patches/5.x/5.1.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -56,8 +57,6 @@
 			<class name="ChCustomFieldSource_Task" />
 			<class name="ChCustomFieldSource_Ticket" />
 			<class name="ChCustomFieldSource_Worker" />
-			<class name="ChNotesSource_Org" />
-			<class name="ChNotesSource_Task" />
 			<class name="ChPageController" />
 			<class name="ChRssSource_Notification" />
 			<class name="ChRssSource_Task" />
@@ -102,11 +101,23 @@
 			<class name="Model_Bucket" />
 		</file>
 		
+		<file path="api/dao/comment.php">
+			<class name="DAO_Comment" />
+			<class name="Model_Comment" />
+			<class name="SearchFields_Comment" />
+			<class name="View_Comment" />
+		</file>
+		
 		<file path="api/dao/contact_org.php">
 			<class name="DAO_ContactOrg" />
 			<class name="Model_ContactOrg" />
 			<class name="SearchFields_ContactOrg" />
 			<class name="View_ContactOrg" />
+		</file>
+		
+		<file path="api/dao/context_link.php">
+			<class name="DAO_ContextLink" />
+			<class name="Model_ContextLink" />
 		</file>
 		
 		<file path="api/dao/explorer.php">
@@ -118,6 +129,8 @@
 			<class name="DAO_Group" />
 			<class name="DAO_GroupSettings" />
 			<class name="Model_Group" />
+			<class name="SearchFields_Group" />
+			<class name="View_Group" />
 		</file>
 		
 		<file path="api/dao/group_inbox_filter.php">
@@ -140,17 +153,7 @@
 			<class name="Search_MessageContent" />
 			<class name="SearchFields_Message" />
 			<class name="Storage_MessageContent" />
-		</file>
-		
-		<file path="api/dao/message_note.php">
-			<class name="DAO_MessageNote" />
-			<class name="Model_MessageNote" />
-		</file>
-		
-		<file path="api/dao/note.php">
-			<class name="DAO_Note" />
-			<class name="Model_Note" />
-			<class name="SearchFields_Note" />
+			<class name="View_Message" />
 		</file>
 		
 		<file path="api/dao/preparse_rule.php">
@@ -177,6 +180,12 @@
 			<class name="Model_Ticket" />
 			<class name="SearchFields_Ticket" />
 			<class name="View_Ticket" />
+		</file>
+		
+		<file path="api/dao/view_filters_preset.php">
+			<class name="DAO_ViewFiltersPreset" />
+			<class name="Model_ViewFiltersPreset" />
+			<class name="SearchFields_ViewFiltersPreset" />
 		</file>
 		
 		<file path="api/dao/worker.php">
@@ -208,11 +217,21 @@
 			<name>Bucket Delete</name>
 			<param key="bucket_ids" />
 		</event>
+		<event id="context_link.set">
+			<name>from_context</name>
+			<name>from_context_id</name>
+			<name>to_context</name>
+			<name>to_context_id</name>
+		</event>
 		<event id="cron.heartbeat">
 			<name>Heartbeat</name>
 		</event>
 		<event id="cron.maint">
 			<name>Maintenance</name>
+		</event>
+		<event id="dao.ticket.update">
+			<name>Ticket Properties Updated</name>
+			<param key="objects" />
 		</event>
 		<event id="group.delete">
 			<name>Group Delete</name>
@@ -223,31 +242,28 @@
 			<param key="task_id" />
 			<param key="fields" />
 		</event>
-		<event id="ticket.comment.create">
-			<name>Ticket Comment</name>
-			<param key="comment_id" />
+		<event id="ticket.action.closed">
+			<name>Ticket Closed</name>
 			<param key="ticket_id" />
-			<param key="address_id" />
-			<param key="comment" />
+			<param key="model" />
 		</event>
-		<event id="ticket.merge">
+		<event id="ticket.action.merge">
 			<name>Ticket Merge</name>
 			<param key="new_ticket_id" />
 			<param key="old_ticket_ids" />
 		</event>
-		<event id="ticket.property.pre_change">
-			<name>Ticket Property Pre-Change</name>
-			<param key="ticket_ids" />
-			<param key="changed_fields" />
-		</event>
-		<event id="ticket.property.post_change">
-			<name>Ticket Property Post-Change</name>
-			<param key="ticket_ids" />
-			<param key="changed_fields" />
+		<event id="ticket.action.moved">
+			<name>Ticket Moved</name>
+			<param key="ticket_id" />
+			<param key="group_id" />
+			<param key="bucket_id" />
+			<param key="model" />
 		</event>
 		<event id="ticket.reply.inbound">
 			<name>Ticket Inbound Reply</name>
 			<param key="ticket_id" />
+			<param key="address_model" />
+			<param key="is_move" />
 		</event>
 		<event id="ticket.reply.outbound">
 			<name>Ticket Outbound Reply</name>
@@ -284,7 +300,6 @@
 		<!-- Mail page -->
 		<priv id="core.mail.actions.auto_refresh" label="acl.core.mail.actions.auto_refresh" />
 		<priv id="core.mail.log_ticket" label="acl.core.mail.log_ticket" />
-		<priv id="core.mail.overview" label="acl.core.mail.overview" />
 		<priv id="core.mail.search" label="acl.core.mail.search" />
 		<priv id="core.mail.send" label="acl.core.mail.send" />
 
@@ -319,6 +334,112 @@
 
 	<extensions>
 
+		<!-- Contexts -->
+		
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.address</id>
+			<name>Address</name>
+			<class>
+				<file>api/dao/address.php</file>
+				<name>Context_Address</name>
+			</class>
+			<params>
+				<param key="events">
+					<value>
+						<data key="context.assigned" value="context.address.assigned" />
+						<data key="context.commented" value="context.address.commented" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.group</id>
+			<name>Group</name>
+			<class>
+				<file>api/dao/group.php</file>
+				<name>Context_Group</name>
+			</class>
+			<params>
+				<param key="events">
+					<!--
+					<value>
+						<data key="context.assigned" value="context.group.assigned" />
+						<data key="context.commented" value="context.group.commented" />
+					</value>
+					-->
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.org</id>
+			<name>Organization</name>
+			<class>
+				<file>api/dao/contact_org.php</file>
+				<name>Context_Org</name>
+			</class>
+			<params>
+				<param key="events">
+					<value>
+						<data key="context.assigned" value="context.org.assigned" />
+						<data key="context.commented" value="context.org.commented" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.task</id>
+			<name>Task</name>
+			<class>
+				<file>api/dao/task.php</file>
+				<name>Context_Task</name>
+			</class>
+			<params>
+				<param key="events">
+					<value>
+						<data key="context.assigned" value="context.task.assigned" />
+						<data key="context.commented" value="context.task.commented" />
+					</value>
+				</param>
+			</params>
+		</extension>
+
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.ticket</id>
+			<name>Ticket</name>
+			<class>
+				<file>api/dao/ticket.php</file>
+				<name>Context_Ticket</name>
+			</class>
+			<params>
+				<param key="events">
+					<value>
+						<data key="context.assigned" value="context.ticket.assigned" />
+						<data key="context.commented" value="context.ticket.commented" />
+					</value>
+				</param>
+			</params>
+		</extension>
+
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.worker</id>
+			<name>Worker</name>
+			<class>
+				<file>api/dao/worker.php</file>
+				<name>Context_Worker</name>
+			</class>
+			<params>
+				<param key="events">
+					<value>
+						<data key="context.assigned" value="context.worker.assigned" />
+						<data key="context.commented" value="context.worker.commented" />
+					</value>
+				</param>
+			</params>
+		</extension>
+
 		<!-- Event Listeners -->
 		
 		<extension point="devblocks.listener.event">
@@ -329,7 +450,19 @@
 				<name>ChCoreEventListener</name>
 			</class>
 			<params>
-				<!-- Global Event Listener -->
+				<param key="events">
+					<value>
+						<data key="context_link.assigned" />
+						<data key="context_link.set" />
+						<data key="cron.heartbeat" />
+						<data key="cron.maint" />
+						<data key="dao.ticket.update" />
+						<data key="ticket.action.closed" />
+						<data key="ticket.action.moved" />					
+						<data key="ticket.reply.inbound" />
+						<data key="ticket.reply.outbound" />						
+					</value>
+				</param>
 			</params>
 		</extension>
  
@@ -828,30 +961,6 @@
 			</params>
 		</extension>		
 		
-		<!-- Notes Sources -->
-		
-		<extension point="cerberusweb.notes.source">
-			<id>cerberusweb.notes.source.org</id>
-			<name>Organization</name>
-			<class>
-				<file>api/plugin.classes.php</file>
-				<name>ChNotesSource_Org</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-
-		<extension point="cerberusweb.notes.source">
-			<id>cerberusweb.notes.source.task</id>
-			<name>Task</name>
-			<class>
-				<file>api/plugin.classes.php</file>
-				<name>ChNotesSource_Task</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-		
 		<!-- Workspace Sources -->
 		
 		<extension point="cerberusweb.workspace.source">
@@ -960,30 +1069,6 @@
 			<params>
 			</params>
 		</extension>		
-		
-		<!-- Task Sources -->
-		
-		<extension point="cerberusweb.task.source">
-			<id>cerberusweb.tasks.org</id>
-			<name>Organization Task</name>
-			<class>
-				<file>api/plugin.classes.php</file>
-				<name>ChTaskSource_Org</name>
-			</class>
-			<params>
-			</params>
-		</extension>		
-		
-		<extension point="cerberusweb.task.source">
-			<id>cerberusweb.tasks.ticket</id>
-			<name>Ticket Task</name>
-			<class>
-				<file>api/plugin.classes.php</file>
-				<name>ChTaskSource_Ticket</name>
-			</class>
-			<params>
-			</params>
-		</extension>
 		
 		<!-- Explorer Toolbars -->
 		

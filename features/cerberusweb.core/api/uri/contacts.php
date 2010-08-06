@@ -126,9 +126,6 @@ class ChContactsPage extends CerberusPageExtension {
 						
 						// Tabs
 						
-						$task_count = DAO_Task::getCountBySourceObjectId('cerberusweb.tasks.org', $contact->id);
-						$tpl->assign('tasks_total', $task_count);
-						
 						$people_count = DAO_Address::getCountByOrgId($contact->id);
 						$tpl->assign('people_total', $people_count);
 						
@@ -143,27 +140,6 @@ class ChContactsPage extends CerberusPageExtension {
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/index.tpl');
 		return;
-		
-//			case 'people':
-//				$view = C4_AbstractViewLoader::getView('addybook_people'); // View_Address::DEFAULT_ID
-//				
-//				if(null == $view) {
-//					$view = new View_Address();
-//					$view->id = 'addybook_people';
-//					$view->name = 'People';
-//					$view->params = array(
-//						new DevblocksSearchCriteria(SearchFields_Address::CONTACT_ORG_ID,'!=',0),
-//					);
-//					
-//					C4_AbstractViewLoader::setView('addybook_people', $view);
-//				}
-//				
-//				$tpl->assign('view', $view);
-//				$tpl->assign('contacts_page', 'people');
-//				$tpl->assign('view_fields', View_Address::getFields());
-//				$tpl->assign('view_searchable_fields', View_Address::getSearchFields());
-//				$tpl->display('file:' . $this->_TPL_PATH . 'contacts/people/index.tpl');
-//				break;
 	}
 	
 	function showOrgsTabAction() {
@@ -177,9 +153,6 @@ class ChContactsPage extends CerberusPageExtension {
 		$view = C4_AbstractViewLoader::getView(View_ContactOrg::DEFAULT_ID, $defaults);
 		$tpl->assign('view', $view);
 		$tpl->assign('contacts_page', 'orgs');
-		$tpl->assign('response_uri', 'contacts/orgs');
-		$tpl->assign('view_fields', View_ContactOrg::getFields());
-		$tpl->assign('view_searchable_fields', View_ContactOrg::getSearchFields());
 		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/index.tpl');
 	}
 	
@@ -190,13 +163,13 @@ class ChContactsPage extends CerberusPageExtension {
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'View_Address';
 		$defaults->id = View_Address::DEFAULT_ID;
+		$defaults->paramsDefault = array(
+			SearchFields_Address::IS_REGISTERED => new DevblocksSearchCriteria(SearchFields_Address::IS_REGISTERED,'=',1),
+		);
 		
 		$view = C4_AbstractViewLoader::getView(View_Address::DEFAULT_ID, $defaults);
 		$tpl->assign('view', $view);
 		$tpl->assign('contacts_page', 'addresses');
-		$tpl->assign('response_uri', 'contacts/addresses');
-		$tpl->assign('view_fields', View_Address::getFields());
-		$tpl->assign('view_searchable_fields', View_Address::getSearchFields());
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/addresses/index.tpl');
 	}
@@ -549,9 +522,9 @@ class ChContactsPage extends CerberusPageExtension {
 		
 		$view = C4_AbstractViewLoader::getView('org_contacts', $defaults);
 		$view->name = 'Contacts: ' . $contact->name;
-		$view->params = array(
+		$view->addParams(array(
 			new DevblocksSearchCriteria(SearchFields_Address::CONTACT_ORG_ID,'=',$org)
-		);
+		), true);
 		$tpl->assign('view', $view);
 		
 		C4_AbstractViewLoader::setView($view->id, $view);
@@ -561,75 +534,6 @@ class ChContactsPage extends CerberusPageExtension {
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/tabs/people.tpl');
 		exit;
-	}
-	
-	function showTabTasksAction() {
-		$translate = DevblocksPlatform::getTranslationService();
-		@$org = DevblocksPlatform::importGPC($_REQUEST['org']);
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-		
-		$contact = DAO_ContactOrg::get($org);
-		$tpl->assign('contact', $contact);
-		
-		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'View_Task';
-		$defaults->id = 'org_tasks';
-		$defaults->view_columns = array(
-			SearchFields_Task::SOURCE_EXTENSION,
-			SearchFields_Task::DUE_DATE,
-			SearchFields_Task::WORKER_ID,
-			SearchFields_Task::COMPLETED_DATE,
-		);
-		
-		$view = C4_AbstractViewLoader::getView('org_tasks', $defaults);
-		$view->name = $translate->_('common.tasks') . ' ' . $contact->name;
-		$view->params = array(
-			new DevblocksSearchCriteria(SearchFields_Task::SOURCE_EXTENSION,'=','cerberusweb.tasks.org'),
-			new DevblocksSearchCriteria(SearchFields_Task::SOURCE_ID,'=',$org),
-		);
-		$tpl->assign('view', $view);
-		
-		C4_AbstractViewLoader::setView($view->id, $view);
-		
-		$tpl->assign('contacts_page', 'orgs');
-		$tpl->assign('search_columns', SearchFields_Address::getFields());
-		
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/tabs/tasks.tpl');
-		exit;
-	}
-	
-	function showTabNotesAction() {
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-		
-		@$org_id = DevblocksPlatform::importGPC($_REQUEST['org']);
-		
-		$org = DAO_ContactOrg::get($org_id);
-		$tpl->assign('org', $org);
-		
-		list($notes, $null) = DAO_Note::search(
-			array(
-				new DevblocksSearchCriteria(SearchFields_Note::SOURCE_EXT_ID,'=',ChNotesSource_Org::ID),
-				new DevblocksSearchCriteria(SearchFields_Note::SOURCE_ID,'=',$org->id),
-			),
-			25,
-			0,
-			SearchFields_Note::CREATED,
-			false,
-			false
-		);
-
-		$tpl->assign('notes', $notes);
-		
-		$active_workers = DAO_Worker::getAllActive();
-		$tpl->assign('active_workers', $active_workers);
-
-		$workers = DAO_Worker::getAllWithDisabled();
-		$tpl->assign('workers', $workers);
-
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/tabs/notes.tpl');
 	}
 	
 	function showTabHistoryAction() {
@@ -663,8 +567,6 @@ class ChContactsPage extends CerberusPageExtension {
 				SearchFields_Ticket::TICKET_TEAM_ID,
 				SearchFields_Ticket::TICKET_CATEGORY_ID,
 			);
-			$tickets_view->params = array(
-			);
 			$tickets_view->renderLimit = 10;
 			$tickets_view->renderPage = 0;
 			$tickets_view->renderSortBy = SearchFields_Ticket::TICKET_CREATED_DATE;
@@ -672,10 +574,10 @@ class ChContactsPage extends CerberusPageExtension {
 		}
 
 		@$tickets_view->name = $translate->_('ticket.requesters') . ": " . htmlspecialchars($contact->name) . ' - ' . intval(count($people)) . ' contact(s)';
-		$tickets_view->params = array(
+		$tickets_view->addParams(array(
 			SearchFields_Ticket::REQUESTER_ID => new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ID,'in',array_keys($people)),
 			SearchFields_Ticket::TICKET_DELETED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_DELETED,DevblocksSearchCriteria::OPER_EQ,0)
-		);
+		), true);
 		$tpl->assign('contact_history', $tickets_view);
 		
 		C4_AbstractViewLoader::setView($tickets_view->id,$tickets_view);
@@ -775,26 +677,30 @@ class ChContactsPage extends CerberusPageExtension {
 		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/addresses/address_peek.tpl');
 	}
 	
-	function showAddressTicketsAction() {
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
-		@$closed = DevblocksPlatform::importGPC($_REQUEST['closed'],'integer',0);
+	function findTicketsAction() {
+		@$email = DevblocksPlatform::importGPC($_REQUEST['email'],'string','');
+		@$closed = DevblocksPlatform::importGPC($_REQUEST['closed'],'string','');
 		
-		if(null == ($address = DAO_Address::get($id)))
+		if(null == ($address = DAO_Address::lookupAddress($email, false)))
 			return;
 		
 		if(null == ($search_view = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_SEARCH))) {
 			$search_view = View_Ticket::createSearchView();
 		}
 		
-		$search_view->params = array(
-			SearchFields_Ticket::TICKET_CLOSED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',$closed),
-			SearchFields_Ticket::REQUESTER_ADDRESS => new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ADDRESS,'=',$address->email),
-		);
+		$search_view->removeAllParams();
+		
+		if(!empty($address))
+			$search_view->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ADDRESS,'=',$address->email));
+
+		if(0 != strlen($closed))
+			$search_view->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',$closed));
+			
 		$search_view->renderPage = 0;
 		
 		C4_AbstractViewLoader::setView(CerberusApplication::VIEW_SEARCH, $search_view);
 		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('tickets','search')));
+		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('tickets','search')));
 	}
 	
 	function showAddressBatchPanelAction() {
@@ -995,44 +901,6 @@ class ChContactsPage extends CerberusPageExtension {
 		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('contacts','orgs','display',$id))); //,'fields'
 	}	
-	
-	function saveOrgNoteAction() {
-		@$org_id = DevblocksPlatform::importGPC($_REQUEST['org_id'],'integer', 0);
-		@$content = DevblocksPlatform::importGPC($_REQUEST['content'],'string','');
-		
-		$active_worker = CerberusApplication::getActiveWorker();
-		
-		if(!empty($org_id) && 0 != strlen(trim($content))) {
-			$fields = array(
-				DAO_Note::SOURCE_EXTENSION_ID => ChNotesSource_Org::ID,
-				DAO_Note::SOURCE_ID => $org_id,
-				DAO_Note::WORKER_ID => $active_worker->id,
-				DAO_Note::CREATED => time(),
-				DAO_Note::CONTENT => $content,
-			);
-			$note_id = DAO_Note::create($fields);
-		}
-		
-		$org = DAO_ContactOrg::get($org_id);
-		
-		// Worker notifications
-		$url_writer = DevblocksPlatform::getUrlService();
-		@$notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
-		if(is_array($notify_worker_ids) && !empty($notify_worker_ids))
-		foreach($notify_worker_ids as $notify_worker_id) {
-			$fields = array(
-				DAO_WorkerEvent::CREATED_DATE => time(),
-				DAO_WorkerEvent::WORKER_ID => $notify_worker_id,
-				DAO_WorkerEvent::URL => $url_writer->write('c=contacts&a=orgs&d=display&id='.$org_id,true),
-				DAO_WorkerEvent::TITLE => 'New Organization Note', // [TODO] Translate
-				DAO_WorkerEvent::CONTENT => sprintf("%s\n%s notes: %s", $org->name, $active_worker->getName(), $content), // [TODO] Translate
-				DAO_WorkerEvent::IS_READ => 0,
-			);
-			DAO_WorkerEvent::create($fields);
-		}
-		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('contacts','orgs','display',$org_id)));
-	}
 	
 	function saveOrgPeekAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
@@ -1276,7 +1144,7 @@ class ChContactsPage extends CerberusPageExtension {
                 break;
         }
         
-        $view->params = $params;
+        $view->addParams($params, true);
         $view->renderPage = 0;
         $view->renderSortBy = null;
         
@@ -1311,7 +1179,7 @@ class ChContactsPage extends CerberusPageExtension {
                 break;
         }
         
-        $view->params = $params;
+        $view->addParams($params, true);
         $view->renderPage = 0;
         $view->renderSortBy = null;
         
@@ -1349,20 +1217,39 @@ class ChContactsPage extends CerberusPageExtension {
 		$db = DevblocksPlatform::getDatabaseService();
 		@$query = DevblocksPlatform::importGPC($_REQUEST['term'],'string','');
 		
-		$starts_with = strtolower($query) . '%';
+		if(false !== (strpos($query,'@'))) { // email search
+			$sql = sprintf("SELECT first_name, last_name, email, num_nonspam ".
+				"FROM address ".
+				"WHERE is_banned = 0 ".
+				"AND email LIKE %s ".
+				"ORDER BY num_nonspam DESC ".
+				"LIMIT 0,25",
+				$db->qstr($query . '%')
+			);
+		} elseif(false !== (strpos($query,' '))) { // first+last
+			$sql = sprintf("SELECT first_name, last_name, email, num_nonspam ".
+				"FROM address ".
+				"WHERE is_banned = 0 ".
+				"AND concat(first_name,' ',last_name) LIKE %s ".
+				"ORDER BY num_nonspam DESC ".
+				"LIMIT 0,25",
+				$db->qstr($query . '%')
+			);
+		} else { // first, last, or email 
+			$sql = sprintf("SELECT first_name, last_name, email, num_nonspam ".
+				"FROM address ".
+				"WHERE is_banned = 0 ".
+				"AND (email LIKE %s ".
+				"OR first_name LIKE %s ".
+				"OR last_name LIKE %s) ".
+				"ORDER BY num_nonspam DESC ".
+				"LIMIT 0,25",
+				$db->qstr($query . '%'),
+				$db->qstr($query . '%'),
+				$db->qstr($query . '%')
+			);
+		}
 		
-		$sql = sprintf("SELECT first_name, last_name, email, num_nonspam ".
-			"FROM address ".
-			"WHERE is_banned = 0 ".
-			"AND (lower(email) LIKE %s ".
-			"OR lower(concat(first_name,' ',last_name)) LIKE %s ".
-			"OR lower(last_name) LIKE %s) ".
-			"ORDER BY num_nonspam DESC ".
-			"LIMIT 0,25",
-			$db->qstr($starts_with),
-			$db->qstr($starts_with),
-			$db->qstr($starts_with)
-		);
 		$rs = $db->Execute($sql);
 		
 		$list = array();
@@ -1370,8 +1257,8 @@ class ChContactsPage extends CerberusPageExtension {
 		while($row = mysql_fetch_assoc($rs)) {
 			$first = $row['first_name'];
 			$last = $row['last_name'];
-			$email = $row['email'];
-			$num_nonspam = $row['num_nonspam'];
+			$email = strtolower($row['email']);
+			$num_nonspam = intval($row['num_nonspam']);
 			
 			$personal = sprintf("%s%s%s",
 				(!empty($first)) ? $first : '',

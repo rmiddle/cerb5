@@ -165,12 +165,36 @@ abstract class Extension_ReplyToolbarItem extends DevblocksExtension {
 	function render(Model_Message $message) { }
 };
 
+abstract class Extension_TaskToolbarItem extends DevblocksExtension {
+	function __construct($manifest) {
+		$this->DevblocksExtension($manifest);
+	}
+	
+	function render(Model_Task $task) { }
+};
+
 abstract class Extension_ExplorerToolbar extends DevblocksExtension {
 	function __construct($manifest) {
 		$this->DevblocksExtension($manifest);
 	}
 	
 	function render(Model_ExplorerSet $item) { }
+};
+
+abstract class Extension_CommentBadge extends DevblocksExtension {
+	function __construct($manifest) {
+		$this->DevblocksExtension($manifest);
+	}
+	
+	function render(Model_Comment $comment) {}
+};
+
+abstract class Extension_MessageBadge extends DevblocksExtension {
+	function __construct($manifest) {
+		$this->DevblocksExtension($manifest);
+	}
+	
+	function render(Model_Message $message) {}
 };
 
 abstract class Extension_OrgTab extends DevblocksExtension {
@@ -202,25 +226,6 @@ abstract class Extension_MailFilterAction extends DevblocksExtension {
 	
 	function renderConfig(Model_PreParseRule $filter=null) {}
 	function saveConfig() { return array(); }
-};
-
-abstract class Extension_TaskSource extends DevblocksExtension {
-	const EXTENSION_POINT = 'cerberusweb.task.source';
-	
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-
-	function getSourceName() {}
-	function getSourceInfo($object_id) {}
-};
-
-abstract class Extension_NoteSource extends DevblocksExtension {
-	const EXTENSION_POINT = 'cerberusweb.notes.source';
-	
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
 };
 
 abstract class Extension_CustomFieldSource extends DevblocksExtension {

@@ -16,6 +16,15 @@
 		{if !empty($task_worker_id) && isset($workers.$task_worker_id)}
 			<b>{'common.worker'|devblocks_translate|capitalize}:</b> {$workers.$task_worker_id->getName()} &nbsp;
 		{/if}
+		<br>
+		
+		<!-- Toolbar -->
+		<button type="button" id="btnDisplayTaskEdit"><span class="cerb-sprite sprite-document_edit"></span> Edit</button>
+		{$toolbar_extensions = DevblocksPlatform::getExtensions('cerberusweb.task.toolbaritem',true)}
+		{foreach from=$toolbar_extensions item=toolbar_extension}
+			{$toolbar_extension->render($task)}
+		{/foreach}
+		
 		</form>
 		<br>
 	</td>
@@ -36,17 +45,10 @@
 
 <div id="tasksTabs">
 	<ul>
-		<li><a href="{devblocks_url}ajax.php?c=tasks&a=showTaskNotesTab&id={$task->id}{/devblocks_url}">{'activity.tasks.tab.notes'|devblocks_translate|escape}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context=cerberusweb.contexts.task&id={$task->id}{/devblocks_url}">{'common.comments'|devblocks_translate|capitalize|escape}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.task&id={$task->id}{/devblocks_url}">{'common.links'|devblocks_translate|escape}</a></li>
 
-		{$tabs = [notes]}
-		
-		{if ($active_worker->hasPriv('core.tasks.actions.create') && (empty($task) || $active_worker->id==$task->worker_id))
-			|| ($active_worker->hasPriv('core.tasks.actions.update_nobody') && empty($task->worker_id)) 
-			|| $active_worker->hasPriv('core.tasks.actions.update_all')}
-			{$tabs[] = properties}
-			<li><a href="{devblocks_url}ajax.php?c=tasks&a=showTasksPropertiesTab&id={$task->id}{/devblocks_url}">{'activity.tasks.tab.properties'|devblocks_translate|escape}</a></li>
-		{/if}
-
+		{$tabs = [notes, links]}
 	</ul>
 </div> 
 <br>
@@ -59,5 +61,13 @@
 <script type="text/javascript">
 	$(function() {
 		var tabs = $("#tasksTabs").tabs( { selected:{$tab_selected_idx} } );
+		
+		$('#btnDisplayTaskEdit').bind('click', function() {
+			$popup = genericAjaxPopup('peek','c=tasks&a=showTaskPeek&id={$task->id}',null,false,'550');
+			$popup.one('task_save', function(event) {
+				event.stopPropagation();
+				document.location.href = '{devblocks_url}c=tasks&a=display&id={$task->id}{/devblocks_url}';
+			});
+		})
 	});
 </script>
