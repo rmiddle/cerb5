@@ -1,3 +1,4 @@
+{$view_fields = $view->getColumnsAvailable()}
 {assign var=results value=$view->getData()}
 {assign var=total value=$results[1]}
 {assign var=data value=$results[0]}
@@ -46,7 +47,7 @@
 			{elseif $column=="kb_title"}
 			<td>
 				<span class="cerb-sprite sprite-document"></span>
-				<a href="javascript:;" onclick="genericAjaxPanel('c=kb.ajax&a=showArticlePeekPanel&id={$result.kb_id}&view_id={$view->id}',null,false,'700');" class="subject">{if !empty($result.kb_title)}{$result.kb_title|escape}{else}(no title){/if}</a>
+				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=kb.ajax&a=showArticlePeekPanel&id={$result.kb_id}&view_id={$view->id}',null,false,'700');" class="subject">{if !empty($result.kb_title)}{$result.kb_title|escape}{else}(no title){/if}</a>
 			</td>
 			{elseif $column=="kb_updated"}
 			<td><abbr title="{$result.kb_updated|devblocks_date}">{$result.kb_updated|devblocks_prettytime}</abbr>&nbsp;</td>

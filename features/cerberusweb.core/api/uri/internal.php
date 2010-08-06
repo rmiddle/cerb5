@@ -108,6 +108,92 @@ class ChInternalController extends DevblocksControllerExtension {
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('home')));
 	}
 	
+	// Contexts
+	
+	function showTabContextLinksAction() {
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer');
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl_path = dirname(dirname(dirname(__FILE__))) . '/templates/';
+		$tpl->assign('path', $tpl_path);
+		
+		$tpl->assign('context', $context);
+		$tpl->assign('context_id', $context_id);
+		
+		// Options
+		$options = array();
+
+		@$filter_open = DevblocksPlatform::importGPC($_REQUEST['filter_open'],'integer', 0);
+		if(!empty($filter_open))
+			$options['filter_open'] = true;
+		
+		// Contexts
+		
+		$context_extensions = DevblocksPlatform::getExtensions('devblocks.context', false);
+		$tpl->assign('context_extensions', $context_extensions);
+		
+		// Context Links
+		
+		$views = array();
+		$contexts = DAO_ContextLink::getDistinctContexts($context, $context_id);
+		
+		foreach($contexts as $ctx) {
+			if(null == ($ext_context = DevblocksPlatform::getExtension($ctx, true)))
+				continue;
+				
+			if(!$ext_context instanceof Extension_DevblocksContext)
+				continue;
+				
+			$view = $ext_context->getView($context, $context_id, $options);
+			
+			if(!empty($view))
+				$views[$view->id] = $view;
+		}
+		
+		ksort($views);
+		
+		$tpl->assign('views', $views);
+		
+		$tpl->display('file:'.$this->_TPL_PATH.'context_links/tab.tpl');
+	}	
+	
+	function chooserOpenAction() {
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string');
+		@$layer = DevblocksPlatform::importGPC($_REQUEST['layer'],'string');
+		
+		if(null != ($context_extension = DevblocksPlatform::getExtension($context, true))) {
+			$tpl = DevblocksPlatform::getTemplateService();
+			$path = dirname(dirname(dirname(__FILE__))) . '/templates/';
+			$tpl->assign('context', $context_extension);
+			$tpl->assign('layer', $layer);
+			$tpl->assign('view', $context_extension->getChooserView());
+			$tpl->display('file:'.$path.'context_links/choosers/__generic.tpl');
+		}
+	}
+	
+	function contextAddLinksAction() {
+		@$from_context = DevblocksPlatform::importGPC($_REQUEST['from_context'],'string','');
+		@$from_context_id = DevblocksPlatform::importGPC($_REQUEST['from_context_id'],'integer',0);
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+		@$context_ids = DevblocksPlatform::importGPC($_REQUEST['context_id'],'array',array());
+		
+		if(is_array($context_ids))
+		foreach($context_ids as $context_id)
+			DAO_ContextLink::setLink($context, $context_id, $from_context, $from_context_id);
+	}
+	
+	function contextDeleteLinksAction() {
+		@$from_context = DevblocksPlatform::importGPC($_REQUEST['from_context'],'string','');
+		@$from_context_id = DevblocksPlatform::importGPC($_REQUEST['from_context_id'],'integer',0);
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+		@$context_ids = DevblocksPlatform::importGPC($_REQUEST['context_id'],'array',array());
+		
+		if(is_array($context_ids))
+		foreach($context_ids as $context_id)
+			DAO_ContextLink::deleteLink($context, $context_id, $from_context, $from_context_id);
+	}
+	
 	// Snippets
 	
 	function snippetPasteAction() {
@@ -184,8 +270,9 @@ class ChInternalController extends DevblocksControllerExtension {
 		$tpl->assign('output', htmlentities($output, null, LANG_CHARSET_CODE));
 		$tpl->display('file:'.$this->_TPL_PATH.'internal/renderers/test_results.tpl');
 	}
+
+	// Views
 	
-	// Ajax
 	function viewRefreshAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
 		$view = C4_AbstractViewLoader::getView($id);
@@ -222,46 +309,10 @@ class ChInternalController extends DevblocksControllerExtension {
 		$view->renderCriteria($field);
 	}
 	
-	// Post
-	function viewAddCriteriaAction() {
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
-		@$response_uri = DevblocksPlatform::importGPC($_REQUEST['response_uri']);
-		@$field = DevblocksPlatform::importGPC($_REQUEST['field']);
-		@$oper = DevblocksPlatform::importGPC($_REQUEST['oper']);
-		@$value = DevblocksPlatform::importGPC($_REQUEST['value']);
-		
-		$view = C4_AbstractViewLoader::getView($id);
-		$view->doSetCriteria($field, $oper, $value);
-		C4_AbstractViewLoader::setView($id, $view);
-		
-		// [TODO] Need to put them back on org or person (depending on which was active)
-		if(!empty($response_uri))
-			DevblocksPlatform::redirect(new DevblocksHttpResponse(explode('/', $response_uri)));
-	}
-	
-	function viewRemoveCriteriaAction() {
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
-		@$response_uri = DevblocksPlatform::importGPC($_REQUEST['response_uri']);
-		@$field = DevblocksPlatform::importGPC($_REQUEST['field']);
-		
-		$view = C4_AbstractViewLoader::getView($id);
-		$view->doRemoveCriteria($field);
-		C4_AbstractViewLoader::setView($id, $view);
-		
-		if(!empty($response_uri))
-			DevblocksPlatform::redirect(new DevblocksHttpResponse(explode('/', $response_uri)));
-	}
-	
-	function viewResetCriteriaAction() {
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
-		@$response_uri = DevblocksPlatform::importGPC($_REQUEST['response_uri']);
-		
-		$view = C4_AbstractViewLoader::getView($id);
-		$view->doResetCriteria();
-		C4_AbstractViewLoader::setView($id, $view);
-
-		if(!empty($response_uri))
-			DevblocksPlatform::redirect(new DevblocksHttpResponse(explode('/', $response_uri)));
+	private function _viewRenderInlineFilters($view) {
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('view', $view);
+		$tpl->display('file:' . $this->_TPL_PATH . 'internal/views/customize_view_criteria.tpl');
 	}
 	
 	// Ajax
@@ -272,8 +323,6 @@ class ChInternalController extends DevblocksControllerExtension {
 		@$oper = DevblocksPlatform::importGPC($_REQUEST['oper']);
 		@$value = DevblocksPlatform::importGPC($_REQUEST['value']);
 		@$field_deletes = DevblocksPlatform::importGPC($_REQUEST['field_deletes'],'array',array());
-		
-		$tpl = DevblocksPlatform::getTemplateService();
 		
 		$view = C4_AbstractViewLoader::getView($id);
 
@@ -288,17 +337,70 @@ class ChInternalController extends DevblocksControllerExtension {
 			$view->doSetCriteria($field, $oper, $value);
 		}
 		
-		$tpl->assign('optColumns', $view->getColumns());
-		$tpl->assign('view_fields', $view->getFields());
-		$tpl->assign('view_searchable_fields', $view->getSearchFields());
+		C4_AbstractViewLoader::setView($view->id, $view);
 		
-		C4_AbstractViewLoader::setView($id, $view);
-		$tpl->assign('view', $view);
-		
-		$tpl->display('file:' . $this->_TPL_PATH . 'internal/views/customize_view_criteria.tpl');
+		$this->_viewRenderInlineFilters($view);
 	}
 	
-	// Ajax
+	function viewResetFiltersAction() {
+		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
+
+		$view = C4_AbstractViewLoader::getView($id);
+
+		$view->doResetCriteria();
+		
+		C4_AbstractViewLoader::setView($view->id, $view);
+		
+		$this->_viewRenderInlineFilters($view);		
+	}
+	
+	function viewLoadPresetAction() {
+		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
+		@$preset_id = DevblocksPlatform::importGPC($_REQUEST['_preset'],'integer',0);
+
+		$view = C4_AbstractViewLoader::getView($id);
+
+		$view->removeAllParams();
+		
+		if(null != ($preset = DAO_ViewFiltersPreset::get($preset_id)))
+			$view->addParams($preset->params);
+		
+		C4_AbstractViewLoader::setView($view->id, $view);
+		
+		$this->_viewRenderInlineFilters($view);
+	}
+	
+	function viewAddPresetAction() {
+		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
+		@$preset_name = DevblocksPlatform::importGPC($_REQUEST['_preset_name'],'string','');
+
+		$active_worker = CerberusApplication::getActiveWorker();
+
+		$view = C4_AbstractViewLoader::getView($id);
+
+		$fields = array(
+			DAO_ViewFiltersPreset::NAME => !empty($preset_name) ? $preset_name : 'New Preset',
+			DAO_ViewFiltersPreset::VIEW_CLASS => get_class($view),
+			DAO_ViewFiltersPreset::WORKER_ID => $active_worker->id,
+			DAO_ViewFiltersPreset::PARAMS_JSON => json_encode($view->getEditableParams()),
+		);
+		
+		DAO_ViewFiltersPreset::create($fields);
+		
+		$this->_viewRenderInlineFilters($view);
+	}
+	
+	function viewEditPresetsAction() {
+		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
+		@$preset_dels = DevblocksPlatform::importGPC($_REQUEST['_preset_del'],'array',array());
+
+		$view = C4_AbstractViewLoader::getView($id);
+
+		DAO_ViewFiltersPreset::delete($preset_dels);
+		
+		$this->_viewRenderInlineFilters($view);		
+	}
+	
 	function viewCustomizeAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
 		
@@ -309,10 +411,6 @@ class ChInternalController extends DevblocksControllerExtension {
 		$view = C4_AbstractViewLoader::getView($id);
 		$tpl->assign('view', $view);
 
-		$tpl->assign('optColumns', $view->getColumns());
-		$tpl->assign('view_fields', $view->getFields());
-		$tpl->assign('view_searchable_fields', $view->getSearchFields());
-		
 		$tpl->display('file:' . $this->_TPL_PATH . 'internal/views/customize_view.tpl');
 	}
 	
@@ -373,7 +471,7 @@ class ChInternalController extends DevblocksControllerExtension {
 			$list_view->title = $list_title;
 			$list_view->num_rows = $view->renderLimit;
 			$list_view->columns = $view->view_columns;
-			$list_view->params = $view->params;
+			$list_view->params = $view->getEditableParams();
 			$list_view->sort_by = $view->renderSortBy;
 			$list_view->sort_asc = $view->renderSortAsc;
 			
@@ -394,7 +492,6 @@ class ChInternalController extends DevblocksControllerExtension {
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('home')));
 	}
 
-	// Ajax
 	function viewShowExportAction() {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['id']);
 
@@ -405,7 +502,7 @@ class ChInternalController extends DevblocksControllerExtension {
 		$view = C4_AbstractViewLoader::getView($view_id);
 		$tpl->assign('view', $view);
 		
-		$model_columns = $view->getColumns();
+		$model_columns = $view->getColumnsAvailable();
 		$tpl->assign('model_columns', $model_columns);
 		
 		$view_columns = $view->view_columns;
@@ -427,7 +524,7 @@ class ChInternalController extends DevblocksControllerExtension {
 		}
 		
 		$view = C4_AbstractViewLoader::getView($view_id);
-		$column_manifests = $view->getColumns();
+		$column_manifests = $view->getColumnsAvailable();
 
 		// Override display
 		$view->view_columns = $columns;
@@ -498,7 +595,6 @@ class ChInternalController extends DevblocksControllerExtension {
 		exit;
 	}
 	
-	// Post?
 	function viewSaveCustomizeAction() {
 		$translate = DevblocksPlatform::getTranslationService();
 		
@@ -513,7 +609,7 @@ class ChInternalController extends DevblocksControllerExtension {
 
 		$active_worker = CerberusApplication::getActiveWorker();
 		
-		// Conditional Persist
+		// Handle worklists specially
 		if(substr($id,0,5)=="cust_") { // custom workspace
 			$list_view_id = intval(substr($id,5));
 			
@@ -523,27 +619,18 @@ class ChInternalController extends DevblocksControllerExtension {
 			$view->name = $title;
 
 			// Persist Object
+			// [TODO] The list view can auto-persist in the 'worker_view_model' table
 			$list_view = new Model_WorkerWorkspaceListView();
 			$list_view->title = $title;
 			$list_view->columns = $view->view_columns;
 			$list_view->num_rows = $view->renderLimit;
-			$list_view->params = $view->params;
+			$list_view->params = $view->getEditableParams();
 			$list_view->sort_by = $view->renderSortBy;
 			$list_view->sort_asc = $view->renderSortAsc;
 			
 			DAO_WorkerWorkspaceList::update($list_view_id, array(
 				DAO_WorkerWorkspaceList::LIST_VIEW => serialize($list_view)
 			));
-			
-		} else {
-			$prefs = new C4_AbstractViewModel();
-			$prefs->class_name = get_class($view);
-			$prefs->view_columns = $view->view_columns;
-			$prefs->renderLimit = $view->renderLimit;
-			$prefs->renderSortBy = $view->renderSortBy;
-			$prefs->renderSortAsc = $view->renderSortAsc;
-			
-			DAO_WorkerPref::set($active_worker->id, 'view'.$view->id, serialize($prefs));
 		}
 		
 		C4_AbstractViewLoader::setView($id, $view);
@@ -561,6 +648,8 @@ class ChInternalController extends DevblocksControllerExtension {
 			'secs' => $secs,
 		);
 	}
+	
+	// Utils
 	
 	function stopAutoRefreshAction() {
 		unset($_SESSION['autorefresh']);
@@ -580,16 +669,96 @@ class ChInternalController extends DevblocksControllerExtension {
 				break;
 		}
 	}
+
+	// Comments
 	
-	function deleteNoteAction() {
-		$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+	function showTabContextCommentsAction() {
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer');
 		
-		$active_worker = CerberusApplication::getActiveWorker();
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl_path = dirname(dirname(dirname(__FILE__))) . '/templates/';
+		$tpl->assign('path', $tpl_path);
 		
-		if(null != ($note = DAO_Note::get($id))) {
-			if($note->worker_id == $active_worker->id || $active_worker->is_superuser) {
-				DAO_Note::delete($id);
-			}
+		$tpl->assign('context', $context);
+		$tpl->assign('context_id', $context_id);
+
+		$comments = DAO_Comment::getByContext($context, $context_id);
+		$tpl->assign('comments', $comments);
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'internal/comments/tab.tpl');
+	}
+	
+	function commentShowPopupAction() {
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('path', $this->_TPL_PATH . '');
+		
+		$tpl->assign('context', $context);
+		$tpl->assign('context_id', $context_id);
+		
+		// Automatically tell anybody associated with this context object
+		$workers = CerberusContexts::getWorkers($context, $context_id);
+		$tpl->assign('notify_workers', $workers);
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'internal/comments/peek.tpl');
+	}
+	
+	function commentSavePopupAction() {
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
+		@$comment = DevblocksPlatform::importGPC($_REQUEST['comment'],'string','');
+		
+		$translate = DevblocksPlatform::getTranslationService();
+		
+		// Worker is logged in
+		if(null === ($active_worker = CerberusApplication::getActiveWorker()))
+			return;
+		
+		// [TODO] Validate context + ID
+		// [TODO] Validate ACL
+		
+		// Form was filled in
+		if(empty($context) || empty($context_id) || empty($comment))
+			return;
+			
+		$fields = array(
+			DAO_Comment::CONTEXT => $context,
+			DAO_Comment::CONTEXT_ID => $context_id,
+			DAO_Comment::ADDRESS_ID => $active_worker->getAddress()->id,
+			DAO_Comment::COMMENT => $comment,
+			DAO_Comment::CREATED => time(),
+		);
+		$comment_id = DAO_Comment::create($fields);
+		
+		if(null == ($extension = DevblocksPlatform::getExtension($context, true, true)))
+			return; 
+		
+		if(null == (@$string = $extension->manifest->params['events'][0]['context.commented']))
+			$string = 'context.default.commented';
+			
+		// URL
+		if(null == ($url = $extension->getPermalink($context_id)))
+			return;
+			
+		// Notifications
+		@$notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
+		if(is_array($notify_worker_ids) && !empty($notify_worker_ids))
+		foreach($notify_worker_ids as $notify_worker_id) {
+			$fields = array(
+				DAO_WorkerEvent::CREATED_DATE => time(),
+				DAO_WorkerEvent::WORKER_ID => $notify_worker_id,
+				DAO_WorkerEvent::URL => $url,
+				DAO_WorkerEvent::MESSAGE => vsprintf($translate->_($string), $active_worker->getName()),
+			);
+			DAO_WorkerEvent::create($fields);
 		}
+	}
+	
+	function commentDeleteAction() {
+		@$comment_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+		DAO_Comment::delete($comment_id);
 	}
 };

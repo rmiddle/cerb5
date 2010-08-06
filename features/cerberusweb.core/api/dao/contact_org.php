@@ -85,14 +85,13 @@ class DAO_ContactOrg extends C4_ORMHelper {
 	 */
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
-		$id = $db->GenID('contact_org_seq');
 		
-		$sql = sprintf("INSERT INTO contact_org (id,name,street,city,province,postal,country,phone,website,created) ".
-  			"VALUES (%d,'','','','','','','','',%d)",
-			$id,
+		$sql = sprintf("INSERT INTO contact_org (created) ".
+  			"VALUES (%d)",
 			time()
 		);
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
+		$id = $db->LastInsertId(); 
 		
 		self::update($id, $fields);
 		return $id;
@@ -134,14 +133,14 @@ class DAO_ContactOrg extends C4_ORMHelper {
 		);
 		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
-		// Tasks
-        DAO_Task::deleteBySourceIds('cerberusweb.tasks.org', $ids);
+		// Context links
+		DAO_ContextLink::delete(CerberusContexts::CONTEXT_ORG, $ids);
         
         // Custom fields
         DAO_CustomFieldValue::deleteBySourceIds(ChCustomFieldSource_Org::ID, $ids);
 
         // Notes
-        DAO_Note::deleteBySourceIds(ChNotesSource_Org::ID, $ids);
+        DAO_Comment::deleteByContext(CerberusContexts::CONTEXT_ORG, $ids);
 	}
 	
 	/**
@@ -276,8 +275,12 @@ class DAO_ContactOrg extends C4_ORMHelper {
 			);
 
 		$join_sql = 
-			"FROM contact_org c ";
+			"FROM contact_org c ".
 			
+			// [JAS]: Dynamic table joins
+			(isset($tables['context_link']) ? "INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.org' AND context_link.to_context_id = c.id) " : " ")
+			;		
+		
 		// Custom field joins
 		list($select_sql, $join_sql, $has_multiple_values) = self::_appendSelectJoinSqlForCustomFieldTables(
 			$tables,
@@ -288,7 +291,7 @@ class DAO_ContactOrg extends C4_ORMHelper {
 		);
 		
 		$where_sql = "".
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "");
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
 			
@@ -345,6 +348,9 @@ class SearchFields_ContactOrg {
 	const WEBSITE = 'c_website';
 	const CREATED = 'c_created';
 
+	const CONTEXT_LINK = 'cl_context_from';
+	const CONTEXT_LINK_ID = 'cl_context_from_id';
+	
 	/**
 	 * @return DevblocksSearchField[]
 	 */
@@ -362,6 +368,9 @@ class SearchFields_ContactOrg {
 			self::PHONE => new DevblocksSearchField(self::PHONE, 'c', 'phone', $translate->_('contact_org.phone')),
 			self::WEBSITE => new DevblocksSearchField(self::WEBSITE, 'c', 'website', $translate->_('contact_org.website')),
 			self::CREATED => new DevblocksSearchField(self::CREATED, 'c', 'created', $translate->_('contact_org.created')),
+			
+			self::CONTEXT_LINK => new DevblocksSearchField(self::CONTEXT_LINK, 'context_link', 'from_context', null),
+			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
 		);
 		
 		// Custom Fields
@@ -411,12 +420,24 @@ class View_ContactOrg extends C4_AbstractView {
 			SearchFields_ContactOrg::PHONE,
 			SearchFields_ContactOrg::WEBSITE,
 		);
+		$this->columnsHidden = array(
+			SearchFields_ContactOrg::CONTEXT_LINK,
+			SearchFields_ContactOrg::CONTEXT_LINK_ID,
+		);
+		
+		$this->paramsHidden = array(
+			SearchFields_ContactOrg::ID,
+			SearchFields_ContactOrg::CONTEXT_LINK,
+			SearchFields_ContactOrg::CONTEXT_LINK_ID,
+		);
+		
+		$this->doResetCriteria();
 	}
 
 	function getData() {
 		$objects = DAO_ContactOrg::search(
 			$this->view_columns,
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -437,8 +458,14 @@ class View_ContactOrg extends C4_AbstractView {
 		$org_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
 		$tpl->assign('custom_fields', $org_fields);
 		
-		$tpl->assign('view_fields', $this->getColumns());
-		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/contacts/orgs/contact_view.tpl');
+		switch($this->renderTemplate) {
+			case 'contextlinks_chooser':
+				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/contacts/orgs/view_contextlinks_chooser.tpl');
+				break;
+			default:
+				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/contacts/orgs/contact_view.tpl');
+				break;
+		}
 	}
 
 	function renderCriteria($field) {
@@ -481,19 +508,8 @@ class View_ContactOrg extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_ContactOrg::getFields();
-	}
-
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_ContactOrg::ID]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		return $fields;
 	}
 
 	function doSetCriteria($field, $oper, $value) {
@@ -533,7 +549,7 @@ class View_ContactOrg extends C4_AbstractView {
 		}
 
 		if(!empty($criteria)) {
-			$this->params[$field] = $criteria;
+			$this->addParam($criteria);
 			$this->renderPage = 0;
 		}
 	}
@@ -573,7 +589,7 @@ class View_ContactOrg extends C4_AbstractView {
 		do {
 			list($objects,$null) = DAO_ContactOrg::search(
 				array(),
-				$this->params,
+				$this->getParams(),
 				100,
 				$pg++,
 				SearchFields_ContactOrg::ID,
@@ -597,5 +613,148 @@ class View_ContactOrg extends C4_AbstractView {
 		}
 
 		unset($ids);
+	}
+};
+
+class Context_Org extends Extension_DevblocksContext {
+    function __construct($manifest) {
+        parent::__construct($manifest);
+    }
+
+    function getPermalink($context_id) {
+    	$url_writer = DevblocksPlatform::getUrlService();
+    	return $url_writer->write('c=contacts&tab=orgs&action=display&id='.$context_id, true);
+    }
+    
+	function getContext($org, &$token_labels, &$token_values, $prefix=null) {
+		if(is_null($prefix))
+			$prefix = 'Org:';
+		
+		$translate = DevblocksPlatform::getTranslationService();
+		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
+
+		// Polymorph
+		if(is_numeric($org)) {
+			$org = DAO_ContactOrg::get($org);
+		} elseif($org instanceof Model_ContactOrg) {
+			// It's what we want already.
+		} else {
+			$org = null;
+		}
+		
+		// Token labels
+		$token_labels = array(
+			'name' => $prefix.$translate->_('contact_org.name'),
+			'city' => $prefix.$translate->_('contact_org.city'),
+			'country' => $prefix.$translate->_('contact_org.country'),
+			'created' => $prefix.$translate->_('contact_org.created'),
+			'phone' => $prefix.$translate->_('contact_org.phone'),
+			'postal' => $prefix.$translate->_('contact_org.postal'),
+			'province' => $prefix.$translate->_('contact_org.province'),
+			'street' => $prefix.$translate->_('contact_org.street'),
+			'website' => $prefix.$translate->_('contact_org.website'),
+		);
+		
+		if(is_array($fields))
+		foreach($fields as $cf_id => $field) {
+			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
+		}
+
+		// Token values
+		$token_values = array();
+		
+		// Org token values
+		if($org) {
+			$token_values['id'] = $org->id;
+			$token_values['name'] = $org->name;
+			$token_values['created'] = $org->created;
+			if(!empty($org->city))
+				$token_values['city'] = $org->city;
+			if(!empty($org->country))
+				$token_values['country'] = $org->country;
+			if(!empty($org->phone))
+				$token_values['phone'] = $org->phone;
+			if(!empty($org->postal))
+				$token_values['postal'] = $org->postal;
+			if(!empty($org->province))
+				$token_values['province'] = $org->province;
+			if(!empty($org->street))
+				$token_values['street'] = $org->street;
+			if(!empty($org->website))
+				$token_values['website'] = $org->website;
+			$token_values['custom'] = array();
+			
+			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Org::ID, $org->id));
+			if(is_array($field_values) && !empty($field_values)) {
+				foreach($field_values as $cf_id => $cf_val) {
+					if(!isset($fields[$cf_id]))
+						continue;
+					
+					// The literal value
+					if(null != $org)
+						$token_values['custom'][$cf_id] = $cf_val;
+					
+					// Stringify
+					if(is_array($cf_val))
+						$cf_val = implode(', ', $cf_val);
+						
+					if(is_string($cf_val)) {
+						if(null != $org)
+							$token_values['custom_'.$cf_id] = $cf_val;
+					}
+				}
+			}
+		}
+
+		return true;		
+	}
+
+	function getChooserView() {
+		// View
+		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = $view_id; 
+		$defaults->is_ephemeral = true;
+		$defaults->class_name = 'View_ContactOrg';
+		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
+		$view->name = 'Organizations';
+
+		$view->view_columns = array(
+			SearchFields_ContactOrg::PHONE,
+			SearchFields_ContactOrg::COUNTRY,
+			SearchFields_ContactOrg::WEBSITE,
+		);
+		
+		$view->renderSortBy = SearchFields_ContactOrg::NAME;
+		$view->renderSortAsc = true;
+		$view->renderLimit = 10;
+		$view->renderTemplate = 'contextlinks_chooser';
+		
+		C4_AbstractViewLoader::setView($view_id, $view);
+		return $view;		
+	}
+	
+	function getView($context, $context_id, $options=array()) {
+		$view_id = str_replace('.','_',$this->id);
+		
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = $view_id; 
+		$defaults->class_name = 'View_ContactOrg';
+		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
+		$view->name = 'Organizations';
+		
+		$params = array(
+			new DevblocksSearchCriteria(SearchFields_ContactOrg::CONTEXT_LINK,'=',$context),
+			new DevblocksSearchCriteria(SearchFields_ContactOrg::CONTEXT_LINK_ID,'=',$context_id),
+		);
+		
+		if(isset($options['filter_open']))
+			true; // Do nothing
+		
+		$view->addParams($params, true);
+		
+		$view->renderTemplate = 'context';
+		C4_AbstractViewLoader::setView($view_id, $view);
+		return $view;
 	}
 };

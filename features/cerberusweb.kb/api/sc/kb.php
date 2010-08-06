@@ -66,7 +66,7 @@ class UmScKbController extends Extension_UmScController {
 
 		        $params[SearchFields_KbArticle::TOP_CATEGORY_ID] = new DevblocksSearchCriteria(SearchFields_KbArticle::TOP_CATEGORY_ID,'in',array_keys($kb_roots));
 		        
-		        $view->params = $params;
+		        $view->addParams($params, true);
 		        
 				UmScAbstractViewLoader::setView($view->id, $view);
 				$tpl->assign('view', $view);
@@ -193,15 +193,15 @@ class UmScKbController extends Extension_UmScController {
 				}
 				
 				if(!empty($root)) {
-					$view->params = array(
+					$view->addParams(array(
 						new DevblocksSearchCriteria(SearchFields_KbArticle::CATEGORY_ID,'=',$root),
 						new DevblocksSearchCriteria(SearchFields_KbArticle::TOP_CATEGORY_ID,'in',array_keys($kb_roots)),
-					);
+					), true);
 				} else {
 					// Most Popular Articles
-					$view->params = array(
+					$view->addParams(array(
 						new DevblocksSearchCriteria(SearchFields_KbArticle::TOP_CATEGORY_ID,'in',array_keys($kb_roots)),
-					);
+					), true);
 				}
 
 				$view->name = "";
@@ -266,12 +266,21 @@ class UmSc_KbArticleView extends C4_AbstractView {
 			SearchFields_KbArticle::UPDATED,
 			SearchFields_KbArticle::VIEWS,
 		);
+		$this->columnsHidden = array(
+		);
+		
+		$this->paramsHidden = array(
+			SearchFields_KbArticle::ID,
+			SearchFields_KbArticle::FORMAT,
+		);
+
+		$this->doResetCriteria();
 	}
 
 	function getData() {
 		$objects = DAO_KbArticle::search(
 			$this->view_columns,
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -288,23 +297,10 @@ class UmSc_KbArticleView extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-		$tpl->assign('view_fields', $this->getColumns());
-		
 		$tpl->display("devblocks:cerberusweb.kb:portal_".UmPortalHelper::getCode() . ":support_center/kb/view.tpl");
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_KbArticle::getFields();
-	}
-
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_KbArticle::ID]);
-		unset($fields[SearchFields_KbArticle::FORMAT]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		return self::getFields();
 	}
 };
