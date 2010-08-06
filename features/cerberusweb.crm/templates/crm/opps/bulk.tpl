@@ -27,6 +27,7 @@
       	</td>
 	</tr>
 	
+	{*
 	<tr>
 		<td width="0%" align="right" nowrap="nowrap">{'common.worker'|devblocks_translate|capitalize}:</td>
 		<td width="100%"><select name="worker_id">
@@ -43,6 +44,7 @@
       	{/if}
 		</td>
 	</tr>
+	*}
 	
 	<tr>
 		<td width="0%" nowrap="nowrap" align="right">{'crm.opportunity.closed_date'|devblocks_translate|capitalize}:</td>
@@ -102,11 +104,12 @@
 
 <br>
 
-<button type="button" onclick="genericPanel.dialog('close');genericAjaxPost('formBatchUpdate','view{$view_id}');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>
+<button type="button" onclick="genericAjaxPopupClose('peek');genericAjaxPost('formBatchUpdate','view{$view_id}');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>
 </form>
 
-<script type="text/javascript" language="JavaScript1.2">
-	genericPanel.one('dialogopen', function(event,ui) {
-		genericPanel.dialog('option','title',"{$translate->_('common.bulk_update')|capitalize|escape:'quotes'}");
+<script type="text/javascript">
+	$popup = genericAjaxPopupFetch('peek');
+	$popup.one('popup_open', function(event,ui) {
+		$(this).dialog('option','title',"{$translate->_('common.bulk_update')|capitalize|escape:'quotes'}");
 	} );
 </script>

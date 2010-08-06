@@ -15,7 +15,7 @@
 <form action="{devblocks_url}{/devblocks_url}" method="post" id="loginForm">
 <input type="hidden" name="c" value="login">
 <input type="hidden" name="a" value="authenticate">
-<input type="hidden" name="original_path" value="{$original_path}">
+<input type="hidden" name="original_path" value="{$original_path|escape}">
 <table cellpadding="0" cellspacing="2">
 <tr>
 	<td align="right" valign="middle">E-mail:</td>
@@ -24,7 +24,7 @@
 <tr>
 	<td align="right" valign="middle">Password:</td>
 	<td nowrap="nowrap">
-		<input type="password" name="password" size="16" id="loginForm_password">
+		<input type="password" name="password" size="16" id="loginForm_password" autocomplete="off">
 		 &nbsp; 
 		<a href="{devblocks_url}c=login&a=forgot{/devblocks_url}">forgot your password?</a> 
 	</td>
@@ -34,7 +34,7 @@
 </form>
 </div>
 
-<script language="JavaScript1.2" type="text/javascript">
+<script type="text/javascript">
 	$(function() {
 		$('#loginForm_email').focus().select();
 	} );
