@@ -27,8 +27,9 @@
 	{/if}
 </div>
 
-<script type="text/javascript" language="JavaScript1.2">
-	genericPanel.one('dialogopen', function(event,ui) {
-		genericPanel.dialog('option','title',"Add Custom Template");
+<script type="text/javascript">
+	$popup = genericAjaxPopupFetch('peek');
+	$popup.one('popup_open', function(event,ui) {
+		$(this).dialog('option','title',"Add Custom Template");
 	} );
 </script>

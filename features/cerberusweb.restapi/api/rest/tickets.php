@@ -108,7 +108,6 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 		@$is_waiting = DevblocksPlatform::importGPC($_REQUEST['is_waiting'],'string','');
 		@$is_closed = DevblocksPlatform::importGPC($_REQUEST['is_closed'],'string','');
 		@$is_deleted = DevblocksPlatform::importGPC($_REQUEST['is_deleted'],'string','');
-		@$next_worker_id = DevblocksPlatform::importGPC($_REQUEST['next_worker_id'],'string','');
 		
 		if(null == ($ticket = DAO_Ticket::get($id)))
 			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid ticket ID %d", $id));
@@ -149,17 +148,10 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 		}
 			
 		// Assign
-		if(0 != strlen($next_worker_id)) {
+		// [TODO] Redo w/ owners + contexts
 			// ACL
-			if(!$worker->hasPriv('core.ticket.actions.assign'))
-				$this->error(self::ERRNO_ACL, 'Access denied to assign tickets.');
-
-			$next_worker_id = intval($next_worker_id);
-			
-			// if valid
-			if(0==$next_worker_id || isset($workers[$next_worker_id]))
-				$fields[DAO_Ticket::NEXT_WORKER_ID] = intval($next_worker_id);
-		}
+//			if(!$worker->hasPriv('core.ticket.actions.assign'))
+//				$this->error(self::ERRNO_ACL, 'Access denied to assign tickets.');
 		
 		if(!empty($fields))
 			DAO_Ticket::update($id, $fields);
@@ -311,12 +303,13 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 			$this->error(self::ERRNO_CUSTOM, "The 'comment' field is required.");
 			
 		$fields = array(
-			DAO_TicketComment::CREATED => time(),
-			DAO_TicketComment::TICKET_ID => $ticket->id,
-			DAO_TicketComment::ADDRESS_ID => $address->id,
-			DAO_TicketComment::COMMENT => $comment,
+			DAO_Comment::CREATED => time(),
+			DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_TICKET,
+			DAO_Comment::CONTEXT_ID => $ticket->id,
+			DAO_Comment::ADDRESS_ID => $address->id,
+			DAO_Comment::COMMENT => $comment,
 		);
-		$comment_id = DAO_TicketComment::create($fields);
+		$comment_id = DAO_Comment::create($fields);
 
 		$this->success(array(
 			'ticket_id' => $ticket->id,

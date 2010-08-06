@@ -50,34 +50,34 @@
 			<br>
 			<br>
 
-			<b>Who should handle the follow-up?</b><br>
-	      	<select name="next_worker_id">
-	      		<option value="0" {if 0==$default_next_worker_id}selected="selected"{/if}>Anybody
-	      		{foreach from=$workers item=worker key=worker_id name=workers}
-					{if $worker_id==$active_worker->id || $active_worker->hasPriv('core.ticket.actions.assign')}
-		      			{if $worker_id==$active_worker->id}{assign var=next_worker_id_sel value=$smarty.foreach.workers.iteration}{/if}
-		      			<option value="{$worker_id}" {if $worker_id==$default_next_worker_id}selected="selected"{/if}>{$worker->getName()}
-					{/if}
-	      		{/foreach}
-	      	</select>&nbsp;
-	      	{if $active_worker->hasPriv('core.ticket.actions.assign') && !empty($next_worker_id_sel)}
-	      		<button type="button" onclick="this.form.next_worker_id.selectedIndex = {$next_worker_id_sel};">me</button>
-	      		<button type="button" onclick="this.form.next_worker_id.selectedIndex = 0;">anybody</button>
-	      	{/if}
-	      	<br>
-	      	<br>			
+			{if $active_worker->hasPriv('core.ticket.actions.assign')}
+				<b>Who should handle the follow-up?</b><br>
+				<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-add"></span></button>
+				{if !empty($context_workers)}
+				<ul class="chooser-container bubbles">
+					{foreach from=$context_workers item=context_worker}
+					<li>{$context_worker->getName()|escape}<input type="hidden" name="worker_id[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
+					{/foreach}
+				</ul>
+				{/if}
+			{/if}
 		</td>
 	</tr>
 </table>
+<br>			
 
-<button type="button" onclick="genericPanel.dialog('close');genericAjaxPost('formComposePeek', 'view{$view_id}')"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
+<button type="button" onclick="genericAjaxPopupClose('peek');genericAjaxPost('formComposePeek', 'view{$view_id}')"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
 <br>
 </form>
 
-<script language="JavaScript1.2" type="text/javascript">
-	genericPanel.one('dialogopen',function(event,ui) {
-		genericPanel.dialog('option','title','Compose');
+<script type="text/javascript">
+	$popup = genericAjaxPopupFetch('peek');
+	$popup.one('popup_open',function(event,ui) {
+		$(this).dialog('option','title','Compose');
 		ajax.emailAutoComplete('#emailinput', { multiple: true } );
 		$('#formComposePeek :input:text:first').focus().select();
-	} );
+	});
+	$('#formComposePeek button.chooser_worker').each(function() {
+		ajax.chooser(this,'cerberusweb.contexts.worker','worker_id');
+	});
 </script>

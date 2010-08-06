@@ -59,13 +59,10 @@ class DAO_Attachment extends DevblocksORMHelper {
     
 	public static function create($fields) {
 	    $db = DevblocksPlatform::getDatabaseService();
-		$id = $db->GenID('attachment_seq');
 		
-		$sql = sprintf("INSERT INTO attachment (id,message_id,display_name,mime_type,storage_size,storage_extension,storage_key,storage_profile_id) ".
-		    "VALUES (%d,0,'','',0,'','',0)",
-		    $id
-		);
-		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$sql = "INSERT INTO attachment () VALUES ()";
+		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
+		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
 		
@@ -216,7 +213,7 @@ class DAO_Attachment extends DevblocksORMHelper {
 		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
 		$total = -1;
 		
-		$sql = sprintf("SELECT ".
+		$select_sql = sprintf("SELECT ".
 			"a.id as %s, ".
 			"a.message_id as %s, ".
 			"a.display_name as %s, ".
@@ -235,11 +232,6 @@ class DAO_Attachment extends DevblocksORMHelper {
 			"t.subject as %s, ".
 		
 			"ad.email as %s ".
-		
-			"FROM attachment a ".
-			"INNER JOIN message m ON (a.message_id = m.id) ".
-			"INNER JOIN ticket t ON (m.ticket_id = t.id) ".
-			"INNER JOIN address ad ON (m.address_id = ad.id) ".
 			"",
 			    SearchFields_Attachment::ID,
 			    SearchFields_Attachment::MESSAGE_ID,
@@ -259,22 +251,27 @@ class DAO_Attachment extends DevblocksORMHelper {
 			    SearchFields_Attachment::TICKET_SUBJECT,
 			    
 			    SearchFields_Attachment::ADDRESS_EMAIL
-			).
+		);
+		
+		$join_sql = "FROM attachment a ".
+			"INNER JOIN message m ON (a.message_id = m.id) ".
+			"INNER JOIN ticket t ON (m.ticket_id = t.id) ".
+			"INNER JOIN address ad ON (m.address_id = ad.id) ";
+//			(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ")
 			
-			// [JAS]: Dynamic table joins
-//			(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
+		$where_sql = "".
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "").
-			(!empty($sortBy) ? sprintf("ORDER BY %s %s",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : "")
-		;
-		// [TODO] Could push the select logic down a level too
-		if($limit > 0) {
-    		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
-		} else {
-		    $rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
-            $total = mysql_num_rows($rs);
-		}
+		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
 
+		$sql = 
+			$select_sql.
+			$join_sql.
+			$where_sql.
+			($has_multiple_values ? 'GROUP BY t.id ' : '').
+			$sort_sql;
+		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		
 		$results = array();
 		
 		while($row = mysql_fetch_assoc($rs)) {
@@ -282,14 +279,16 @@ class DAO_Attachment extends DevblocksORMHelper {
 			foreach($row as $f => $v) {
 				$result[$f] = $v;
 			}
-			$ticket_id = intval($row[SearchFields_Attachment::ID]);
-			$results[$ticket_id] = $result;
+			$id = intval($row[SearchFields_Attachment::ID]);
+			$results[$id] = $result;
 		}
 
-		// [JAS]: Count all
 		if($withCounts) {
-		    $rs = $db->Execute($sql);
-		    $total = mysql_num_rows($rs);
+			$count_sql = 
+				"SELECT COUNT(a.id) ".
+				$join_sql.
+				$where_sql;
+			$total = $db->GetOne($count_sql);
 		}
 		
 		mysql_free_result($rs);
@@ -705,15 +704,22 @@ class View_Attachment extends C4_AbstractView {
 			SearchFields_Attachment::ADDRESS_EMAIL,
 			SearchFields_Attachment::TICKET_MASK,
 		);
+		$this->columnsHidden = array(
+			SearchFields_Attachment::ID,
+			SearchFields_Attachment::MESSAGE_ID,
+		);
 		
-//		$this->params = array(
-//			SearchFields_Address::NUM_NONSPAM => new DevblocksSearchCriteria(SearchFields_Address::NUM_NONSPAM,'>',0),
-//		);
+		$this->paramsHidden = array(
+			SearchFields_Attachment::ID,
+			SearchFields_Attachment::MESSAGE_ID,
+		);
+		
+		$this->doResetCriteria();
 	}
 
 	function getData() {
 		$objects = DAO_Attachment::search(
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -730,7 +736,6 @@ class View_Attachment extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/configuration/tabs/attachments/view.tpl');
 	}
 
@@ -778,30 +783,10 @@ class View_Attachment extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_Attachment::getFields();
 	}
 
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_Attachment::ID]);
-		unset($fields[SearchFields_Attachment::MESSAGE_ID]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		return $fields;
-	}
-
-	function doResetCriteria() {
-		parent::doResetCriteria();
-		
-//		$this->params = array(
-//			SearchFields_Address::NUM_NONSPAM => new DevblocksSearchCriteria(SearchFields_Address::NUM_NONSPAM,'>',0),
-//		);
-	}
-	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -845,7 +830,7 @@ class View_Attachment extends C4_AbstractView {
 		}
 
 		if(!empty($criteria)) {
-			$this->params[$field] = $criteria;
+			$this->addParam($criteria);
 			$this->renderPage = 0;
 		}
 	}
@@ -880,7 +865,7 @@ class View_Attachment extends C4_AbstractView {
 		if(empty($ids))
 		do {
 			list($objects,$null) = DAO_Attachment::search(
-				$this->params,
+				$this->getParams(),
 				100,
 				$pg++,
 				SearchFields_Attachment::ID,
