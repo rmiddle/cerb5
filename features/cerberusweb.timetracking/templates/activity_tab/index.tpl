@@ -1,19 +1,7 @@
-<table cellpadding="0" cellspacing="0" width="100%">
+{if $active_worker->hasPriv('timetracking.actions.create')}
+<form action="{devblocks_url}{/devblocks_url}" method="post" style="padding-bottom:5px;">
+<button type="button" onclick="timeTrackingTimer.play('','');"><span class="cerb-sprite sprite-stopwatch"></span> {$translate->_('timetracking.ui.button.track')|capitalize}</button>
+</form>
+{/if}
 
-<tr>
-	<td width="0%" nowrap="nowrap" valign="top">
-		<div style="width:220px;">
-			{include file="file:$core_tpl/internal/views/criteria_list.tpl" divName="feedbackSearchFilters"}
-			<div id="feedbackSearchFilters" style="visibility:visible;"></div>
-		</div>
-	</td>
-	
-	<td nowrap="nowrap" width="0%" style="padding-right:5px;"></td>
-	
-	<td width="100%" valign="top">
-		<div id="view{$view->id}">{$view->render()}</div>
-	</td>
-	
-</tr>
-
-</table>
+{include file="$core_tpl/internal/views/search_and_view.tpl" view=$view}

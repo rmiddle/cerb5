@@ -129,7 +129,7 @@ class ChRest_Opps extends Extension_RestController implements IExtensionRestCont
 		if('dao'==$type) {
 			$tokens = array(
 				'amount' => DAO_CrmOpportunity::AMOUNT,
-				'assignee_id' => DAO_CrmOpportunity::WORKER_ID,
+//				'assignee_id' => DAO_CrmOpportunity::WORKER_ID,
 				'created' => DAO_CrmOpportunity::CREATED_DATE,
 				'email_id' => DAO_CrmOpportunity::PRIMARY_EMAIL_ID,
 				'is_closed' => DAO_CrmOpportunity::IS_CLOSED,
@@ -396,13 +396,13 @@ class ChRest_Opps extends Extension_RestController implements IExtensionRestCont
 			
 		// Post
 		$fields = array(
-			DAO_Note::SOURCE_EXTENSION_ID => CrmNotesSource_Opportunity::ID,
-			DAO_Note::SOURCE_ID => $opp->id,
-			DAO_Note::WORKER_ID => $worker->id,
-			DAO_Note::CREATED => time(),
-			DAO_Note::CONTENT => $note,
+			DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_OPPORTUNITY,
+			DAO_Comment::CONTEXT_ID => $opp->id,
+			DAO_Comment::ADDRESS_ID => $worker->getAddress()->id,
+			DAO_Comment::CREATED => time(),
+			DAO_Comment::COMMENT => $note,
 		);
-		$note_id = DAO_Note::create($fields);
+		$note_id = DAO_Comment::create($fields);
 			
 		$this->success(array(
 			'opp_id' => $opp->id,

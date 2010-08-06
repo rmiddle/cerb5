@@ -628,13 +628,11 @@ class ImportCron extends CerberusCronPageExtension {
 
 		// Last action code + last worker
 		$sLastActionCode = CerberusTicketActionCode::TICKET_OPENED;
-		$iLastWorkerId = 0;
 		if($iNumMessages > 1) {
-			if(null != (@$iLastWorkerId = $email_to_worker_id[strtolower($lastWroteInst->email)])) {
+			if(isset($email_to_worker_id[strtolower($lastWroteInst->email)])) {
 				$sLastActionCode = CerberusTicketActionCode::TICKET_WORKER_REPLY;
 			} else {
 				$sLastActionCode = CerberusTicketActionCode::TICKET_CUSTOMER_REPLY;
-				$iLastWorkerId = 0;
 			}
 		}
 		
@@ -666,7 +664,6 @@ class ImportCron extends CerberusCronPageExtension {
 			DAO_Ticket::TEAM_ID => intval($iDestGroupId),
 			DAO_Ticket::CATEGORY_ID => intval($iDestBucketId),
 			DAO_Ticket::LAST_ACTION_CODE => $sLastActionCode,
-			DAO_Ticket::LAST_WORKER_ID => intval($iLastWorkerId),
 		);
 		$ticket_id = DAO_Ticket::createTicket($fields);
 
@@ -797,12 +794,13 @@ class ImportCron extends CerberusCronPageExtension {
 			// [TODO] Sanity checking
 			
 			$fields = array(
-				DAO_TicketComment::TICKET_ID => intval($ticket_id),
-				DAO_TicketComment::CREATED => intval($iCommentDate),
-				DAO_TicketComment::ADDRESS_ID => intval($commentAuthorInst->id),
-				DAO_TicketComment::COMMENT => $sCommentText,
+				DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_TICKET,
+				DAO_Comment::CONTEXT_ID => intval($ticket_id),
+				DAO_Comment::CREATED => intval($iCommentDate),
+				DAO_Comment::ADDRESS_ID => intval($commentAuthorInst->id),
+				DAO_Comment::COMMENT => $sCommentText,
 			);
-			$comment_id = DAO_TicketComment::create($fields);
+			$comment_id = DAO_Comment::create($fields);
 			
 			unset($sCommentText);
 		}
@@ -976,13 +974,14 @@ class ImportCron extends CerberusCronPageExtension {
 
 		if(null !== ($ticket = DAO_Ticket::getTicketByMask($mask))) {
 			$fields = array(
-				DAO_TicketComment::CREATED => $created,
-				DAO_TicketComment::TICKET_ID => $ticket->id,
-				DAO_TicketComment::COMMENT => $note,
-				DAO_TicketComment::ADDRESS_ID => $author_address->id,
+				DAO_Comment::CREATED => $created,
+				DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_TICKET,
+				DAO_Comment::CONTEXT_ID => $ticket->id,
+				DAO_Comment::COMMENT => $note,
+				DAO_Comment::ADDRESS_ID => $author_address->id,
 			);
 			
-			if(null !== ($comment_id = DAO_TicketComment::create($fields)))
+			if(null !== ($comment_id = DAO_Comment::create($fields)))
 				return true;
 		}
 		

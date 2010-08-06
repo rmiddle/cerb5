@@ -1,3 +1,4 @@
+{$view_fields = $view->getColumnsAvailable()}
 {assign var=total value=$results[1]}
 {assign var=data value=$results[0]}
 <table cellpadding="0" cellspacing="0" border="0" class="worklist" width="100%">
@@ -61,7 +62,20 @@
 				{if $result.t_is_completed}
 					<span class="cerb-sprite sprite-check_gray" title="{$result.t_completed_date|devblocks_date}"></span>
 				{/if}
-				<a href="{devblocks_url}c=tasks&d=display&id={$result.t_id}{/devblocks_url}" class="subject">{if !empty($result.t_title)}{$result.t_title|escape}{else}New Task{/if}</a> <a href="javascript:;" onclick="genericAjaxPanel('c=tasks&a=showTaskPeek&id={$result.t_id}&view_id={$view->id}',null,false,'550');"><span class="ui-icon ui-icon-newwin" style="display:inline-block;vertical-align:middle;" title="{$translate->_('views.peek')}"></span></a>
+				<a href="{devblocks_url}c=tasks&d=display&id={$result.t_id}{/devblocks_url}" class="subject">{if !empty($result.t_title)}{$result.t_title|escape}{else}New Task{/if}</a> <a href="javascript:;" onclick="genericAjaxPopup('peek','c=tasks&a=showTaskPeek&id={$result.t_id}&view_id={$view->id}',null,false,'550');"><span class="ui-icon ui-icon-newwin" style="display:inline-block;vertical-align:middle;" title="{$translate->_('views.peek')}"></span></a>
+				
+				{$object_workers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_TASK, array_keys($data), CerberusContexts::CONTEXT_WORKER)}
+				{if isset($object_workers.{$result.t_id})}
+				<div style="display:inline;padding-left:5px;">
+				{foreach from=$object_workers.{$result.t_id} key=worker_id item=worker name=workers}
+					{if isset($workers.{$worker_id})}
+						<span style="color:rgb(150,150,150);">
+						{$workers.{$worker_id}->getName()}{if !$smarty.foreach.workers.last}, {/if}
+						</span>
+					{/if}
+				{/foreach}
+				</div>
+				{/if}
 			</td>
 		</tr>
 		<tr class="{$tableRowClass}">
@@ -88,27 +102,10 @@
 					<a href="{$result.t_url}" target="_blank">{$result.t_url|truncate:64:'...':true}</a>
 					{/if}
 				</td>
-			{elseif $column=="t_worker_id"}
-				<td>
-					{assign var=t_worker_id value=$result.t_worker_id}
-					{if isset($workers.$t_worker_id)}
-						{$workers.$t_worker_id->getName()}&nbsp;
-					{/if}
-				</td>
 			{elseif $column=="t_is_completed"}
 				<td>
 					{if $result.t_is_completed}
 					<span class="cerb-sprite sprite-check_gray"></span>
-					{/if}
-				</td>
-			{elseif $column=="t_source_extension"}
-				<td>
-					{assign var=source_extension value=$result.t_source_extension}
-					{assign var=source_id value=$result.t_source_id}
-					{assign var=source_renderer value=$source_renderers.$source_extension}
-					{if !empty($source_id) && !empty($source_renderer)}
-						{assign var=source_info value=$source_renderer->getSourceInfo($source_id)}
-						<a href="{$source_info.url}" title="{$source_info.name|escape}">{$source_info.name|truncate:75:'...':true|escape}</a>
 					{/if}
 				</td>
 			{else}
@@ -124,7 +121,8 @@
 	{if $total}
 	<tr>
 		<td colspan="2" valign="top">
-			{if $active_worker->hasPriv('core.tasks.actions.update_all')}<button type="button" onclick="genericAjaxPanel('c=tasks&a=showTaskBulkPanel&view_id={$view->id}&ids=' + Devblocks.getFormEnabledCheckboxValues('viewForm{$view->id}','row_id[]'),null,false,'500');"><span class="cerb-sprite sprite-folder_gear"></span> {'common.bulk_update'|devblocks_translate|lower}</button>{/if}
+			{if 'context'==$view->renderTemplate}<button type="button" onclick="removeSelectedContextLinks('{$view->id}');">Unlink</button>{/if}
+			{if $active_worker->hasPriv('core.tasks.actions.update_all')}<button type="button" onclick="genericAjaxPopup('peek','c=tasks&a=showTaskBulkPanel&view_id={$view->id}&ids=' + Devblocks.getFormEnabledCheckboxValues('viewForm{$view->id}','row_id[]'),null,false,'500');"><span class="cerb-sprite sprite-folder_gear"></span> {'common.bulk_update'|devblocks_translate|lower}</button>{/if}
 		</td>
 	</tr>
 	{/if}

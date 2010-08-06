@@ -149,7 +149,7 @@ function appendFileInput(divName,fieldName) {
 }
 
 var cAjaxCalls = function() {
-
+	// [TODO] We don't really need all this
 	this.showBatchPanel = function(view_id,target) {
 		var viewForm = document.getElementById('viewForm'+view_id);
 		if(null == viewForm) return;
@@ -172,9 +172,10 @@ var cAjaxCalls = function() {
 		
 		var ticket_ids = ids.join(','); // [TODO] Encode?
 	
-		genericAjaxPanel('c=tickets&a=showBatchPanel&view_id=' + view_id + '&ids=' + ticket_ids,target,false,'500');
+		genericAjaxPopup('peek','c=tickets&a=showBatchPanel&view_id=' + view_id + '&ids=' + ticket_ids,target,false,'500');
 	}
 
+	// [TODO] This isn't necessary with *any* other bulk update panel
 	this.saveBatchPanel = function(view_id) {
 		var divName = 'view'+view_id;
 		var formName = 'viewForm'+view_id;
@@ -205,9 +206,7 @@ var cAjaxCalls = function() {
 		genericAjaxPost('formBatchUpdate', '', 'c=tickets&a=doBatchUpdate', function(html) {
 			$('#'+divName).html(html);
 
-			if(null != genericPanel) {
-				genericPanel.dialog("close");
-			}
+			genericAjaxPopupClose('peek');
 			
 			document.location = '#top';
 			genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
@@ -216,6 +215,7 @@ var cAjaxCalls = function() {
 		});
 	}
 
+	// [TODO] This is not necessary
 	this.showAddressBatchPanel = function(view_id,target) {
 		var viewForm = document.getElementById('viewForm'+view_id);
 		if(null == viewForm) return;
@@ -238,9 +238,10 @@ var cAjaxCalls = function() {
 		
 		var row_ids = ids.join(','); // [TODO] Encode?
 	
-		genericAjaxPanel('c=contacts&a=showAddressBatchPanel&view_id=' + view_id + '&ids=' + row_ids,null,false,'500');
+		genericAjaxPopup('peek','c=contacts&a=showAddressBatchPanel&view_id=' + view_id + '&ids=' + row_ids,null,false,'500');
 	}
 	
+	// [TODO] This is not necessary
 	this.saveAddressBatchPanel = function(view_id) {
 		var divName = 'view'+view_id;
 		var formName = 'viewForm'+view_id;
@@ -271,9 +272,7 @@ var cAjaxCalls = function() {
 		genericAjaxPost('formBatchUpdate', '', 'c=contacts&a=doAddressBatchUpdate', function(html) {
 			$('#'+divName).html(html);
 
-			if(null != genericPanel) {
-				genericPanel.dialog("close");
-			}
+			genericAjaxPopupClose('peek');
 			
 			document.location = '#top';
 		});
@@ -287,10 +286,8 @@ var cAjaxCalls = function() {
 				
 				insertAtCursor(div, text);
 				div.focus();
-				
-				try {
-					genericPanel.dialog("close");
-				} catch(e) { } 
+
+				genericAjaxPopupClose('peek');
 			} 
 		);
 	}
@@ -402,12 +399,7 @@ var cAjaxCalls = function() {
 	
 				$('#'+view_id).fadeTo("slow", 1.0);
 	
-				if(null != genericPanel) {
-					try {
-						genericPanel.dialog('close');
-						genericPanel = null;
-					} catch(e) {}
-				}
+				genericAjaxPopupClose('peek');
 			}
 		);
 	}
@@ -493,6 +485,48 @@ var cAjaxCalls = function() {
 			options.minLength = 1;
 
 		$(sel).autocomplete(options);
+	}
+	
+	this.chooser = function(button, context, field_name, options) {
+		if(null == field_name)
+			field_name = 'context_id';
+		
+		if(null == options) 
+			options = { };
+		if(null == options.after)
+			options.after = true;
+		
+		$button = $(button);
+
+		$button.click(function(event) {
+			$button = $(this);
+			$chooser=genericAjaxPopup('chooser','c=internal&a=chooserOpen&context=' + context,null,true,'750');
+			$chooser.one('chooser_save', function(event) {
+				// Look for an existing label
+				if(!options.after)
+					$label = $button.prev('ul.chooser-container');
+				else
+					$label = $button.next('ul.chooser-container');
+				
+				// Add the container
+				if(0==$label.length) {
+					$label = $('<ul class="bubbles chooser-container"></ul>');
+					if(!options.after)
+						$label.insertBefore($button);
+					else
+						$label.insertAfter($button);
+				}
+				
+				// Add the labels
+				for(var idx in event.labels)
+					if(0==$label.find('input:hidden[value='+event.values[idx]+']').length) {
+						$li = $('<li>'+event.labels[idx]+'<input type="hidden" name="' + field_name + '[]" value="'+event.values[idx]+'"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>');
+						if(null != options.style)
+							$li.addClass(options.style);
+						$label.append($li);
+					}
+			});
+		});
 	}
 }
 

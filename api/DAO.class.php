@@ -135,6 +135,164 @@ class C4_ORMHelper extends DevblocksORMHelper {
 	}
 };
 
+class DAO_WorkerViewModel {
+	// [TODO] Add an 'ephemeral' bit to clear record on login
+	
+	/**
+	 * 
+	 * @param integer $worker_id
+	 * @param string $view_id
+	 * @return C4_AbstractViewModel or false
+	 */
+	static public function getView($worker_id, $view_id) {
+		$db = DevblocksPlatform::getDatabaseService();
+		
+		$fields = array(
+			'worker_id',
+			'view_id',
+			'is_ephemeral',
+			'class_name',
+			'title',
+			'columns_json',
+			'columns_hidden_json',
+			'params_editable_json',
+			'params_required_json',
+			'params_default_json',
+			'params_hidden_json',
+			'render_page',
+			'render_total',
+			'render_limit',
+			'render_sort_by',
+			'render_sort_asc',
+			'render_template',
+		);
+		
+		$row = $db->GetRow(sprintf("SELECT %s FROM worker_view_model WHERE worker_id = %d AND view_id = %s",
+			implode(',', $fields),
+			$worker_id,
+			$db->qstr($view_id)
+		));
+		
+		if(!empty($row)) {
+			$model = new C4_AbstractViewModel();
+			$model->id = $row['view_id'];
+			$model->is_ephemeral = $row['is_ephemeral'];
+			$model->class_name = $row['class_name'];
+			$model->name = $row['title'];
+			$model->renderPage = $row['render_page'];
+			$model->renderTotal = $row['render_total'];
+			$model->renderLimit = $row['render_limit'];
+			$model->renderSortBy = $row['render_sort_by'];
+			$model->renderSortAsc = $row['render_sort_asc'];
+			$model->renderTemplate = $row['render_template'];
+			
+			// JSON blocks
+			$model->view_columns = json_decode($row['columns_json'], true);
+			$model->columnsHidden = json_decode($row['columns_hidden_json'], true);
+			$model->paramsEditable = self::decodeParamsJson($row['params_editable_json']);
+			$model->paramsRequired = self::decodeParamsJson($row['params_required_json']);
+			$model->paramsDefault = self::decodeParamsJson($row['params_default_json']);
+			$model->paramsHidden = json_decode($row['params_hidden_json'], true);
+			
+			return $model;
+		}
+			
+		return false; 
+	}
+
+	static public function decodeParamsJson($json) {
+		$params = array();
+		
+		if(empty($json) || false === ($params_data = json_decode($json, true)))
+			return array();
+		
+		if(is_array($params_data))
+		foreach($params_data as $key => $data) {
+			if(is_numeric(key($data))) {
+				$params[$key] = self::_recurseParam($data);
+			} else {
+				$params[$key] = new DevblocksSearchCriteria($data['field'], $data['operator'], $data['value']); 
+			}
+		}
+		
+		return $params;
+	}
+	
+	static private function _recurseParam($group) {
+		$params = array();
+		
+		foreach($group as $key => $data) {
+			if(is_array($data)) {
+				if(is_numeric(key($data))) {
+					$params[$key] = array(array_shift($data)) + self::_recurseParam($data);
+				} else {
+					$param = new DevblocksSearchCriteria($data['field'], $data['operator'], $data['value']);
+					$params[$key] = $param;
+				}
+			} elseif(is_string($data)) {
+				$params[$key] = $data;
+			}
+		}
+		
+		return $params;
+	}
+	
+	static public function setView($worker_id, $view_id, C4_AbstractViewModel $model) {
+		$db = DevblocksPlatform::getDatabaseService();
+		
+		$fields = array(
+			'worker_id' => $worker_id,
+			'view_id' => $db->qstr($view_id),
+			'is_ephemeral' => !empty($model->is_ephemeral) ? 1 : 0,
+			'class_name' => $db->qstr($model->class_name),
+			'title' => $db->qstr($model->name),
+			'columns_json' => $db->qstr(json_encode($model->view_columns)),
+			'columns_hidden_json' => $db->qstr(json_encode($model->columnsHidden)),
+			'params_editable_json' => $db->qstr(json_encode($model->paramsEditable)),
+			'params_required_json' => $db->qstr(json_encode($model->paramsRequired)),
+			'params_default_json' => $db->qstr(json_encode($model->paramsDefault)),
+			'params_hidden_json' => $db->qstr(json_encode($model->paramsHidden)),
+			'render_page' => abs(intval($model->renderPage)),
+			'render_total' => !empty($model->renderTotal) ? 1 : 0,
+			'render_limit' => intval($model->renderLimit),
+			'render_sort_by' => $db->qstr($model->renderSortBy),
+			'render_sort_asc' => !empty($model->renderSortAsc) ? 1 : 0,
+			'render_template' => $db->qstr($model->renderTemplate),
+		);
+		
+		$db->Execute(sprintf("REPLACE INTO worker_view_model (%s)".
+			"VALUES (%s)",
+			implode(',', array_keys($fields)),
+			implode(',', $fields)
+		));
+	}
+	
+	static public function deleteView($worker_id, $view_id) {
+		$db = DevblocksPlatform::getDatabaseService();
+		
+		$db->Execute(sprintf("DELETE FROM worker_view_model WHERE worker_id = %d AND view_id = %s",
+			$worker_id,
+			$db->qstr($view_id)
+		));
+	}
+	
+	/**
+	 * Prepares for a new session by removing ephemeral views and 
+	 * resetting all page cursors to the first page of the list.
+	 * 
+	 * @param integer$worker_id
+	 */
+	static public function flush($worker_id) {
+		$db = DevblocksPlatform::getDatabaseService();
+		$db->Execute(sprintf("DELETE FROM worker_view_model WHERE worker_id = %d and is_ephemeral = 1",
+			$worker_id
+		));
+		$db->Execute(sprintf("UPDATE worker_view_model SET render_page = 0 WHERE worker_id = %d",
+			$worker_id
+		));
+	}
+};
+
 class DAO_WorkerRole extends DevblocksORMHelper {
 	const _CACHE_ALL = 'ch_acl';
 	
@@ -149,13 +307,11 @@ class DAO_WorkerRole extends DevblocksORMHelper {
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$id = $db->GenID('generic_seq');
-		
-		$sql = sprintf("INSERT INTO worker_role (id) ".
-			"VALUES (%d)",
-			$id
+		$sql = sprintf("INSERT INTO worker_role () ".
+			"VALUES ()"
 		);
 		$db->Execute($sql);
+		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
 		
@@ -394,15 +550,16 @@ class DAO_ViewRss extends DevblocksORMHelper {
 	
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
-		$newId = $db->GenID('generic_seq');
 		
-		$sql = sprintf("INSERT INTO view_rss (id,hash,title,worker_id,created,source_extension,params) ".
-			"VALUES (%d,'','',0,0,'','')",
-			$newId
+		$sql = sprintf("INSERT INTO view_rss () ".
+			"VALUES ()"
 		);
-		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
+		$id = $db->LastInsertId(); 
 		
-		self::update($newId, $fields);
+		self::update($id, $fields);
+		
+		return $id;
 	}
 	
 	/**
@@ -544,17 +701,16 @@ class DAO_Mail {
 	
 	static function createPop3Account($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
-		$newId = $db->GenID('generic_seq');
 		
-		$sql = sprintf("INSERT INTO pop3_account (id, enabled, nickname, host, username, password) ".
-			"VALUES (%d,0,'','','','')",
-			$newId
+		$sql = sprintf("INSERT INTO pop3_account () ".
+			"VALUES ()"
 		);
-		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
+		$id = $db->LastInsertId(); 
 		
-		self::updatePop3Account($newId, $fields);
+		self::updatePop3Account($id, $fields);
 		
-		return $newId;
+		return $id;
 	}
 	
 	static function getPop3Accounts($ids=array()) {
@@ -650,14 +806,12 @@ class DAO_MailToGroupRule extends DevblocksORMHelper {
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$id = $db->GenID('generic_seq');
-		
-		$sql = sprintf("INSERT INTO mail_to_group_rule (id, created) ".
-			"VALUES (%d, %d)",
-			$id,
+		$sql = sprintf("INSERT INTO mail_to_group_rule (created) ".
+			"VALUES (%d)",
 			time()
 		);
 		$db->Execute($sql);
+		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
 		
@@ -771,13 +925,11 @@ class DAO_WorkerWorkspaceList extends DevblocksORMHelper {
 		if(empty($fields))
 			return NULL;
 		
-		$id = $db->GenID('generic_seq');
-		
-		$sql = sprintf("INSERT INTO worker_workspace_list (id, worker_id, workspace, source_extension, list_view, list_pos) ".
-			"VALUES (%d, 0, '', '', '',0)",
-			$id
+		$sql = sprintf("INSERT INTO worker_workspace_list () ".
+			"VALUES ()"
 		);
 		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
+		$id = $db->LastInsertId();
 
 		self::update($id, $fields);
 		
@@ -881,136 +1033,6 @@ class DAO_WorkerWorkspaceList extends DevblocksORMHelper {
 	}
 };
 
-class DAO_TicketComment extends DevblocksORMHelper {
-	const ID = 'id';
-	const TICKET_ID = 'ticket_id';
-	const ADDRESS_ID = 'address_id';
-	const CREATED = 'created';
-	const COMMENT = 'comment';
-
-	static function create($fields) {
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$id = $db->GenID('ticket_comment_seq');
-		
-		$sql = sprintf("INSERT INTO ticket_comment (id) ".
-			"VALUES (%d)",
-			$id
-		);
-		$db->Execute($sql);
-		
-		self::update($id, $fields);
-		
-		/* This event fires after the change takes place in the db,
-		 * which is important if the listener needs to stack changes
-		 */
-		if(!empty($fields[self::TICKET_ID]) && !empty($fields[self::ADDRESS_ID]) && !empty($fields[self::COMMENT])) {
-		    $eventMgr = DevblocksPlatform::getEventService();
-		    $eventMgr->trigger(
-		        new Model_DevblocksEvent(
-		            'ticket.comment.create',
-	                array(
-						'comment_id' => $id,
-	                    'ticket_id' => $fields[self::TICKET_ID],
-	                    'address_id' => $fields[self::ADDRESS_ID],
-	                    'comment' => $fields[self::COMMENT],
-	                )
-	            )
-		    );
-		}
-		
-		return $id;
-	}
-	
-	static function update($ids, $fields) {
-		parent::_update($ids, 'ticket_comment', $fields);
-	}
-	
-	/**
-	 * @param string $where
-	 * @return Model_TicketComment[]
-	 */
-	static function getWhere($where=null) {
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$sql = "SELECT id, ticket_id, address_id, created, comment ".
-			"FROM ticket_comment ".
-			(!empty($where) ? sprintf("WHERE %s ",$where) : "").
-			"ORDER BY created asc";
-		$rs = $db->Execute($sql);
-		
-		return self::_getObjectsFromResult($rs);
-	}
-	
-	static function getByTicketId($id) {
-		return self::getWhere(sprintf("%s = %d",
-			self::TICKET_ID,
-			$id
-		));
-	}
-	
-	static function getCountByTicketId($id) {
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$sql = sprintf("SELECT count(id) FROM ticket_comment WHERE ticket_id = %d",
-			$id
-		);
-		return $db->GetOne($sql);
-	}
-
-	/**
-	 * @param integer $id
-	 * @return Model_TicketComment	 */
-	static function get($id) {
-		$objects = self::getWhere(sprintf("%s = %d",
-			self::ID,
-			$id
-		));
-		
-		if(isset($objects[$id]))
-			return $objects[$id];
-		
-		return null;
-	}
-	
-	/**
-	 * @param resource $rs
-	 * @return Model_TicketComment[]
-	 */
-	static private function _getObjectsFromResult($rs) {
-		$objects = array();
-		
-		while($row = mysql_fetch_assoc($rs)) {
-			$object = new Model_TicketComment();
-			$object->id = $row['id'];
-			$object->ticket_id = $row['ticket_id'];
-			$object->address_id = $row['address_id'];
-			$object->created = $row['created'];
-			$object->comment = $row['comment'];
-			$objects[$object->id] = $object;
-		}
-		
-		mysql_free_result($rs);
-		
-		return $objects;
-	}
-	
-	static function delete($ids) {
-		if(!is_array($ids)) $ids = array($ids);
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		if(empty($ids))
-			return;
-		
-		$ids_list = implode(',', $ids);
-		
-		$db->Execute(sprintf("DELETE QUICK FROM ticket_comment WHERE id IN (%s)", $ids_list));
-		
-		return true;
-	}
-
-};
-
 class DAO_CustomField extends DevblocksORMHelper {
 	const ID = 'id';
 	const NAME = 'name';
@@ -1024,13 +1046,12 @@ class DAO_CustomField extends DevblocksORMHelper {
 	
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
-		$id = $db->GenID('custom_field_seq');
 		
-		$sql = sprintf("INSERT INTO custom_field (id,name,type,source_extension,group_id,pos,options) ".
-			"VALUES (%d,'','','',0,0,'')",
-			$id
+		$sql = sprintf("INSERT INTO custom_field () ".
+			"VALUES ()"
 		);
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
+		$id = $db->LastInsertId(); 
 
 		self::update($id, $fields);
 		
@@ -1651,170 +1672,5 @@ class DAO_CustomFieldValue extends DevblocksORMHelper {
 			$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
 		}
 
-	}
-};
-
-class DAO_Overview {
-	static function getGroupTotals() {
-		$db = DevblocksPlatform::getDatabaseService();
-
-		$active_worker = CerberusApplication::getActiveWorker();
-		$memberships = $active_worker->getMemberships();
-
-		// Does the active worker want to filter anything out?
-		// [TODO] DAO_WorkerPref should really auto serialize/deserialize
-		
-		if(empty($memberships))
-			return array();
-		
-		// Group Loads
-		$sql = sprintf("SELECT count(*) AS hits, team_id, category_id ".
-		"FROM ticket ".
-		"WHERE is_waiting = 0 AND is_closed = 0 AND is_deleted = 0 ".
-		"GROUP BY team_id, category_id "
-		);
-		$rs = $db->Execute($sql);
-
-		$group_counts = array();
-		while($row = mysql_fetch_assoc($rs)) {
-			$team_id = intval($row['team_id']);
-			$category_id = intval($row['category_id']);
-			$hits = intval($row['hits']);
-				
-			if(isset($memberships[$team_id])) {
-				// If the active worker is filtering out these buckets, don't total.
-				if(!isset($group_counts[$team_id]))
-					$group_counts[$team_id] = array();
-
-				$group_counts[$team_id][$category_id] = $hits;
-				@$group_counts[$team_id]['total'] = intval($group_counts[$team_id]['total']) + $hits;
-			}
-		}
-		
-		mysql_free_result($rs);
-
-		return $group_counts;
-	}
-
-	static function getWaitingTotals() {
-		$db = DevblocksPlatform::getDatabaseService();
-
-		$active_worker = CerberusApplication::getActiveWorker();
-		$memberships = $active_worker->getMemberships();
-
-		if(empty($memberships))
-			return array();
-		
-		// Waiting For Reply Loads
-		$sql = sprintf("SELECT count(*) AS hits, team_id, category_id ".
-		"FROM ticket ".
-		"WHERE is_waiting = 1 AND is_closed = 0 AND is_deleted = 0 ".
-		"GROUP BY team_id, category_id "
-		);
-		$rs = $db->Execute($sql);
-
-		$waiting_counts = array();
-		while($row = mysql_fetch_assoc($rs)) {
-			$team_id = intval($row['team_id']);
-			$category_id = intval($row['category_id']);
-			$hits = intval($row['hits']);
-				
-			if(isset($memberships[$team_id])) {
-				if(!isset($waiting_counts[$team_id]))
-				$waiting_counts[$team_id] = array();
-
-				$waiting_counts[$team_id][$category_id] = $hits;
-				@$waiting_counts[$team_id]['total'] = intval($waiting_counts[$team_id]['total']) + $hits;
-			}
-		}
-		
-		mysql_free_result($rs);
-
-		return $waiting_counts;
-	}
-
-	static function getWorkerTotals() {
-		$db = DevblocksPlatform::getDatabaseService();
-
-		$active_worker = CerberusApplication::getActiveWorker();
-		$memberships = $active_worker->getMemberships();
-		
-		if(empty($memberships))
-			return array();
-		
-		// Worker Loads
-		$sql = sprintf("SELECT count(*) AS hits, t.team_id, t.next_worker_id ".
-			"FROM ticket t ".
-			"WHERE t.is_waiting = 0 AND t.is_closed = 0 AND t.is_deleted = 0 ".
-			"AND t.next_worker_id > 0 ".
-			"AND t.team_id IN (%s) ".
-			"GROUP BY t.team_id, t.next_worker_id ",
-			implode(',', array_keys($memberships))
-		);
-		$rs = $db->Execute($sql);
-
-		$worker_counts = array();
-		while($row = mysql_fetch_assoc($rs)) {
-			$hits = intval($row['hits']);
-			$team_id = intval($row['team_id']);
-			$worker_id = intval($row['next_worker_id']);
-				
-			if(!isset($worker_counts[$worker_id]))
-			$worker_counts[$worker_id] = array();
-				
-			$worker_counts[$worker_id][$team_id] = $hits;
-			@$worker_counts[$worker_id]['total'] = intval($worker_counts[$worker_id]['total']) + $hits;
-		}
-		
-		mysql_free_result($rs);
-
-		return $worker_counts;
-	}
-}
-
-class DAO_WorkflowView {
-	static function getGroupTotals() {
-		$db = DevblocksPlatform::getDatabaseService();
-
-		$active_worker = CerberusApplication::getActiveWorker();
-		$memberships = $active_worker->getMemberships();
-
-		if(empty($memberships))
-			return array();
-		
-		// Group Loads
-		$sql = sprintf("SELECT count(t.id) AS hits, t.team_id, t.category_id ".
-			"FROM ticket t ".
-			"LEFT JOIN category c ON (t.category_id=c.id) ".
-			"WHERE t.is_waiting = 0 AND t.is_closed = 0 AND t.is_deleted = 0 ".
-			"AND t.next_worker_id = 0 ".
-			"AND (c.id IS NULL OR c.is_assignable = 1) ".
-			"GROUP BY t.team_id, c.pos "
-		);
-		$rs = $db->Execute($sql);
-
-		$group_counts = array();
-		while($row = mysql_fetch_assoc($rs)) {
-			$team_id = intval($row['team_id']);
-			$category_id = intval($row['category_id']);
-			$hits = intval($row['hits']);
-				
-			if(isset($memberships[$team_id])) {
-				// If the group manager doesn't want this group inbox assignable (default to YES)
-				if(empty($category_id) && !DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_INBOX_IS_ASSIGNABLE, 1)) {
-					// ...skip the unassignable inbox	
-				} else {
-					if(!isset($group_counts[$team_id]))
-						$group_counts[$team_id] = array();
-						
-					$group_counts[$team_id][$category_id] = $hits;
-					@$group_counts[$team_id]['total'] = intval($group_counts[$team_id]['total']) + $hits;
-				}
-			}
-		}
-		
-		mysql_free_result($rs);
-
-		return $group_counts;
 	}
 };
