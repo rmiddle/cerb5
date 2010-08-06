@@ -64,7 +64,7 @@
 		<td>
 			<button id="btnSaveDraft" type="button" onclick="genericAjaxPost('frmCompose',null,'c=tickets&a=saveDraft&type=compose',function(json) { var obj = $.parseJSON(json); if(!obj || !obj.html || !obj.draft_id) return; $('#divDraftStatus').html(obj.html); $('#frmCompose input[name=draft_id]').val(obj.draft_id); } );"><span class="cerb-sprite sprite-check"></span> Save Draft</button>
 			<button type="button" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id='+selectValue(this.form.team_id),function(text) { insertAtCursor(document.getElementById('content'),text); } );"><span class="cerb-sprite sprite-document_edit"></span> Insert Signature</button>
-			<button type="button" onclick="genericAjaxPanel('c=display&a=showSnippets&text=content&contexts=cerberusweb.contexts.worker',null,false,'550');"><span class="cerb-sprite sprite-text_rich"></span> {$translate->_('common.snippets')|capitalize}</button>
+			<button type="button" onclick="genericAjaxPopup('peek','c=display&a=showSnippets&text=content&contexts=cerberusweb.contexts.worker',null,false,'550');"><span class="cerb-sprite sprite-text_rich"></span> {$translate->_('common.snippets')|capitalize}</button>
 			{* Plugin Toolbar *}
 			{if !empty($sendmail_toolbaritems)}
 				{foreach from=$sendmail_toolbaritems item=renderer}
@@ -219,30 +219,12 @@
 								<br>
 								</div>
 		
-								<b>{$translate->_('display.reply.next.handle_reply')}</b><br>
-						      	<select name="next_worker_id" onchange="toggleDiv('replySurrender{$message->id}',this.selectedIndex?'block':'none');">
-						      		<option value="0" selected="selected">{$translate->_('common.anybody')|capitalize}
-						      		{foreach from=$workers item=worker key=worker_id name=workers}
-										{if $worker_id==$active_worker->id || $active_worker->hasPriv('core.ticket.actions.assign')}
-							      			{if $worker_id==$active_worker->id}{assign var=next_worker_id_sel value=$smarty.foreach.workers.iteration}{/if}
-							      			<option value="{$worker_id}">{$worker->getName()}
-										{/if}
-						      		{/foreach}
-						      	</select>&nbsp;
-						      	{if $active_worker->hasPriv('core.ticket.actions.assign') && !empty($next_worker_id_sel)}
-						      		<button type="button" onclick="this.form.next_worker_id.selectedIndex = {$next_worker_id_sel};toggleDiv('replySurrender{$message->id}','block');">{$translate->_('common.me')|lower}</button>
-						      		<button type="button" onclick="this.form.next_worker_id.selectedIndex = 0;toggleDiv('replySurrender{$message->id}','none');">{$translate->_('common.anybody')|lower}</button>
-						      	{/if}
-						      	<br>
-						      	<br>
-						      	
-						      	<div id="replySurrender{$message->id}" style="display:none;margin-left:10px;">
-									<b>{$translate->_('display.reply.next.handle_reply_after')}</b> {$translate->_('display.reply.next.handle_reply_after_eg')}<br>  
-							      	<input type="text" name="unlock_date" size="32" maxlength="255" value="">
-							      	<button type="button" onclick="this.form.unlock_date.value='+2 hours';">{$translate->_('display.reply.next.handle_reply_after_2hrs')}</button>
+								{if $active_worker->hasPriv('core.ticket.actions.assign')}
+									<b>{$translate->_('display.reply.next.handle_reply')}</b><br>
+									<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-add"></span></button>
 							      	<br>
 							      	<br>
-							    </div>
+								{/if}
 		
 								{if $active_worker->hasPriv('core.ticket.actions.move')}
 								<b>{$translate->_('display.reply.next.move')}</b><br>  
@@ -289,7 +271,7 @@
 </form>
 </div>
 
-<script language="JavaScript1.2" type="text/javascript">
+<script type="text/javascript">
 	$(function() {
 		ajax.emailAutoComplete('#frmCompose input[name=to]', { multiple: true } );
 		ajax.emailAutoComplete('#frmCompose input[name=cc]', { multiple: true } );
@@ -298,5 +280,9 @@
 		$('#frmCompose').validate();
 		
 		setInterval("$('#btnSaveDraft').click();", 30000);
-	} );
+		
+		$('#frmCompose button.chooser_worker').each(function() {
+			ajax.chooser(this,'cerberusweb.contexts.worker','worker_id');
+		});		
+	});
 </script>

@@ -1947,6 +1947,8 @@ class _DevblocksSessionManager {
 		static $instance = null;
 		if(null == $instance) {
 		    $db = DevblocksPlatform::getDatabaseService();
+		    $url_writer = DevblocksPlatform::getUrlService();
+		    
 			if(is_null($db) || !$db->isConnected()) { 
 				return null;
 			}
@@ -1967,7 +1969,7 @@ class _DevblocksSessionManager {
 			);
 			
 			session_name(APP_SESSION_NAME);
-			session_set_cookie_params(0);
+			session_set_cookie_params(0, NULL, NULL, $url_writer->isSSL(), true);
 			session_start();
 			
 			$instance = new _DevblocksSessionManager();
@@ -2652,7 +2654,7 @@ class _DevblocksEventManager {
 		}
 
 		// [TODO] Make sure we can't get a double listener
-	    if(is_array($events['*']))
+	    if(isset($events['*']) && is_array($events['*']))
 	    foreach($events['*'] as $evt) {
 	        $listeners[] = $evt;
 	    }
@@ -4310,21 +4312,8 @@ class _DevblocksDatabaseManager {
 		
 		return false;
 	}
-	
-	function GenID($seq) {
-		// Attempt to update and see if we fail, if so we need to create table
-		if(false === ($rs = $this->Execute("UPDATE ${seq} SET id=LAST_INSERT_ID(id+1)"))) {
-			// Create the table
-			$sql = "
-				CREATE TABLE IF NOT EXISTS ${seq} (
-					id INT UNSIGNED NOT NULL
-				) ENGINE=MyISAM;
-			";
-			$this->Execute($sql);
-			$this->Execute(sprintf("INSERT INTO ${seq} (id) VALUES (1)"));
-			return 1;
-		}
-		
+
+	function LastInsertId() {
 		return mysql_insert_id($this->_db);
 	}
 	

@@ -61,7 +61,7 @@ class ChAuditLogEventListener extends DevblocksEventListenerExtension {
             	DAO_TicketAuditLog::maint();
             	break;
             
-            case 'ticket.merge':
+            case 'ticket.action.merge':
             	// Listen for ticket merges and update our internal ticket_id records
             	
             	@$new_ticket_id = $event->params['new_ticket_id'];
@@ -81,49 +81,45 @@ class ChAuditLogEventListener extends DevblocksEventListenerExtension {
             	
             	break;
             	
-            case 'ticket.property.pre_change':
-            	@$ticket_ids = $event->params['ticket_ids'];
-            	@$changed_fields = $event->params['changed_fields'];
-
-            	// Filter out any mandatory changes we could care less about
-				unset($changed_fields[DAO_Ticket::UPDATED_DATE]);
-				unset($changed_fields[DAO_Ticket::MASK]);
-				unset($changed_fields[DAO_Ticket::FIRST_MESSAGE_ID]);
-				unset($changed_fields[DAO_Ticket::LAST_MESSAGE_ID]);
-				unset($changed_fields[DAO_Ticket::FIRST_WROTE_ID]);
-				unset($changed_fields[DAO_Ticket::LAST_WROTE_ID]);
-				unset($changed_fields[DAO_Ticket::INTERESTING_WORDS]);
+            case 'dao.ticket.update':
+            	@$objects = $event->params['objects'];
             	
-            	@$tickets = DAO_Ticket::getTickets($ticket_ids);
-            	// Is a worker around to invoke this change?  0 = automatic
-            	@$worker_id = (null != ($active_worker = CerberusApplication::getActiveWorker()) && !empty($active_worker->id))
-            		? $active_worker->id
-            		: 0;
-            	
-            	if(is_array($tickets) 
-            		&& !empty($tickets) 
-            		&& is_array($changed_fields) 
-            		&& !empty($changed_fields))
-            	foreach($tickets as $ticket_id => $ticket) { /* @var $ticket Model_Ticket */
-            		foreach($changed_fields as $changed_field => $changed_value) {
-            			if(is_array($changed_value))
-							$changed_value = implode("\r\n", $changed_value);
+            	foreach($objects as $object_id => $object) {
+            		$model = $object['model'];
+            		$changes = $object['changes'];
+            		
+	            	// Filter out any mandatory changes we could care less about
+					unset($changes[DAO_Ticket::UPDATED_DATE]);
+					unset($changes[DAO_Ticket::MASK]);
+					unset($changes[DAO_Ticket::FIRST_MESSAGE_ID]);
+					unset($changes[DAO_Ticket::LAST_MESSAGE_ID]);
+					unset($changes[DAO_Ticket::FIRST_WROTE_ID]);
+					unset($changes[DAO_Ticket::LAST_WROTE_ID]);
+					unset($changes[DAO_Ticket::INTERESTING_WORDS]);
+            		
+	            	// Is a worker around to invoke this change?  0 = automatic
+	            	@$worker_id = (null != ($active_worker = CerberusApplication::getActiveWorker()) && !empty($active_worker->id))
+	            		? $active_worker->id
+	            		: 0;
+	            		
+	            	if(!empty($changes))
+	            	foreach($changes as $key => $change) {
+	            		$value = $change['to'];
+	            		
+            			if(is_array($value))
+							$value = implode("\r\n", $value);
 						
-            			// If different
-            			if(isset($ticket->$changed_field) 
-            				&& 0 != strcmp($ticket->$changed_field,$changed_value)) {
-		            		$fields = array(
-		            			DAO_TicketAuditLog::TICKET_ID => $ticket_id,
-		            			DAO_TicketAuditLog::WORKER_ID => $worker_id,
-		            			DAO_TicketAuditLog::CHANGE_DATE => time(),
-		            			DAO_TicketAuditLog::CHANGE_FIELD => $changed_field,
-		            			DAO_TicketAuditLog::CHANGE_VALUE => substr($changed_value,0,128),
-		            		);
-			            	$log_id = DAO_TicketAuditLog::create($fields);
-            			}
-            		}
-            	}
-            	break;
+	            		$fields = array(
+	            			DAO_TicketAuditLog::TICKET_ID => $object_id,
+	            			DAO_TicketAuditLog::WORKER_ID => $worker_id,
+	            			DAO_TicketAuditLog::CHANGE_DATE => time(),
+	            			DAO_TicketAuditLog::CHANGE_FIELD => $key,
+	            			DAO_TicketAuditLog::CHANGE_VALUE => substr($value,0,128),
+	            		);
+		            	$log_id = DAO_TicketAuditLog::create($fields);
+	            	}
+				}
+           		break;
         }
     }
 };
@@ -154,7 +150,6 @@ class ChAuditLogTicketTab extends Extension_TicketTab {
 			SearchFields_TicketAuditLog::CHANGE_FIELD,
 			SearchFields_TicketAuditLog::CHANGE_VALUE,
 		);
-		$defaults->params = array();
 		$defaults->renderLimit = 15;
 		$defaults->renderPage = 0;
 		$defaults->renderSortBy = SearchFields_TicketAuditLog::CHANGE_DATE;
@@ -162,9 +157,9 @@ class ChAuditLogTicketTab extends Extension_TicketTab {
 		
 		$view = C4_AbstractViewLoader::getView('audit_log', $defaults);
 		
-		$view->params = array(
+		$view->addParams(array(
 			SearchFields_TicketAuditLog::TICKET_ID => new DevblocksSearchCriteria(SearchFields_TicketAuditLog::TICKET_ID,DevblocksSearchCriteria::OPER_EQ,$ticket_id)
-		);
+		), true);
 		$view->renderPage = 0;
 		
 		C4_AbstractViewLoader::setView($view->id,$view);
@@ -190,14 +185,12 @@ class DAO_TicketAuditLog extends DevblocksORMHelper {
 	public static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$id = $db->GenID('ticket_audit_log_seq');
-		
-		$sql = sprintf("INSERT INTO ticket_audit_log (id, worker_id, ticket_id, change_date, change_field, change_value) ".
-			"VALUES (%d,0,0,%d,'','')",
-			$id,
+		$sql = sprintf("INSERT INTO ticket_audit_log (change_date) ".
+			"VALUES (%d)",
 			time()
 		);
 		$db->Execute($sql);
+		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
 		
@@ -293,32 +286,42 @@ class DAO_TicketAuditLog extends DevblocksORMHelper {
 
         list($tables,$wheres) = parent::_parseSearchParams($params, array(), $fields,$sortBy);
 		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
-		$total = -1;
 		
-		$sql = sprintf("SELECT ".
+		$select_sql = sprintf("SELECT ".
 			"l.id as %s, ".
 			"l.ticket_id as %s, ".
 			"l.worker_id as %s, ".
 			"l.change_date as %s, ".
 			"l.change_field as %s, ".
-			"l.change_value as %s ".
-			"FROM ticket_audit_log l ",
-//			"INNER JOIN team tm ON (tm.id = t.team_id) ".
+			"l.change_value as %s ",
 			    SearchFields_TicketAuditLog::ID,
 			    SearchFields_TicketAuditLog::TICKET_ID,
 			    SearchFields_TicketAuditLog::WORKER_ID,
 			    SearchFields_TicketAuditLog::CHANGE_DATE,
 			    SearchFields_TicketAuditLog::CHANGE_FIELD,
 			    SearchFields_TicketAuditLog::CHANGE_VALUE
-			).
+			);
 			
+		$join_sql = "FROM ticket_audit_log l "
 			// [JAS]: Dynamic table joins
+//			"INNER JOIN team tm ON (tm.id = t.team_id) ".
 //			(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
-			
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "").
-			(!empty($sortBy) ? sprintf("ORDER BY %s %s",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : "")
 		;
-		// [TODO] Could push the select logic down a level too
+
+		$where_sql = "".
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
+		
+		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
+
+		$has_multiple_values = false;
+		
+		$sql = 
+			$select_sql.
+			$join_sql.
+			$where_sql.
+			($has_multiple_values ? 'GROUP BY l.id ' : '').
+			$sort_sql;
+		
 		if($limit > 0) {
     		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		} else {
@@ -338,14 +341,18 @@ class DAO_TicketAuditLog extends DevblocksORMHelper {
 		}
 
 		// [JAS]: Count all
+		$total = -1;
 		if($withCounts) {
-		    $rs = $db->Execute($sql);
-		    $total = mysql_num_rows($rs);
+			$count_sql = 
+				($has_multiple_values ? "SELECT COUNT(DISTINCT l.id) " : "SELECT COUNT(l.id) ").
+				$join_sql.
+				$where_sql;
+			$total = $db->GetOne($count_sql);
 		}
 		
 		mysql_free_result($rs);
 		
-		return array($results,$total);
+		return array($results, $total);
     }
 	
 };
@@ -408,11 +415,17 @@ class C4_TicketAuditLogView extends C4_AbstractView {
 			SearchFields_TicketAuditLog::CHANGE_FIELD,
 			SearchFields_TicketAuditLog::CHANGE_VALUE,
 		);
+		
+		$this->paramsHidden = array(
+			SearchFields_TicketAuditLog::ID,
+		);
+		
+		$this->doResetCriteria();
 	}
 	
 	function getData() {
 		$objects = DAO_TicketAuditLog::search(
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -428,7 +441,6 @@ class C4_TicketAuditLogView extends C4_AbstractView {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
-		$tpl->assign('view_fields', $this->getColumns());
 		
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
@@ -460,19 +472,8 @@ class C4_TicketAuditLogView extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_TicketAuditLog::getFields();
-	}
-	
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_TicketAuditLog::ID]);
-		return $fields;
-	}
-	
-	static function getColumns() {
-		$fields = self::getFields();
-		return $fields;
 	}
 	
 	function doSetCriteria($field, $oper, $value) {
@@ -495,7 +496,7 @@ class C4_TicketAuditLogView extends C4_AbstractView {
 		}
 		
 		if(!empty($criteria)) {
-			$this->params[$field] = $criteria;
+			$this->addParam($criteria);
 			$this->renderPage = 0;
 		}
 	}	

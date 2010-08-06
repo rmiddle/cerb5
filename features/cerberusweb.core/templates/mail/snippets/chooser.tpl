@@ -6,16 +6,17 @@
   	{$view->render()}
 </div>
 
-<script language="JavaScript1.2" type="text/javascript">
-	genericPanel.one('dialogopen',function(event,ui) {
-		genericPanel.dialog('option','title',"Snippets");
+<script type="text/javascript">
+	$popup = genericAjaxPopupFetch('peek');
+	$popup.one('popup_open',function(event,ui) {
+		$(this).dialog('option','title',"Snippets");
 		$('#view{$view->id}').data('context_id','{$context_id}');
 		$('#view{$view->id}').data('text_element','{$text_element}');
 		
 		$('#frmSnippetChooser input:text:first').focus();
 		
-		var $snippetWaitTime = 0;
-		var $snippetTimer = null;
+		$snippetWaitTime = 0;
+		$snippetTimer = null;
 		$('#frmSnippetChooser input:text[name=term]').bind('keyup', function(evt) {
 			var $term = $(evt.target).val();
 			
