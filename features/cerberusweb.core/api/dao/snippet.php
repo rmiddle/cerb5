@@ -60,13 +60,11 @@ class DAO_Snippet extends DevblocksORMHelper {
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$id = $db->GenID('snippet_seq');
-		
-		$sql = sprintf("INSERT INTO snippet (id) ".
-			"VALUES (%d)",
-			$id
+		$sql = sprintf("INSERT INTO snippet () ".
+			"VALUES ()"
 		);
 		$db->Execute($sql);
+		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
 		
@@ -256,7 +254,7 @@ class DAO_Snippet extends DevblocksORMHelper {
 		//);
 				
 		$where_sql = "".
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "");
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
 			
@@ -382,6 +380,14 @@ class View_Snippet extends C4_AbstractView {
 			SearchFields_Snippet::LAST_UPDATED,
 			SearchFields_Snippet::LAST_UPDATED_BY,
 		);
+		$this->columnsHidden = array(
+			SearchFields_Snippet::CONTENT,
+		);
+		
+		$this->paramsHidden = array(
+			SearchFields_Snippet::ID,
+			SearchFields_Snippet::USAGE_HITS,
+		);
 		
 		$this->doResetCriteria();
 	}
@@ -389,7 +395,7 @@ class View_Snippet extends C4_AbstractView {
 	function getData() {
 		$objects = DAO_Snippet::search(
 			array(),
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -406,8 +412,6 @@ class View_Snippet extends C4_AbstractView {
 		$tpl_path = APP_PATH . '/features/cerberusweb.core/templates';
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
-
-		$tpl->assign('view_fields', $this->getColumns());
 
 		switch($this->renderTemplate) {
 			case 'chooser':
@@ -463,31 +467,10 @@ class View_Snippet extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_Snippet::getFields();
 	}
 
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_Snippet::ID]);
-		unset($fields[SearchFields_Snippet::USAGE_HITS]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_Snippet::CONTENT]);
-		return $fields;
-	}
-
-	function doResetCriteria() {
-		parent::doResetCriteria();
-		
-		$this->params = array(
-			//SearchFields_Snippet::ID => new DevblocksSearchCriteria(SearchFields_Snippet::ID,'!=',0),
-		);
-	}
-	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -530,7 +513,7 @@ class View_Snippet extends C4_AbstractView {
 		}
 
 		if(!empty($criteria)) {
-			$this->params[$field] = $criteria;
+			$this->addParam($criteria);
 			$this->renderPage = 0;
 		}
 	}
@@ -566,7 +549,7 @@ class View_Snippet extends C4_AbstractView {
 		if(empty($ids))
 		do {
 			list($objects,$null) = DAO_Snippet::search(
-				$this->params,
+				$this->getParams(),
 				100,
 				$pg++,
 				SearchFields_Snippet::ID,

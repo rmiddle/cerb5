@@ -69,13 +69,12 @@ class DAO_Worker extends C4_ORMHelper {
 			return NULL;
 			
 		$db = DevblocksPlatform::getDatabaseService();
-		$id = $db->GenID('generic_seq');
 		
-		$sql = sprintf("INSERT INTO worker (id, email, pass, first_name, last_name, title, is_superuser, is_disabled) ".
-			"VALUES (%d, '', '', '', '', '', 0, 0)",
-			$id
+		$sql = sprintf("INSERT INTO worker () ".
+			"VALUES ()"
 		);
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
+		$id = $db->LastInsertId(); 
 
 		self::update($id, $fields);
 		
@@ -288,8 +287,11 @@ class DAO_Worker extends C4_ORMHelper {
 		
 		$sql = "DELETE QUICK worker_pref FROM worker_pref LEFT JOIN worker ON worker_pref.worker_id = worker.id WHERE worker.id IS NULL";
 		$db->Execute($sql);
-		
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' worker_pref records.');
+
+		$sql = "DELETE QUICK worker_view_model FROM worker_view_model LEFT JOIN worker ON worker_view_model.worker_id = worker.id WHERE worker.id IS NULL";
+		$db->Execute($sql);
+		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' worker_view_model records.');
 		
 		$sql = "DELETE QUICK worker_to_team FROM worker_to_team LEFT JOIN worker ON worker_to_team.agent_id = worker.id WHERE worker.id IS NULL";
 		$db->Execute($sql);
@@ -298,6 +300,17 @@ class DAO_Worker extends C4_ORMHelper {
 		
 		$sql = "DELETE QUICK worker_workspace_list FROM worker_workspace_list LEFT JOIN worker ON worker_workspace_list.worker_id = worker.id WHERE worker.id IS NULL";
 		$db->Execute($sql);
+		
+		// Context Links
+		$db->Execute(sprintf("DELETE QUICK context_link FROM context_link LEFT JOIN worker ON context_link.from_context_id=worker.id WHERE context_link.from_context = %s AND worker.id IS NULL",
+			$db->qstr(CerberusContexts::CONTEXT_WORKER)
+		));
+		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' worker context link sources.');
+		
+		$db->Execute(sprintf("DELETE QUICK context_link FROM context_link LEFT JOIN worker ON context_link.to_context_id=worker.id WHERE context_link.to_context = %s AND worker.id IS NULL",
+			$db->qstr(CerberusContexts::CONTEXT_WORKER)
+		));
+		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' worker context link targets.');
 		
 		// [TODO] Clear out workers from any group_inbox_filter rows
 		
@@ -339,12 +352,11 @@ class DAO_Worker extends C4_ORMHelper {
 		$sql = sprintf("DELETE QUICK FROM worker_workspace_list WHERE worker_id = %d", $id);
 		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 
-		// Clear assigned workers
-		$sql = sprintf("UPDATE ticket SET next_worker_id = 0 WHERE next_worker_id = %d", $id);
-		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
-
 		// Clear roles
 		$db->Execute(sprintf("DELETE FROM worker_to_role WHERE worker_id = %d", $id));
+		
+		// Context links
+		DAO_ContextLink::delete(CerberusContexts::CONTEXT_WORKER, $id);
 		
 		// Invalidate caches
 		self::clearCache();
@@ -483,7 +495,11 @@ class DAO_Worker extends C4_ORMHelper {
 			    SearchFields_Worker::IS_DISABLED
 			);
 			
-		$join_sql = "FROM worker w ";
+		$join_sql = "FROM worker w ".
+
+		// Dynamic joins
+		(isset($tables['context_link']) ? "INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.worker' AND context_link.to_context_id = w.id) " : " ")
+		;
 		
 		// Custom field joins
 		list($select_sql, $join_sql, $has_multiple_values) = self::_appendSelectJoinSqlForCustomFieldTables(
@@ -495,10 +511,28 @@ class DAO_Worker extends C4_ORMHelper {
 		);
 				
 		$where_sql = "".
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "");
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
-			
+		
+		// Virtuals
+		foreach($params as $param_key => $param) {
+			settype($param_key, 'string');
+			switch($param_key) {
+				case SearchFields_Worker::VIRTUAL_GROUPS:
+					$has_multiple_values = true;
+					if(empty($param->value)) { // empty
+						$join_sql .= "LEFT JOIN worker_to_team ON (worker_to_team.agent_id = w.id) ";
+						$where_sql .= "AND worker_to_team.agent_id IS NULL ";
+					} else {
+						$join_sql .= sprintf("INNER JOIN worker_to_team ON (worker_to_team.agent_id = w.id) ",
+							implode(',', $param->value)
+						);
+					}
+					break;
+			}
+		}
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
@@ -557,6 +591,11 @@ class SearchFields_Worker implements IDevblocksSearchFields {
 	const LAST_ACTIVITY_DATE = 'w_last_activity_date';
 	const IS_DISABLED = 'w_is_disabled';
 	
+	const VIRTUAL_GROUPS = '*_groups';
+	
+	const CONTEXT_LINK = 'cl_context_from';
+	const CONTEXT_LINK_ID = 'cl_context_from_id';
+	
 	/**
 	 * @return DevblocksSearchField[]
 	 */
@@ -573,6 +612,11 @@ class SearchFields_Worker implements IDevblocksSearchFields {
 			self::LAST_ACTIVITY => new DevblocksSearchField(self::LAST_ACTIVITY, 'w', 'last_activity', $translate->_('worker.last_activity')),
 			self::LAST_ACTIVITY_DATE => new DevblocksSearchField(self::LAST_ACTIVITY_DATE, 'w', 'last_activity_date', $translate->_('worker.last_activity_date')),
 			self::IS_DISABLED => new DevblocksSearchField(self::IS_DISABLED, 'w', 'is_disabled', ucwords($translate->_('common.disabled'))),
+			
+			self::VIRTUAL_GROUPS => new DevblocksSearchField(self::VIRTUAL_GROUPS, '*', 'groups', $translate->_('common.groups')),
+			
+			self::CONTEXT_LINK => new DevblocksSearchField(self::CONTEXT_LINK, 'context_link', 'from_context', null),
+			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
 		);
 		
 		// Custom Fields
@@ -611,6 +655,13 @@ class Model_Worker {
 		return DAO_Worker::getWorkerGroups($this->id); 
 	}
 
+	/**
+	 * @return Model_Address
+	 */
+	function getAddress() {
+		return DAO_Address::getByEmail($this->email);
+	}
+	
 	function hasPriv($priv_id) {
 		// We don't need to do much work if we're a superuser
 		if($this->is_superuser)
@@ -697,13 +748,26 @@ class View_Worker extends C4_AbstractView {
 			SearchFields_Worker::IS_SUPERUSER,
 		);
 		
+		$this->columnsHidden = array(
+			SearchFields_Worker::LAST_ACTIVITY,
+			SearchFields_Worker::CONTEXT_LINK,
+			SearchFields_Worker::CONTEXT_LINK_ID,
+			SearchFields_Worker::VIRTUAL_GROUPS,
+		);
+		$this->paramsHidden = array(
+			SearchFields_Worker::ID,
+			SearchFields_Worker::LAST_ACTIVITY,
+			SearchFields_Worker::CONTEXT_LINK,
+			SearchFields_Worker::CONTEXT_LINK_ID,
+		);
+		
 		$this->doResetCriteria();
 	}
 
 	function getData() {
 		return DAO_Worker::search(
 			$this->view_columns,
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -722,10 +786,39 @@ class View_Worker extends C4_AbstractView {
 		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Worker::ID);
 		$tpl->assign('custom_fields', $custom_fields);
 
-		$tpl->assign('view_fields', $this->getColumns());
-		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/configuration/tabs/workers/view.tpl');
+		switch($this->renderTemplate) {
+			case 'contextlinks_chooser':
+				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/workers/view_contextlinks_chooser.tpl');
+				break;
+			default:
+				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/workers/view.tpl');
+				break;
+		}
 	}
 
+	function renderVirtualCriteria($param) {
+		$key = $param->field;
+		
+		switch($key) {
+			case SearchFields_Worker::VIRTUAL_GROUPS:
+				if(empty($param->value)) {
+					echo "<b>Not</b> a member of any groups";
+					
+				} elseif(is_array($param->value)) {
+					$groups = DAO_Group::getAll();
+					$strings = array();
+					
+					foreach($param->value as $group_id) {
+						if(isset($groups[$group_id]))
+							$strings[] = '<b>'.$groups[$group_id]->name.'</b>';
+					}
+					
+					echo sprintf("Group member of %s", implode(' or ', $strings));
+				}
+				break;
+		}
+	}	
+	
 	function renderCriteria($field) {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id', $this->id);
@@ -737,13 +830,20 @@ class View_Worker extends C4_AbstractView {
 			case SearchFields_Worker::TITLE:
 				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
 				break;
+				
 			case SearchFields_Worker::IS_DISABLED:
 			case SearchFields_Worker::IS_SUPERUSER:
 				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
 				break;
+				
 			case SearchFields_Worker::LAST_ACTIVITY_DATE:
 				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
 				break;
+				
+			case SearchFields_Worker::VIRTUAL_GROUPS:
+				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_group.tpl');
+				break;
+				
 			default:
 				// Custom Fields
 				if('cf_' == substr($field,0,3)) {
@@ -780,31 +880,10 @@ class View_Worker extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_Worker::getFields();
 	}
 
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_Worker::ID]);
-		unset($fields[SearchFields_Worker::LAST_ACTIVITY]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_Worker::LAST_ACTIVITY]);
-		return $fields;
-	}
-
-	function doResetCriteria() {
-		parent::doResetCriteria();
-		
-//		$this->params = array(
-//			SearchFields_WorkerEvent::NUM_NONSPAM => new DevblocksSearchCriteria(SearchFields_WorkerEvent::NUM_NONSPAM,'>',0),
-//		);
-	}
-	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -836,6 +915,12 @@ class View_Worker extends C4_AbstractView {
 				@$bool = DevblocksPlatform::importGPC($_REQUEST['bool'],'integer',1);
 				$criteria = new DevblocksSearchCriteria($field,$oper,$bool);
 				break;
+				
+			case SearchFields_Worker::VIRTUAL_GROUPS:
+				@$group_ids = DevblocksPlatform::importGPC($_REQUEST['group_id'],'array',array());
+				$criteria = new DevblocksSearchCriteria($field,'in', $group_ids);
+				break;
+				
 			default:
 				// Custom Fields
 				if(substr($field,0,3)=='cf_') {
@@ -845,7 +930,7 @@ class View_Worker extends C4_AbstractView {
 		}
 
 		if(!empty($criteria)) {
-			$this->params[$field] = $criteria;
+			$this->addParam($criteria);
 			$this->renderPage = 0;
 		}
 	}
@@ -885,7 +970,7 @@ class View_Worker extends C4_AbstractView {
 		do {
 			list($objects,$null) = DAO_Worker::search(
 			array(),
-			$this->params,
+			$this->getParams(),
 			100,
 			$pg++,
 			SearchFields_Worker::ID,
@@ -982,3 +1067,146 @@ class DAO_WorkerPref extends DevblocksORMHelper {
 		return $objects;
 	}
 };
+
+class Context_Worker extends Extension_DevblocksContext {
+    function __construct($manifest) {
+        parent::__construct($manifest);
+    }
+
+    function getPermalink($context_id) {
+    	// [TODO] Profiles
+    	$url_writer = DevblocksPlatform::getUrlService();
+    	return null;
+    	//return $url_writer->write('c=home&tab=orgs&action=display&id='.$context_id, true);
+    }
+    
+	function getContext($worker, &$token_labels, &$token_values, $prefix=null) {
+		if(is_null($prefix))
+			$prefix = 'Worker:';
+			
+		$translate = DevblocksPlatform::getTranslationService();
+		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Worker::ID);
+		
+		// Polymorph
+		if(is_numeric($worker)) {
+			$worker = DAO_Worker::get($worker);
+		} elseif($worker instanceof Model_Worker) {
+			// It's what we want already.
+		} else {
+			$worker = null;
+		}
+			
+		// Token labels
+		$token_labels = array(
+			'first_name' => $prefix.$translate->_('worker.first_name'),
+			'last_name' => $prefix.$translate->_('worker.last_name'),
+			'title' => $prefix.$translate->_('worker.title'),
+		);
+		
+		if(is_array($fields))
+		foreach($fields as $cf_id => $field) {
+			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
+		}
+
+		// Token values
+		$token_values = array();
+		
+		// Worker token values
+		if(null != $worker) {
+			$token_values['id'] = $worker->id;
+			if(!empty($worker->first_name))
+				$token_values['first_name'] = $worker->first_name;
+			if(!empty($worker->last_name))
+				$token_values['last_name'] = $worker->last_name;
+			if(!empty($worker->title))
+				$token_values['title'] = $worker->title;
+			$token_values['custom'] = array();
+			
+			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Worker::ID, $worker->id));
+			if(is_array($field_values) && !empty($field_values)) {
+				foreach($field_values as $cf_id => $cf_val) {
+					if(!isset($fields[$cf_id]))
+						continue;
+					
+					// The literal value
+					if(null != $worker)
+						$token_values['custom'][$cf_id] = $cf_val;
+					
+					// Stringify
+					if(is_array($cf_val))
+						$cf_val = implode(', ', $cf_val);
+						
+					if(is_string($cf_val)) {
+						if(null != $worker)
+							$token_values['custom_'.$cf_id] = $cf_val;
+					}
+				}
+			}
+		}
+		
+		// Worker email
+		@$worker_email = !is_null($worker) ? $worker->email : null;
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_ADDRESS, $worker_email, $merge_token_labels, $merge_token_values, null, true);
+
+		CerberusContexts::merge(
+			'address_',
+			'',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);		
+		
+		return true;		
+	}
+	
+	function getChooserView() {
+		// View
+		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = $view_id;
+		$defaults->is_ephemeral = true;
+		$defaults->class_name = 'View_Worker';
+		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
+		$view->name = 'Workers';
+		$view->view_columns = array(
+			SearchFields_Worker::FIRST_NAME,
+			SearchFields_Worker::LAST_NAME,
+			SearchFields_Worker::TITLE,
+		);
+		$view->addParams(array(
+			SearchFields_Worker::IS_DISABLED => new DevblocksSearchCriteria(SearchFields_Worker::IS_DISABLED,'=',0),
+		), true);
+		$view->renderLimit = 10;
+		$view->renderTemplate = 'contextlinks_chooser';
+		C4_AbstractViewLoader::setView($view_id, $view);
+		
+		return $view;
+	}
+	
+	function getView($context, $context_id, $options=array()) {
+		$view_id = str_replace('.','_',$this->id);
+		
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = $view_id; 
+		$defaults->class_name = 'View_Worker';
+		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
+		$view->name = 'Workers';
+		
+		$params = array(
+			new DevblocksSearchCriteria(SearchFields_Worker::CONTEXT_LINK,'=',$context),
+			new DevblocksSearchCriteria(SearchFields_Worker::CONTEXT_LINK_ID,'=',$context_id),
+		);
+
+		if(isset($options['filter_open']))
+			true; // Do nothing
+		
+		$view->addParams($params, true);
+		
+		$view->renderTemplate = 'context';
+		C4_AbstractViewLoader::setView($view_id, $view);
+		return $view;
+	}
+}

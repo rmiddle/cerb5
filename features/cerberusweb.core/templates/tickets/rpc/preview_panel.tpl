@@ -1,4 +1,4 @@
-<form action="{devblocks_url}{/devblocks_url}" method="post" id="frmTicketPeek" onsubmit="ajax.postAndReloadView('frmTicketPeek','view{$view_id}');return false;">
+<form action="{devblocks_url}{/devblocks_url}" method="post" id="frmTicketPeek" onsubmit="return false;">
 <input type="hidden" name="c" value="tickets">
 <input type="hidden" name="a" value="savePreview">
 <input type="hidden" name="id" value="{$ticket->id}">
@@ -6,22 +6,24 @@
 
 <div id="peekTabs">
 	<ul>
-		<li><a href="#ticketPeekTab1">Message</a></li>
-		<li><a href="#ticketPeekTab2">Properties</a></li>
+		{if !$edit_mode}<li><a href="#ticketPeekMessage">Message</a></li>{/if}
+		<li><a href="#ticketPeekProps">Properties</a></li>
 	</ul>
 		
-    <div id="ticketPeekTab1">
+	{if !$edit_mode}
+    <div id="ticketPeekMessage">
 			{assign var=headers value=$message->getHeaders()}
 			<b>To:</b> {$headers.to|escape}<br>
 			<b>From:</b> {$headers.from|escape}<br>
-			<div id="ticketPeekContent" style="width:400;height:250px;overflow:auto;border:1px solid rgb(180,180,180);margin:2px;padding:3px;background-color:rgb(255,255,255);" ondblclick="if(null != genericPanel) genericPanel.dialog('close');">
+			<div id="ticketPeekContent" style="width:400;height:250px;overflow:auto;border:1px solid rgb(180,180,180);margin:2px;padding:3px;background-color:rgb(255,255,255);" ondblclick="genericAjaxPopupClose('peek');">
 				<pre class="emailbody">{$content|trim|escape|devblocks_hyperlinks|devblocks_hideemailquotes}</pre>
 			</div>
 			
 			<b>URL:</b> <a href="{devblocks_url}c=display&id={$ticket->mask}{/devblocks_url}">{devblocks_url full=true}c=display&id={$ticket->mask}{/devblocks_url}</a>
     </div>
+	{/if}
 	
-    <div id="ticketPeekTab2" style="display:none;">
+    <div id="ticketPeekProps" style="display:none;">
 		<table cellpadding="0" cellspacing="2" border="0" width="98%">
 			<tr>
 				<td width="0%" nowrap="nowrap" align="right">{$translate->_('ticket.status')|capitalize}: </td>
@@ -38,22 +40,19 @@
 					<input type="text" name="subject" size="45" maxlength="255" value="{$ticket->subject|escape}">
 				</td>
 			</tr>
+			
+			{* Owners *}
 			<tr>
-				<td width="0%" nowrap="nowrap" align="right">Next Worker: </td>
+				<td width="0%" nowrap="nowrap" valign="top" align="right">{$translate->_('common.owners')|capitalize}: </td>
 				<td width="100%">
-					<select name="next_worker_id">
-						{if $active_worker->id==$ticket->next_worker_id || 0==$ticket->next_worker_id || $active_worker->hasPriv('core.ticket.actions.assign')}<option value="0" {if 0==$ticket->next_worker_id}selected{/if}>Anybody{/if}
-						{foreach from=$workers item=worker key=worker_id name=workers}
-							{if $worker_id==$ticket->next_worker_id || $active_worker->hasPriv('core.ticket.actions.assign')}
-							{if $worker_id==$active_worker->id}{assign var=next_worker_id_sel value=$smarty.foreach.workers.iteration}{/if}
-							<option value="{$worker_id}" {if $worker_id==$ticket->next_worker_id}selected{/if}>{$worker->getName()}
-							{/if}
+					<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-add"></span></button>
+					{if !empty($context_workers)}
+					<ul class="chooser-container bubbles">
+						{foreach from=$context_workers item=context_worker}
+						<li>{$context_worker->getName()|escape}<input type="hidden" name="worker_id[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
 						{/foreach}
-					</select>
-				   	{if $active_worker->hasPriv('core.ticket.actions.assign') && !empty($next_worker_id_sel)}
-				   		<button type="button" onclick="this.form.next_worker_id.selectedIndex = {$next_worker_id_sel};toggleDiv('ticketPropsUnlockDate','block');">{$translate->_('common.me')|lower}</button>
-				   		<button type="button" onclick="this.form.next_worker_id.selectedIndex = 0;toggleDiv('ticketPropsUnlockDate','none');">{$translate->_('common.anybody')|lower}</button>
-				   	{/if}
+					</ul>
+					{/if}
 				</td>
 			</tr>
 			
@@ -162,19 +161,25 @@
 		{/if}
 		{/foreach}
 		</table>
+		<br>
+		
+		<button type="button" onclick="genericAjaxPopupClose('peek', 'ticket_save');genericAjaxPost('frmTicketPeek', 'view{$view_id}');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
     </div><!--tab2-->		
 </div> 
 <br>
 
-<button type="submit"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>
 </form>
 
-<script language="JavaScript1.2" type="text/javascript">
-	genericPanel.one('dialogopen',function(event,ui) {
-		genericPanel.dialog('option','title',"{$ticket->subject|escape}");
+<script type="text/javascript">
+	$popup = genericAjaxPopupFetch('peek');
+	$popup.one('popup_open',function(event,ui) {
+		$(this).dialog('option','title',"{$ticket->subject|escape}");
 		$("#peekTabs").tabs();
 		$("#ticketPeekContent").css('width','100%');
-		$("#ticketPeekTab2").show();
-		genericPanel.focus();
-	} );
+		$("#ticketPeekProps").show();
+		$(this).focus();
+	});
+	$('#frmTicketPeek button.chooser_worker').each(function() {
+		ajax.chooser(this, 'cerberusweb.contexts.worker', 'worker_id')
+	});
 </script>

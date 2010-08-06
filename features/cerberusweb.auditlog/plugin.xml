@@ -18,6 +18,7 @@
 	
 	<patches>
 		<patch version="4.0.0-alpha" revision="2" file="patches/4.0.0_alpha.php" />
+		<patch version="5.1.0-dev" revision="4" file="patches/5.1.0.php" />
 	</patches>
 
 	<!-- Exported Classes -->
@@ -45,8 +46,8 @@
 				<!-- Event Listener -->
 				<param key="events">
 					<value>
-						<data key="ticket.property.pre_change" />
-						<data key="ticket.merge" />
+						<data key="dao.ticket.update" />
+						<data key="ticket.action.merge" />
 						<data key="cron.maint" />
 					</value>
 				</param>

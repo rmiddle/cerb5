@@ -64,13 +64,9 @@ class DAO_MailQueue extends DevblocksORMHelper {
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$id = $db->GenID('mail_queue_seq');
-		
-		$sql = sprintf("INSERT INTO mail_queue (id) ".
-			"VALUES (%d)",
-			$id
-		);
+		$sql = "INSERT INTO mail_queue () VALUES ()";
 		$db->Execute($sql);
+		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
 		
@@ -236,7 +232,7 @@ class DAO_MailQueue extends DevblocksORMHelper {
 		//);
 				
 		$where_sql = "".
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "");
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
 			
@@ -417,7 +413,6 @@ class Model_MailQueue {
 		
 		// Files + Next step
 		//'files' => $files,
-		//'next_worker_id' => $next_worker_id,
 
 		// Send mail
 		if(false == ($ticket_id = CerberusMail::compose($properties)))
@@ -499,11 +494,9 @@ class Model_MailQueue {
 		    'subject' => $this->subject,
 		    'content' => $this->body,
 //		    'files' => @$_FILES['attachment'],
-//		    'next_worker_id' => $next_worker_id,
 //		    'closed' => $closed,
 //		    'bucket_id' => $move_bucket,
 //		    'ticket_reopen' => $ticket_reopen,
-//		    'unlock_date' => $unlock_date,
 		    'agent_id' => $worker->id,
 			'dont_send' => (false==$send_to_reqs),
 		);
@@ -557,11 +550,9 @@ class Model_MailQueue {
 		// 'files' => $attachment_files,
 		// 'files' => @$_FILES['attachment'],
 		
-//	    'next_worker_id' => DevblocksPlatform::importGPC(@$_REQUEST['next_worker_id'],'integer',0),
 //	    'closed' => DevblocksPlatform::importGPC(@$_REQUEST['closed'],'integer',0),
 //	    'bucket_id' => DevblocksPlatform::importGPC(@$_REQUEST['bucket_id'],'string',''),
 //	    'ticket_reopen' => DevblocksPlatform::importGPC(@$_REQUEST['ticket_reopen'],'string',''),
-//	    'unlock_date' => DevblocksPlatform::importGPC(@$_REQUEST['unlock_date'],'string',''),
 
 //	    'forward_files' => DevblocksPlatform::importGPC(@$_REQUEST['forward_files'],'array',array()),
 		
@@ -587,6 +578,14 @@ class View_MailQueue extends C4_AbstractView {
 			SearchFields_MailQueue::HINT_TO,
 			SearchFields_MailQueue::UPDATED,
 		);
+		$this->columnsHidden = array(
+			SearchFields_MailQueue::TICKET_ID,
+		);
+		
+		$this->paramsHidden = array(
+			SearchFields_MailQueue::ID,
+			SearchFields_MailQueue::TICKET_ID,
+		);
 		
 		$this->doResetCriteria();
 	}
@@ -594,7 +593,7 @@ class View_MailQueue extends C4_AbstractView {
 	function getData() {
 		$objects = DAO_MailQueue::search(
 			array(),
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -613,9 +612,6 @@ class View_MailQueue extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-		$tpl->assign('view_fields', $this->getColumns());
-		
-		// [TODO] Set your template path
 		$tpl->display('file:'.$path.'mail/queue/view.tpl');
 	}
 
@@ -642,7 +638,7 @@ class View_MailQueue extends C4_AbstractView {
 				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
 				break;
 			case SearchFields_MailQueue::WORKER_ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__worker.tpl');
+				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_worker.tpl');
 				break;
 			default:
 				echo '';
@@ -676,29 +672,8 @@ class View_MailQueue extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_MailQueue::getFields();
-	}
-
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_MailQueue::ID]);
-		unset($fields[SearchFields_MailQueue::TICKET_ID]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_MailQueue::TICKET_ID]);
-		return $fields;
-	}
-
-	function doResetCriteria() {
-		parent::doResetCriteria();
-		
-		$this->params = array(
-			//SearchFields_MailQueue::ID => new DevblocksSearchCriteria(SearchFields_MailQueue::ID,'!=',0),
-		);
 	}
 	
 	function doSetCriteria($field, $oper, $value) {
@@ -744,7 +719,7 @@ class View_MailQueue extends C4_AbstractView {
 		}
 
 		if(!empty($criteria)) {
-			$this->params[$field] = $criteria;
+			$this->addParam($criteria);
 			$this->renderPage = 0;
 		}
 	}
@@ -792,7 +767,7 @@ class View_MailQueue extends C4_AbstractView {
 		if(empty($ids))
 		do {
 			list($objects,$null) = DAO_MailQueue::search(
-				$this->params,
+				$this->getParams(),
 				100,
 				$pg++,
 				SearchFields_MailQueue::ID,
