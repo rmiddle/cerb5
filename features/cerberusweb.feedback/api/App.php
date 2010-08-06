@@ -91,11 +91,7 @@ class ChFeedbackActivityTab extends Extension_ActivityTab {
 		
 		$view = C4_AbstractViewLoader::getView(self::VIEW_ACTIVITY_FEEDBACK, $defaults);
 
-		$tpl->assign('response_uri', 'activity/feedback');
-		
 		$tpl->assign('view', $view);
-		$tpl->assign('view_fields', C4_FeedbackEntryView::getFields());
-		$tpl->assign('view_searchable_fields', C4_FeedbackEntryView::getSearchFields());
 		
 		$tpl->display($tpl_path . 'activity_tab/index.tpl');		
 	}
@@ -114,13 +110,11 @@ class DAO_FeedbackEntry extends C4_ORMHelper {
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$id = $db->GenID('feedback_entry_seq');
-		
-		$sql = sprintf("INSERT INTO feedback_entry (id) ".
-			"VALUES (%d)",
-			$id
+		$sql = sprintf("INSERT INTO feedback_entry () ".
+			"VALUES ()"
 		);
 		$db->Execute($sql);
+		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
 		
@@ -265,7 +259,7 @@ class DAO_FeedbackEntry extends C4_ORMHelper {
 		);
 		
 		$where_sql = "".
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "");
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
 		
@@ -381,14 +375,26 @@ class C4_FeedbackEntryView extends C4_AbstractView {
 			SearchFields_FeedbackEntry::ADDRESS_EMAIL,
 			SearchFields_FeedbackEntry::SOURCE_URL,
 		);
-
+		$this->columnsHidden = array(
+			SearchFields_FeedbackEntry::ID,
+			SearchFields_FeedbackEntry::QUOTE_ADDRESS_ID,
+		);
+		
+		$this->paramsHidden = array(
+			SearchFields_FeedbackEntry::ID,
+			SearchFields_FeedbackEntry::QUOTE_ADDRESS_ID,
+		);
+		$this->paramsDefault = array(
+			SearchFields_FeedbackEntry::LOG_DATE => new DevblocksSearchCriteria(SearchFields_FeedbackEntry::LOG_DATE,DevblocksSearchCriteria::OPER_BETWEEN,array('-1 month','now')),
+		);
+		
 		$this->doResetCriteria();
 	}
 
 	function getData() {
 		$objects = DAO_FeedbackEntry::search(
 			$this->view_columns,
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -412,7 +418,6 @@ class C4_FeedbackEntryView extends C4_AbstractView {
 		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_FeedbackEntry::ID);
 		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.feedback/templates/feedback/view.tpl');
 	}
 
@@ -433,9 +438,7 @@ class C4_FeedbackEntryView extends C4_AbstractView {
 				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
 				break;
 			case SearchFields_FeedbackEntry::WORKER_ID:
-				$workers = DAO_Worker::getAll();
-				$tpl->assign('workers', $workers);
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__worker.tpl');
+				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_worker.tpl');
 				break;
 			case SearchFields_FeedbackEntry::QUOTE_MOOD:
 				// [TODO] Translations
@@ -499,32 +502,10 @@ class C4_FeedbackEntryView extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_FeedbackEntry::getFields();
 	}
 
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_FeedbackEntry::ID]);
-		unset($fields[SearchFields_FeedbackEntry::QUOTE_ADDRESS_ID]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_FeedbackEntry::ID]);
-		unset($fields[SearchFields_FeedbackEntry::QUOTE_ADDRESS_ID]);
-		return $fields;
-	}
-
-	function doResetCriteria() {
-		parent::doResetCriteria();
-		
-		$this->params = array(
-			SearchFields_FeedbackEntry::LOG_DATE => new DevblocksSearchCriteria(SearchFields_FeedbackEntry::LOG_DATE,DevblocksSearchCriteria::OPER_BETWEEN,array('-1 month','now')),
-		);
-	}
-	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -569,7 +550,7 @@ class C4_FeedbackEntryView extends C4_AbstractView {
 		}
 
 		if(!empty($criteria)) {
-			$this->params[$field] = $criteria;
+			$this->addParam($criteria);
 			$this->renderPage = 0;
 		}
 	}
@@ -606,7 +587,7 @@ class C4_FeedbackEntryView extends C4_AbstractView {
 		do {
 			list($objects,$null) = DAO_FeedbackEntry::search(
 				array(),
-				$this->params,
+				$this->getParams(),
 				100,
 				$pg++,
 				SearchFields_FeedbackEntry::ID,
@@ -819,12 +800,13 @@ class ChFeedbackController extends DevblocksControllerExtension {
 						$quote
 					);
 					$fields = array(
-						DAO_TicketComment::ADDRESS_ID => $worker_address->id,
-						DAO_TicketComment::COMMENT => $comment_text,
-						DAO_TicketComment::CREATED => time(),
-						DAO_TicketComment::TICKET_ID => intval($source_id),
+						DAO_Comment::ADDRESS_ID => $worker_address->id,
+						DAO_Comment::COMMENT => $comment_text,
+						DAO_Comment::CREATED => time(),
+						DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_TICKET,
+						DAO_Comment::CONTEXT_ID => intval($source_id),
 					);
-					DAO_TicketComment::create($fields);
+					DAO_Comment::create($fields);
 					break;
 			}
 			

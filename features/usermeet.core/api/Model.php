@@ -97,17 +97,25 @@ class View_CommunityPortal extends C4_AbstractView {
 			SearchFields_CommunityTool::NAME,
 			SearchFields_CommunityTool::CODE,
 			SearchFields_CommunityTool::EXTENSION_ID,
-			);
+		);
+		$this->columnsHidden = array(
+			SearchFields_CommunityTool::ID,
+		);
 		
-		$this->params = array(
+		$this->paramsHidden = array(
+			SearchFields_CommunityTool::ID,
+		);
+		$this->paramsDefault = array(
 			//SearchFields_CommunityTool::IS_DISABLED => new DevblocksSearchCriteria(SearchFields_CommunityTool::IS_DISABLED,'=',0),
 		);
+		
+		$this->doResetCriteria();
 	}
 
 	function getData() {
 		$objects = DAO_CommunityTool::search(
 			$this->view_columns,
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -136,7 +144,6 @@ class View_CommunityPortal extends C4_AbstractView {
 		$custom_fields = DAO_CustomField::getBySource(CustomFieldSource_CommunityPortal::ID);
 		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . APP_PATH . '/features/usermeet.core/templates/community/config/tab/view.tpl');
 	}
 
@@ -197,30 +204,10 @@ class View_CommunityPortal extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_CommunityTool::getFields();
 	}
 
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_CommunityTool::ID]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_CommunityTool::ID]);
-		return $fields;
-	}
-
-	function doResetCriteria() {
-		parent::doResetCriteria();
-		
-		$this->params = array(
-//			SearchFields_CommunityTool::IS_COMPLETED => new DevblocksSearchCriteria(SearchFields_CommunityTool::IS_COMPLETED,'=',0)
-		);
-	}
-	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -254,7 +241,7 @@ class View_CommunityPortal extends C4_AbstractView {
 		}
 
 		if(!empty($criteria)) {
-			$this->params[$field] = $criteria;
+			$this->addParam($criteria);
 			$this->renderPage = 0;
 		}
 	}
@@ -299,7 +286,7 @@ class View_CommunityPortal extends C4_AbstractView {
 		do {
 			list($objects,$null) = DAO_CommunityTool::search(
 				array(),
-				$this->params,
+				$this->getParams(),
 				100,
 				$pg++,
 				SearchFields_CommunityTool::ID,

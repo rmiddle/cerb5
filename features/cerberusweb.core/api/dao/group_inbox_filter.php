@@ -60,14 +60,13 @@ class DAO_GroupInboxFilter extends DevblocksORMHelper {
     
 	public static function create($fields) {
 	    $db = DevblocksPlatform::getDatabaseService();
-		$id = $db->GenID('generic_seq');
 		
-		$sql = sprintf("INSERT INTO group_inbox_filter (id,name,created,group_id,criteria_ser,actions_ser,pos,is_sticky,sticky_order,is_stackable) ".
-		    "VALUES (%d,'',%d,0,'','',0,0,0,0)",
-		    $id,
+		$sql = sprintf("INSERT INTO group_inbox_filter (created) ".
+		    "VALUES (%d)",
 		    time()
 		);
-		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
+		$id = $db->LastInsertId(); 
 		
 		self::update($id, $fields);
 		
@@ -214,33 +213,44 @@ class DAO_GroupInboxFilter extends DevblocksORMHelper {
         list($tables,$wheres) = parent::_parseSearchParams($params, array(), $fields,$sortBy);
 		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
 		
-		$sql = sprintf("SELECT ".
+		$select_sql = sprintf("SELECT ".
 			"trr.id as %s, ".
 			"trr.group_id as %s, ".
 			"trr.pos as %s, ".
 			"trr.is_sticky as %s, ".
 			"trr.sticky_order as %s, ".
-			"trr.is_stackable as %s ".
-			"FROM group_inbox_filter trr ",
-//			"INNER JOIN team tm ON (tm.id = t.team_id) ".
+			"trr.is_stackable as %s ",
 			    SearchFields_GroupInboxFilter::ID,
 			    SearchFields_GroupInboxFilter::GROUP_ID,
 			    SearchFields_GroupInboxFilter::POS,
 			    SearchFields_GroupInboxFilter::IS_STICKY,
 			    SearchFields_GroupInboxFilter::STICKY_ORDER,
 			    SearchFields_GroupInboxFilter::IS_STACKABLE
-			).
+			);
 			
+		$join_sql = "FROM group_inbox_filter trr "
+//			"INNER JOIN team tm ON (tm.id = t.team_id) ".
 			// [JAS]: Dynamic table joins
 //			(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
-			
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "").
-			(!empty($sortBy) ? sprintf("ORDER BY %s %s",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : "")
 		;
+		
+		$where_sql = "".
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
+		
+		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
+
+		$has_multiple_values = false;
+		
+		$sql = 
+			$select_sql.
+			$join_sql.
+			$where_sql.
+			($has_multiple_values ? 'GROUP BY trr.id ' : '').
+			$sort_sql;
+		
 		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
 		$results = array();
-		
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			$result = array();
@@ -254,8 +264,11 @@ class DAO_GroupInboxFilter extends DevblocksORMHelper {
 		// [JAS]: Count all
 		$total = -1;
 		if($withCounts) {
-		    $rs = $db->Execute($sql);
-		    $total = mysql_num_rows($rs);
+			$count_sql = 
+				($has_multiple_values ? "SELECT COUNT(DISTINCT trr.id) " : "SELECT COUNT(trr.id) ").
+				$join_sql.
+				$where_sql;
+			$total = $db->GetOne($count_sql);
 		}
 		
 		mysql_free_result($rs);
@@ -648,14 +661,15 @@ class Model_GroupInboxFilter {
 						$change_fields[DAO_Ticket::IS_DELETED] = intval($params['is_deleted']);
 					break;
 
-				case 'assign':
-					if(isset($params['worker_id'])) {
-						$w_id = intval($params['worker_id']);
-						if(0 == $w_id || isset($workers[$w_id]))
-							$change_fields[DAO_Ticket::NEXT_WORKER_ID] = $w_id;
+				case 'owner':
+					foreach($ticket_ids as $ticket_id) {
+						if(isset($params['add']) && is_array($params['add']))
+							CerberusContexts::addWorkers(CerberusContexts::CONTEXT_TICKET, $ticket_id, $params['add']);
+						if(isset($params['remove']) && is_array($params['remove']))
+							CerberusContexts::removeWorkers(CerberusContexts::CONTEXT_TICKET, $ticket_id, $params['remove']);
 					}
 					break;
-
+					
 				case 'move':
 					if(isset($params['group_id']) && isset($params['bucket_id'])) {
 						$g_id = intval($params['group_id']);

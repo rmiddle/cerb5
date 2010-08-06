@@ -59,17 +59,12 @@ class ChTranslatorsConfigTab extends Extension_ConfigTab {
 		$core_tplpath = dirname(dirname(dirname(__FILE__))) . '/cerberusweb.core/templates/';
 		$tpl->assign('core_tplpath', $core_tplpath);
 
-		$tpl->assign('response_uri', 'config/translations');
-		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'C4_TranslationView';
 		$defaults->id = C4_TranslationView::DEFAULT_ID;
 		
 		$view = C4_AbstractViewLoader::getView(C4_TranslationView::DEFAULT_ID, $defaults);
-		
 		$tpl->assign('view', $view);
-		$tpl->assign('view_fields', C4_TranslationView::getFields());
-		$tpl->assign('view_searchable_fields', C4_TranslationView::getSearchFields());
 		
 		$tpl->display('file:' . $tpl_path . 'config/translations/index.tpl');
 	}
@@ -97,13 +92,20 @@ class C4_TranslationView extends C4_AbstractView {
 			SearchFields_Translation::STRING_OVERRIDE,
 			SearchFields_Translation::STRING_ID,
 		);
-
+		$this->columnsHidden = array(
+			SearchFields_Translation::ID,
+		);
+		
+		$this->paramsHidden = array(
+			SearchFields_Translation::ID,
+		);
+		
 		$this->doResetCriteria();
 	}
 
 	function getData() {
 		$objects = DAO_Translation::search(
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -128,7 +130,6 @@ class C4_TranslationView extends C4_AbstractView {
 		$english_map = DAO_Translation::getMapByLang('en_US');
 		$tpl->assign('english_map', $english_map);
 		
-		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.translators/templates/config/translations/view.tpl');
 	}
 
@@ -180,30 +181,10 @@ class C4_TranslationView extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_Translation::getFields();
 	}
 
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_Translation::ID]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_Translation::ID]);
-		return $fields;
-	}
-
-	function doResetCriteria() {
-		parent::doResetCriteria();
-		
-		$this->params = array(
-//			SearchFields_FeedbackEntry::LOG_DATE => new DevblocksSearchCriteria(SearchFields_FeedbackEntry::LOG_DATE,DevblocksSearchCriteria::OPER_BETWEEN,array('-1 month','now')),
-		);
-	}
-	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -228,7 +209,7 @@ class C4_TranslationView extends C4_AbstractView {
 		}
 
 		if(!empty($criteria)) {
-			$this->params[$field] = $criteria;
+			$this->addParam($criteria);
 			$this->renderPage = 0;
 		}
 	}
@@ -352,10 +333,10 @@ class ChTranslatorsAjaxController extends DevblocksControllerExtension {
 		// Set search to untranslated strings that aren't English
 		$view->renderSortBy = SearchFields_Translation::STRING_ID;
 		$view->renderSortAsc = true;
-		$view->params = array(
+		$view->addParams(array(
 			SearchFields_Translation::STRING_OVERRIDE => new DevblocksSearchCriteria(SearchFields_Translation::STRING_OVERRIDE,DevblocksSearchCriteria::OPER_EQ,''),
 			SearchFields_Translation::LANG_CODE => new DevblocksSearchCriteria(SearchFields_Translation::LANG_CODE,DevblocksSearchCriteria::OPER_NEQ,'en_US'),
-		);
+		), true);
 		C4_AbstractViewLoader::setView($view->id, $view);
 
 		self::_clearCache();
@@ -453,16 +434,16 @@ class ChTranslatorsAjaxController extends DevblocksControllerExtension {
 			// Set search to untranslated strings that aren't English
 			$view->renderSortBy = SearchFields_Translation::STRING_ID;
 			$view->renderSortAsc = true;
-			$view->params = array(
+			$view->addParams(array(
 				SearchFields_Translation::LANG_CODE => new DevblocksSearchCriteria(SearchFields_Translation::LANG_CODE,DevblocksSearchCriteria::OPER_EQ,$add_lang_code),
-			);
+			), true);
 			
 			/*
 			 * If we didn't copy from another language, only show empty strings 
 			 * which makes it easier to translate in the GUI.
 			 */ 
 			if(empty($copy_lang_code)) {
-				$view->params[SearchFields_Translation::STRING_OVERRIDE] = new DevblocksSearchCriteria(SearchFields_Translation::STRING_OVERRIDE,DevblocksSearchCriteria::OPER_EQ,'');
+				$view->addParam(new DevblocksSearchCriteria(SearchFields_Translation::STRING_OVERRIDE,DevblocksSearchCriteria::OPER_EQ,''));
 			}
 			
 			C4_AbstractViewLoader::setView($view->id, $view);
@@ -499,7 +480,7 @@ class ChTranslatorsAjaxController extends DevblocksControllerExtension {
 
 		// Extract every result from the view
 		list($results, $null) = DAO_Translation::search(
-			$view->params,
+			$view->getParams(),
 			-1,
 			0,
 			SearchFields_Translation::STRING_ID,

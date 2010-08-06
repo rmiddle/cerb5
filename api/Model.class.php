@@ -50,10 +50,17 @@
 
 abstract class C4_AbstractView {
 	public $id = 0;
+	public $is_ephemeral = 0;
 	public $name = "";
+	
 	public $view_columns = array();
-	public $params = array();
-
+	public $columnsHidden = array();
+	
+	private $_paramsEditable = array();
+	public $paramsDefault = array();
+	public $paramsRequired = array();
+	public $paramsHidden = array();
+	
 	public $renderPage = 0;
 	public $renderLimit = 10;
 	public $renderTotal = true;
@@ -65,6 +72,65 @@ abstract class C4_AbstractView {
 	function getData() {
 	}
 
+	function getColumnsAvailable() {
+		$columns = $this->getFields();
+		
+		if(is_array($this->columnsHidden))
+		foreach($this->columnsHidden as $col)
+			unset($columns[$col]);
+			
+		return $columns;
+	}
+	
+	// Params
+	
+	function getParamsAvailable() {
+		$params = $this->getFields();
+		
+		if(is_array($this->paramsHidden))
+		foreach($this->paramsHidden as $param)
+			unset($params[$param]);
+		
+		return $params;
+	}
+	
+	function getParams() {
+		return array_merge($this->_paramsEditable, $this->paramsRequired);
+	}
+	
+	function getEditableParams() {
+		return $this->_paramsEditable;
+	}
+	
+	function addParam($param, $key=null) {
+		if(empty($key) && $param instanceof DevblocksSearchCriteria)
+			$key = $param->field;
+		
+		$this->_paramsEditable[$key] = $param;
+	}
+	
+	function addParams($params, $replace=false) {
+		if($replace)
+			$this->removeAllParams();
+			
+		if(is_array($params))
+		foreach($params as $key => $param) {
+			$key = !is_string($key) ? $param->field : $key;
+			$this->addParam($param, $key);	
+		}	
+	}
+	
+	function removeParam($key) {
+		if(isset($this->_paramsEditable[$key]))
+			unset($this->_paramsEditable[$key]);
+	}
+	
+	function removeAllParams() {
+		$this->_paramsEditable = array();
+	}
+	
+	// Render
+	
 	function render() {
 		echo ' '; // Expect Override
 	}
@@ -94,8 +160,7 @@ abstract class C4_AbstractView {
 				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__number.tpl');
 				break;
 			case Model_CustomField::TYPE_WORKER:
-				$tpl->assign('workers', DAO_Worker::getAllActive());
-				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__worker.tpl');
+				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__context_worker.tpl');
 				break;
 			default:
 				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__string.tpl');
@@ -172,24 +237,27 @@ abstract class C4_AbstractView {
 	 *
 	 */
 	protected function _sanitize() {
-		$fields = $this->getColumns();
+		$fields = $this->getColumnsAvailable();
 		$custom_fields = DAO_CustomField::getAll();
 		$needs_save = false;
 		
+		$params = $this->getParams();
+		
 		// Parameter sanity check
-		if(is_array($this->params))
-		foreach($this->params as $pidx => $null) {
+		if(is_array($params))
+		foreach($params as $pidx => $null) {
 			if(substr($pidx,0,3)!="cf_")
 				continue;
 				
 			if(0 != ($cf_id = intval(substr($pidx,3)))) {
 				// Make sure our custom fields still exist
 				if(!isset($custom_fields[$cf_id])) {
-					unset($this->params[$pidx]);
+					$this->removeParam($pidx);
 					$needs_save = true;
 				}
 			}
 		}
+		unset($params);
 		
 		// View column sanity check
 		if(is_array($this->view_columns))
@@ -258,27 +326,7 @@ abstract class C4_AbstractView {
 	 *
 	 * @return array
 	 */
-	static function getFields() {
-		// Expect Override
-		return array();
-	}
-
-	/**
-	 * All searchable fields
-	 *
-	 * @return array
-	 */
-	static function getSearchFields() {
-		// Expect Override
-		return array();
-	}
-
-	/**
-	 * All fields that can be displayed as columns in the view
-	 *
-	 * @return array
-	 */
-	static function getColumns() {
+	function getFields() {
 		// Expect Override
 		return array();
 	}
@@ -314,14 +362,28 @@ abstract class C4_AbstractView {
 		$this->renderPage = $page;
 	}
 
-	function doRemoveCriteria($field) {
-		unset($this->params[$field]);
+	function doRemoveCriteria($key) {
+		$this->removeParam($key);
 		$this->renderPage = 0;
 	}
 
 	function doResetCriteria() {
-		$this->params = array();
+		$this->addParams($this->paramsDefault, true);
 		$this->renderPage = 0;
+	}
+	
+	function getPresets() {
+		$active_worker = CerberusApplication::getActiveWorker();
+		
+		// Presets
+		return DAO_ViewFiltersPreset::getWhere(
+			sprintf("%s = %s AND %s = %d",
+				DAO_ViewFiltersPreset::VIEW_CLASS,
+				C4_ORMHelper::qstr(get_class($this)),
+				DAO_ViewFiltersPreset::WORKER_ID,
+				$active_worker->id
+			)
+		);
 	}
 	
 	public static function _doBulkSetCustomFields($source_extension,$custom_fields, $ids) {
@@ -384,10 +446,17 @@ abstract class C4_AbstractView {
 class C4_AbstractViewModel {
 	public $class_name = '';
 
-	public $id = 0;
+	public $id = '';
 	public $name = "";
+	public $is_ephemeral = 0;
+	
 	public $view_columns = array();
-	public $params = array();
+	public $columnsHidden = array();
+	
+	public $paramsEditable = array();
+	public $paramsDefault = array();
+	public $paramsRequired = array();
+	public $paramsHidden = array();
 
 	public $renderPage = 0;
 	public $renderLimit = 10;
@@ -402,80 +471,29 @@ class C4_AbstractViewModel {
  * This is essentially an AbstractView Factory
  */
 class C4_AbstractViewLoader {
-	static $views = null;
-	const VISIT_ABSTRACTVIEWS = 'abstractviews_list';
-
-	static private function _init() {
-		$visit = CerberusApplication::getVisit();
-		self::$views = $visit->get(self::VISIT_ABSTRACTVIEWS,array());
-	}
-
-	/**
-	 * @param string $view_label Abstract view identifier
-	 * @return boolean
-	 */
-	static function exists($view_label) {
-		if(is_null(self::$views)) self::_init();
-		return isset(self::$views[$view_label]);
-	}
-
 	/**
 	 * Enter description here...
 	 *
 	 * @param string $class C4_AbstractView
 	 * @param string $view_label ID
-	 * @return C4_AbstractView instance
+	 * @return C4_AbstractView or null
 	 */
-	static function getView($view_label, C4_AbstractViewModel $defaults=null) {
+	static function getView($view_id, C4_AbstractViewModel $defaults=null) {
 		$active_worker = CerberusApplication::getActiveWorker();
-		if(is_null(self::$views)) self::_init();
 
-		if(self::exists($view_label)) {
-			$model = self::$views[$view_label];
+		// Check if we've ever persisted this view
+		if(false !== ($model = DAO_WorkerViewModel::getView($active_worker->id, $view_id))) {
 			return self::unserializeAbstractView($model);
 			
-		} else {
-			// See if the worker has their own saved prefs
-			@$prefs = unserialize(DAO_WorkerPref::get($active_worker->id, 'view'.$view_label));
-
-			// Sanitize
-			if(!empty($prefs)
-				&& $prefs instanceof C4_AbstractViewModel 
-				&& !empty($prefs->class_name)
-			) {
-				if(!class_exists($prefs->class_name)) {
-					DAO_WorkerPref::delete($active_worker->id, 'view'.$view_label);
-					$prefs = null;
-				}
-			} else {
-				$prefs = null;
+		} elseif(!empty($defaults) && $defaults instanceof C4_AbstractViewModel) {
+			// Load defaults if they were provided
+			if(null != ($view = self::unserializeAbstractView($defaults)))  {
+				self::setView($view_id, $view);
+				return $view;
 			}
-			
-			// If no worker prefs, check if we're passed defaults
-			if(!$prefs instanceof C4_AbstractViewModel && !empty($defaults))
-				$prefs = $defaults;
-			
-			// Create a default view if it doesn't exist
-			if($prefs instanceof C4_AbstractViewModel) {
-				if(!empty($prefs->class_name) && class_exists($prefs->class_name)) {
-					$view = new $prefs->class_name;
-					$view->id = $view_label;
-					if(!empty($prefs->view_columns))
-						$view->view_columns = $prefs->view_columns;
-					if(!empty($prefs->renderLimit))
-						$view->renderLimit = $prefs->renderLimit;
-					if(null !== $prefs->renderSortBy)
-						$view->renderSortBy = $prefs->renderSortBy;
-					if(null !== $prefs->renderSortAsc)
-						$view->renderSortAsc = $prefs->renderSortAsc;
-					self::setView($view_label, $view);
-					return $view;
-				}
-			}
-			
 		}
-
-		return null;
+		
+		return NULL;
 	}
 
 	/**
@@ -485,37 +503,37 @@ class C4_AbstractViewLoader {
 	 * @param string $view_label ID
 	 * @param C4_AbstractView $view
 	 */
-	static function setView($view_label, $view) {
-		if(is_null(self::$views)) self::_init();
-		self::$views[$view_label] = self::serializeAbstractView($view);
-		self::_save();
+	static function setView($view_id, C4_AbstractView $view) {
+		$active_worker = CerberusApplication::getActiveWorker();
+		$model = self::serializeAbstractView($view);
+		DAO_WorkerViewModel::setView($active_worker->id, $view_id, $model);
 	}
 
-	static function deleteView($view_label) {
-		unset(self::$views[$view_label]);
-		self::_save();
+	static function deleteView($view_id) {
+		$active_worker = CerberusApplication::getActiveWorker();
+		DAO_WorkerViewModel::deleteView($active_worker->id, $view_id);
 	}
 	
-	static private function _save() {
-		// persist
-		$visit = CerberusApplication::getVisit();
-		$visit->set(self::VISIT_ABSTRACTVIEWS, self::$views);
-	}
-
 	static function serializeAbstractView($view) {
-		if(!$view instanceof C4_AbstractView) {
-			return null;
-		}
+		if(!$view instanceof C4_AbstractView)
+			return NULL;
 
 		$model = new C4_AbstractViewModel();
 			
 		$model->class_name = get_class($view);
 
 		$model->id = $view->id;
+		$model->is_ephemeral = $view->is_ephemeral;
 		$model->name = $view->name;
+		
 		$model->view_columns = $view->view_columns;
-		$model->params = $view->params;
-
+		$model->columnsHidden = $view->columnsHidden;
+		
+		$model->paramsEditable = $view->getEditableParams();
+		$model->paramsDefault = $view->paramsDefault;
+		$model->paramsRequired = $view->paramsRequired;
+		$model->paramsHidden = $view->paramsHidden;
+		
 		$model->renderPage = $view->renderPage;
 		$model->renderLimit = $view->renderLimit;
 		$model->renderTotal = $view->renderTotal;
@@ -535,19 +553,41 @@ class C4_AbstractViewLoader {
 			return null;
 
 		/* @var $inst C4_AbstractView */
-			
-		$inst->id = $model->id;
-		$inst->name = $model->name;
-		$inst->view_columns = $model->view_columns;
-		$inst->params = $model->params;
+		
+		if(!empty($model->id))
+			$inst->id = $model->id;
+		if(null !== $model->is_ephemeral)
+			$inst->is_ephemeral = $model->is_ephemeral;
+		if(!empty($model->name))
+			$inst->name = $model->name;
+		
+		if(!empty($model->view_columns))
+			$inst->view_columns = $model->view_columns;
+		if(!empty($model->columnsHidden))
+			$inst->columnsHidden = $model->columnsHidden;
+		
+		if(!empty($model->paramsEditable))
+			$inst->addParams($model->paramsEditable, true);
+		if(!empty($model->paramsDefault))
+			$inst->paramsDefault = $model->paramsDefault;
+		if(!empty($model->paramsRequired))
+			$inst->paramsRequired = $model->paramsRequired;
+		if(!empty($model->paramsHidden))
+			$inst->paramsHidden = $model->paramsHidden;
 
-		$inst->renderPage = $model->renderPage;
-		$inst->renderLimit = $model->renderLimit;
-		$inst->renderTotal = $model->renderTotal;
-		$inst->renderSortBy = $model->renderSortBy;
-		$inst->renderSortAsc = $model->renderSortAsc;
+		if(null !== $model->renderPage)
+			$inst->renderPage = $model->renderPage;
+		if(null !== $model->renderLimit)
+			$inst->renderLimit = $model->renderLimit;
+		if(null !== $model->renderTotal)
+			$inst->renderTotal = $model->renderTotal;
+		if(!empty($model->renderSortBy))
+			$inst->renderSortBy = $model->renderSortBy;
+		if(null !== $model->renderSortBy)
+			$inst->renderSortAsc = $model->renderSortAsc;
 
-		$inst->renderTemplate = $model->renderTemplate;
+		if(!empty($model->renderTemplate))
+			$inst->renderTemplate = $model->renderTemplate;
 		
 		return $inst;
 	}
@@ -575,7 +615,7 @@ class View_DevblocksTemplate extends C4_AbstractView {
 	function getData() {
 		return DAO_DevblocksTemplate::search(
 			$this->view_columns,
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -594,7 +634,6 @@ class View_DevblocksTemplate extends C4_AbstractView {
 //		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Worker::ID);
 //		$tpl->assign('custom_fields', $custom_fields);
 
-		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . APP_PATH . '/features/usermeet.core/templates/community/display/tabs/templates/view.tpl');
 	}
 
@@ -648,28 +687,10 @@ class View_DevblocksTemplate extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_DevblocksTemplate::getFields();
 	}
 
-	static function getSearchFields() {
-		$fields = self::getFields();
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		return $fields;
-	}
-
-	function doResetCriteria() {
-		parent::doResetCriteria();
-		
-//		$this->params = array(
-//			SearchFields_WorkerEvent::NUM_NONSPAM => new DevblocksSearchCriteria(SearchFields_WorkerEvent::NUM_NONSPAM,'>',0),
-//		);
-	}
-	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -705,7 +726,7 @@ class View_DevblocksTemplate extends C4_AbstractView {
 		}
 
 		if(!empty($criteria)) {
-			$this->params[$field] = $criteria;
+			$this->addParam($criteria);
 			$this->renderPage = 0;
 		}
 	}
@@ -746,7 +767,7 @@ class View_DevblocksTemplate extends C4_AbstractView {
 		do {
 			list($objects,$null) = DAO_DevblocksTemplate::search(
 				array(),
-				$this->params,
+				$this->getParams(),
 				100,
 				$pg++,
 				DAO_DevblocksTemplate::ID,
@@ -791,21 +812,30 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 	function __construct() {
 		$this->id = self::DEFAULT_ID;
 		$this->name = 'Storage Profiles';
-		$this->renderLimit = 25;
-		$this->renderSortBy = SearchFields_DevblocksStorageProfile::ID;
-		$this->renderSortAsc = true;
 
 		$this->view_columns = array(
 			SearchFields_DevblocksStorageProfile::NAME,
 			SearchFields_DevblocksStorageProfile::EXTENSION_ID,
 		);
+		$this->columnsHidden = array(
+			SearchFields_DevblocksStorageProfile::PARAMS_JSON,
+		);
+		
+		$this->paramsHidden = array(
+			SearchFields_DevblocksStorageProfile::ID,
+			SearchFields_DevblocksStorageProfile::PARAMS_JSON,
+		);
+		
+		$this->renderLimit = 25;
+		$this->renderSortBy = SearchFields_DevblocksStorageProfile::ID;
+		$this->renderSortAsc = true;
 		
 		$this->doResetCriteria();
 	}
 
 	function getData() {
 		$objects = DAO_DevblocksStorageProfile::search(
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -822,8 +852,6 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-		$tpl->assign('view_fields', $this->getColumns());
-		
 		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/configuration/tabs/storage/profiles/view.tpl');
 	}
 
@@ -862,31 +890,10 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_DevblocksStorageProfile::getFields();
 	}
 
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_DevblocksStorageProfile::ID]);
-		unset($fields[SearchFields_DevblocksStorageProfile::PARAMS_JSON]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_DevblocksStorageProfile::PARAMS_JSON]);
-		return $fields;
-	}
-
-	function doResetCriteria() {
-		parent::doResetCriteria();
-		
-		$this->params = array(
-			//SearchFields_DevblocksStorageProfile::ID => new DevblocksSearchCriteria(SearchFields_DevblocksStorageProfile::ID,'!=',0),
-		);
-	}
-	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
@@ -921,7 +928,7 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 		}
 
 		if(!empty($criteria)) {
-			$this->params[$field] = $criteria;
+			$this->addParam($criteria);
 			$this->renderPage = 0;
 		}
 	}
@@ -957,7 +964,7 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 		if(empty($ids))
 		do {
 			list($objects,$null) = DAO_DevblocksStorageProfile::search(
-				$this->params,
+				$this->getParams(),
 				100,
 				$pg++,
 				SearchFields_DevblocksStorageProfile::ID,
@@ -1348,14 +1355,6 @@ class Model_MailToGroupRule {
 //						$fields[DAO_Ticket::IS_DELETED] = intval($params['is_deleted']);
 //					break;
 
-//				case 'assign':
-//					if(isset($params['worker_id'])) {
-//						$w_id = intval($params['worker_id']);
-//						if(0 == $w_id || isset($workers[$w_id]))
-//							$fields[DAO_Ticket::NEXT_WORKER_ID] = $w_id;
-//					}
-//					break;
-
 				case 'move':
 					if(isset($params['group_id']) && isset($params['bucket_id'])) {
 						$g_id = intval($params['group_id']);
@@ -1412,7 +1411,6 @@ class CerberusVisit extends DevblocksVisit {
 	const KEY_MY_WORKSPACE = 'view_my_workspace';
 	const KEY_MAIL_MODE = 'mail_mode';
 	const KEY_HOME_SELECTED_TAB = 'home_selected_tab';
-	const KEY_OVERVIEW_FILTER = 'overview_filter';
 	const KEY_WORKFLOW_FILTER = 'workflow_filter';
 
 	public function __construct() {
@@ -1498,18 +1496,6 @@ class Model_Pop3Account {
 	public $username;
 	public $password;
 	public $port=110;
-};
-
-class Model_TicketComment {
-	public $id;
-	public $ticket_id;
-	public $address_id;
-	public $created;
-	public $comment;
-	
-	public function getAddress() {
-		return DAO_Address::get($this->address_id);
-	}
 };
 
 class Model_CustomField {
