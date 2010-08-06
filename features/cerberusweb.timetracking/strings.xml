@@ -4,6 +4,15 @@
 	<header datatype="winres" segtype="sentence" adminlang="en-us"
 		srclang="en-us" o-tmf="abc" />
 	<body>
+	
+		<!-- Contexts -->
+		
+		<tu tuid='context.timetracking.assigned'>
+			<tuv xml:lang="en_US"><seg>%s assigned a time slip to you.</seg></tuv>
+		</tu>
+		<tu tuid='context.timetracking.commented'>
+			<tuv xml:lang="en_US"><seg>%s commented on a time slip.</seg></tuv>
+		</tu>
 
 		<!-- Manifest -->
 
@@ -126,23 +135,14 @@
 		<tu tuid='timetracking_entry.activity_id'>
 			<tuv xml:lang="en_US"><seg>Activity</seg></tuv>
 		</tu>
-		<tu tuid='timetracking_entry.debit_org_id'>
-			<tuv xml:lang="en_US"><seg>Org</seg></tuv>
-		</tu>
 		<tu tuid='timetracking_entry.id'>
 			<tuv xml:lang="en_US"><seg>ID</seg></tuv>
 		</tu>
+		<tu tuid='timetracking_entry.is_closed'>
+			<tuv xml:lang="en_US"><seg>Is Closed</seg></tuv>
+		</tu>
 		<tu tuid='timetracking_entry.log_date'>
 			<tuv xml:lang="en_US"><seg>Log Date</seg></tuv>
-		</tu>
-		<tu tuid='timetracking_entry.notes'>
-			<tuv xml:lang="en_US"><seg>Notes</seg></tuv>
-		</tu>
-		<tu tuid='timetracking_entry.source_id'>
-			<tuv xml:lang="en_US"><seg>Source ID</seg></tuv>
-		</tu>
-		<tu tuid='timetracking_entry.source_extension_id'>
-			<tuv xml:lang="en_US"><seg>Source</seg></tuv>
 		</tu>
 		<tu tuid='timetracking_entry.time_actual_mins'>
 			<tuv xml:lang="en_US"><seg>Mins</seg></tuv>
@@ -220,13 +220,13 @@
 			<tuv xml:lang="en_US"><seg>Past:</seg></tuv>
 		</tu>
 		<tu tuid='timetracking.ui.reports.time_spent_activity'>
-			<tuv xml:lang="en_US"><seg>Time Spent Per Activity</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Time Spent by Activity over Date Range</seg></tuv>
 		</tu>
 		<tu tuid='timetracking.ui.reports.time_spent_activity.no_activity'>
 			<tuv xml:lang="en_US"><seg>(no activity)</seg></tuv>
 		</tu>
 		<tu tuid='timetracking.ui.reports.time_spent_org'>
-			<tuv xml:lang="en_US"><seg>Time Spent Per Organization</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Time Spent by Organization over Date Range</seg></tuv>
 		</tu>
 		<tu tuid='timetracking.ui.reports.time_spent_org.no_organization'>
 			<tuv xml:lang="en_US"><seg>(no organization)</seg></tuv>
@@ -235,13 +235,10 @@
 			<tuv xml:lang="en_US"><seg>All Workers</seg></tuv>
 		</tu>
 		<tu tuid='timetracking.ui.reports.time_spent_worker'>
-			<tuv xml:lang="en_US"><seg>Time Spent Per Worker</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Time Spent by Worker over Date Range</seg></tuv>
 		</tu>
 		<tu tuid='timetracking.ui.reports.to'>
 			<tuv xml:lang="en_US"><seg>To:</seg></tuv>
-		</tu>
-		<tu tuid='timetracking.ui.reports.tracked_desc.with_org'>
-			<tuv xml:lang="en_US"><seg>%s tracked %s mins on %s for %s</seg></tuv>
 		</tu>
 		
 		<!-- Time Tracking Comment Text -->
@@ -258,13 +255,6 @@
 		<tu tuid='timetracking.ui.comment.not_set'>
 			<tuv xml:lang="en_US"><seg>(not set)</seg></tuv>
 		</tu>
-		<tu tuid='timetracking.ui.comment.notes'>
-			<tuv xml:lang="en_US"><seg>Notes:</seg></tuv>
-		</tu>
-		<tu tuid='timetracking.ui.comment.notes'>
-			<tuv xml:lang="en_US"><seg>Notes:</seg></tuv>
-		</tu>
-
 
 	</body>
 </tmx>

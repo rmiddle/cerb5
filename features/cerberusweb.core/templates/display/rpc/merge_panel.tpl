@@ -3,18 +3,21 @@
 <input type="hidden" name="a" value="saveMergePanel">
 <input type="hidden" name="src_ticket_id" value="{$ticket_id}">
 
-<b>Merge with Ticket ID/Mask:</b><br>
-<input type="text" name="dst_ticket_id" size="32" style="width:100%;" value=""><br>
+<b>Merge with tickets:</b><br>
+<button type="button" class="chooser_ticket"><span class="cerb-sprite sprite-add"></span></button>
+<br>
 <br>
 
 <button type="submit"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>
 <br>
 </form>
 
-<script type="text/javascript" language="JavaScript1.2">
-	genericPanel.one('dialogopen',function(event,ui) {
-		genericPanel.dialog('option','title','{$translate->_('mail.merge')|escape}');
-		
-		//ajax.emailAutoComplete('#frmDisplayMerge textarea[name=req_adds]', { multiple: true } );
+<script type="text/javascript">
+	$popup = genericAjaxPopupFetch('peek');
+	$popup.one('popup_open',function(event,ui) {
+		$(this).dialog('option','title','{$translate->_('mail.merge')|escape}');
+	});
+	$('#frmDisplayMerge button.chooser_ticket').each(function() {
+		ajax.chooser(this,'cerberusweb.contexts.ticket','dst_ticket_id');
 	});
 </script>

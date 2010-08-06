@@ -8,8 +8,7 @@
 	<tr>
 		<td width="100%">
 			<table cellpadding="1" cellspacing="0" border="0" width="100%">
-				{assign var=assigned_worker_id value=$ticket->next_worker_id}
-				{if $assigned_worker_id > 0 && $assigned_worker_id != $active_worker->id && isset($workers.$assigned_worker_id)}
+				{if !empty($context_workers) && !isset($context_workers.{$active_worker->id})}
 				<tr>
 					<td width="100%" colspan="2">
 						<div class="ui-widget">
@@ -53,7 +52,7 @@
 			{assign var=ticket_team_id value=$ticket->team_id}
 			{assign var=headers value=$message->getHeaders()}
 			<button name="saveDraft" type="button" onclick="if($(this).attr('disabled'))return;$(this).attr('disabled','disabled');genericAjaxPost('reply{$message->id}_part2',null,'c=display&a=saveDraftReply&is_ajax=1',function(json, ui) { var obj = $.parseJSON(json); $('#divDraftStatus{$message->id}').html(obj.html); $('#reply{$message->id}_part2 input[name=draft_id]').val(obj.draft_id); $('#reply{$message->id}_part1 button[name=saveDraft]').removeAttr('disabled'); } );"><span class="cerb-sprite sprite-check"></span> Save Draft</button>
-			<button type="button" onclick="genericAjaxPanel('c=display&a=showSnippets&text=reply_{$message->id}&contexts=cerberusweb.contexts.ticket,cerberusweb.contexts.worker&id={$message->ticket_id}',null,false,'550');"><span class="cerb-sprite sprite-text_rich"></span> {$translate->_('common.snippets')|capitalize}</button>
+			<button type="button" onclick="genericAjaxPopup('peek','c=display&a=showSnippets&text=reply_{$message->id}&contexts=cerberusweb.contexts.ticket,cerberusweb.contexts.worker&id={$message->ticket_id}',null,false,'550');"><span class="cerb-sprite sprite-text_rich"></span> {$translate->_('common.snippets')|capitalize}</button>
 			<button type="button" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id={$ticket->team_id}',function(text) { insertAtCursor(document.getElementById('reply_{$message->id}'),text);document.getElementById('reply_{$message->id}').focus(); } );"><span class="cerb-sprite sprite-document_edit"></span> {$translate->_('display.reply.insert_sig')|capitalize}</button>
 			{* Plugin Toolbar *}
 			{if !empty($reply_toolbaritems)}
@@ -182,30 +181,17 @@
 		
 								<div style="margin-left:10px;">
 								<b>{$translate->_('display.reply.next.handle_reply')}</b><br>
-						      	<select name="next_worker_id" onchange="toggleDiv('replySurrender{$message->id}',this.selectedIndex?'block':'none');">
-						      		{if $active_worker->id==$ticket->next_worker_id || 0==$ticket->next_worker_id || $active_worker->hasPriv('core.ticket.actions.assign')}<option value="0" {if 0==$ticket->next_worker_id}selected{/if}>{$translate->_('common.anybody')|capitalize}{/if}
-						      		{foreach from=$workers item=worker key=worker_id name=workers}
-										{if ($worker_id==$active_worker->id && !$ticket->next_worker_id) || $worker_id==$ticket->next_worker_id || $active_worker->hasPriv('core.ticket.actions.assign')}
-							      			{if $worker_id==$active_worker->id}{assign var=next_worker_id_sel value=$smarty.foreach.workers.iteration}{/if}
-							      			<option value="{$worker_id}" {if $worker_id==$ticket->next_worker_id}selected{/if}>{$worker->getName()}
-										{/if}
-						      		{/foreach}
-						      	</select>&nbsp;
-						      	{if $active_worker->hasPriv('core.ticket.actions.assign') && !empty($next_worker_id_sel)}
-						      		<button type="button" onclick="this.form.next_worker_id.selectedIndex = {$next_worker_id_sel};toggleDiv('replySurrender{$message->id}','block');">{$translate->_('common.me')|lower}</button>
-						      		<button type="button" onclick="this.form.next_worker_id.selectedIndex = 0;toggleDiv('replySurrender{$message->id}','none');">{$translate->_('common.anybody')|lower}</button>
-						      	{/if}
-						      	</div>
+								<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-add"></span></button>
+								{if !empty($context_workers)}
+								<ul class="chooser-container bubbles">
+									{foreach from=$context_workers item=context_worker}
+									<li>{$context_worker->getName()|escape}<input type="hidden" name="worker_id[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
+									{/foreach}
+								</ul>
+								{/if}
+						      	<br>
 						      	<br>
 						      	
-						      	<div id="replySurrender{$message->id}" style="display:{if $ticket->next_worker_id}block{else}none{/if};margin-left:10px;">
-									<b>{$translate->_('display.reply.next.handle_reply_after')}</b> {$translate->_('display.reply.next.handle_reply_after_eg')}<br>  
-							      	<input type="text" name="unlock_date" size="32" maxlength="255" value="">
-							      	<button type="button" onclick="this.form.unlock_date.value='+2 hours';">{$translate->_('display.reply.next.handle_reply_after_2hrs')}</button>
-							      	<br>
-							      	<br>
-							    </div>
-		
 								{if $active_worker->hasPriv('core.ticket.actions.move')}
 								<b>{$translate->_('display.reply.next.move')}</b><br>  
 						      	<select name="bucket_id">
@@ -254,7 +240,7 @@
 
 </div>
 
-<script language="JavaScript1.2" type="text/javascript">
+<script type="text/javascript">
 	$(function() {
 		// Autocompletes
 		ajax.emailAutoComplete('#reply{$message->id}_part1 input[name=to]', { multiple: true } );
@@ -270,5 +256,9 @@
 		
 		$('#reply{$message->id}_part1 button[name=saveDraft]').click(); // save now
 		setInterval("$('#reply{$message->id}_part1 button[name=saveDraft]').click();", 30000); // and every 30 sec
+		
+		$('#reply{$message->id}_part2 button.chooser_worker').each(function() {
+			ajax.chooser(this,'cerberusweb.contexts.worker','worker_id');			
+		});
 	} );
 </script>

@@ -16,29 +16,14 @@
 			<textarea name="content" rows="8" cols="80" id="note_content" class="reply" style="width:98%;border:1px solid rgb(180,180,180);padding:5px;"></textarea>
 		</td>
 	</tr>
-	{if !empty($workers)}
-	{assign var=owner_id value=$ticket->next_worker_id}
 	<tr>
 		<td>
-			<label><input type="checkbox" onclick="toggleDiv('addNoteNotifyWorkers{$message->id}');"> <b>Notify workers</b></label>
-			<div id="addNoteNotifyWorkers{$message->id}" style="display:none;">
-			<select name="notify_worker_ids[]" multiple="multiple" size="8" id="notify_worker_ids">
-				{foreach from=$active_workers item=worker name=notify_workers}
-				{if $owner_id && $worker->id == $owner_id}{math assign=notify_owner_id equation="x-1" x=$smarty.foreach.notify_workers.iteration}{/if}
-				{if $worker->id == $active_worker->id}{math assign=notify_me_id equation="x-1" x=$smarty.foreach.notify_workers.iteration}{/if}
-				<option value="{$worker->id}">{$worker->getName()}</option>
-				{/foreach}
-			</select><br>
-			(hold CTRL or CMD to select multiple)<br>
-			{if !empty($notify_me_id)}<button type="button" onclick="document.getElementById('notify_worker_ids').options[{$notify_me_id}].selected=true;">{$translate->_('common.me')}</button>{/if} 
-			{if !empty($owner_id) || isset($notify_owner_id)}<button type="button" onclick="document.getElementById('notify_worker_ids').options[{$notify_owner_id}].selected=true;">{$workers.$owner_id->getName()} (owner)</button>{/if}
-			<br>
+			<b>Notify workers</b>:<br>
+			<div style="margin-left:20px;margin-bottom:1em;">
+				<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-add"></span></button>
 			</div>
-			<br>
-			<br>
 		</td>
 	</tr>
-	{/if}
 	<tr>
 		<td nowrap="nowrap" valign="top">
 			<button type="button" onclick="genericAjaxPost('reply{$message->id}_form','{$message->id}notes','c=display&a=doAddNote');$('#reply{$message->id}').html('');"><span class="cerb-sprite sprite-check"></span> Add Note</button>
@@ -48,3 +33,9 @@
 </table>
 </div>
 </form>
+
+<script type="text/javascript">
+	$('#reply{$message->id}_form button.chooser_worker').each(function() {
+		ajax.chooser(this,'cerberusweb.contexts.worker','notify_worker_ids');
+	});
+</script>

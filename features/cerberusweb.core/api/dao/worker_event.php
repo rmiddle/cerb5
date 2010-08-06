@@ -53,21 +53,18 @@ class DAO_WorkerEvent extends DevblocksORMHelper {
 	const ID = 'id';
 	const CREATED_DATE = 'created_date';
 	const WORKER_ID = 'worker_id';
-	const TITLE = 'title';
-	const CONTENT = 'content';
+	const MESSAGE = 'message';
 	const IS_READ = 'is_read';
 	const URL = 'url';
 
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$id = $db->GenID('worker_event_seq');
-		
-		$sql = sprintf("INSERT INTO worker_event (id) ".
-			"VALUES (%d)",
-			$id
+		$sql = sprintf("INSERT INTO worker_event () ".
+			"VALUES ()"
 		);
 		$db->Execute($sql);
+		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
 		
@@ -95,7 +92,7 @@ class DAO_WorkerEvent extends DevblocksORMHelper {
 	static function getWhere($where=null) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$sql = "SELECT id, created_date, worker_id, title, content, is_read, url ".
+		$sql = "SELECT id, created_date, worker_id, message, is_read, url ".
 			"FROM worker_event ".
 			(!empty($where) ? sprintf("WHERE %s ",$where) : "").
 			"ORDER BY id asc";
@@ -150,9 +147,8 @@ class DAO_WorkerEvent extends DevblocksORMHelper {
 			$object->id = $row['id'];
 			$object->created_date = $row['created_date'];
 			$object->worker_id = $row['worker_id'];
-			$object->title = $row['title'];
+			$object->message = $row['message'];
 			$object->url = $row['url'];
-			$object->content = $row['content'];
 			$object->is_read = $row['is_read'];
 			$objects[$object->id] = $object;
 		}
@@ -211,33 +207,41 @@ class DAO_WorkerEvent extends DevblocksORMHelper {
 
         list($tables,$wheres) = parent::_parseSearchParams($params, array(),$fields,$sortBy);
 		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
-		$total = -1;
 		
-		$sql = sprintf("SELECT ".
+		$select_sql = sprintf("SELECT ".
 			"we.id as %s, ".
 			"we.created_date as %s, ".
 			"we.worker_id as %s, ".
-			"we.title as %s, ".
-			"we.content as %s, ".
+			"we.message as %s, ".
 			"we.is_read as %s, ".
-			"we.url as %s ".
-			"FROM worker_event we ",
-//			"INNER JOIN team tm ON (tm.id = t.team_id) ".
+			"we.url as %s ",
 			    SearchFields_WorkerEvent::ID,
 			    SearchFields_WorkerEvent::CREATED_DATE,
 			    SearchFields_WorkerEvent::WORKER_ID,
-			    SearchFields_WorkerEvent::TITLE,
-			    SearchFields_WorkerEvent::CONTENT,
+			    SearchFields_WorkerEvent::MESSAGE,
 			    SearchFields_WorkerEvent::IS_READ,
 			    SearchFields_WorkerEvent::URL
-			).
+		);
 			
-			// [JAS]: Dynamic table joins
+		$join_sql = "FROM worker_event we "
+//			"INNER JOIN team tm ON (tm.id = t.team_id) ".
 //			(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
-			
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "").
-			(!empty($sortBy) ? sprintf("ORDER BY %s %s",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : "")
 		;
+			
+		$where_sql = "".
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
+		
+		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
+
+		$has_multiple_values = false;
+		
+		$sql = 
+			$select_sql.
+			$join_sql.
+			$where_sql.
+			($has_multiple_values ? 'GROUP BY we.id ' : '').
+			$sort_sql;
+		
 		// [TODO] Could push the select logic down a level too
 		if($limit > 0) {
     		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
@@ -258,9 +262,13 @@ class DAO_WorkerEvent extends DevblocksORMHelper {
 		}
 
 		// [JAS]: Count all
+		$total = -1;
 		if($withCounts) {
-		    $rs = $db->Execute($sql);
-		    $total = mysql_num_rows($rs);
+			$count_sql = 
+				($has_multiple_values ? "SELECT COUNT(DISTINCT we.id) " : "SELECT COUNT(we.id) ").
+				$join_sql.
+				$where_sql;
+			$total = $db->GetOne($count_sql);
 		}
 		
 		mysql_free_result($rs);
@@ -275,8 +283,7 @@ class SearchFields_WorkerEvent implements IDevblocksSearchFields {
 	const ID = 'we_id';
 	const CREATED_DATE = 'we_created_date';
 	const WORKER_ID = 'we_worker_id';
-	const TITLE = 'we_title';
-	const CONTENT = 'we_content';
+	const MESSAGE = 'we_message';
 	const IS_READ = 'we_is_read';
 	const URL = 'we_url';
 	
@@ -290,8 +297,7 @@ class SearchFields_WorkerEvent implements IDevblocksSearchFields {
 			self::ID => new DevblocksSearchField(self::ID, 'we', 'id', $translate->_('worker_event.id')),
 			self::CREATED_DATE => new DevblocksSearchField(self::CREATED_DATE, 'we', 'created_date', $translate->_('worker_event.created_date')),
 			self::WORKER_ID => new DevblocksSearchField(self::WORKER_ID, 'we', 'worker_id', $translate->_('worker_event.worker_id')),
-			self::TITLE => new DevblocksSearchField(self::TITLE, 'we', 'title', $translate->_('worker_event.title')),
-			self::CONTENT => new DevblocksSearchField(self::CONTENT, 'we', 'content', $translate->_('worker_event.content')),
+			self::MESSAGE => new DevblocksSearchField(self::MESSAGE, 'we', 'message', $translate->_('worker_event.message')),
 			self::IS_READ => new DevblocksSearchField(self::IS_READ, 'we', 'is_read', $translate->_('worker_event.is_read')),
 			self::URL => new DevblocksSearchField(self::URL, 'we', 'url', $translate->_('common.url')),
 		);
@@ -307,8 +313,7 @@ class Model_WorkerEvent {
 	public $id;
 	public $created_date;
 	public $worker_id;
-	public $title;
-	public $content;
+	public $message;
 	public $is_read;
 	public $url;
 };
@@ -324,8 +329,15 @@ class View_WorkerEvent extends C4_AbstractView {
 		$this->renderSortAsc = false;
 
 		$this->view_columns = array(
-			SearchFields_WorkerEvent::CONTENT,
+			SearchFields_WorkerEvent::MESSAGE,
 			SearchFields_WorkerEvent::CREATED_DATE,
+		);
+		$this->columnsHidden = array(
+			SearchFields_WorkerEvent::ID,
+		);
+		
+		$this->paramsHidden = array(
+			SearchFields_WorkerEvent::ID,
 		);
 		
 		$this->doResetCriteria();
@@ -333,7 +345,7 @@ class View_WorkerEvent extends C4_AbstractView {
 
 	function getData() {
 		$objects = DAO_WorkerEvent::search(
-			$this->params,
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
@@ -353,7 +365,6 @@ class View_WorkerEvent extends C4_AbstractView {
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
 		
-		$tpl->assign('view_fields', $this->getColumns());
 		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/home/tabs/my_events/view.tpl');
 	}
 
@@ -362,8 +373,7 @@ class View_WorkerEvent extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 
 		switch($field) {
-			case SearchFields_WorkerEvent::TITLE:
-			case SearchFields_WorkerEvent::CONTENT:
+			case SearchFields_WorkerEvent::MESSAGE:
 			case SearchFields_WorkerEvent::URL:
 				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
 				break;
@@ -379,9 +389,7 @@ class View_WorkerEvent extends C4_AbstractView {
 				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
 				break;
 			case SearchFields_WorkerEvent::WORKER_ID:
-				$workers = DAO_Worker::getAllActive();
-				$tpl->assign('workers', $workers);
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__worker.tpl');
+				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_worker.tpl');
 				break;
 			default:
 				echo '';
@@ -414,35 +422,15 @@ class View_WorkerEvent extends C4_AbstractView {
 		}
 	}
 
-	static function getFields() {
+	function getFields() {
 		return SearchFields_WorkerEvent::getFields();
 	}
 
-	static function getSearchFields() {
-		$fields = self::getFields();
-		unset($fields[SearchFields_WorkerEvent::ID]);
-		return $fields;
-	}
-
-	static function getColumns() {
-		$fields = self::getFields();
-		return $fields;
-	}
-
-	function doResetCriteria() {
-		parent::doResetCriteria();
-		
-//		$this->params = array(
-//			SearchFields_WorkerEvent::NUM_NONSPAM => new DevblocksSearchCriteria(SearchFields_WorkerEvent::NUM_NONSPAM,'>',0),
-//		);
-	}
-	
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
 		switch($field) {
-			case SearchFields_WorkerEvent::TITLE:
-			case SearchFields_WorkerEvent::CONTENT:
+			case SearchFields_WorkerEvent::MESSAGE:
 			case SearchFields_WorkerEvent::URL:
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
@@ -473,7 +461,7 @@ class View_WorkerEvent extends C4_AbstractView {
 		}
 
 		if(!empty($criteria)) {
-			$this->params[$field] = $criteria;
+			$this->addParam($criteria);
 			$this->renderPage = 0;
 		}
 	}
@@ -504,7 +492,7 @@ class View_WorkerEvent extends C4_AbstractView {
 //		if(empty($ids))
 //		do {
 //			list($objects,$null) = DAO_Address::search(
-//			$this->params,
+//			$this->getParams(),
 //			100,
 //			$pg++,
 //			SearchFields_Address::ID,
