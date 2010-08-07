@@ -14,6 +14,17 @@ class DAO_Comment extends DevblocksORMHelper {
 		$id = $db->LastInsertId();
 		
 		self::update($id, $fields);
+		// New task
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'comment.action.create',
+                array(
+                    'comment_id' => $id,
+                	'fields' => $fields,
+                )
+            )
+	    );
 		
 		return $id;
 	}
