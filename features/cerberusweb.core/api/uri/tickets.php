@@ -229,17 +229,59 @@ class ChTicketsPage extends CerberusPageExtension {
 				$quick_search_type = $visit->get('quick_search_type');
 				$tpl->assign('quick_search_type', $quick_search_type);
 
+				$tab_manifests = DevblocksPlatform::getExtensions('cerberusweb.mail.tab', false);
+				$tpl->assign('tab_manifests', $tab_manifests);
+				
 				$tpl->display('file:' . $this->_TPL_PATH . 'tickets/index.tpl');
 				break;
 		}
 		
 	}
 	
+	// Ajax
+	function showTabAction() {
+		@$ext_id = DevblocksPlatform::importGPC($_REQUEST['ext_id'],'string','');
+		
+		if(null != ($tab_mft = DevblocksPlatform::getExtension($ext_id)) 
+			&& null != ($inst = $tab_mft->createInstance()) 
+			&& $inst instanceof Extension_MailTab) {
+			$inst->showTab();
+		}
+	}
+	
+	// Post
+	function saveTabAction() {
+		@$ext_id = DevblocksPlatform::importGPC($_REQUEST['ext_id'],'string','');
+		
+		if(null != ($tab_mft = DevblocksPlatform::getExtension($ext_id)) 
+			&& null != ($inst = $tab_mft->createInstance()) 
+			&& $inst instanceof Extension_MailTab) {
+			$inst->saveTab();
+		}
+	}
+	
+	/*
+	 * [TODO] Proxy any func requests to be handled by the tab directly, 
+	 * instead of forcing tabs to implement controllers.  This should check 
+	 * for the *Action() functions just as a handleRequest would
+	 */
+	function handleTabActionAction() {
+		@$tab = DevblocksPlatform::importGPC($_REQUEST['tab'],'string','');
+		@$action = DevblocksPlatform::importGPC($_REQUEST['action'],'string','');
+
+		if(null != ($tab_mft = DevblocksPlatform::getExtension($tab)) 
+			&& null != ($inst = $tab_mft->createInstance()) 
+			&& $inst instanceof Extension_MailTab) {
+				if(method_exists($inst,$action.'Action')) {
+					call_user_func(array(&$inst, $action.'Action'));
+				}
+		}
+	}	
+	
 	function showWorkflowTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 		
-		$db = DevblocksPlatform::getDatabaseService();
 		$visit = CerberusApplication::getVisit();
 		$translate = DevblocksPlatform::getTranslationService();
 		
@@ -355,7 +397,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		// Totals (only drill down as deep as a group)
 		$original_params = $workflowView->getEditableParams();
 		$workflowView->removeParam(SearchFields_Ticket::TICKET_CATEGORY_ID);
-		$counts = $workflowView->getCounts('group');
+		$counts = $workflowView->getCounts('available');
 		$workflowView->addParams($original_params, true);
 		$tpl->assign('counts', $counts);
 		
@@ -468,7 +510,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		@$field = DevblocksPlatform::importGPC($_REQUEST['field'],'string');
 
 		if(empty($field))
-			$field = 'group';
+			$field = 'available';
 		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('view_id', $view_id);
@@ -995,7 +1037,7 @@ class ChTicketsPage extends CerberusPageExtension {
 				// Since we don't re-save the view, we can remove filters that we don't want to restrict the count
 				$view = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_MAIL_WORKFLOW);
 				$view->removeParam(SearchFields_Ticket::TICKET_CATEGORY_ID);
-				$counts = $view->getCounts('group');
+				$counts = $view->getCounts('available');
 				$tpl->assign('counts', $counts);
 				
 				$tpl->display('file:' . $this->_TPL_PATH . 'tickets/workflow/sidebar.tpl');
