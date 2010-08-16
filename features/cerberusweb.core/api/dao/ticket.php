@@ -935,6 +935,36 @@ class DAO_Ticket extends C4_ORMHelper {
 						$where_sql .= sprintf("AND t.category_id NOT IN (%s) ", implode(',', $assignable_bucket_ids));	
 					}
 					break;
+					
+				case SearchFields_Ticket::VIRTUAL_STATUS:
+					$values = $param->value;
+					if(!is_array($values))
+						$values = array($values);
+						
+					$status_sql = array();
+					
+					foreach($values as $value) {
+						switch($value) {
+							case 'open':
+								$status_sql[] = "(t.is_waiting = 0 AND t.is_closed = 0)";
+								break;
+							case 'waiting':
+								$status_sql[] = "(t.is_waiting = 1 AND t.is_closed = 0)";
+								break;
+							case 'closed':
+								$status_sql[] = "(t.is_closed = 1 AND t.is_deleted=0)";
+								break;
+							case 'deleted':
+								$status_sql[] = "(t.is_closed = 1 AND t.is_deleted=1)";
+								break;
+						}
+					}
+					
+					if(empty($status_sql))
+						break;
+					
+					$where_sql .= 'AND (' . implode(' OR ', $status_sql) . ') ';
+					break;
 			}
 		}
 		
@@ -1047,6 +1077,7 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 	
 	// Virtuals
 	const VIRTUAL_ASSIGNABLE = '*_assignable';
+	const VIRTUAL_STATUS = '*_status';
 	const VIRTUAL_WORKERS = '*_workers';
 	
 	/**
@@ -1075,9 +1106,9 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 			self::TICKET_CATEGORY_ID => new DevblocksSearchField(self::TICKET_CATEGORY_ID, 't', 'category_id',$translate->_('common.bucket')),
 			self::TICKET_CREATED_DATE => new DevblocksSearchField(self::TICKET_CREATED_DATE, 't', 'created_date',$translate->_('ticket.created')),
 			self::TICKET_UPDATED_DATE => new DevblocksSearchField(self::TICKET_UPDATED_DATE, 't', 'updated_date',$translate->_('ticket.updated')),
-			self::TICKET_WAITING => new DevblocksSearchField(self::TICKET_WAITING, 't', 'is_waiting',$translate->_('status.waiting')),
-			self::TICKET_CLOSED => new DevblocksSearchField(self::TICKET_CLOSED, 't', 'is_closed',$translate->_('status.closed')),
-			self::TICKET_DELETED => new DevblocksSearchField(self::TICKET_DELETED, 't', 'is_deleted',$translate->_('status.deleted')),
+			self::TICKET_WAITING => new DevblocksSearchField(self::TICKET_WAITING, 't', 'is_waiting'),
+			self::TICKET_CLOSED => new DevblocksSearchField(self::TICKET_CLOSED, 't', 'is_closed'),
+			self::TICKET_DELETED => new DevblocksSearchField(self::TICKET_DELETED, 't', 'is_deleted'),
 
 			self::TICKET_LAST_ACTION_CODE => new DevblocksSearchField(self::TICKET_LAST_ACTION_CODE, 't', 'last_action_code',$translate->_('ticket.last_action')),
 			self::TICKET_SPAM_TRAINING => new DevblocksSearchField(self::TICKET_SPAM_TRAINING, 't', 'spam_training',$translate->_('ticket.spam_training')),
@@ -1099,6 +1130,7 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
 			
 			self::VIRTUAL_ASSIGNABLE => new DevblocksSearchField(self::VIRTUAL_ASSIGNABLE, '*', 'assignable', $translate->_('ticket.assignable')),
+			self::VIRTUAL_STATUS => new DevblocksSearchField(self::VIRTUAL_STATUS, '*', 'status', $translate->_('ticket.status')),
 			self::VIRTUAL_WORKERS => new DevblocksSearchField(self::VIRTUAL_WORKERS, '*', 'workers', $translate->_('common.owners')),
 		);
 
@@ -1212,9 +1244,24 @@ class View_Ticket extends C4_AbstractView {
 		return $objects;
 	}
 
+	function renderSubtotals() {
+		if(!method_exists($this, 'getCounts'))
+			return;
+			
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('view_id', $this->id);
+		$tpl->assign('view', $this);
+			
+		$counts = $this->getCounts($this->renderSubtotals);
+		$tpl->assign('counts', $counts);
+		
+		$tpl->display('devblocks:cerberusweb.core::tickets/view_sidebar.tpl');
+	}
+	
 	// [TODO] This code really should be in DAO_*
 	function getCounts($category=null) {
 		$db = DevblocksPlatform::getDatabaseService();
+		$translate = DevblocksPlatform::getTranslationService();
 		
 		$groups = DAO_Group::getAll();
 		$buckets = DAO_Bucket::getAll();
@@ -1223,110 +1270,6 @@ class View_Ticket extends C4_AbstractView {
 		$counts = array();
 
 		switch($category) {
-			case 'open':
-				$params = $this->getParams();
-				$params[] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',0);
-				$params[] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',0);
-				
-				$query_parts = DAO_Ticket::getSearchQueryComponents(
-					$this->view_columns,
-					$params,
-					$this->renderSortBy,
-					$this->renderSortAsc
-				);
-				
-				$join_sql = $query_parts['join'];
-				$where_sql = $query_parts['where'];
-				
-				$sql = 
-					"SELECT t.team_id, t.category_id, count(t.id) as hits ".
-					$join_sql.
-					$where_sql.
-					"GROUP BY t.team_id, t.category_id ";
-		
-				$results = $db->GetArray($sql);
-				
-				foreach($results as $result) {
-					$group_id = $result['team_id'];
-					$bucket_id = $result['category_id'];
-					$hits = $result['hits'];
-		
-					// ACL
-					if(!isset($counts[$group_id]))
-						$counts[$group_id] = array('hits'=>0, 'label'=>$groups[$group_id]->name, 'children'=>array());
-					
-					if(empty($bucket_id))
-						$label = 'Inbox';
-					else
-						$label = $buckets[$bucket_id]->name;
-						
-					$counts[$group_id]['children'][$bucket_id] = array('hits'=>$hits, 'label'=>$label);
-					$counts[$group_id]['hits'] += $hits;
-				}
-				
-				unset($results);
-				
-				// Sort groups by name
-				uasort($counts, array($this, '_sortByLabel'));
-				
-				// Sort by bucket position
-				foreach($counts as $group_id => $group)
-					uksort($counts[$group_id]['children'], array($this, '_sortByBucketPos'));				
-					
-				break;
-				
-			case 'waiting':
-				$params = $this->getParams();
-				$params[] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',0);
-				$params[] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',1);
-				
-				$query_parts = DAO_Ticket::getSearchQueryComponents(
-					$this->view_columns,
-					$params,
-					$this->renderSortBy,
-					$this->renderSortAsc
-				);
-				
-				$join_sql = $query_parts['join'];
-				$where_sql = $query_parts['where'];
-				
-				$sql = 
-					"SELECT t.team_id, t.category_id, count(t.id) as hits ".
-					$join_sql.
-					$where_sql.
-					"GROUP BY t.team_id, t.category_id ";
-		
-				$results = $db->GetArray($sql);
-				
-				foreach($results as $result) {
-					$group_id = $result['team_id'];
-					$bucket_id = $result['category_id'];
-					$hits = $result['hits'];
-		
-					// ACL
-					if(!isset($counts[$group_id]))
-						$counts[$group_id] = array('hits'=>0, 'label'=>$groups[$group_id]->name, 'children'=>array());
-					
-					if(empty($bucket_id))
-						$label = 'Inbox';
-					else
-						$label = $buckets[$bucket_id]->name;
-						
-					$counts[$group_id]['children'][$bucket_id] = array('hits'=>$hits, 'label'=>$label);
-					$counts[$group_id]['hits'] += $hits;
-				}
-				
-				unset($results);
-				
-				// Sort groups by name
-				uasort($counts, array($this, '_sortByLabel'));
-				
-				// Sort by bucket position
-				foreach($counts as $group_id => $group)
-					uksort($counts[$group_id]['children'], array($this, '_sortByBucketPos'));				
-				
-				break;
-				
 			case 'group':
 				$params = $this->getParams();
 				
@@ -1355,14 +1298,21 @@ class View_Ticket extends C4_AbstractView {
 		
 					// ACL
 					if(!isset($counts[$group_id]))
-						$counts[$group_id] = array('hits'=>0, 'label'=>$groups[$group_id]->name, 'children'=>array());
+						$counts[$group_id] = array(
+							'hits'=>0,
+							'label'=>$groups[$group_id]->name,
+							'children'=>array()
+						);
 					
 					if(empty($bucket_id))
 						$label = 'Inbox';
 					else
 						$label = $buckets[$bucket_id]->name;
 						
-					$counts[$group_id]['children'][$bucket_id] = array('hits'=>$hits, 'label'=>$label);
+					$counts[$group_id]['children'][$bucket_id] = array(
+						'hits'=>$hits,
+						'label'=>$label
+					);
 					$counts[$group_id]['hits'] += $hits;
 				}
 				
@@ -1391,16 +1341,24 @@ class View_Ticket extends C4_AbstractView {
 				$where_sql = $query_parts['where'];				
 				
 				$sql = 
-					"SELECT COUNT(IF(t.is_closed=0 AND t.is_waiting=0,1,NULL)) AS open_hits, COUNT(IF(t.is_waiting=1,1,NULL)) AS waiting_hits, COUNT(IF(t.is_closed=1,1,NULL)) AS closed_hits ".
+					"SELECT COUNT(IF(t.is_closed=0 AND t.is_waiting=0,1,NULL)) AS open_hits, COUNT(IF(t.is_waiting=1 AND t.is_deleted=0,1,NULL)) AS waiting_hits, COUNT(IF(t.is_closed=1 AND t.is_deleted=0,1,NULL)) AS closed_hits, COUNT(IF(t.is_deleted=1,1,NULL)) AS deleted_hits ".
 					$join_sql.
 					$where_sql.
 					"";
 		
 				$result = $db->GetRow($sql);
 				
-				$counts['open'] = array('hits'=> $result['open_hits'], 'label'=>'Open');
-				$counts['waiting'] = array('hits'=> $result['waiting_hits'], 'label'=>'Waiting');
-				$counts['closed'] = array('hits'=> $result['closed_hits'], 'label'=>'Closed');
+				if(!empty($result['open_hits']))
+					$counts['open'] = array('hits'=> $result['open_hits'], 'label'=>$translate->_('status.open'));
+
+				if(!empty($result['waiting_hits']))
+					$counts['waiting'] = array('hits'=> $result['waiting_hits'], 'label'=>$translate->_('status.waiting'));
+					
+				if(!empty($result['closed_hits']))
+					$counts['closed'] = array('hits'=> $result['closed_hits'], 'label'=>$translate->_('status.closed'));
+					
+				if(!empty($result['deleted_hits']))
+					$counts['deleted'] = array('hits'=> $result['deleted_hits'], 'label'=>$translate->_('status.deleted'));
 
 				unset($result);
 				
@@ -1582,6 +1540,10 @@ class View_Ticket extends C4_AbstractView {
 				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_worker.tpl');
 				break;
 				
+			case SearchFields_Ticket::VIRTUAL_STATUS:
+				$tpl->display('file:' . $tpl_path . 'tickets/search/criteria/ticket_status.tpl');
+				break;
+				
 			default:
 				// Custom Fields
 				if('cf_' == substr($field,0,3)) {
@@ -1595,6 +1557,8 @@ class View_Ticket extends C4_AbstractView {
 
 	function renderVirtualCriteria($param) {
 		$key = $param->field;
+		
+		$translate = DevblocksPlatform::getTranslationService();
 		
 		switch($key) {
 			case SearchFields_Ticket::VIRTUAL_ASSIGNABLE:
@@ -1619,6 +1583,31 @@ class View_Ticket extends C4_AbstractView {
 					}
 					
 					echo sprintf("Owner is %s", implode(' or ', $strings));
+				}
+				break;
+				
+			case SearchFields_Ticket::VIRTUAL_STATUS:
+				if(is_array($param->value)) {
+					$strings = array();
+					
+					foreach($param->value as $value) {
+						switch($value) {
+							case 'open':
+								$strings[] = '<b>' . $translate->_('status.open') . '</b>';
+								break;
+							case 'waiting':
+								$strings[] = '<b>' . $translate->_('status.waiting') . '</b>';
+								break;
+							case 'closed':
+								$strings[] = '<b>' . $translate->_('status.closed') . '</b>';
+								break;
+							case 'deleted':
+								$strings[] = '<b>' . $translate->_('status.deleted') . '</b>';
+								break;
+						}
+					}
+					
+					echo sprintf("Status is %s", implode(' or ', $strings));
 				}
 				break;
 		}
@@ -1774,10 +1763,17 @@ class View_Ticket extends C4_AbstractView {
 				@$team_ids = DevblocksPlatform::importGPC($_REQUEST['team_id'],'array');
 				@$bucket_ids = DevblocksPlatform::importGPC($_REQUEST['bucket_id'],'array');
 
-				if(!empty($team_ids))
+				// Groups
+				if(!empty($team_ids)) {
 					$this->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,$oper,$team_ids));
-				if(!empty($bucket_ids))
+				}
+					
+				// Buckets
+				if(!empty($bucket_ids)) {
 					$this->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CATEGORY_ID,$oper,$bucket_ids));
+				} else { // clear if no buckets provided
+					$this->removeParam(SearchFields_Ticket::TICKET_CATEGORY_ID);
+				}
 
 				break;
 				
@@ -1788,7 +1784,12 @@ class View_Ticket extends C4_AbstractView {
 				
 			case SearchFields_Ticket::VIRTUAL_WORKERS:
 				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
-				$criteria = new DevblocksSearchCriteria($field,'in', $worker_ids);
+				$criteria = new DevblocksSearchCriteria($field, 'in', $worker_ids);
+				break;
+				
+			case SearchFields_Ticket::VIRTUAL_STATUS:
+				@$statuses = DevblocksPlatform::importGPC($_REQUEST['value'],'array',array());
+				$criteria = new DevblocksSearchCriteria($field, null, $statuses);
 				break;
 				
 			default:
