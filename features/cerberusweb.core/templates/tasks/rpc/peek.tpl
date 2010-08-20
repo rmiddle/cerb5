@@ -1,8 +1,12 @@
 <form action="{devblocks_url}{/devblocks_url}" method="POST" id="formTaskPeek" name="formTaskPeek" onsubmit="return false;">
 <input type="hidden" name="c" value="tasks">
 <input type="hidden" name="a" value="saveTaskPeek">
-<input type="hidden" name="id" value="{$task->id}">
 <input type="hidden" name="view_id" value="{$view_id}">
+<input type="hidden" name="id" value="{$task->id}">
+{if empty($id) && !empty($context)}
+<input type="hidden" name="context" value="{$context}">
+<input type="hidden" name="context_id" value="{$context_id}">
+{/if}
 <input type="hidden" name="do_delete" value="0">
 
 <table cellpadding="0" cellspacing="2" border="0" width="98%">
@@ -58,7 +62,7 @@
 <br>
 
 {if $active_worker->hasPriv('core.tasks.actions.create')}
-	<button type="button" onclick="genericAjaxPopupClose('peek', 'task_save');genericAjaxPost('formTaskPeek', 'view{$view_id}');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
+	<button type="button" onclick="genericAjaxPost('formTaskPeek', 'view{$view_id}', '', function() { genericAjaxPopupClose('peek', 'task_save'); } );"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
 	{if !empty($task)}<button type="button" onclick="if(confirm('Are you sure you want to permanently delete this task?')) { $('#formTaskPeek input[name=do_delete]').val('1'); genericAjaxPost('formTaskPeek', 'view{$view_id}'); genericAjaxPopupClose('peek'); } "><span class="cerb-sprite sprite-delete2"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
 {else}
 	<div class="error">{'error.core.no_acl.edit'|devblocks_translate}</div>
