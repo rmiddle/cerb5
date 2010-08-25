@@ -1061,7 +1061,7 @@ class DAO_KbArticle extends C4_ORMHelper {
 		$fields = SearchFields_KbArticle::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
@@ -1468,16 +1468,16 @@ class View_KbArticle extends C4_AbstractView {
 			SearchFields_KbArticle::UPDATED,
 			SearchFields_KbArticle::VIEWS,
 		);
-		$this->columnsHidden = array(
+		$this->addColumnsHidden(array(
 			SearchFields_KbArticle::CONTENT,
 			SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT,
-		);
+		));
 		
-		$this->paramsHidden = array(
+		$this->addParamsHidden(array(
 			SearchFields_KbArticle::CONTENT,
 			SearchFields_KbArticle::FORMAT,
 			SearchFields_KbArticle::ID,
-		);
+		));
 		
 		$this->doResetCriteria();
 	}

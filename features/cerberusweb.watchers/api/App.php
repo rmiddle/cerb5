@@ -354,14 +354,14 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 			
 		}
 		
-		$view->paramsRequired = array(
+		$view->addParamsRequired(array(
 			SearchFields_WatcherMailFilter::WORKER_ID => new DevblocksSearchCriteria(SearchFields_WatcherMailFilter::WORKER_ID,'eq',$worker->id),
-		);
+		));
 		
-		$view->paramsHidden = array(
+		$view->addParamsHidden(array(
 			SearchFields_WatcherMailFilter::ID,
 			SearchFields_WatcherMailFilter::WORKER_ID,
-		);
+		));
 		
 		C4_AbstractViewLoader::setView($view->id, $view);
 		
@@ -1152,7 +1152,7 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 		$fields = SearchFields_WatcherMailFilter::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields,$sortBy);

@@ -162,7 +162,7 @@ class DAO_Comment extends DevblocksORMHelper {
 		$fields = SearchFields_Comment::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
@@ -322,11 +322,11 @@ class View_Comment extends C4_AbstractView {
 			SearchFields_Comment::ADDRESS_ID,
 			SearchFields_Comment::COMMENT,
 		);
-		// [TODO] Filter fields
+		// Filter fields
 		$this->columnsHidden = array(
 		);
 		
-		// [TODO] Filter fields
+		// Filter fields
 		$this->paramsHidden = array(
 		);
 		
@@ -336,7 +336,7 @@ class View_Comment extends C4_AbstractView {
 	function getData() {
 		$objects = DAO_Comment::search(
 			array(),
-			array_merge($this->params, $this->paramsRequired),
+			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
 			$this->renderSortBy,
