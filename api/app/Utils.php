@@ -67,4 +67,25 @@ class CerberusUtils {
 		return $addys;
 	}
 	
+    static function sendNotification($object) {
+        $id = 0;
+        $processNotifications = DevblocksPlatform::getExtensions('cerberusweb.utils.notifications', true);
+		if(!empty($processNotifications)) {
+			foreach($processNotifications as $procNotification) { /* Run the run loop and update properties */
+				try {
+					$procNotification->processNotification(&$object);
+				} catch(Exception $e) {
+					// print_r($e);
+				}
+			}
+		}
+		if(isset($object['id'])) {
+            $id = $object['id'];
+        }
+		if(!isset($object['postNotification']) || $object['postNotification'] == 1) {
+            $id = DAO_WorkerEvent::create($object['fields']);
+        }
+		return $id;
+	}
+ 	
 }

@@ -263,6 +263,15 @@ abstract class Extension_WorkspaceSource extends DevblocksExtension {
 	}
 };
 
+abstract class Extension_SendNotifications extends DevblocksExtension {
+       const EXTENSION_POINT = 'cerberusweb.utils.notifications';
+       function __construct($manifest) {
+			$this->DevblocksExtension($manifest);
+       }
+    
+       function processNotification($object) {}
+};
+
 abstract class Extension_LoginAuthenticator extends DevblocksExtension {
 	function __construct($manifest) {
 		$this->DevblocksExtension($manifest);

@@ -411,7 +411,13 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 					DAO_WorkerEvent::URL => $url,
 					DAO_WorkerEvent::MESSAGE => vsprintf($translate->_($string_assigned), $worker_name),
 				);
-				DAO_WorkerEvent::create($fields);
+                $object['context'] = 'cerberusweb.contexts.assigned';
+                $object['context_id'] = $context_id;
+                $object['fields'] = $fields;
+                $object['string_assigned'] = $string_assigned;
+                $object['url'] = $url;
+                CerberusUtils::sendNotification($object);
+//				DAO_WorkerEvent::create($fields);
 			}
 		}
 		

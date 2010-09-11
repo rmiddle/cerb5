@@ -159,7 +159,13 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 					),
 					DAO_WorkerEvent::IS_READ => 0,
 				);
-				DAO_WorkerEvent::create($fields);
+                $object['context'] = 'cerberusweb.contexts.watchers';
+                $object['context_id'] = $filter->id;
+                $object['fields'] = $fields;
+                $object['filter'] = $filter;
+                $object['url'] = $url;
+                CerberusUtils::sendNotification($object);
+				//DAO_WorkerEvent::create($fields);
 			}
 		}
 	}
