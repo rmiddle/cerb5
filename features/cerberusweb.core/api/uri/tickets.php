@@ -1267,7 +1267,12 @@ class ChTicketsPage extends CerberusPageExtension {
 		@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
 		@$bucket = DevblocksPlatform::importGPC($_REQUEST['bucket_id'],'string','');
 		@$spam_training = DevblocksPlatform::importGPC($_REQUEST['spam_training'],'string','');
-		
+		@$ticket_reopen = DevblocksPlatform::importGPC(@$_REQUEST['ticket_reopen'],'string','');
+
+		if(isset($ticket_reopen) && !empty($ticket_reopen)) {
+			$due = strtotime($ticket_reopen);
+		}
+
 		$fields = array(
 			DAO_Ticket::SUBJECT => $subject,
 		);
@@ -1285,11 +1290,13 @@ class ChTicketsPage extends CerberusPageExtension {
 					$fields[DAO_Ticket::IS_WAITING] = 0;
 					$fields[DAO_Ticket::IS_CLOSED] = 1;
 					$fields[DAO_Ticket::IS_DELETED] = 0;
+					if($due) $fields[DAO_Ticket::DUE_DATE] = $due;
 					break;
 				case 2: // waiting
 					$fields[DAO_Ticket::IS_WAITING] = 1;
 					$fields[DAO_Ticket::IS_CLOSED] = 0;
 					$fields[DAO_Ticket::IS_DELETED] = 0;
+					if($due) $fields[DAO_Ticket::DUE_DATE] = $due;
 					break;
 				case 3: // deleted
 					$fields[DAO_Ticket::IS_WAITING] = 0;
