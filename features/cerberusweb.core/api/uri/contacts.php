@@ -1010,7 +1010,7 @@ class ChContactsPage extends CerberusPageExtension {
 			$do['banned'] = $is_banned;
 		
 		// Broadcast: Compose
-		if($active_worker->hasPriv('crm.opp.view.actions.broadcast')) {
+		if($active_worker->hasPriv('core.addybook.addy.view.actions.broadcast')) {
 			@$do_broadcast = DevblocksPlatform::importGPC($_REQUEST['do_broadcast'],'string',null);
 			@$broadcast_group_id = DevblocksPlatform::importGPC($_REQUEST['broadcast_group_id'],'integer',0);
 			@$broadcast_subject = DevblocksPlatform::importGPC($_REQUEST['broadcast_subject'],'string',null);
@@ -1129,6 +1129,20 @@ class ChContactsPage extends CerberusPageExtension {
 		// Do: Country
 		if(0 != strlen($country))
 			$do['country'] = $country;
+			
+		// Owners
+		$owner_options = array();
+		
+		@$owner_add_ids = DevblocksPlatform::importGPC($_REQUEST['do_owner_add_ids'],'array',array());
+		if(!empty($owner_add_ids))
+			$owner_params['add'] = $owner_add_ids;
+			
+		@$owner_remove_ids = DevblocksPlatform::importGPC($_REQUEST['do_owner_remove_ids'],'array',array());
+		if(!empty($owner_remove_ids))
+			$owner_params['remove'] = $owner_remove_ids;
+		
+		if(!empty($owner_params))
+			$do['owner'] = $owner_params;
 			
 		// Do: Custom fields
 		$do = DAO_CustomFieldValue::handleBulkPost($do);

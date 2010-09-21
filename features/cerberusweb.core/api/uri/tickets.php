@@ -334,7 +334,7 @@ class ChTicketsPage extends CerberusPageExtension {
 			SearchFields_Ticket::VIRTUAL_STATUS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_STATUS,'',array('open')),
 			SearchFields_Ticket::VIRTUAL_ASSIGNABLE => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_ASSIGNABLE,null,true),
 			SearchFields_Ticket::VIRTUAL_WORKERS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_WORKERS,null,array()),
-			new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'in',array_keys($active_worker->getMemberships())),
+			'req_team_id' => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'in',array_keys($active_worker->getMemberships())),
 		));
 		
 		$workflowView->renderPage = 0;
@@ -1024,32 +1024,32 @@ class ChTicketsPage extends CerberusPageExtension {
             		$params[SearchFields_Ticket::TICKET_ID] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_ID,DevblocksSearchCriteria::OPER_EQ,intval($query));
             	} else {
 			        if($query && false===strpos($query,'*'))
-			            $query = '*' . $query . '*';
+			            $query .= '*';
             		$params[SearchFields_Ticket::TICKET_MASK] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_MASK,DevblocksSearchCriteria::OPER_LIKE,strtoupper($query));
             	}
                 break;
                 
             case "sender":
 		        if($query && false===strpos($query,'*'))
-		            $query = '*' . $query . '*';
+		            $query .= '*';
                 $params[SearchFields_Ticket::TICKET_FIRST_WROTE] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_FIRST_WROTE,DevblocksSearchCriteria::OPER_LIKE,strtolower($query));               
                 break;
                 
             case "requester":
 		        if($query && false===strpos($query,'*'))
-		            $query = '*' . $query . '*';
+		            $query .= '*';
                 $params[SearchFields_Ticket::REQUESTER_ADDRESS] = new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ADDRESS,DevblocksSearchCriteria::OPER_LIKE,strtolower($query));               
                 break;
                 
             case "subject":
 		        if($query && false===strpos($query,'*'))
-		            $query = '*' . $query . '*';
+		            $query .= '*';
             	$params[SearchFields_Ticket::TICKET_SUBJECT] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_SUBJECT,DevblocksSearchCriteria::OPER_LIKE,$query);               
                 break;
                 
             case "org":
 		        if($query && false===strpos($query,'*'))
-		            $query = '*' . $query . '*';
+		            $query .= '*';
             	$params[SearchFields_Ticket::ORG_NAME] = new DevblocksSearchCriteria(SearchFields_Ticket::ORG_NAME,DevblocksSearchCriteria::OPER_LIKE,$query);               
                 break;
                 
@@ -2204,7 +2204,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		}
 		
 		// Owners
-		$owner_options = array();
+		$owner_params = array();
 		
 		@$owner_add_ids = DevblocksPlatform::importGPC($_REQUEST['do_owner_add_ids'],'array',array());
 		if(!empty($owner_add_ids))

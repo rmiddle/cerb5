@@ -867,6 +867,17 @@ class View_TimeTracking extends C4_AbstractView {
 			$batch_ids = array_slice($ids,$x,100);
 			DAO_TimeTrackingEntry::update($batch_ids, $change_fields);
 
+			// Owners
+			if(isset($do['owner']) && is_array($do['owner'])) {
+				$owner_params = $do['owner'];
+				foreach($batch_ids as $batch_id) {
+					if(isset($owner_params['add']) && is_array($owner_params['add']))
+						CerberusContexts::addWorkers(CerberusContexts::CONTEXT_TIMETRACKING, $batch_id, $owner_params['add']);
+					if(isset($owner_params['remove']) && is_array($owner_params['remove']))
+						CerberusContexts::removeWorkers(CerberusContexts::CONTEXT_TIMETRACKING, $batch_id, $owner_params['remove']);
+				}
+			}
+			
 			// Custom Fields
 			self::_doBulkSetCustomFields(ChCustomFieldSource_TimeEntry::ID, $custom_fields, $batch_ids);
 			
@@ -1292,7 +1303,40 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 
 		// Establishing a context link?
 		if(!empty($context) && !empty($context_id)) {
+			// Primary context
 			DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, $context, $context_id);
+			
+			// Associated contexts
+			switch($context) {
+				case CerberusContexts::CONTEXT_OPPORTUNITY:
+					if(!class_exists('DAO_CrmOpportunity', true))
+						break;
+						
+					$labels = null;
+					$values = null;
+					CerberusContexts::getContext($context, $context_id, $labels, $values);
+					
+					if(is_array($values)) {
+						// Is there an org associated with this context?
+						if(isset($values['email_org_id']) && !empty($values['email_org_id'])) {
+							DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, CerberusContexts::CONTEXT_ORG, $values['email_org_id']);
+						}
+					}
+					break;
+					
+				case CerberusContexts::CONTEXT_TICKET:
+					$labels = null;
+					$values = null;
+					CerberusContexts::getContext($context, $context_id, $labels, $values);
+					
+					if(is_array($values)) {
+						// Is there an org associated with this context?
+						if(isset($values['initial_message_sender_org_id']) && !empty($values['initial_message_sender_org_id'])) {
+							DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, CerberusContexts::CONTEXT_ORG, $values['initial_message_sender_org_id']);
+						}
+					}
+					break;
+			}
 		}
 		
 		// Owners
@@ -1429,7 +1473,21 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 		// Do: ...
 //		if(0 != strlen($list_id))
 //			$do['list_id'] = $list_id;
+
+		// Owners
+		$owner_options = array();
+		
+		@$owner_add_ids = DevblocksPlatform::importGPC($_REQUEST['do_owner_add_ids'],'array',array());
+		if(!empty($owner_add_ids))
+			$owner_params['add'] = $owner_add_ids;
 			
+		@$owner_remove_ids = DevblocksPlatform::importGPC($_REQUEST['do_owner_remove_ids'],'array',array());
+		if(!empty($owner_remove_ids))
+			$owner_params['remove'] = $owner_remove_ids;
+		
+		if(!empty($owner_params))
+			$do['owner'] = $owner_params;
+		
 		// Do: Custom fields
 		$do = DAO_CustomFieldValue::handleBulkPost($do);
 
