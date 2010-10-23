@@ -1,12 +1,14 @@
-<div id="headerSubMenu">
-	<div style="padding-bottom:5px;"></div>
-</div>
+<ul class="submenu">
+</ul>
+<div style="clear:both;"></div>
 
-{$tabs = [orgs,addresses]}
+{$tabs = [orgs,people,addresses,lists]}
 <div id="addyBookTabs">
 	<ul>
 		<li><a href="{devblocks_url}ajax.php?c=contacts&a=showOrgsTab{/devblocks_url}">{$translate->_('addy_book.tab.organizations')|escape:'quotes'}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=contacts&a=showPeopleTab{/devblocks_url}">{$translate->_('addy_book.tab.people')|escape:'quotes'}</a></li>
 		<li><a href="{devblocks_url}ajax.php?c=contacts&a=showAddysTab{/devblocks_url}">{$translate->_('addy_book.tab.addresses')|escape:'quotes'}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=contacts&a=showListsTab{/devblocks_url}">{$translate->_('addy_book.tab.lists')|escape:'quotes'}</a></li>
 		{if $active_worker->hasPriv('core.addybook.import')}
 			{$tabs[] = import}
 			<li><a href="{devblocks_url}ajax.php?c=contacts&a=showImportTab{/devblocks_url}">{$translate->_('addy_book.tab.import')|escape:'quotes'}</a></li>

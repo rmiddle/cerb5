@@ -48,10 +48,7 @@
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class ChPreferencesPage extends CerberusPageExtension {
-	private $_TPL_PATH = '';
-	
 	function __construct($manifest) {
-		$this->_TPL_PATH = dirname(dirname(dirname(__FILE__))) . '/templates/';
 		parent::__construct($manifest);
 	}
 	
@@ -71,8 +68,6 @@ class ChPreferencesPage extends CerberusPageExtension {
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = $this->_TPL_PATH;
-		$tpl->assign('path', $tpl_path);
 
 		$response = DevblocksPlatform::getHttpResponse();
 		$path = $response->path;
@@ -116,12 +111,12 @@ class ChPreferencesPage extends CerberusPageExtension {
 					$tpl->assign('pref_errors', $errors);
 				}
 				
-				$tpl->display('file:' . $tpl_path . 'preferences/index.tpl');
+				$tpl->display('devblocks:cerberusweb.core::preferences/index.tpl');
 				break;
 			
 		    default:
 		    	$tpl->assign('tab', $section);
-				$tpl->display('file:' . $tpl_path . 'preferences/index.tpl');
+				$tpl->display('devblocks:cerberusweb.core::preferences/index.tpl');
 				break;
 		}
 	}
@@ -141,10 +136,9 @@ class ChPreferencesPage extends CerberusPageExtension {
 	function saveTabAction() {
 		@$ext_id = DevblocksPlatform::importGPC($_REQUEST['ext_id'],'string','');
 		
-		if(null != ($tab_mft = DevblocksPlatform::getExtension($ext_id)) 
-			&& null != ($inst = $tab_mft->createInstance()) 
+		if(null != ($inst = DevblocksPlatform::getExtension($ext_id, true)) 
 			&& $inst instanceof Extension_PreferenceTab) {
-			$inst->saveTab();
+				$inst->saveTab();
 		}
 	}
 	
@@ -171,8 +165,6 @@ class ChPreferencesPage extends CerberusPageExtension {
 		$date_service = DevblocksPlatform::getDateService();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = $this->_TPL_PATH;
-		$tpl->assign('path', $tpl_path);
 		
 		$worker = CerberusApplication::getActiveWorker();
 		$tpl->assign('worker', $worker);
@@ -199,21 +191,19 @@ class ChPreferencesPage extends CerberusPageExtension {
 		$tpl->assign('langs', $langs);
 		$tpl->assign('selected_language', DAO_WorkerPref::get($worker->id,'locale','en_US')); 
 		
-		$tpl->display('file:' . $tpl_path . 'preferences/modules/general.tpl');
+		$tpl->display('devblocks:cerberusweb.core::preferences/modules/general.tpl');
 	}
 	
 	// Ajax [TODO] This should probably turn into Extension_PreferenceTab
 	function showRssAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = $this->_TPL_PATH;
-		$tpl->assign('path', $tpl_path);
 		
 		$active_worker = CerberusApplication::getActiveWorker();
 		
 		$feeds = DAO_ViewRss::getByWorker($active_worker->id);
 		$tpl->assign('feeds', $feeds);
 		
-		$tpl->display('file:' . $tpl_path . 'preferences/modules/rss.tpl');
+		$tpl->display('devblocks:cerberusweb.core::preferences/modules/rss.tpl');
 	}
 	
 	// Post [TODO] This should probably turn into Extension_PreferenceTab
@@ -262,14 +252,17 @@ class ChPreferencesPage extends CerberusPageExtension {
 		
 		// Alternate Email Addresses
 		@$new_email = DevblocksPlatform::importGPC($_REQUEST['new_email'],'string','');
-		@$email_delete = DevblocksPlatform::importGPC($_REQUEST['email_delete'],'array',array());
+		@$worker_emails = DevblocksPlatform::importGPC($_REQUEST['worker_emails'],'array',array());
 
+		$current_addresses = DAO_AddressToWorker::getByWorker($worker->id);
+		$removed_addresses = array_diff(array_keys($current_addresses), $worker_emails);
+		
 		// Confirm deletions are assigned to the current worker
-		if(!empty($email_delete))
-		foreach($email_delete as $e) {
-			if(null != ($worker_address = DAO_AddressToWorker::getByAddress($e))
-				&& $worker_address->worker_id == $worker->id)
-				DAO_AddressToWorker::unassign($e);
+		foreach($removed_addresses as $removed_address) {
+			if($removed_address == $worker->email)
+				continue;
+
+			DAO_AddressToWorker::unassign($removed_address);
 		}
 		
 		// Assign a new e-mail address if it's legitimate

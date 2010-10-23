@@ -110,7 +110,7 @@ class ChPageController extends DevblocksControllerExtension {
 			    
 			    if($page->isVisible()) {
 					if(method_exists($page,$action)) {
-						call_user_func(array(&$page, $action)); // [TODO] Pass HttpRequest as arg?
+						call_user_func(array($page, $action)); // [TODO] Pass HttpRequest as arg?
 					}
 				} else {
 					// if Ajax [TODO] percolate isAjax from platform to handleRequest
@@ -200,9 +200,6 @@ class ChPageController extends DevblocksControllerExtension {
 
 		$tpl->assign('response_uri', implode('/', $response->path));
 		
-		$core_tpl = APP_PATH . '/features/cerberusweb.core/templates/';
-		$tpl->assign('core_tpl', $core_tpl);
-		
 		// Prebody Renderers
 		$preBodyRenderers = DevblocksPlatform::getExtensions('cerberusweb.renderer.prebody', true);
 		if(!empty($preBodyRenderers))
@@ -220,33 +217,11 @@ class ChPageController extends DevblocksControllerExtension {
 			$tpl->assign('render_peak_memory', memory_get_peak_usage() - DevblocksPlatform::getStartPeakMemory());
 		}
 		
-		$tpl->display($core_tpl.'border.tpl');
+		$tpl->display('devblocks:cerberusweb.core::border.tpl');
 		
 //		$cache = DevblocksPlatform::getCacheService();
 //		$cache->printStatistics();
 	}
-};
-
-// Custom Field Sources
-
-class ChCustomFieldSource_Address extends Extension_CustomFieldSource {
-	const ID = 'cerberusweb.fields.source.address';
-};
-
-class ChCustomFieldSource_Org extends Extension_CustomFieldSource {
-	const ID = 'cerberusweb.fields.source.org';
-};
-
-class ChCustomFieldSource_Task extends Extension_CustomFieldSource {
-	const ID = 'cerberusweb.fields.source.task';
-};
-
-class ChCustomFieldSource_Ticket extends Extension_CustomFieldSource {
-	const ID = 'cerberusweb.fields.source.ticket';
-};
-
-class ChCustomFieldSource_Worker extends Extension_CustomFieldSource {
-	const ID = 'cerberusweb.fields.source.worker';
 };
 
 // Workspace Sources

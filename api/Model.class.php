@@ -72,7 +72,46 @@ abstract class C4_AbstractView {
 	
 	public $renderTemplate = null;
 
-	function getData() {
+	abstract function getData();
+	function getDataSample($size) {}
+	
+	protected function _doGetDataSample($dao_class, $size) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		if(!method_exists($dao_class,'getSearchQueryComponents'))
+			return array();
+		
+		$query_parts = call_user_func_array(
+			array($dao_class,'getSearchQueryComponents'),
+			array(
+				$this->view_columns,
+				$this->getParams(),
+				$this->renderSortBy,
+				$this->renderSortAsc
+			)
+		);
+		
+		$select_sql = sprintf("SELECT %s.id ", $query_parts['primary_table']);
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = sprintf("ORDER BY RAND() LIMIT %d ", $size);
+		
+		$sql = 
+			$select_sql.
+			$join_sql.
+			$where_sql.
+			($has_multiple_values ? sprintf("GROUP BY %s.id ", $query_parts['primary_table']) : '').
+			$sort_sql;
+			
+		$rs = $db->Execute($sql);
+		
+		$objects = array();
+		while($row = mysql_fetch_row($rs)) {
+			$objects[] = $row[0];
+		}		
+		
+		return $objects;		
 	}
 
 	function getColumnsAvailable() {
@@ -189,29 +228,28 @@ abstract class C4_AbstractView {
 
 	protected function _renderCriteriaCustomField($tpl, $field_id) {
 		$field = DAO_CustomField::get($field_id);
-		$tpl_path = APP_PATH . '/features/cerberusweb.core/templates/';
 		
 		switch($field->type) {
 			case Model_CustomField::TYPE_DROPDOWN:
 			case Model_CustomField::TYPE_MULTI_PICKLIST:
 			case Model_CustomField::TYPE_MULTI_CHECKBOX:
 				$tpl->assign('field', $field);
-				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__cfield_picklist.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__cfield_picklist.tpl');
 				break;
 			case Model_CustomField::TYPE_CHECKBOX:
-				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__cfield_checkbox.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__cfield_checkbox.tpl');
 				break;
 			case Model_CustomField::TYPE_DATE:
-				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 			case Model_CustomField::TYPE_NUMBER:
-				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__number.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__number.tpl');
 				break;
 			case Model_CustomField::TYPE_WORKER:
-				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__context_worker.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_worker.tpl');
 				break;
 			default:
-				$tpl->display('file:' . $tpl_path . 'internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 		}
 	}
@@ -434,7 +472,7 @@ abstract class C4_AbstractView {
 		);
 	}
 	
-	public static function _doBulkSetCustomFields($source_extension,$custom_fields, $ids) {
+	public static function _doBulkSetCustomFields($context,$custom_fields, $ids) {
 		$fields = DAO_CustomField::getAll();
 		
 		if(!empty($custom_fields))
@@ -466,9 +504,9 @@ abstract class C4_AbstractView {
 					if(is_array($ids))
 					foreach($ids as $id) {
 						if($op=='+')
-							DAO_CustomFieldValue::setFieldValue($source_extension,$id,$cf_id,$val,true);
+							DAO_CustomFieldValue::setFieldValue($context,$id,$cf_id,$val,true);
 						elseif($op=='-')
-							DAO_CustomFieldValue::unsetFieldValue($source_extension,$id,$cf_id,$val);
+							DAO_CustomFieldValue::unsetFieldValue($context,$id,$cf_id,$val);
 					}
 				}
 					
@@ -477,9 +515,9 @@ abstract class C4_AbstractView {
 				if(is_array($ids))
 				foreach($ids as $id) {
 					if(0 != strlen($cf_val))
-						DAO_CustomFieldValue::setFieldValue($source_extension,$id,$cf_id,$cf_val);
+						DAO_CustomFieldValue::setFieldValue($context,$id,$cf_id,$cf_val);
 					else
-						DAO_CustomFieldValue::unsetFieldValue($source_extension,$id,$cf_id);
+						DAO_CustomFieldValue::unsetFieldValue($context,$id,$cf_id);
 				}
 			}
 		}
@@ -687,10 +725,10 @@ class View_DevblocksTemplate extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-//		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Worker::ID);
+//		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_WORKER);
 //		$tpl->assign('custom_fields', $custom_fields);
 
-		$tpl->display('file:' . APP_PATH . '/features/usermeet.core/templates/community/display/tabs/templates/view.tpl');
+		$tpl->display('devblocks:usermeet.core::community/display/tabs/templates/view.tpl');
 	}
 
 	function renderCriteria($field) {
@@ -702,10 +740,10 @@ class View_DevblocksTemplate extends C4_AbstractView {
 			case SearchFields_DevblocksTemplate::PATH:
 			case SearchFields_DevblocksTemplate::PLUGIN_ID:
 			case SearchFields_DevblocksTemplate::TAG:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 			case SearchFields_DevblocksTemplate::LAST_UPDATED:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 			default:
 				// Custom Fields
@@ -845,7 +883,7 @@ class View_DevblocksTemplate extends C4_AbstractView {
 				DAO_DevblocksTemplate::delete($batch_ids);
 			
 			// Custom Fields
-//			self::_doBulkSetCustomFields(ChCustomFieldSource_Worker::ID, $custom_fields, $batch_ids);
+//			self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_WORKER, $custom_fields, $batch_ids);
 			
 			unset($batch_ids);
 		}
@@ -908,7 +946,7 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/configuration/tabs/storage/profiles/view.tpl');
+		$tpl->display('devblocks:cerberusweb.core::configuration/tabs/storage/profiles/view.tpl');
 	}
 
 	function renderCriteria($field) {
@@ -918,16 +956,16 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 		switch($field) {
 			case SearchFields_DevblocksStorageProfile::NAME:
 			case SearchFields_DevblocksStorageProfile::EXTENSION_ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 			case SearchFields_DevblocksStorageProfile::ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__number.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__number.tpl');
 				break;
 			case 'placeholder_bool':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
 			case 'placeholder_date':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 			default:
 				echo '';
@@ -1277,15 +1315,15 @@ class Model_MailToGroupRule {
 
 							// Lazy values loader
 							$field_values = array();
-							switch($field->source_extension) {
-								case ChCustomFieldSource_Address::ID:
+							switch($field->context) {
+								case CerberusContexts::CONTEXT_ADDRESS:
 									if(null == $address_field_values)
-										$address_field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Address::ID, $fromAddress->id));
+										$address_field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ADDRESS, $fromAddress->id));
 									$field_values =& $address_field_values;
 									break;
-								case ChCustomFieldSource_Org::ID:
+								case CerberusContexts::CONTEXT_ORG:
 									if(null == $org_field_values)
-										$org_field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Org::ID, $fromAddress->contact_org_id));
+										$org_field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ORG, $fromAddress->contact_org_id));
 									$field_values =& $org_field_values;
 									break;
 							}
@@ -1454,7 +1492,7 @@ class Model_MailToGroupRule {
 				DAO_Ticket::update($ticket_ids, $fields);
 			
 			// Custom Fields
-			C4_AbstractView::_doBulkSetCustomFields(ChCustomFieldSource_Ticket::ID, $field_values, $ticket_ids);
+			C4_AbstractView::_doBulkSetCustomFields(CerberusContexts::CONTEXT_TICKET, $field_values, $ticket_ids);
 		}
 	}
 	
@@ -1570,7 +1608,7 @@ class Model_CustomField {
 	public $name = '';
 	public $type = '';
 	public $group_id = 0;
-	public $source_extension = '';
+	public $context = '';
 	public $pos = 0;
 	public $options = array();
 	

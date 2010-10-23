@@ -186,19 +186,7 @@ class DAO_WorkerEvent extends DevblocksORMHelper {
 		$cache->remove(self::CACHE_COUNT_PREFIX.$worker_id);
 	}
 
-    /**
-     * Enter description here...
-     *
-     * @param DevblocksSearchCriteria[] $params
-     * @param integer $limit
-     * @param integer $page
-     * @param string $sortBy
-     * @param boolean $sortAsc
-     * @param boolean $withCounts
-     * @return array
-     */
-    static function search($params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_WorkerEvent::getFields();
 		
 		// Sanitize
@@ -206,7 +194,6 @@ class DAO_WorkerEvent extends DevblocksORMHelper {
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, array(),$fields,$sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
 		
 		$select_sql = sprintf("SELECT ".
 			"we.id as %s, ".
@@ -235,6 +222,41 @@ class DAO_WorkerEvent extends DevblocksORMHelper {
 
 		$has_multiple_values = false;
 		
+		$result = array(
+			'primary_table' => 'we',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => $has_multiple_values,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+	
+    /**
+     * Enter description here...
+     *
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents(array(),$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
@@ -244,7 +266,7 @@ class DAO_WorkerEvent extends DevblocksORMHelper {
 		
 		// [TODO] Could push the select logic down a level too
 		if($limit > 0) {
-    		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+    		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		} else {
 		    $rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
             $total = mysql_num_rows($rs);
@@ -355,6 +377,10 @@ class View_WorkerEvent extends C4_AbstractView {
 		return $objects;
 	}
 
+	function getDataSample($size) {
+		return $this->_doGetDataSample('DAO_WorkerEvent', $size);
+	}
+	
 	function render() {
 		$this->_sanitize();
 		
@@ -365,7 +391,7 @@ class View_WorkerEvent extends C4_AbstractView {
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
 		
-		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/home/tabs/my_events/view.tpl');
+		$tpl->display('devblocks:cerberusweb.core::home/tabs/my_events/view.tpl');
 	}
 
 	function renderCriteria($field) {
@@ -375,21 +401,21 @@ class View_WorkerEvent extends C4_AbstractView {
 		switch($field) {
 			case SearchFields_WorkerEvent::MESSAGE:
 			case SearchFields_WorkerEvent::URL:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 //			case SearchFields_WorkerEvent::ID:
 //			case SearchFields_WorkerEvent::MESSAGE_ID:
 //			case SearchFields_WorkerEvent::TICKET_ID:
-//				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__number.tpl');
+//				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__number.tpl');
 //				break;
 			case SearchFields_WorkerEvent::IS_READ:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
 			case SearchFields_WorkerEvent::CREATED_DATE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 			case SearchFields_WorkerEvent::WORKER_ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_worker.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_worker.tpl');
 				break;
 			default:
 				echo '';
@@ -522,7 +548,7 @@ class View_WorkerEvent extends C4_AbstractView {
 			DAO_WorkerEvent::update($batch_ids, $change_fields);
 			
 			// Custom Fields
-			//self::_doBulkSetCustomFields(ChCustomFieldSource_Task::ID, $custom_fields, $batch_ids);
+			//self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_TASK, $custom_fields, $batch_ids);
 			
 			unset($batch_ids);
 		}

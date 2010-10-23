@@ -48,10 +48,6 @@
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
-class ChCustomFieldSource_FeedbackEntry extends Extension_CustomFieldSource {
-	const ID = 'feedback.fields.source.feedback_entry';
-};
-
 // Workspace Sources
 
 class ChWorkspaceSource_FeedbackEntry extends Extension_WorkspaceSource {
@@ -74,8 +70,6 @@ class ChFeedbackActivityTab extends Extension_ActivityTab {
 		$visit->set(CerberusVisit::KEY_ACTIVITY_TAB, 'feedback');
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $tpl_path);
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'C4_FeedbackEntryView';
@@ -93,7 +87,7 @@ class ChFeedbackActivityTab extends Extension_ActivityTab {
 
 		$tpl->assign('view', $view);
 		
-		$tpl->display($tpl_path . 'activity_tab/index.tpl');		
+		$tpl->display('devblocks:cerberusweb.feedback::activity_tab/index.tpl');		
 	}
 }
 endif;
@@ -195,24 +189,12 @@ class DAO_FeedbackEntry extends C4_ORMHelper {
 		$db->Execute(sprintf("DELETE FROM feedback_entry WHERE id IN (%s)", $ids_list));
 		
 		// Custom fields
-		DAO_CustomFieldValue::deleteBySourceIds(ChCustomFieldSource_FeedbackEntry::ID, $ids);
+		DAO_CustomFieldValue::deleteByContextIds(CerberusContexts::CONTEXT_FEEDBACK, $ids);
 		
 		return true;
 	}
 
-    /**
-     * Enter description here...
-     *
-     * @param DevblocksSearchCriteria[] $params
-     * @param integer $limit
-     * @param integer $page
-     * @param string $sortBy
-     * @param boolean $sortAsc
-     * @param boolean $withCounts
-     * @return array
-     */
-    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_FeedbackEntry::getFields();
 		
 		// Sanitize
@@ -220,7 +202,6 @@ class DAO_FeedbackEntry extends C4_ORMHelper {
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns,$fields,$sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
 		
 		$select_sql = sprintf("SELECT ".
 			"f.id as %s, ".
@@ -263,6 +244,41 @@ class DAO_FeedbackEntry extends C4_ORMHelper {
 			
 		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
 		
+		$result = array(
+			'primary_table' => 'f',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => $has_multiple_values,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+	
+    /**
+     * Enter description here...
+     *
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents($columns,$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
@@ -270,7 +286,7 @@ class DAO_FeedbackEntry extends C4_ORMHelper {
 			($has_multiple_values ? 'GROUP BY f.id ' : '').
 			$sort_sql;
 		
-		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
 		$results = array();
 		
@@ -344,7 +360,7 @@ class SearchFields_FeedbackEntry {
 		);
 		
 		// Custom Fields
-		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_FeedbackEntry::ID);
+		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_FEEDBACK);
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
@@ -404,6 +420,10 @@ class C4_FeedbackEntryView extends C4_AbstractView {
 		return $objects;
 	}
 
+	function getDataSample($size) {
+		return $this->_doGetDataSample('DAO_FeedbackEntry', $size);
+	}
+	
 	function render() {
 		$this->_sanitize();
 		
@@ -415,10 +435,10 @@ class C4_FeedbackEntryView extends C4_AbstractView {
 		$tpl->assign('workers', $workers);
 		
 		// Custom fields
-		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_FeedbackEntry::ID);
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_FEEDBACK);
 		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.feedback/templates/feedback/view.tpl');
+		$tpl->display('devblocks:cerberusweb.feedback::feedback/view.tpl');
 	}
 
 	function renderCriteria($field) {
@@ -429,20 +449,20 @@ class C4_FeedbackEntryView extends C4_AbstractView {
 			case SearchFields_FeedbackEntry::QUOTE_TEXT:
 			case SearchFields_FeedbackEntry::SOURCE_URL:
 			case SearchFields_FeedbackEntry::ADDRESS_EMAIL:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 			case SearchFields_FeedbackEntry::ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__number.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__number.tpl');
 				break;
 			case SearchFields_FeedbackEntry::LOG_DATE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 			case SearchFields_FeedbackEntry::WORKER_ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_worker.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_worker.tpl');
 				break;
 			case SearchFields_FeedbackEntry::QUOTE_MOOD:
 				// [TODO] Translations
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.feedback/templates/feedback/criteria/quote_mood.tpl');
+				$tpl->display('devblocks:cerberusweb.feedback::feedback/criteria/quote_mood.tpl');
 				break;
 			default:
 				// Custom Fields
@@ -605,7 +625,7 @@ class C4_FeedbackEntryView extends C4_AbstractView {
 			DAO_FeedbackEntry::update($batch_ids, $change_fields);
 
 			// Custom Fields
-			self::_doBulkSetCustomFields(ChCustomFieldSource_FeedbackEntry::ID, $custom_fields, $batch_ids);
+			self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_FEEDBACK, $custom_fields, $batch_ids);
 
 			unset($batch_ids);
 		}
@@ -663,8 +683,6 @@ class ChFeedbackController extends DevblocksControllerExtension {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)).'/templates/';
-		$tpl->assign('path', $this->plugin_path . '/templates/');
 		$tpl->assign('view_id', $view_id);
 
 		// Editing
@@ -715,10 +733,10 @@ class ChFeedbackController extends DevblocksControllerExtension {
 		}
 		
 		// Custom fields
-		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_FeedbackEntry::ID); 
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_FEEDBACK); 
 		$tpl->assign('custom_fields', $custom_fields);
 
-		$custom_field_values = DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_FeedbackEntry::ID, $id);
+		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_FEEDBACK, $id);
 		if(isset($custom_field_values[$id]))
 			$tpl->assign('custom_field_values', $custom_field_values[$id]);
 		
@@ -816,7 +834,7 @@ class ChFeedbackController extends DevblocksControllerExtension {
 		
 		// Custom field saves
 		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
-		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_FeedbackEntry::ID, $id, $field_ids);
+		DAO_CustomFieldValue::handleFormPost(CerberusContexts::CONTEXT_FEEDBACK, $id, $field_ids);
 	}
 	
 	function showBulkPanelAction() {
@@ -824,8 +842,6 @@ class ChFeedbackController extends DevblocksControllerExtension {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $path);
 		$tpl->assign('view_id', $view_id);
 
 	    if(!empty($id_csv)) {
@@ -834,10 +850,10 @@ class ChFeedbackController extends DevblocksControllerExtension {
 	    }
 		
 		// Custom Fields
-		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_FeedbackEntry::ID);
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_FEEDBACK);
 		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->display('file:' . $path . 'feedback/bulk.tpl');
+		$tpl->display('devblocks:cerberusweb.feedback::feedback/bulk.tpl');
 	}
 	
 	function doBulkUpdateAction() {
@@ -867,6 +883,11 @@ class ChFeedbackController extends DevblocksControllerExtension {
 			    @$ids_str = DevblocksPlatform::importGPC($_REQUEST['ids'],'string');
 				$ids = DevblocksPlatform::parseCsvString($ids_str);
 				break;
+			case 'sample':
+				@$sample_size = min(DevblocksPlatform::importGPC($_REQUEST['filter_sample_size'],'integer',0),9999);
+				$filter = 'checks';
+				$ids = $view->getDataSample($sample_size);
+				break;
 			default:
 				break;
 		}
@@ -883,11 +904,10 @@ if (class_exists('Extension_MessageToolbarItem',true)):
 	class ChFeedbackMessageToolbarFeedback extends Extension_MessageToolbarItem {
 		function render(Model_Message $message) { 
 			$tpl = DevblocksPlatform::getTemplateService();
-			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
 			
 			$tpl->assign('message', $message); /* @var $message Model_Message */
 			
-			$tpl->display('file:' . $tpl_path . 'feedback/renderers/message_toolbar_feedback.tpl');
+			$tpl->display('devblocks:cerberusweb.feedback::feedback/renderers/message_toolbar_feedback.tpl');
 		}
 	};
 endif;

@@ -1,25 +1,26 @@
-<div id="headerSubMenu">
-	<div style="padding-bottom:5px;">
-	</div>
-</div> 
+<ul class="submenu">
+</ul>
+<div style="clear:both;"></div>
 
 <h1>{$translate->_('header.preferences')|capitalize}</h1>
 
 {if is_array($pref_errors) && !empty($pref_errors)}
-	<div class="error">
-		<ul style="margin:2px;">
-		{foreach from=$pref_errors item=error}
-			<li>{$error}</li>
+	<div class="ui-widget">
+		<div class="ui-state-error ui-corner-all" style="padding: 0.7em; margin:0.2em; ">
+		<span style="float:right;">(<a href="javascript:;" onclick="$(this).closest('.ui-widget').fadeOut();">dismiss</a>)</span>
+		{foreach from=$pref_errors item=error} 
+			<span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span> {$error}<br>
 		{/foreach}
-		</ul>
+		</div>
 	</div>
 {elseif is_array($pref_success) && !empty($pref_success)}
-	<div class="success">
-		<ul style="margin:2px;">
+	<div class="ui-widget">
+		<div class="ui-state-highlight ui-corner-all" style="padding: 0.7em; margin:0.2em; ">
+		<span style="float:right;">(<a href="javascript:;" onclick="$(this).closest('.ui-widget').fadeOut();">dismiss</a>)</span>
 		{foreach from=$pref_success item=success}
-			<li>{$success}</li>
+			<span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span> {$success}<br>
 		{/foreach}
-		</ul>
+		</div>
 	</div>
 {else}
 	<br>

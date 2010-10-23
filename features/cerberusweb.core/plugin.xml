@@ -33,6 +33,7 @@
 		<patch version="5.0.1" revision="864" file="patches/5.x/5.0.1.php" />
 		<patch version="5.1.0" revision="896" file="patches/5.x/5.1.0.php" />
 		<patch version="5.1.1" revision="898" file="patches/5.x/5.1.1.php" />
+		<patch version="5.2.0-dev" revision="903" file="patches/5.x/5.2.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -53,11 +54,6 @@
 	
 	<class_loader>
 		<file path="api/plugin.classes.php">
-			<class name="ChCustomFieldSource_Address" />
-			<class name="ChCustomFieldSource_Org" />
-			<class name="ChCustomFieldSource_Task" />
-			<class name="ChCustomFieldSource_Ticket" />
-			<class name="ChCustomFieldSource_Worker" />
 			<class name="ChPageController" />
 			<class name="ChRssSource_Notification" />
 			<class name="ChRssSource_Task" />
@@ -110,6 +106,26 @@
 			<class name="View_Comment" />
 		</file>
 		
+		<file path="api/dao/confirmation_code.php">
+			<class name="DAO_ConfirmationCode" />
+			<class name="Model_ConfirmationCode" />
+			<class name="SearchFields_ConfirmationCode" />
+		</file>
+		
+		<file path="api/dao/contact_list.php">
+			<class name="DAO_ContactList" />
+			<class name="Model_ContactList" />
+			<class name="SearchFields_ContactList" />
+			<class name="View_ContactList" />
+		</file>
+		
+		<file path="api/dao/contact_person.php">
+			<class name="DAO_ContactPerson" />
+			<class name="Model_ContactPerson" />
+			<class name="SearchFields_ContactPerson" />
+			<class name="View_ContactPerson" />
+		</file>
+		
 		<file path="api/dao/contact_org.php">
 			<class name="DAO_ContactOrg" />
 			<class name="Model_ContactOrg" />
@@ -156,6 +172,11 @@
 			<class name="SearchFields_Message" />
 			<class name="Storage_MessageContent" />
 			<class name="View_Message" />
+		</file>
+		
+		<file path="api/dao/openid_to_contact_person.php">
+			<class name="DAO_OpenIdToContactPerson" />
+			<class name="Model_OpenIdToContactPerson" />
 		</file>
 		
 		<file path="api/dao/preparse_rule.php">
@@ -856,26 +877,17 @@
 
 		<extension point="cerberusweb.login">
 			<id>login.default</id>
-			<name>Default Login Module</name>
+			<name>Default Login</name>
 			<class>
 				<file>api/login.classes.php</file>
 				<name>DefaultLoginModule</name>
 			</class>
 			<params>
+				<param key="switcher_icon" value="images/plugin/mail.png" />
+				<param key="switcher_label" value="Log in with email and password" />
 			</params>
 		</extension>
 
-		<extension point="cerberusweb.login">
-			<id>login.ldap</id>
-			<name>LDAP Login Module</name>
-			<class>
-				<file>api/login.classes.php</file>
-				<name>LDAPLoginModule</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-		 
 		<!-- Cron Extensions -->
 		
 		<extension point="cerberusweb.cron">
@@ -965,63 +977,6 @@
 			<params>
 			</params>
 		</extension>
-		
-		<!-- Custom Field Sources -->
-		
-		<extension point="cerberusweb.fields.source">
-			<id>cerberusweb.fields.source.address</id>
-			<name>Address</name>
-			<class>
-				<file>api/plugin.classes.php</file>
-				<name>ChCustomFieldSource_Address</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-				
-		<extension point="cerberusweb.fields.source">
-			<id>cerberusweb.fields.source.org</id>
-			<name>Organization</name>
-			<class>
-				<file>api/plugin.classes.php</file>
-				<name>ChCustomFieldSource_Org</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-				
-		<extension point="cerberusweb.fields.source">
-			<id>cerberusweb.fields.source.task</id>
-			<name>Task</name>
-			<class>
-				<file>api/plugin.classes.php</file>
-				<name>ChCustomFieldSource_Task</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-				
-		<extension point="cerberusweb.fields.source">
-			<id>cerberusweb.fields.source.ticket</id>
-			<name>Ticket</name>
-			<class>
-				<file>api/plugin.classes.php</file>
-				<name>ChCustomFieldSource_Ticket</name>
-			</class>
-			<params>
-			</params>
-		</extension>		
-		
-		<extension point="cerberusweb.fields.source">
-			<id>cerberusweb.fields.source.worker</id>
-			<name>Worker</name>
-			<class>
-				<file>api/plugin.classes.php</file>
-				<name>ChCustomFieldSource_Worker</name>
-			</class>
-			<params>
-			</params>
-		</extension>		
 		
 		<!-- Workspace Sources -->
 		

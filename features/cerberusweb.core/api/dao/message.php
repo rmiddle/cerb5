@@ -205,19 +205,7 @@ class DAO_Message extends DevblocksORMHelper {
 		DAO_Attachment::maint();
     }
     
-    /**
-     * Enter description here...
-     *
-     * @param DevblocksSearchCriteria[] $params
-     * @param integer $limit
-     * @param integer $page
-     * @param string $sortBy
-     * @param boolean $sortAsc
-     * @param boolean $withCounts
-     * @return array
-     */
-    static function search($params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_Message::getFields();
 		
 		// Sanitize
@@ -225,7 +213,6 @@ class DAO_Message extends DevblocksORMHelper {
 			$sortBy=null;
 
         list($tables,$wheres,$selects) = parent::_parseSearchParams($params, array(),$fields,$sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
 
 		$select_sql = sprintf("SELECT ".
 			"m.id as %s, ".
@@ -268,7 +255,44 @@ class DAO_Message extends DevblocksORMHelper {
 			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
+		
+		$has_multiple_values = false;
+		
+		$result = array(
+			'primary_table' => 'm',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => $has_multiple_values,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+    
+    /**
+     * Enter description here...
+     *
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
 
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents(array(),$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
@@ -276,7 +300,7 @@ class DAO_Message extends DevblocksORMHelper {
 			($has_multiple_values ? 'GROUP BY m.id ' : '').
 			$sort_sql;
 		
-		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
 		$results = array();
 		
@@ -291,7 +315,6 @@ class DAO_Message extends DevblocksORMHelper {
 		
 		// [JAS]: Count all
 		$total = -1;
-		$has_multiple_values = false;
 		if($withCounts) {
 			$count_sql = 
 				($has_multiple_values ? "SELECT COUNT(DISTINCT m.id) " : "SELECT COUNT(m.id) ").
@@ -478,24 +501,22 @@ class Storage_MessageContent extends Extension_DevblocksStorageSchema {
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(dirname(__FILE__))) . '/templates';
 		
 		$tpl->assign('active_storage_profile', $this->getParam('active_storage_profile'));
 		$tpl->assign('archive_storage_profile', $this->getParam('archive_storage_profile'));
 		$tpl->assign('archive_after_days', $this->getParam('archive_after_days'));
 		
-		$tpl->display("file:{$path}/configuration/tabs/storage/schemas/message_content/render.tpl");
+		$tpl->display("devblocks:cerberusweb.core::configuration/tabs/storage/schemas/message_content/render.tpl");
 	}	
 	
 	function renderConfig() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(dirname(__FILE__))) . '/templates';
 		
 		$tpl->assign('active_storage_profile', $this->getParam('active_storage_profile'));
 		$tpl->assign('archive_storage_profile', $this->getParam('archive_storage_profile'));
 		$tpl->assign('archive_after_days', $this->getParam('archive_after_days'));
 		
-		$tpl->display("file:{$path}/configuration/tabs/storage/schemas/message_content/config.tpl");
+		$tpl->display("devblocks:cerberusweb.core::configuration/tabs/storage/schemas/message_content/config.tpl");
 	}
 	
 	function saveConfig() {
@@ -911,15 +932,15 @@ class View_Message extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-//		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Worker::ID);
+//		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_WORKER);
 //		$tpl->assign('custom_fields', $custom_fields);
 
 		switch($this->renderTemplate) {
 //			case 'contextlinks_chooser':
-//				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/workers/view_contextlinks_chooser.tpl');
+//				$tpl->display('devblocks:cerberusweb.core::workers/view_contextlinks_chooser.tpl');
 //				break;
 			default:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/messages/view.tpl');
+				$tpl->display('devblocks:cerberusweb.core::messages/view.tpl');
 				break;
 		}
 	}
@@ -955,23 +976,23 @@ class View_Message extends C4_AbstractView {
 			case SearchFields_Message::ADDRESS_EMAIL:
 			case SearchFields_Message::TICKET_MASK:
 			case SearchFields_Message::TICKET_SUBJECT:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 				
 			case SearchFields_Message::IS_OUTGOING:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
 				
 			case SearchFields_Message::CREATED_DATE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 				
 			case SearchFields_Message::TICKET_GROUP_ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_group.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_group.tpl');
 				break;
 				
 			case SearchFields_Message::WORKER_ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_worker.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_worker.tpl');
 				break;
 				
 			default:
@@ -1133,7 +1154,7 @@ class View_Message extends C4_AbstractView {
 			DAO_Message::update($batch_ids, $change_fields);
 			
 			// Custom Fields
-			//self::_doBulkSetCustomFields(ChCustomFieldSource_Worker::ID, $custom_fields, $batch_ids);
+			//self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_WORKER, $custom_fields, $batch_ids);
 			
 			unset($batch_ids);
 		}

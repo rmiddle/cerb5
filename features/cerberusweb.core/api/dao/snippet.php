@@ -187,22 +187,8 @@ class DAO_Snippet extends DevblocksORMHelper {
 		return true;
 	}
 	
-    /**
-     * Enter description here...
-     *
-     * @param array $columns
-     * @param DevblocksSearchCriteria[] $params
-     * @param integer $limit
-     * @param integer $page
-     * @param string $sortBy
-     * @param boolean $sortAsc
-     * @param boolean $withCounts
-     * @return array
-     */
-    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_Snippet::getFields();
-		
 		$active_worker = CerberusApplication::getActiveWorker();
 		
 		// Sanitize
@@ -210,8 +196,6 @@ class DAO_Snippet extends DevblocksORMHelper {
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based
-		$total = -1;
 		
 		$select_sql = sprintf("SELECT ".
 			"snippet.id as %s, ".
@@ -257,7 +241,45 @@ class DAO_Snippet extends DevblocksORMHelper {
 			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
-			
+		
+		$has_multiple_values = false;
+		
+		$result = array(
+			'primary_table' => 'snippet',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => $has_multiple_values,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+	
+    /**
+     * Enter description here...
+     *
+     * @param array $columns
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents($columns,$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
@@ -267,13 +289,14 @@ class DAO_Snippet extends DevblocksORMHelper {
 			
 		// [TODO] Could push the select logic down a level too
 		if($limit > 0) {
-    		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
+    		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
 		} else {
 		    $rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
             $total = mysql_num_rows($rs);
 		}
 		
 		$results = array();
+		$total = -1;
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			$result = array();
@@ -320,8 +343,8 @@ class SearchFields_Snippet implements IDevblocksSearchFields {
 		
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'snippet', 'id', $translate->_('common.id')),
-			self::TITLE => new DevblocksSearchField(self::TITLE, 'snippet', 'title', $translate->_('dao.snippet.title')),
-			self::CONTEXT => new DevblocksSearchField(self::CONTEXT, 'snippet', 'context', $translate->_('dao.snippet.context')),
+			self::TITLE => new DevblocksSearchField(self::TITLE, 'snippet', 'title', $translate->_('common.title')),
+			self::CONTEXT => new DevblocksSearchField(self::CONTEXT, 'snippet', 'context', $translate->_('common.context')),
 			self::CREATED_BY => new DevblocksSearchField(self::CREATED_BY, 'snippet', 'created_by', $translate->_('dao.snippet.created_by')),
 			self::LAST_UPDATED => new DevblocksSearchField(self::LAST_UPDATED, 'snippet', 'last_updated', $translate->_('dao.snippet.last_updated')),
 			self::LAST_UPDATED_BY => new DevblocksSearchField(self::LAST_UPDATED_BY, 'snippet', 'last_updated_by', $translate->_('dao.snippet.last_updated_by')),
@@ -332,7 +355,7 @@ class SearchFields_Snippet implements IDevblocksSearchFields {
 		);
 		
 		// Custom Fields
-		//$fields = DAO_CustomField::getBySource(PsCustomFieldSource_XXX::ID);
+		//$fields = DAO_CustomField::getByContext(CerberusContexts::XXX);
 
 		//if(is_array($fields))
 		//foreach($fields as $field_id => $field) {
@@ -412,19 +435,18 @@ class View_Snippet extends C4_AbstractView {
 		$this->_sanitize();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = APP_PATH . '/features/cerberusweb.core/templates';
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
 		switch($this->renderTemplate) {
 			case 'contextlinks_chooser':
-				$tpl->display('file:'.$tpl_path.'/mail/snippets/views/view_contextlinks_chooser.tpl');
+				$tpl->display('devblocks:cerberusweb.core::mail/snippets/views/view_contextlinks_chooser.tpl');
 				break;
 //			case 'context':
-//				$tpl->display('file:'.$tpl_path.'/mail/snippets/views/.tpl');
+//				$tpl->display('devblocks:cerberusweb.core::mail/snippets/views/.tpl');
 //				break;
 			default:
-				$tpl->display('file:'.$tpl_path.'/mail/snippets/views/default.tpl');
+				$tpl->display('devblocks:cerberusweb.core::mail/snippets/views/default.tpl');
 				break;
 		}
 		
@@ -444,16 +466,16 @@ class View_Snippet extends C4_AbstractView {
 			case SearchFields_Snippet::LAST_UPDATED_BY:
 			case SearchFields_Snippet::IS_PRIVATE:
 			case SearchFields_Snippet::CONTENT:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 			case 'placeholder_number':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__number.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__number.tpl');
 				break;
 			case 'placeholder_bool':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
 			case 'placeholder_date':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 			default:
 				echo '';
@@ -596,7 +618,7 @@ class Context_Snippet extends Extension_DevblocksContext {
 			$prefix = 'Snippet:';
 		
 		$translate = DevblocksPlatform::getTranslationService();
-		//$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Task::ID);
+		//$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TASK);
 
 		// Polymorph
 		if(is_numeric($snippet)) {
@@ -625,7 +647,7 @@ class Context_Snippet extends Extension_DevblocksContext {
 			
 //			$token_values['custom'] = array();
 			
-//			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Task::ID, $task->id));
+//			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TASK, $task->id));
 //			if(is_array($field_values) && !empty($field_values)) {
 //				foreach($field_values as $cf_id => $cf_val) {
 //					if(!isset($fields[$cf_id]))

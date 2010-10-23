@@ -164,27 +164,15 @@ class DAO_Task extends C4_ORMHelper {
 		DAO_ContextLink::delete(CerberusContexts::CONTEXT_TASK, $ids);
 		
 		// Custom fields
-		DAO_CustomFieldValue::deleteBySourceIds(ChCustomFieldSource_Task::ID, $ids);
+		DAO_CustomFieldValue::deleteByContextIds(CerberusContexts::CONTEXT_TASK, $ids);
 		
 		// Notes
 		DAO_Comment::deleteByContext(CerberusContexts::CONTEXT_TASK, $ids);
 		
 		return true;
 	}
-
-    /**
-     * Enter description here...
-     *
-     * @param DevblocksSearchCriteria[] $params
-     * @param integer $limit
-     * @param integer $page
-     * @param string $sortBy
-     * @param boolean $sortAsc
-     * @param boolean $withCounts
-     * @return array
-     */
-    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_Task::getFields();
 		
 		// Sanitize
@@ -192,7 +180,6 @@ class DAO_Task extends C4_ORMHelper {
 			$sortBy=null;
 		
         list($tables, $wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
 		
 		$select_sql = sprintf("SELECT ".
 			"t.id as %s, ".
@@ -250,6 +237,41 @@ class DAO_Task extends C4_ORMHelper {
 			}
 		}
 		
+		$result = array(
+			'primary_table' => 't',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => $has_multiple_values,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+
+    /**
+     * Enter description here...
+     *
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents($columns,$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
 		// Build it
 		$sql = 
 			$select_sql.
@@ -258,7 +280,7 @@ class DAO_Task extends C4_ORMHelper {
 			($has_multiple_values ? 'GROUP BY t.id ' : '').
 			$sort_sql;
 		
-		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
 		$results = array();
 		
@@ -309,9 +331,9 @@ class SearchFields_Task implements IDevblocksSearchFields {
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		$columns = array(
-			self::ID => new DevblocksSearchField(self::ID, 't', 'id', $translate->_('task.id')),
+			self::ID => new DevblocksSearchField(self::ID, 't', 'id', $translate->_('common.id')),
 			self::UPDATED_DATE => new DevblocksSearchField(self::UPDATED_DATE, 't', 'updated_date', $translate->_('task.updated_date')),
-			self::TITLE => new DevblocksSearchField(self::TITLE, 't', 'title', $translate->_('task.title')),
+			self::TITLE => new DevblocksSearchField(self::TITLE, 't', 'title', $translate->_('common.title')),
 			self::IS_COMPLETED => new DevblocksSearchField(self::IS_COMPLETED, 't', 'is_completed', $translate->_('task.is_completed')),
 			self::DUE_DATE => new DevblocksSearchField(self::DUE_DATE, 't', 'due_date', $translate->_('task.due_date')),
 			self::COMPLETED_DATE => new DevblocksSearchField(self::COMPLETED_DATE, 't', 'completed_date', $translate->_('task.completed_date')),
@@ -323,7 +345,7 @@ class SearchFields_Task implements IDevblocksSearchFields {
 		);
 		
 		// Custom Fields
-		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Task::ID);
+		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TASK);
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
@@ -392,6 +414,10 @@ class View_Task extends C4_AbstractView {
 			$this->renderTotal
 		);
 	}
+	
+	function getDataSample($size) {
+		return $this->_doGetDataSample('DAO_Task', $size);
+	}
 
 	function render() {
 		$this->_sanitize();
@@ -410,15 +436,15 @@ class View_Task extends C4_AbstractView {
 		$tpl->assign('results', $results);
 
 		// Custom fields
-		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Task::ID);
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TASK);
 		$tpl->assign('custom_fields', $custom_fields);
 		
 		switch($this->renderTemplate) {
 			case 'contextlinks_chooser':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/tasks/view_contextlinks_chooser.tpl');
+				$tpl->display('devblocks:cerberusweb.core::tasks/view_contextlinks_chooser.tpl');
 				break;
 			default:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/tasks/view.tpl');
+				$tpl->display('devblocks:cerberusweb.core::tasks/view.tpl');
 				break;
 		}
 		
@@ -426,26 +452,25 @@ class View_Task extends C4_AbstractView {
 
 	function renderCriteria($field) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = APP_PATH . '/features/cerberusweb.core/templates/';
 		$tpl->assign('id', $this->id);
 		
 		switch($field) {
 			case SearchFields_Task::TITLE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 				
 			case SearchFields_Task::IS_COMPLETED:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
 				
 			case SearchFields_Task::UPDATED_DATE:
 			case SearchFields_Task::DUE_DATE:
 			case SearchFields_Task::COMPLETED_DATE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 				
 			case SearchFields_Task::VIRTUAL_WORKERS:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_worker.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_worker.tpl');
 				break;
 				
 			default:
@@ -609,7 +634,7 @@ class View_Task extends C4_AbstractView {
 			DAO_Task::update($batch_ids, $change_fields);
 			
 			// Custom Fields
-			self::_doBulkSetCustomFields(ChCustomFieldSource_Task::ID, $custom_fields, $batch_ids);
+			self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_TASK, $custom_fields, $batch_ids);
 			
 			// Owners
 			if(isset($do['owner']) && is_array($do['owner'])) {
@@ -644,7 +669,7 @@ class Context_Task extends Extension_DevblocksContext {
 			$prefix = 'Task:';
 		
 		$translate = DevblocksPlatform::getTranslationService();
-		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Task::ID);
+		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TASK);
 
 		// Polymorph
 		if(is_numeric($task)) {
@@ -661,7 +686,7 @@ class Context_Task extends Extension_DevblocksContext {
 			'due|date' => $prefix.$translate->_('task.due_date'),
 			'id' => $prefix.$translate->_('common.id'),
 			'is_completed' => $prefix.$translate->_('task.is_completed'),
-			'title' => $prefix.$translate->_('task.title'),
+			'title' => $prefix.$translate->_('common.title'),
 			'updated|date' => $prefix.$translate->_('task.updated_date'),
 		);
 		
@@ -683,7 +708,7 @@ class Context_Task extends Extension_DevblocksContext {
 			
 			$token_values['custom'] = array();
 			
-			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Task::ID, $task->id));
+			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TASK, $task->id));
 			if(is_array($field_values) && !empty($field_values)) {
 				foreach($field_values as $cf_id => $cf_val) {
 					if(!isset($fields[$cf_id]))

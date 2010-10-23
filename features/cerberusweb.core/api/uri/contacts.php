@@ -48,10 +48,7 @@
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class ChContactsPage extends CerberusPageExtension {
-	private $_TPL_PATH = '';
-	
 	function __construct($manifest) {
-		$this->_TPL_PATH = dirname(dirname(dirname(__FILE__))) . '/templates/';
 		parent::__construct($manifest);
 	}
 		
@@ -72,7 +69,6 @@ class ChContactsPage extends CerberusPageExtension {
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$visit = CerberusApplication::getVisit();		
 		
@@ -95,18 +91,18 @@ class ChContactsPage extends CerberusPageExtension {
 							case 'orgs':
 								$fields = DAO_ContactOrg::getFields();
 								$tpl->assign('fields',$fields);
-								$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
+								$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ORG);
 								$tpl->assign('custom_fields', $custom_fields);
 								break;
 							case 'addys':
 								$fields = DAO_Address::getFields();
 								$tpl->assign('fields',$fields);
-								$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Address::ID);
+								$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ADDRESS);
 								$tpl->assign('custom_fields', $custom_fields);
 								break;
 						}
 						
-						$tpl->display('file:' . $this->_TPL_PATH . 'contacts/import/mapping.tpl');
+						$tpl->display('devblocks:cerberusweb.core::contacts/import/mapping.tpl');
 						return;
 						break;
 				}
@@ -129,7 +125,7 @@ class ChContactsPage extends CerberusPageExtension {
 						$people_count = DAO_Address::getCountByOrgId($contact->id);
 						$tpl->assign('people_total', $people_count);
 						
-						$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/display.tpl');
+						$tpl->display('devblocks:cerberusweb.core::contacts/orgs/display.tpl');
 						return;
 						break; // case 'orgs/display'
 						
@@ -138,13 +134,12 @@ class ChContactsPage extends CerberusPageExtension {
 				
 		} // switch (tab)
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/index.tpl');
+		$tpl->display('devblocks:cerberusweb.core::contacts/index.tpl');
 		return;
 	}
 	
 	function showOrgsTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'View_ContactOrg';
@@ -153,31 +148,67 @@ class ChContactsPage extends CerberusPageExtension {
 		$view = C4_AbstractViewLoader::getView(View_ContactOrg::DEFAULT_ID, $defaults);
 		$tpl->assign('view', $view);
 		$tpl->assign('contacts_page', 'orgs');
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/index.tpl');
+		$tpl->display('devblocks:cerberusweb.core::contacts/orgs/index.tpl');
 	}
 	
 	function showAddysTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'View_Address';
 		$defaults->id = View_Address::DEFAULT_ID;
-		$defaults->paramsDefault = array(
-			SearchFields_Address::IS_REGISTERED => new DevblocksSearchCriteria(SearchFields_Address::IS_REGISTERED,'=',1),
-		);
 		
 		$view = C4_AbstractViewLoader::getView(View_Address::DEFAULT_ID, $defaults);
-		
-		$view->addParamsDefault(array(
-			SearchFields_Address::IS_REGISTERED => new DevblocksSearchCriteria(SearchFields_Address::IS_REGISTERED,'=',1),
-		));
 		
 		$tpl->assign('view', $view);
 		$tpl->assign('contacts_page', 'addresses');
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/addresses/index.tpl');
+		$tpl->display('devblocks:cerberusweb.core::contacts/addresses/index.tpl');
 	}
+	
+	function showPeopleTabAction() {
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		$defaults = new C4_AbstractViewModel();
+		$defaults->class_name = 'View_ContactPerson';
+		$defaults->id = View_ContactPerson::DEFAULT_ID;
+		//$defaults->paramsDefault = array(
+			//SearchFields_Example::PROPERTY => new DevblocksSearchCriteria(SearchFields_Example::PROPERTY,'=',1),
+		//);
+		
+		$view = C4_AbstractViewLoader::getView($defaults->id, $defaults);
+		
+		//$view->addParamsDefault(array(
+			//SearchFields_Example::PROPERTY => new DevblocksSearchCriteria(SearchFields_Example::PROPERTY,'=',1),
+		//));
+		
+		$tpl->assign('view', $view);
+		$tpl->assign('contacts_page', 'people');
+		
+		$tpl->display('devblocks:cerberusweb.core::contacts/people/index.tpl');
+	}	
+	
+	function showListsTabAction() {
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		$defaults = new C4_AbstractViewModel();
+		$defaults->class_name = 'View_ContactList';
+		$defaults->id = View_ContactList::DEFAULT_ID;
+		$defaults->paramsDefault = array(
+			//SearchFields_Example::PROPERTY => new DevblocksSearchCriteria(SearchFields_Example::PROPERTY,'=',1),
+		);
+		
+		$view = C4_AbstractViewLoader::getView(View_ContactList::DEFAULT_ID, $defaults);
+		
+		$view->addParamsDefault(array(
+			//SearchFields_Example::PROPERTY => new DevblocksSearchCriteria(SearchFields_Example::PROPERTY,'=',1),
+		));
+		
+		$tpl->assign('view', $view);
+		$tpl->assign('contacts_page', 'lists');
+		
+		$tpl->display('devblocks:cerberusweb.core::contacts/lists/index.tpl');
+	}	
 	
 	function showImportTabAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
@@ -186,9 +217,8 @@ class ChContactsPage extends CerberusPageExtension {
 			return;
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/import/index.tpl');
+		
+		$tpl->display('devblocks:cerberusweb.core::contacts/import/index.tpl');
 	}
 	
 	function viewOrgsExploreAction() {
@@ -310,8 +340,6 @@ class ChContactsPage extends CerberusPageExtension {
 		@$include_first = DevblocksPlatform::importGPC($_REQUEST['include_first'],'integer',0);
 		@$is_blank_unset = DevblocksPlatform::importGPC($_REQUEST['is_blank_unset'],'integer',0);
 		
-		@$replace_passwords = DevblocksPlatform::importGPC($_REQUEST['replace_passwords'],'integer',0);
-		
 		$visit = CerberusApplication::getVisit();
 		$db = DevblocksPlatform::getDatabaseService();
 		
@@ -337,7 +365,6 @@ class ChContactsPage extends CerberusPageExtension {
 			$sync_val = '';
 			
 			// Overrides
-			$contact_password = '';
 			
 			if(is_array($pos))
 			foreach($pos as $idx => $p) {
@@ -375,16 +402,6 @@ class ChContactsPage extends CerberusPageExtension {
 									$val = $org_id;
 								} else {
 									$val = 0;
-								}
-								break;
-								
-							case 'pass':
-								$key = null;
-								// Detect if we need to MD5 a plaintext password.
-								if(preg_match("/[a-z0-9]{32}/", $val)) {
-									$contact_password = $val;
-								} else {
-									$contact_password = md5($val);
 								}
 								break;
 						}
@@ -432,21 +449,6 @@ class ChContactsPage extends CerberusPageExtension {
 						);
 					
 					if(isset($fields['email'])) {
-						// Overrides
-						if(!empty($contact_password)) {
-							if($replace_passwords) { // always replace
-								$fields[DAO_Address::IS_REGISTERED] = 1;
-								$fields[DAO_Address::PASS] = $contact_password;
-								
-							} else { // only replace if null
-								if(null == ($addy = DAO_Address::lookupAddress($fields['email'], false))
-									|| !$addy->is_registered) {
-										$fields[DAO_Address::IS_REGISTERED] = 1;
-										$fields[DAO_Address::PASS] = $contact_password;
-								}
-							}
-						}
-						
 						if(empty($addys)) {
 							$id = DAO_Address::create($fields);
 						} else {
@@ -460,8 +462,8 @@ class ChContactsPage extends CerberusPageExtension {
 			
 			if(!empty($custom_fields) && !empty($id)) {
 				// Format (typecast) and set the custom field types
-				$source_ext_id = ($type=="orgs") ? ChCustomFieldSource_Org::ID : ChCustomFieldSource_Address::ID;
-				DAO_CustomFieldValue::formatAndSetFieldValues($source_ext_id, $id, $custom_fields, $is_blank_unset, true, true);
+				$context_ext_id = ($type=="orgs") ? CerberusContexts::CONTEXT_ORG : CerberusContexts::CONTEXT_ADDRESS;
+				DAO_CustomFieldValue::formatAndSetFieldValues($context_ext_id, $id, $custom_fields, $is_blank_unset, true, true);
 			}
 			
 		}
@@ -485,34 +487,11 @@ class ChContactsPage extends CerberusPageExtension {
 		}
 	}
 	
-	function showTabPropertiesAction() {
-		@$org = DevblocksPlatform::importGPC($_REQUEST['org']);
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-		
-		$tpl->assign('org_id', $org);
-		
-		$contact = DAO_ContactOrg::get($org);
-		$tpl->assign('contact', $contact);
-
-		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
-		$tpl->assign('custom_fields', $custom_fields);
-		
-		$custom_field_values = DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Org::ID, $org);
-		if(isset($custom_field_values[$org]))
-			$tpl->assign('custom_field_values', $custom_field_values[$org]);
-		
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/tabs/properties.tpl');
-		exit;
-	}
-	
 	function showTabPeopleAction() {
 		@$org = DevblocksPlatform::importGPC($_REQUEST['org']);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-		
+				
 		$contact = DAO_ContactOrg::get($org);
 		$tpl->assign('contact', $contact);
 		
@@ -537,7 +516,7 @@ class ChContactsPage extends CerberusPageExtension {
 		$tpl->assign('contacts_page', 'orgs');
 		$tpl->assign('search_columns', SearchFields_Address::getFields());
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/tabs/people.tpl');
+		$tpl->display('devblocks:cerberusweb.core::contacts/orgs/tabs/people.tpl');
 		exit;
 	}
 	
@@ -547,8 +526,7 @@ class ChContactsPage extends CerberusPageExtension {
 		@$org = DevblocksPlatform::importGPC($_REQUEST['org']);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-		
+				
 		$contact = DAO_ContactOrg::get($org);
 		$tpl->assign('contact', $contact);
 		
@@ -599,7 +577,7 @@ class ChContactsPage extends CerberusPageExtension {
 		$team_categories = DAO_Bucket::getTeams();
 		$tpl->assign('team_categories', $team_categories);
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/tabs/history.tpl');
+		$tpl->display('devblocks:cerberusweb.core::contacts/orgs/tabs/history.tpl');
 		exit;
 	}
 	
@@ -611,8 +589,7 @@ class ChContactsPage extends CerberusPageExtension {
 		@$org_id = DevblocksPlatform::importGPC($_REQUEST['org_id'],'string','');
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-
+		
 		// Handle context links ([TODO] as an optional array)
 		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
 		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer','');
@@ -672,10 +649,10 @@ class ChContactsPage extends CerberusPageExtension {
 		}
 		
 		// Custom fields
-		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Address::ID); 
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ADDRESS); 
 		$tpl->assign('custom_fields', $custom_fields);
 
-		$custom_field_values = DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Address::ID, $id);
+		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ADDRESS, $id);
 		if(isset($custom_field_values[$id]))
 			$tpl->assign('custom_field_values', $custom_field_values[$id]);
 		
@@ -685,7 +662,7 @@ class ChContactsPage extends CerberusPageExtension {
 		// Display
 		$tpl->assign('id', $id);
 		$tpl->assign('view_id', $view_id);
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/addresses/address_peek.tpl');
+		$tpl->display('devblocks:cerberusweb.core::contacts/addresses/address_peek.tpl');
 	}
 	
 	function findTicketsAction() {
@@ -719,8 +696,7 @@ class ChContactsPage extends CerberusPageExtension {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-		$tpl->assign('view_id', $view_id);
+				$tpl->assign('view_id', $view_id);
 
 	    if(!empty($ids)) {
 	        $address_ids = DevblocksPlatform::parseCsvString($ids);
@@ -728,7 +704,7 @@ class ChContactsPage extends CerberusPageExtension {
 	    }
 		
 	    // Custom fields
-	    $custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Address::ID);
+	    $custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ADDRESS);
 	    $tpl->assign('custom_fields', $custom_fields);
 	    
 		// Groups
@@ -739,7 +715,7 @@ class ChContactsPage extends CerberusPageExtension {
 		CerberusContexts::getContext(CerberusContexts::CONTEXT_ADDRESS, null, $token_labels, $token_values);
 		$tpl->assign('token_labels', $token_labels);
 	    
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/addresses/address_bulk.tpl');
+		$tpl->display('devblocks:cerberusweb.core::contacts/addresses/address_bulk.tpl');
 	}
 	
 	function showOrgBulkPanelAction() {
@@ -747,8 +723,7 @@ class ChContactsPage extends CerberusPageExtension {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-		$tpl->assign('view_id', $view_id);
+				$tpl->assign('view_id', $view_id);
 
 	    if(!empty($ids)) {
 	        $org_ids = DevblocksPlatform::parseCsvString($ids);
@@ -756,10 +731,10 @@ class ChContactsPage extends CerberusPageExtension {
 	    }
 		
 		// Custom Fields
-		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ORG);
 		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/org_bulk.tpl');
+		$tpl->display('devblocks:cerberusweb.core::contacts/orgs/org_bulk.tpl');
 	}
 		
 	function showOrgPeekAction() {
@@ -767,8 +742,7 @@ class ChContactsPage extends CerberusPageExtension {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-		
+				
 		// Handle context links ([TODO] as an optional array)
 		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
 		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer','');
@@ -779,10 +753,10 @@ class ChContactsPage extends CerberusPageExtension {
 		$tpl->assign('contact', $contact);
 
 		// Custom fields
-		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID); 
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ORG); 
 		$tpl->assign('custom_fields', $custom_fields);
 
-		$custom_field_values = DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Org::ID, $id);
+		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ORG, $id);
 		if(isset($custom_field_values[$id]))
 			$tpl->assign('custom_field_values', $custom_field_values[$id]);
 		
@@ -792,7 +766,7 @@ class ChContactsPage extends CerberusPageExtension {
 		// View
 		$tpl->assign('view_id', $view_id);
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'contacts/orgs/org_peek.tpl');
+		$tpl->display('devblocks:cerberusweb.core::contacts/orgs/org_peek.tpl');
 	}
 	
 	function saveContactAction() {
@@ -805,8 +779,6 @@ class ChContactsPage extends CerberusPageExtension {
 		@$last_name = trim(DevblocksPlatform::importGPC($_REQUEST['last_name'],'string',''));
 		@$contact_org = trim(DevblocksPlatform::importGPC($_REQUEST['contact_org'],'string',''));
 		@$is_banned = DevblocksPlatform::importGPC($_REQUEST['is_banned'],'integer',0);
-		@$pass = DevblocksPlatform::importGPC($_REQUEST['pass'],'string','');
-		@$unregister = DevblocksPlatform::importGPC($_REQUEST['unregister'],'integer',0);
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string', '');
 		
 		if($active_worker->hasPriv('core.addybook.addy.actions.update')) {
@@ -825,16 +797,6 @@ class ChContactsPage extends CerberusPageExtension {
 				DAO_Address::IS_BANNED => $is_banned,
 			);
 			
-			// Are we clearing the contact's login?
-			if($unregister) {
-				$fields[DAO_Address::IS_REGISTERED] = 0;
-				$fields[DAO_Address::PASS] = '';
-				
-			} elseif(!empty($pass)) { // Are we changing their password?
-				$fields[DAO_Address::IS_REGISTERED] = 1;
-				$fields[DAO_Address::PASS] = md5($pass);
-			}
-			
 			if($id==0) {
 				$fields = $fields + array(DAO_Address::EMAIL => $email);
 				$id = DAO_Address::create($fields);
@@ -852,7 +814,7 @@ class ChContactsPage extends CerberusPageExtension {
 	
 			// Custom field saves
 			@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
-			DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Address::ID, $id, $field_ids);
+			DAO_CustomFieldValue::handleFormPost(CerberusContexts::CONTEXT_ADDRESS, $id, $field_ids);
 			
 			/*
 			 * Notify anything that wants to know when Address Peek saves.
@@ -874,57 +836,6 @@ class ChContactsPage extends CerberusPageExtension {
 			$view->render();
 		}
 	}
-	
-	function saveOrgPropertiesAction() {
-		$active_worker = CerberusApplication::getActiveWorker();
-		
-		@$id = DevblocksPlatform::importGPC($_REQUEST['org_id'],'integer');
-		
-		@$org_name = DevblocksPlatform::importGPC($_REQUEST['org_name'],'string','');
-		@$street = DevblocksPlatform::importGPC($_REQUEST['street'],'string','');
-		@$city = DevblocksPlatform::importGPC($_REQUEST['city'],'string','');
-		@$province = DevblocksPlatform::importGPC($_REQUEST['province'],'string','');
-		@$postal = DevblocksPlatform::importGPC($_REQUEST['postal'],'string','');
-		@$country = DevblocksPlatform::importGPC($_REQUEST['country'],'string','');
-		@$phone = DevblocksPlatform::importGPC($_REQUEST['phone'],'string','');
-		@$website = DevblocksPlatform::importGPC($_REQUEST['website'],'string','');
-		@$delete = DevblocksPlatform::importGPC($_REQUEST['do_delete'],'integer',0);
-
-		if(!empty($id) && !empty($delete)) { // delete
-			if($active_worker->hasPriv('core.addybook.org.actions.delete'))
-				DAO_ContactOrg::delete($id);
-				
-			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('contacts','orgs')));
-			return;
-			
-		} else { // create/edit
-			if($active_worker->hasPriv('core.addybook.org.actions.update')) {
-				$fields = array(
-					DAO_ContactOrg::NAME => $org_name,
-					DAO_ContactOrg::STREET => $street,
-					DAO_ContactOrg::CITY => $city,
-					DAO_ContactOrg::PROVINCE => $province,
-					DAO_ContactOrg::POSTAL => $postal,
-					DAO_ContactOrg::COUNTRY => $country,
-					DAO_ContactOrg::PHONE => $phone,
-					DAO_ContactOrg::WEBSITE => $website
-				);
-		
-				if($id==0) {
-					$id = DAO_ContactOrg::create($fields);
-				}
-				else {
-					DAO_ContactOrg::update($id, $fields);	
-				}
-				
-				// Custom field saves
-				@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
-				DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Org::ID, $id, $field_ids);
-			}
-		}		
-		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('contacts','orgs','display',$id))); //,'fields'
-	}	
 	
 	function saveOrgPeekAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
@@ -974,7 +885,7 @@ class ChContactsPage extends CerberusPageExtension {
 				
 				// Custom field saves
 				@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
-				DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Org::ID, $id, $field_ids);
+				DAO_CustomFieldValue::handleFormPost(CerberusContexts::CONTEXT_ORG, $id, $field_ids);
 			}
 		}
 		
@@ -1038,6 +949,11 @@ class ChContactsPage extends CerberusPageExtension {
 				@$address_id_str = DevblocksPlatform::importGPC($_REQUEST['address_ids'],'string');
 				$ids = DevblocksPlatform::parseCsvString($address_id_str);
 				break;
+			case 'sample':
+				@$sample_size = min(DevblocksPlatform::importGPC($_REQUEST['filter_sample_size'],'integer',0),9999);
+				$filter = 'checks';
+				$ids = $view->getDataSample($sample_size);
+				break;
 			default:
 				break;
 		}
@@ -1061,24 +977,22 @@ class ChContactsPage extends CerberusPageExtension {
 			@$broadcast_subject = DevblocksPlatform::importGPC($_REQUEST['broadcast_subject'],'string',null);
 			@$broadcast_message = DevblocksPlatform::importGPC($_REQUEST['broadcast_message'],'string',null);
 
-			// Get total
-			$view->renderPage = 0;
-			$view->renderLimit = 1;
-			$view->renderTotal = true;
-			list($null, $total) = $view->getData();
+			@$filter = DevblocksPlatform::importGPC($_REQUEST['filter'],'string','');
+			@$ids = DevblocksPlatform::importGPC($_REQUEST['address_ids'],'string','');
 			
-			// Get the first row from the view
-			$view->renderPage = mt_rand(0, $total-1);
-			$view->renderLimit = 1;
-			$view->renderTotal = false;
-			list($results, $null) = $view->getData();
+			// Filter to checked
+			if('checks' == $filter && !empty($ids)) {
+				$view->addParam(new DevblocksSearchCriteria(SearchFields_Address::ID,'in',explode(',', $ids)));
+			}
+			
+			$results = $view->getDataSample(1);
 			
 			if(empty($results)) {
 				$success = false;
 				$output = "There aren't any rows in this view!";
 				
 			} else {
-				@$addy = DAO_Address::get(key($results));
+				@$addy = DAO_Address::get(current($results));
 				
 				// Try to build the template
 				CerberusContexts::getContext(CerberusContexts::CONTEXT_ADDRESS, $addy, $token_labels, $token_values);
@@ -1106,9 +1020,7 @@ class ChContactsPage extends CerberusPageExtension {
 			$tpl->assign('success', $success);
 			$tpl->assign('output', htmlentities($output, null, LANG_CHARSET_CODE));
 			
-			$core_tpl_path = APP_PATH . '/features/cerberusweb.core/templates/';
-			
-			$tpl->display('file:'.$core_tpl_path.'internal/renderers/test_results.tpl');
+			$tpl->display('devblocks:cerberusweb.core::internal/renderers/test_results.tpl');
 		}
 	}	
 	
@@ -1152,6 +1064,11 @@ class ChContactsPage extends CerberusPageExtension {
 			case 'checks':
 			    @$org_ids_str = DevblocksPlatform::importGPC($_REQUEST['org_ids'],'string');
 				$ids = DevblocksPlatform::parseCsvString($org_ids_str);
+				break;
+			case 'sample':
+				@$sample_size = min(DevblocksPlatform::importGPC($_REQUEST['filter_sample_size'],'integer',0),9999);
+				$filter = 'checks';
+				$ids = $view->getDataSample($sample_size);
 				break;
 			default:
 				break;

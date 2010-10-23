@@ -48,10 +48,7 @@
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class ChGroupsPage extends CerberusPageExtension  {
-	private $_TPL_PATH = '';
-	
 	function __construct($manifest) {
-		$this->_TPL_PATH = dirname(dirname(dirname(__FILE__))) . '/templates/';
 		parent::__construct($manifest);
 	}
 	
@@ -72,7 +69,6 @@ class ChGroupsPage extends CerberusPageExtension  {
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 
 		$active_worker = CerberusApplication::getActiveWorker();
 		
@@ -100,15 +96,13 @@ class ChGroupsPage extends CerberusPageExtension  {
 	    		$tpl->assign('tab_selected', $tab_selected);
 		}
     	
-		$tpl->display('file:' . $this->_TPL_PATH . 'groups/index.tpl');
+		$tpl->display('devblocks:cerberusweb.core::groups/index.tpl');
 	}
 	
 	function showTabMailAction() {
 		@$group_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = $this->_TPL_PATH;
-		$tpl->assign('path', $tpl_path);
 		
 		$active_worker = CerberusApplication::getActiveWorker();
 		if(!$active_worker->isTeamManager($group_id) && !$active_worker->is_superuser) {
@@ -144,15 +138,13 @@ class ChGroupsPage extends CerberusPageExtension  {
 		
 		// Template
 		
-		$tpl->display('file:' . $tpl_path . 'groups/manage/index.tpl');
+		$tpl->display('devblocks:cerberusweb.core::groups/manage/index.tpl');
 	}
 	
 	function showTabInboxAction() {
 		@$group_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = $this->_TPL_PATH;
-		$tpl->assign('path', $tpl_path);
 
 		$tpl->assign('group_id', $group_id);
 		
@@ -174,14 +166,13 @@ class ChGroupsPage extends CerberusPageExtension  {
 		$tpl->assign('workers', $workers);
 
 		// Custom Field Sources
-		$source_manifests = DevblocksPlatform::getExtensions('cerberusweb.fields.source', false);
-		$tpl->assign('source_manifests', $source_manifests);
+		$tpl->assign('context_manifests', DAO_CustomField::getContexts());
 		
 		// Custom Fields
 		$custom_fields =  DAO_CustomField::getAll();
 		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->display('file:' . $tpl_path . 'groups/manage/filters/index.tpl');
+		$tpl->display('devblocks:cerberusweb.core::groups/manage/filters/index.tpl');
 	}
 	
 	function saveTabInboxAction() {
@@ -220,8 +211,6 @@ class ChGroupsPage extends CerberusPageExtension  {
 		$active_worker = CerberusApplication::getActiveWorker();
 
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = $this->_TPL_PATH;
-		$tpl->assign('path', $tpl_path);
    		
 		$tpl->assign('group_id', $group_id);
 		$tpl->assign('view_id', $view_id);
@@ -260,18 +249,18 @@ class ChGroupsPage extends CerberusPageExtension  {
 		$tpl->assign('workers', $workers);
 		
 		// Custom Fields: Address
-		$address_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Address::ID);
+		$address_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ADDRESS);
 		$tpl->assign('address_fields', $address_fields);
 		
 		// Custom Fields: Orgs
-		$org_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
+		$org_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ORG);
 		$tpl->assign('org_fields', $org_fields);
 		
 		// Custom Fields: Tickets
-		$ticket_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Ticket::ID);
+		$ticket_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
 		$tpl->assign('ticket_fields', $ticket_fields);
 		
-		$tpl->display('file:' . $tpl_path . 'groups/manage/filters/peek.tpl');
+		$tpl->display('devblocks:cerberusweb.core::groups/manage/filters/peek.tpl');
    	}
    	
    	function saveTabInboxAddAction() {
@@ -648,8 +637,6 @@ class ChGroupsPage extends CerberusPageExtension  {
 		@$group_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = $this->_TPL_PATH;
-		$tpl->assign('path', $tpl_path);
 		
 		$active_worker = CerberusApplication::getActiveWorker();
 		if(!$active_worker->isTeamManager($group_id) && !$active_worker->is_superuser) {
@@ -665,7 +652,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 		$workers = DAO_Worker::getAllActive();
 	    $tpl->assign('workers', $workers);
 		
-		$tpl->display('file:' . $tpl_path . 'groups/manage/members.tpl');
+		$tpl->display('devblocks:cerberusweb.core::groups/manage/members.tpl');
 	}
 	
 	function saveTabMembersAction() {
@@ -696,8 +683,6 @@ class ChGroupsPage extends CerberusPageExtension  {
 		@$group_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = $this->_TPL_PATH;
-		$tpl->assign('path', $tpl_path);
 
 		$active_worker = CerberusApplication::getActiveWorker();
 		if(!$active_worker->isTeamManager($group_id) && !$active_worker->is_superuser) {
@@ -710,7 +695,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 		$team_categories = DAO_Bucket::getByTeam($group_id);
 		$tpl->assign('categories', $team_categories);
 		
-		$tpl->display('file:' . $tpl_path . 'groups/manage/buckets.tpl');
+		$tpl->display('devblocks:cerberusweb.core::groups/manage/buckets.tpl');
 	}
 	
 	function saveTabBucketsAction() {
@@ -765,8 +750,6 @@ class ChGroupsPage extends CerberusPageExtension  {
 		@$group_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = $this->_TPL_PATH;
-		$tpl->assign('path', $tpl_path);
 		
 		$active_worker = CerberusApplication::getActiveWorker();
 		if(!$active_worker->isTeamManager($group_id) && !$active_worker->is_superuser) {
@@ -776,13 +759,13 @@ class ChGroupsPage extends CerberusPageExtension  {
 			$tpl->assign('team', $group);
 		}
 		
-		$group_fields = DAO_CustomField::getBySourceAndGroupId(ChCustomFieldSource_Ticket::ID, $group_id); 
+		$group_fields = DAO_CustomField::getByContextAndGroupId(CerberusContexts::CONTEXT_TICKET, $group_id); 
 		$tpl->assign('group_fields', $group_fields);
                     
 		$types = Model_CustomField::getTypes();
 		$tpl->assign('types', $types);
 		
-		$tpl->display('file:' . $tpl_path . 'groups/manage/fields.tpl');
+		$tpl->display('devblocks:cerberusweb.core::groups/manage/fields.tpl');
 	}
 	
 	// Post
@@ -830,7 +813,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 				DAO_CustomField::NAME => $add_name,
 				DAO_CustomField::TYPE => $add_type,
 				DAO_CustomField::GROUP_ID => $group_id,
-				DAO_CustomField::SOURCE_EXTENSION => ChCustomFieldSource_Ticket::ID,
+				DAO_CustomField::CONTEXT => CerberusContexts::CONTEXT_TICKET,
 				DAO_CustomField::OPTIONS => $add_options,
 			);
 			$id = DAO_CustomField::create($fields);
@@ -844,8 +827,6 @@ class ChGroupsPage extends CerberusPageExtension  {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = $this->_TPL_PATH;
-		$tpl->assign('path', $tpl_path);
 		
 		$tpl->assign('view_id', $view_id);
 		
@@ -853,7 +834,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 			$tpl->assign('group', $group);
 		}
 		
-		$tpl->display('file:' . $tpl_path . 'groups/rpc/peek.tpl');
+		$tpl->display('devblocks:cerberusweb.core::groups/rpc/peek.tpl');
 	}
 	
 	function saveGroupPanelAction() {

@@ -57,9 +57,6 @@ class ChWatchersConfigTab extends Extension_ConfigTab {
 		$settings = DevblocksPlatform::getPluginSettingsService();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$core_tplpath = dirname(dirname(dirname(__FILE__))) . '/cerberusweb.core/templates/';
-		$tpl->assign('core_tplpath', $core_tplpath);
 		$tpl->assign('view_id', $view_id);
 
 		$defaults = new C4_AbstractViewModel();
@@ -71,7 +68,7 @@ class ChWatchersConfigTab extends Extension_ConfigTab {
 		$view = C4_AbstractViewLoader::getView(View_WatcherMailFilter::DEFAULT_ID, $defaults);
 		$tpl->assign('view', $view);
 		
-		$tpl->display('file:' . $tpl_path . 'config/watchers/index.tpl');
+		$tpl->display('devblocks:cerberusweb.watchers::config/watchers/index.tpl');
 	}
 	
 	function saveTab() {
@@ -326,17 +323,13 @@ class ChWatchersEventListener extends DevblocksEventListenerExtension {
 };
 
 class ChWatchersPreferences extends Extension_PreferenceTab {
-	private $_TPL_PATH = null; 
-	
     function __construct($manifest) {
         parent::__construct($manifest);
-        $this->_TPL_PATH = dirname(dirname(__FILE__)).'/templates/';
     }
 	
 	// Ajax
 	function showTab() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$worker = CerberusApplication::getActiveWorker();
 		
@@ -367,7 +360,7 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 		
 		$tpl->assign('view', $view);
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'preferences/watchers.tpl');
+		$tpl->display('devblocks:cerberusweb.watchers::preferences/watchers.tpl');
 	}
     
 	// Post
@@ -380,8 +373,6 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $path);
 		$tpl->assign('view_id', $view_id);
 
 	    if(!empty($id_csv)) {
@@ -390,10 +381,10 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 	    }
 		
 		// Custom Fields
-//		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_TimeEntry::ID);
+//		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TIMETRACKING);
 //		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->display('file:' . $path . 'preferences/bulk.tpl');
+		$tpl->display('devblocks:cerberusweb.watchers::preferences/bulk.tpl');
 	}
 	
 	// Ajax
@@ -424,6 +415,11 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 			    @$ids_str = DevblocksPlatform::importGPC($_REQUEST['ids'],'string');
 				$ids = DevblocksPlatform::parseCsvString($ids_str);
 				break;
+			case 'sample':
+				@$sample_size = min(DevblocksPlatform::importGPC($_REQUEST['filter_sample_size'],'integer',0),9999);
+				$filter = 'checks';
+				$ids = $view->getDataSample($sample_size);
+				break;
 			default:
 				break;
 		}
@@ -440,7 +436,6 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 		$tpl->assign('view_id', $view_id);
 		
 		$active_worker = CerberusApplication::getActiveWorker();
@@ -472,18 +467,18 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 		$tpl->assign('all_workers', DAO_Worker::getAll());
 
 		// Custom Fields: Ticket
-		$ticket_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Ticket::ID);
+		$ticket_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
 		$tpl->assign('ticket_fields', $ticket_fields);
 
 		// Custom Fields: Address
-		$address_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Address::ID);
+		$address_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ADDRESS);
 		$tpl->assign('address_fields', $address_fields);
 		
 		// Custom Fields: Orgs
-		$org_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
+		$org_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ORG);
 		$tpl->assign('org_fields', $org_fields);
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'preferences/peek.tpl');
+		$tpl->display('devblocks:cerberusweb.watchers::preferences/peek.tpl');
 	}
 	
 	function saveWatcherPanelAction() {
@@ -705,12 +700,11 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
    		@$worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);
 	
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 
 		$addresses = DAO_AddressToWorker::getByWorker($worker_id);
 		$tpl->assign('addresses', $addresses);
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'preferences/worker_addresses.tpl');
+		$tpl->display('devblocks:cerberusweb.watchers::preferences/worker_addresses.tpl');
 	}
 	
 };
@@ -754,6 +748,10 @@ class View_WatcherMailFilter extends C4_AbstractView {
 		
 		return $objects;
 	}
+	
+	function getDataSample($size) {
+		return $this->_doGetDataSample('DAO_WatcherMailFilter', $size);
+	}
 
 	function render() {
 		$this->_sanitize();
@@ -766,7 +764,7 @@ class View_WatcherMailFilter extends C4_AbstractView {
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
 		
-		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.watchers/templates/config/watchers/view.tpl');
+		$tpl->display('devblocks:cerberusweb.watchers::config/watchers/view.tpl');
 	}
 
 	function renderCriteria($field) {
@@ -775,20 +773,20 @@ class View_WatcherMailFilter extends C4_AbstractView {
 
 		switch($field) {
 			case SearchFields_WatcherMailFilter::NAME:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 			case SearchFields_WatcherMailFilter::ID:
 			case SearchFields_WatcherMailFilter::POS:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__number.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__number.tpl');
 				break;
 			case SearchFields_WatcherMailFilter::CREATED:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 			case SearchFields_WatcherMailFilter::IS_DISABLED:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
 			case SearchFields_WatcherMailFilter::WORKER_ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_worker.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_worker.tpl');
 				break;
 			default:
 				echo '';
@@ -931,7 +929,7 @@ class View_WatcherMailFilter extends C4_AbstractView {
 				DAO_WatcherMailFilter::update($batch_ids, $change_fields);
 
 				// Custom Fields
-				//self::_doBulkSetCustomFields(ChCustomFieldSource_TimeEntry::ID, $custom_fields, $batch_ids);
+				//self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_TIMETRACKING, $custom_fields, $batch_ids);
 			}
 			
 			unset($batch_ids);
@@ -1136,19 +1134,7 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 		// [TODO] invalidate cache
 	}
 	
-    /**
-     * Enter description here...
-     *
-     * @param DevblocksSearchCriteria[] $params
-     * @param integer $limit
-     * @param integer $page
-     * @param string $sortBy
-     * @param boolean $sortAsc
-     * @param boolean $withCounts
-     * @return array
-     */
-    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_WatcherMailFilter::getFields();
 		
 		// Sanitize
@@ -1156,7 +1142,6 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields,$sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
 		
 		$select_sql = sprintf("SELECT ".
 			"wmf.id as %s, ".
@@ -1194,6 +1179,43 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 			
 		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
 		
+		$has_multiple_values = false;
+		
+		$result = array(
+			'primary_table' => 'wmf',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => $has_multiple_values,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+	
+    /**
+     * Enter description here...
+     *
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents($columns,$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
@@ -1201,10 +1223,9 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 			//($has_multiple_values ? 'GROUP BY wmf.id ' : '').
 			$sort_sql;
 
-		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
 		$results = array();
-		
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			foreach($row as $f => $v) {
@@ -1266,7 +1287,7 @@ class SearchFields_WatcherMailFilter {
 		);
 		
 		// Custom Fields
-//		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_TimeEntry::ID);
+//		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TIMETRACKING);
 //		if(is_array($fields))
 //		foreach($fields as $field_id => $field) {
 //			$key = 'cf_'.$field_id;
@@ -1504,20 +1525,20 @@ class Model_WatcherMailFilter {
 
 							// Lazy values loader
 							$field_values = array();
-							switch($field->source_extension) {
-								case ChCustomFieldSource_Address::ID:
+							switch($field->context) {
+								case CerberusContexts::CONTEXT_ADDRESS:
 									if(null == $address_field_values)
-										$address_field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Address::ID, $ticket_from->id));
+										$address_field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ADDRESS, $ticket_from->id));
 									$field_values =& $address_field_values;
 									break;
-								case ChCustomFieldSource_Org::ID:
+								case CerberusContexts::CONTEXT_ORG:
 									if(null == $org_field_values)
-										$org_field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Org::ID, $ticket_from->contact_org_id));
+										$org_field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ORG, $ticket_from->contact_org_id));
 									$field_values =& $org_field_values;
 									break;
-								case ChCustomFieldSource_Ticket::ID:
+								case CerberusContexts::CONTEXT_TICKET:
 									if(null == $ticket_field_values)
-										$ticket_field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Ticket::ID, $ticket->id));
+										$ticket_field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TICKET, $ticket->id));
 									$field_values =& $ticket_field_values;
 									break;
 							}

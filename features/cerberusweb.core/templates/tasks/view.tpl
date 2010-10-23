@@ -20,6 +20,7 @@
 <form id="viewForm{$view->id}" name="viewForm{$view->id}" action="{devblocks_url}{/devblocks_url}" method="post">
 <button id="btnExplore{$view->id}" type="button" style="display:none;" onclick="this.form.explore_from.value=$(this).closest('form').find('tbody input:checkbox:checked:first').val();this.form.a.value='viewTasksExplore';this.form.submit();"></button>
 <input type="hidden" name="view_id" value="{$view->id}">
+<input type="hidden" name="context_id" value="cerberusweb.contexts.task">
 <input type="hidden" name="c" value="tasks">
 <input type="hidden" name="a" value="">
 <input type="hidden" name="explore_from" value="0">
@@ -81,7 +82,7 @@
 		<tr class="{$tableRowClass}">
 		{foreach from=$view->view_columns item=column name=columns}
 			{if substr($column,0,3)=="cf_"}
-				{include file="file:$core_tpl/internal/custom_fields/view/cell_renderer.tpl"}
+				{include file="devblocks:cerberusweb.core::internal/custom_fields/view/cell_renderer.tpl"}
 			{elseif $column=="t_id"}
 				<td>{$result.t_id}&nbsp;</td>
 			{elseif $column=="t_completed_date" || $column=="t_updated_date"}

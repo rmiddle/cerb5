@@ -151,12 +151,10 @@ class ParseCron extends CerberusCronPageExtension {
 
 	function configure($instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $tpl_path);
 
 		$tpl->assign('max_messages', $this->getParam('max_messages', 500));
 
-		$tpl->display($tpl_path . 'cron/parser/config.tpl');
+		$tpl->display('devblocks:cerberusweb.core::cron/parser/config.tpl');
 	}
 
 	function saveConfigurationAction() {
@@ -238,12 +236,10 @@ class MaintCron extends CerberusCronPageExtension {
 
 	function configure($instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $tpl_path);
 
 		$tpl->assign('purge_waitdays', $this->getParam('purge_waitdays', 7));
 
-		$tpl->display($tpl_path . 'cron/maint/config.tpl');
+		$tpl->display('devblocks:cerberusweb.core::cron/maint/config.tpl');
 	}
 
 	function saveConfigurationAction() {
@@ -272,10 +268,7 @@ class HeartbeatCron extends CerberusCronPageExtension {
 
 	function configure($instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $tpl_path);
-
-		$tpl->display($tpl_path . 'cron/heartbeat/config.tpl');
+		$tpl->display('devblocks:cerberusweb.core::cron/heartbeat/config.tpl');
 	}
 };
 
@@ -397,7 +390,7 @@ class ImportCron extends CerberusCronPageExtension {
 		 		return $this->_handleImportOrg($xml);
 		 		break;
 		 	case 'contact':
-		 		return $this->_handleImportContact($xml);
+		 		return $this->_handleImportAddress($xml);
 		 		break;
 		 	default:
 		 		break;
@@ -910,7 +903,7 @@ class ImportCron extends CerberusCronPageExtension {
 		return true;
 	}
 
-	private function _handleImportContact($xml) {
+	private function _handleImportAddress($xml) {
 		$settings = DevblocksPlatform::getPluginSettingsService();
 		$logger = DevblocksPlatform::getConsoleLog();
 
@@ -934,11 +927,7 @@ class ImportCron extends CerberusCronPageExtension {
 			DAO_Address::EMAIL => $sEmail,
 		);
 
-		// Associate SC password
-		if(!empty($sPassword) && $sPassword != md5('')) {
-			$fields[DAO_Address::IS_REGISTERED] = 1;
-			$fields[DAO_Address::PASS] = $sPassword;
-		}
+		// [TODO] Associate SC password
 		
 		$address_id = DAO_Address::create($fields);
 		
@@ -951,7 +940,7 @@ class ImportCron extends CerberusCronPageExtension {
 			}
 		}
 		
-		$logger->info('[Importer] Imported contact #'.$address_id.' ('.$sEmail.')');
+		$logger->info('[Importer] Imported address #'.$address_id.' ('.$sEmail.')');
 		
 		return true;
 	}
@@ -999,10 +988,7 @@ class ImportCron extends CerberusCronPageExtension {
 
 	function configure($instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $tpl_path);
-
-		$tpl->display($tpl_path . 'cron/import/config.tpl');
+		$tpl->display('devblocks:cerberusweb.core::cron/import/config.tpl');
 	}
 };
 
@@ -1159,13 +1145,11 @@ class Pop3Cron extends CerberusCronPageExtension {
 
 	function configure($instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $tpl_path);
 
 		$timeout = ini_get('max_execution_time');
 		$tpl->assign('max_messages', $this->getParam('max_messages', (($timeout) ? 20 : 50)));
 
-		$tpl->display($tpl_path . 'cron/pop3/config.tpl');
+		$tpl->display('devblocks:cerberusweb.core::cron/pop3/config.tpl');
 	}
 
 	function saveConfigurationAction() {
@@ -1200,13 +1184,11 @@ class StorageCron extends CerberusCronPageExtension {
 	
 	function configure($instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $tpl_path);
 
 //		$timeout = ini_get('max_execution_time');
 //		$tpl->assign('max_messages', $this->getParam('max_messages', (($timeout) ? 20 : 50)));
 
-		//$tpl->display($tpl_path . 'cron/storage/config.tpl');
+		//$tpl->display('devblocks:cerberusweb.core::cron/storage/config.tpl');
 	}
 
 	function saveConfigurationAction() {
@@ -1270,10 +1252,8 @@ class MailQueueCron extends CerberusCronPageExtension {
 
 	function configure($instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $tpl_path);
 
-		$tpl->display($tpl_path . 'cron/mail_queue/config.tpl');
+		$tpl->display('devblocks:cerberusweb.core::cron/mail_queue/config.tpl');
 	}
 };
 
@@ -1300,13 +1280,11 @@ class SearchCron extends CerberusCronPageExtension {
 	
 	function configure($instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $tpl_path);
 		
 //		$timeout = ini_get('max_execution_time');
 //		$tpl->assign('max_messages', $this->getParam('max_messages', (($timeout) ? 20 : 50)));
 
-		//$tpl->display($tpl_path . 'cron/storage/config.tpl');
+		//$tpl->display('devblocks:cerberusweb.core::cron/storage/config.tpl');
 	}
 	
 	function saveConfigurationAction() {

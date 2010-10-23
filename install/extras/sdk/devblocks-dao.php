@@ -2,57 +2,15 @@
 /**
  * Devblocks DAO
  * @author Jeff Standen, WebGroup Media LLC <jeff@webgroupmedia.com>
- * @version 2010-09-14 
+ * @version 2010-10-02 
  */
 
 $tables = array();
 
-$tables['Server'] = "
+$tables['ExampleTable'] = "
 id INT UNSIGNED NOT NULL AUTO_INCREMENT,
 name VARCHAR(255) DEFAULT '',
 ";
-
-//$tables['usermeet_project'] = "
-//id INT UNSIGNED NOT NULL DEFAULT 0,
-//name VARCHAR(128) DEFAULT '',
-//view_id VARCHAR(255) DEFAULT '',
-//worker_id INT UNSIGNED NOT NULL DEFAULT 0,
-//hits INT UNSIGNED NOT NULL DEFAULT 0
-//";
-
-//$tables['portsensor_server'] = "
-//id INT UNSIGNED NOT NULL DEFAULT 0,
-//summary VARCHAR(255) DEFAULT '',
-//project_id INT UNSIGNED NOT NULL DEFAULT 0,
-//deck_id INT UNSIGNED NOT NULL DEFAULT 0
-//";
-
-//$tables['portsensor_device'] = "
-//id INT UNSIGNED NOT NULL DEFAULT 0,
-//name VARCHAR(255) DEFAULT ''
-//";
-
-//$tables['portsensor_sensor'] = "
-//id INT UNSIGNED NOT NULL DEFAULT 0,
-//name VARCHAR(255) DEFAULT '',
-//device_id INT UNSIGNED NOT NULL DEFAULT 0,
-//extension_id VARCHAR(255) DEFAULT '',
-//params_json TEXT,
-//status TINYINT UNSIGNED NOT NULL DEFAULT 0,
-//updated_date INT UNSIGNED NOT NULL DEFAULT 0,
-//is_disabled TINYINT UNSIGNED NOT NULL DEFAULT 0,
-//metric TEXT,
-//output TEXT,
-//fail_count TINYINT UNSIGNED NOT NULL DEFAULT 0
-//";
-
-//$tables['usermeet_deck'] = "
-//id INT UNSIGNED NOT NULL DEFAULT 0,
-//name VARCHAR(255) DEFAULT '',
-//project_id INT UNSIGNED NOT NULL DEFAULT 0
-//";
-
-//address_id INT UNSIGNED NOT NULL DEFAULT 0,
 
 foreach($tables as $table_name => $field_strs) {
 	// Class
@@ -73,6 +31,7 @@ foreach($tables as $table_name => $field_strs) {
 	}
 	
 ?>
+<b>api/dao/<?php echo $table_name; ?>.php</b><br>
 <textarea style="width:98%;height:200px;">
 class DAO_<?php echo $class_name; ?> extends DevblocksORMHelper {
 <?php 
@@ -183,20 +142,7 @@ foreach($fields as $field_name => $field_type) {
 		return true;
 	}
 	
-    /**
-     * Enter description here...
-     *
-     * @param array $columns
-     * @param DevblocksSearchCriteria[] $params
-     * @param integer $limit
-     * @param integer $page
-     * @param string $sortBy
-     * @param boolean $sortAsc
-     * @param boolean $withCounts
-     * @return array
-     */
-    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_<?php echo $class_name; ?>::getFields();
 		
 		// Sanitize
@@ -204,8 +150,6 @@ foreach($fields as $field_name => $field_type) {
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based
-		$total = -1;
 		
 		$select_sql = sprintf("SELECT ".
 <?php
@@ -240,12 +184,47 @@ foreach($fields as $field_name => $field_type) {
 		//	$select_sql,
 		//	$join_sql
 		//);
+		$has_multiple_values = false; // [TODO] Temporary when custom fields disabled
 				
 		$where_sql = "".
 			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
-			
+	
+		return array(
+			'primary_table' => '<?php echo $table_name; ?>',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => $has_multiple_values,
+			'sort' => $sort_sql,
+		);
+	}
+	
+    /**
+     * Enter description here...
+     *
+     * @param array $columns
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+		
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents($columns,$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
@@ -253,15 +232,15 @@ foreach($fields as $field_name => $field_type) {
 			($has_multiple_values ? 'GROUP BY <?php echo $table_name; ?>.id ' : '').
 			$sort_sql;
 			
-		// [TODO] Could push the select logic down a level too
 		if($limit > 0) {
-    		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
+    		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
 		} else {
 		    $rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
             $total = mysql_num_rows($rs);
 		}
 		
 		$results = array();
+		$total = -1;
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			$result = array();
@@ -323,7 +302,7 @@ foreach($fields as $field_name => $field_type) {
 		);
 		
 		// Custom Fields
-		//$fields = DAO_CustomField::getBySource(CustomFieldSource_XXX::ID);
+		//$fields = DAO_CustomField::getByContext(CerberusContexts::XXX);
 
 		//if(is_array($fields))
 		//foreach($fields as $field_id => $field) {
@@ -398,6 +377,10 @@ foreach($fields as $field_name => $field_type) {
 		);
 		return $objects;
 	}
+	
+	function getDataSample($size) {
+		return $this->_doGetDataSample('DAO_<?php echo $class_name; ?>', $size);
+	}
 
 	function render() {
 		$this->_sanitize();
@@ -407,11 +390,11 @@ foreach($fields as $field_name => $field_type) {
 		$tpl->assign('view', $this);
 
 		// Custom fields
-		//$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Example::ID);
+		//$custom_fields = DAO_CustomField::getByContext(CerberusContexts::XXX);
 		//$tpl->assign('custom_fields', $custom_fields);
 
 		// [TODO] Set your template path
-		$tpl->display('file:/path/to/view.tpl');
+		$tpl->display('devblocks:example.plugin::path/to/view.tpl');
 	}
 
 	function renderCriteria($field) {
@@ -429,16 +412,16 @@ foreach($fields as $field_name => $field_type) {
 }
 ?>
 			case 'placeholder_string':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 			case 'placeholder_number':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__number.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__number.tpl');
 				break;
 			case 'placeholder_bool':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
 			case 'placeholder_date':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 			/*
 			default:
@@ -590,6 +573,17 @@ foreach($fields as $field_name => $field_type) {
 };
 </textarea>
 
+<b>plugin.xml</b><br>
+<textarea style="width:98%;height:200px;">
+<file path="api/dao/<?php echo $table_name; ?>.php">
+	<class name="DAO_<?php echo $class_name; ?>" />
+	<class name="Model_<?php echo $class_name; ?>" />
+	<class name="SearchFields_<?php echo $class_name; ?>" />
+	<class name="View_<?php echo $class_name; ?>" />
+</file>
+</textarea>
+
+<b>strings.xml</b><br>
 <textarea style="width:98%;height:200px;">
 <!-- <?php echo $class_name; ?> -->
 

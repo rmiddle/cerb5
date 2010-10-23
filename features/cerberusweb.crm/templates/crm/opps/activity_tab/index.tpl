@@ -17,10 +17,10 @@
 			<option value="email"{if $quick_search_type eq 'email'}selected{/if}>{$translate->_('crm.opportunity.email_address')|capitalize}</option>
 			<option value="org"{if $quick_search_type eq 'org'}selected{/if}>{$translate->_('crm.opportunity.org_name')|capitalize}</option>
 			<option value="title"{if $quick_search_type eq 'title'}selected{/if}>{$translate->_('crm.opportunity.name')|capitalize}</option>
-		</select><input type="text" name="query" size="16"><button type="submit">{$translate->_('common.search_go')|lower}</button>
+		</select><input type="text" name="query" class="input_search" size="16"><button type="submit">{$translate->_('common.search_go')|lower}</button>
 		</form>
 	</td>
 </tr>
 </table>
 
-{include file="$core_tpl/internal/views/search_and_view.tpl" view=$view}
+{include file="devblocks:cerberusweb.core::internal/views/search_and_view.tpl" view=$view}

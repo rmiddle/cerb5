@@ -125,11 +125,8 @@ class ChAuditLogEventListener extends DevblocksEventListenerExtension {
 };
 
 class ChAuditLogTicketTab extends Extension_TicketTab {
-	private $tpl_path = null; 
-	
     function __construct($manifest) {
         parent::__construct($manifest);
-        $this->tpl_path = dirname(dirname(__FILE__)).'/templates';
     }
 	
 	function showTab() {
@@ -139,7 +136,6 @@ class ChAuditLogTicketTab extends Extension_TicketTab {
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->tpl_path);
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'C4_TicketAuditLogView';
@@ -166,7 +162,7 @@ class ChAuditLogTicketTab extends Extension_TicketTab {
 		
 		$tpl->assign('view', $view);
 		
-		$tpl->display('file:' . $this->tpl_path . '/display/log/index.tpl');
+		$tpl->display('devblocks:cerberusweb.auditlog::display/log/index.tpl');
 	}
 	
 	function saveTab() {
@@ -265,19 +261,7 @@ class DAO_TicketAuditLog extends DevblocksORMHelper {
 		$db->Execute(sprintf("DELETE QUICK FROM ticket_audit_log WHERE ticket_id IN (%s)", $ids_list));
 	}
 	
-    /**
-     * Enter description here...
-     *
-     * @param DevblocksSearchCriteria[] $params
-     * @param integer $limit
-     * @param integer $page
-     * @param string $sortBy
-     * @param boolean $sortAsc
-     * @param boolean $withCounts
-     * @return array
-     */
-    static function search($params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_TicketAuditLog::getFields();
 		
 		// Sanitize
@@ -285,7 +269,6 @@ class DAO_TicketAuditLog extends DevblocksORMHelper {
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, array(), $fields,$sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
 		
 		$select_sql = sprintf("SELECT ".
 			"l.id as %s, ".
@@ -315,15 +298,50 @@ class DAO_TicketAuditLog extends DevblocksORMHelper {
 
 		$has_multiple_values = false;
 		
+		$result = array(
+			'primary_table' => 'l',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => $has_multiple_values,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}
+	
+    /**
+     * Enter description here...
+     *
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents(array(),$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
 			$where_sql.
 			($has_multiple_values ? 'GROUP BY l.id ' : '').
 			$sort_sql;
-		
+			
 		if($limit > 0) {
-    		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+    		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		} else {
 		    $rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
             $total = mysql_num_rows($rs);
@@ -454,7 +472,7 @@ class C4_TicketAuditLogView extends C4_AbstractView {
 		$ticket_fields = SearchFields_Ticket::getFields();
 		$tpl->assign('ticket_fields', $ticket_fields);
 		
-		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.auditlog/templates/display/log/log_view.tpl');
+		$tpl->display('devblocks:cerberusweb.auditlog::display/log/log_view.tpl');
 	}
 	
 	function renderCriteria($field) {
@@ -464,7 +482,7 @@ class C4_TicketAuditLogView extends C4_AbstractView {
 		switch($field) {
 			case SearchFields_TicketAuditLog::CHANGE_FIELD:
 			case SearchFields_TicketAuditLog::CHANGE_VALUE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 			default:
 				echo '';

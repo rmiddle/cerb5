@@ -379,8 +379,7 @@ class DAO_Group extends C4_ORMHelper {
 		$cache->remove(CerberusApplication::CACHE_HELPDESK_FROMS);
 	}
 	
-    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_Group::getFields();
 
 		// Sanitize
@@ -388,8 +387,6 @@ class DAO_Group extends C4_ORMHelper {
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
-		$total = -1;
 		
 		$select_sql = sprintf("SELECT ".
 			"g.id as %s, ".
@@ -417,6 +414,32 @@ class DAO_Group extends C4_ORMHelper {
 			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
+
+		$has_multiple_values = false;
+		
+		$result = array(
+			'primary_table' => 'g',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => $has_multiple_values,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+	
+    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents($columns,$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
 		
 		$sql = 
 			$select_sql.
@@ -426,13 +449,14 @@ class DAO_Group extends C4_ORMHelper {
 			$sort_sql;
 			
 		if($limit > 0) {
-    		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+    		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		} else {
 		    $rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
             $total = mysql_num_rows($rs);
 		}
 		
 		$results = array();
+		$total = -1;
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			$result = array();
@@ -481,7 +505,7 @@ class SearchFields_Group implements IDevblocksSearchFields {
 		);
 		
 		// Custom Fields
-		//$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Group::ID);
+		//$fields = DAO_CustomField::getByContext(ChCustomFieldSource_Group::ID);
 
 //		if(is_array($fields))
 //		foreach($fields as $field_id => $field) {
@@ -647,15 +671,15 @@ class View_Group extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-		//$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Group::ID);
+		//$custom_fields = DAO_CustomField::getByContext(ChCustomFieldSource_Group::ID);
 		//$tpl->assign('custom_fields', $custom_fields);
 
 		switch($this->renderTemplate) {
 			case 'contextlinks_chooser':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/groups/view_contextlinks_chooser.tpl');
+				$tpl->display('devblocks:cerberusweb.core::groups/view_contextlinks_chooser.tpl');
 				break;
 			default:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/groups/view.tpl');
+				$tpl->display('devblocks:cerberusweb.core::groups/view.tpl');
 				break;
 		}
 	}
@@ -666,15 +690,15 @@ class View_Group extends C4_AbstractView {
 
 		switch($field) {
 			case SearchFields_Group::NAME:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 				
 			case 'placeholder_bool':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
 				
 			case 'placeholder_date':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 				
 			default:
@@ -814,7 +838,7 @@ class View_Group extends C4_AbstractView {
 			DAO_Worker::update($batch_ids, $change_fields);
 			
 			// Custom Fields
-			//self::_doBulkSetCustomFields(ChCustomFieldSource_Worker::ID, $custom_fields, $batch_ids);
+			//self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_WORKER, $custom_fields, $batch_ids);
 			
 			unset($batch_ids);
 		}
@@ -840,7 +864,7 @@ class Context_Group extends Extension_DevblocksContext {
 			$prefix = 'Group:';
 			
 		$translate = DevblocksPlatform::getTranslationService();
-		//$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Group::ID);
+		//$fields = DAO_CustomField::getByContext(ChCustomFieldSource_Group::ID);
 		
 		// Polymorph
 		if(is_numeric($group)) {
@@ -872,7 +896,7 @@ class Context_Group extends Extension_DevblocksContext {
 //				$token_values['title'] = $worker->title;
 //			$token_values['custom'] = array();
 			
-//			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Worker::ID, $worker->id));
+//			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_WORKER, $worker->id));
 //			if(is_array($field_values) && !empty($field_values)) {
 //				foreach($field_values as $cf_id => $cf_val) {
 //					if(!isset($fields[$cf_id]))

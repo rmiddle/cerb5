@@ -23,7 +23,6 @@ class UmScKbController extends Extension_UmScController {
 		$tpl = DevblocksPlatform::getTemplateService();
 		
 		$umsession = UmPortalHelper::getSession();
-		$active_user = $umsession->getProperty('sc_login', null);
 		
 		$stack = $response->path;
 		array_shift($stack); // kb
@@ -221,7 +220,6 @@ class UmScKbController extends Extension_UmScController {
 	
 	function configure(Model_CommunityTool $instance) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(dirname(__FILE__))) . '/templates/';
 
 		// Knowledgebase
 		$tree_map = DAO_KbCategory::getTreeMap();
@@ -237,7 +235,7 @@ class UmScKbController extends Extension_UmScController {
         $kb_roots = !empty($sKbRoots) ? unserialize($sKbRoots) : array();
         $tpl->assign('kb_roots', $kb_roots);
 
-		$tpl->display("file:${tpl_path}portal/sc/config/kb.tpl");
+		$tpl->display("devblocks:cerberusweb.kb::portal/sc/config/kb.tpl");
 	}
 	
 	function saveConfiguration(Model_CommunityTool $instance) {
@@ -251,11 +249,7 @@ class UmScKbController extends Extension_UmScController {
 class UmSc_KbArticleView extends C4_AbstractView {
 	const DEFAULT_ID = 'sc_kb';
 	
-	private $_TPL_PATH = '';
-
 	function __construct() {
-		$this->_TPL_PATH = dirname(dirname(dirname(__FILE__))) . '/templates/';
-		
 		$this->id = self::DEFAULT_ID;
 		$this->name = 'Articles';
 		$this->renderSortBy = 'kb_updated';

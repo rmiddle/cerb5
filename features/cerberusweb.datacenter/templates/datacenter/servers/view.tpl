@@ -18,6 +18,7 @@
 <form id="customize{$view->id}" name="customize{$view->id}" action="#" onsubmit="return false;" style="display:none;"></form>
 <form id="viewForm{$view->id}" name="viewForm{$view->id}" action="{devblocks_url}{/devblocks_url}" method="post">
 <input type="hidden" name="view_id" value="{$view->id}">
+<input type="hidden" name="context_id" value="cerberusweb.contexts.datacenter.server">
 <input type="hidden" name="id" value="{$view->id}">
 <input type="hidden" name="c" value="cerberusweb.datacenter">
 <input type="hidden" name="a" value="">
@@ -61,7 +62,7 @@
 		<tr class="{$tableRowClass}">
 		{foreach from=$view->view_columns item=column name=columns}
 			{if substr($column,0,3)=="cf_"}
-				{include file="file:$core_tpl/internal/custom_fields/view/cell_renderer.tpl"}
+				{include file="devblocks:cerberusweb.core::internal/custom_fields/view/cell_renderer.tpl"}
 			{elseif $column=="w_created"}
 				<td><abbr title="{$result.$column|devblocks_date}">{$result.w_created|devblocks_prettytime}</abbr>&nbsp;</td>
 			{else}

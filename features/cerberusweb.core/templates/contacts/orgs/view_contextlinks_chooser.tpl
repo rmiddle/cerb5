@@ -4,7 +4,7 @@
 {assign var=data value=$results[0]}
 
 <form id="viewForm{$view->id}" name="viewForm{$view->id}" action="{devblocks_url}{/devblocks_url}" method="post" onsubmit="return false;">
-<input type="hidden" name="viec_id" value="{$view->id}">
+<input type="hidden" name="view_id" value="{$view->id}">
 <input type="hidden" name="c" value="config">
 <input type="hidden" name="a" value="">
 
@@ -46,7 +46,7 @@
 		<tr class="{$tableRowClass}">
 		{foreach from=$view->view_columns item=column name=columns}
 			{if substr($column,0,3)=="cf_"}
-				{include file="file:$core_tpl/internal/custom_fields/view/cell_renderer.tpl"}
+				{include file="devblocks:cerberusweb.core::internal/custom_fields/view/cell_renderer.tpl"}
 			{elseif $column=="c_id"}
 			<td>{$result.c_id}&nbsp;</td>
 			{elseif $column=="c_website"}

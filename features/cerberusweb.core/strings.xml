@@ -28,9 +28,6 @@
 		<tu tuid='display.tab.history'>
 			<tuv xml:lang="en_US"><seg>Recipient History</seg></tuv>
 		</tu>
-		<tu tuid='display.tab.properties'>
-			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
-		</tu>
 		<tu tuid='display.tab.tasks'>
 			<tuv xml:lang="en_US"><seg>Tasks</seg></tuv>
 		</tu>
@@ -50,6 +47,9 @@
 
 		<tu tuid='common.access_denied'>
 			<tuv xml:lang="en_US"><seg>Access denied.</seg></tuv>
+		</tu>
+		<tu tuid='common.add'>
+			<tuv xml:lang="en_US"><seg>add</seg></tuv>
 		</tu>
 		<tu tuid='common.all'>
 			<tuv xml:lang="en_US"><seg>all</seg></tuv>
@@ -84,6 +84,9 @@
 		<tu tuid='common.bulk_update.filter.checked'>
 			<tuv xml:lang="en_US"><seg>Only checked</seg></tuv>
 		</tu>
+		<tu tuid='common.bulk_update.filter.random'>
+			<tuv xml:lang="en_US"><seg>Random</seg></tuv>
+		</tu>
 		<tu tuid='common.bulk_update.with'>
 			<tuv xml:lang="en_US"><seg>With</seg></tuv>
 		</tu>
@@ -111,6 +114,12 @@
 		<tu tuid='common.content'>
 			<tuv xml:lang="en_US"><seg>Content</seg></tuv>
 		</tu>
+		<tu tuid='common.context'>
+			<tuv xml:lang="en_US"><seg>Context</seg></tuv>
+		</tu>
+		<tu tuid='common.context_id'>
+			<tuv xml:lang="en_US"><seg>Context ID</seg></tuv>
+		</tu>
 		<tu tuid='common.copy'>
 			<tuv xml:lang="en_US"><seg>copy</seg></tuv>
 		</tu>
@@ -118,7 +127,7 @@
 			<tuv xml:lang="en_US"><seg>created</seg></tuv>
 		</tu>
 		<tu tuid='common.custom_fields'>
-			<tuv xml:lang="en_US"><seg>custom fields</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Custom Fields</seg></tuv>
 		</tu>
 		<tu tuid='common.customize'>
 			<tuv xml:lang="en_US"><seg>customize</seg></tuv>
@@ -282,6 +291,9 @@
 		<tu tuid='common.print'>
 			<tuv xml:lang="en_US"><seg>Print</seg></tuv>
 		</tu>
+		<tu tuid='common.properties'>
+			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
+		</tu>
 		<tu tuid='common.quick_compose'>
 			<tuv xml:lang="en_US"><seg>Quick Compose</seg></tuv>
 		</tu>
@@ -357,6 +369,9 @@
 		<tu tuid='common.tips.multi_select'>
 			<tuv xml:lang="en_US"><seg>(hold CTRL or COMMAND to select multiple options)</seg></tuv>
 		</tu>
+		<tu tuid='common.title'>
+			<tuv xml:lang="en_US"><seg>Title</seg></tuv>
+		</tu>
 		<tu tuid='common.today'>
 			<tuv xml:lang="en_US"><seg>today</seg></tuv>
 		</tu>
@@ -401,9 +416,6 @@
 		
 			<!-- Snippets -->
 
-		<tu tuid='dao.snippet.context'>
-			<tuv xml:lang="en_US"><seg>Context</seg></tuv>
-		</tu>
 		<tu tuid='dao.snippet.created_by'>
 			<tuv xml:lang="en_US"><seg>Created By</seg></tuv>
 		</tu>
@@ -415,9 +427,6 @@
 		</tu>
 		<tu tuid='dao.snippet.last_updated_by'>
 			<tuv xml:lang="en_US"><seg>Updated By</seg></tuv>
-		</tu>
-		<tu tuid='dao.snippet.title'>
-			<tuv xml:lang="en_US"><seg>Title</seg></tuv>
 		</tu>
 		
 		<tu tuid='dao.snippet_usage.hits'>
@@ -554,12 +563,6 @@
 			<tuv xml:lang="en_US"><seg>[Tickets] Allows user to see who's Online</seg></tuv>
 		</tu>
 
-		<!-- Activity -->
-		
-		<tu tuid='activity.tasks.tab.properties'>
-			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
-		</tu>
-		
 		<!-- Addresses -->
 		
 		<tu tuid='address.id'>
@@ -579,9 +582,6 @@
 		</tu>
 		<tu tuid='address.is_banned'>
 			<tuv xml:lang="en_US"><seg>Is Banned</seg></tuv>
-		</tu>
-		<tu tuid='address.is_registered'>
-			<tuv xml:lang="en_US"><seg>Is Registered</seg></tuv>
 		</tu>
 		<tu tuid='address.last_name'>
 			<tuv xml:lang="en_US"><seg>Last Name</seg></tuv>
@@ -640,9 +640,6 @@
 		<tu tuid='addy_book.org.tabs.people'>
 			<tuv xml:lang="en_US"><seg>People (%s)</seg></tuv>
 		</tu>
-		<tu tuid='addy_book.org.tabs.properties'>
-			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
-		</tu>
 		<tu tuid='addy_book.peek.compose'>
 			<tuv xml:lang="en_US"><seg>compose</seg></tuv>
 		</tu>
@@ -664,8 +661,14 @@
 		<tu tuid='addy_book.tab.import'>
 			<tuv xml:lang="en_US"><seg>Import</seg></tuv>
 		</tu>
+		<tu tuid='addy_book.tab.lists'>
+			<tuv xml:lang="en_US"><seg>Contact Lists</seg></tuv>
+		</tu>
 		<tu tuid='addy_book.tab.organizations'>
 			<tuv xml:lang="en_US"><seg>Organizations</seg></tuv>
+		</tu>
+		<tu tuid='addy_book.tab.people'>
+			<tuv xml:lang="en_US"><seg>People</seg></tuv>
 		</tu>
 
 		<!-- Attachment -->
@@ -711,10 +714,12 @@
 		</tu>
 		<tu tuid='config.mail.message.status'>
 			<tuv xml:lang="en_US"><seg>Default Message Status:</seg></tuv>
-		</tu>
+	        </tu>
+	        
 		<tu tuid='config.mail.message.status.default'>
 			<tuv xml:lang="en_US"><seg>Site Wide Default</seg></tuv>
 		</tu>
+		
 		<tu tuid='config.mail.message.status.reply'>
 			<tuv xml:lang="en_US"><seg>In Replies</seg></tuv>
 		</tu>
@@ -725,6 +730,15 @@
 			<tuv xml:lang="en_US"><seg>In Send Mail</seg></tuv>
 		</tu>
 		
+		<!-- ConfirmationCode -->
+		
+		<tu tuid='dao.confirmation_code.namespace_key'>
+			<tuv xml:lang="en_US"><seg>Namespace</seg></tuv>
+		</tu>
+		<tu tuid='dao.confirmation_code.confirmation_code'>
+			<tuv xml:lang="en_US"><seg>Confirmation Code</seg></tuv>
+		</tu>
+
 		<!-- Contact orgs -->
 		<tu tuid='contact_org.city'>
 			<tuv xml:lang="en_US"><seg>City</seg></tuv>
@@ -758,6 +772,11 @@
 		</tu>
 
 		<!-- Contact People -->
+		
+		<tu tuid='dao.contact_person.auth_salt'>
+			<tuv xml:lang="en_US"><seg>Password Salt</seg></tuv>
+		</tu>
+
 		<tu tuid='contact_person.contact_org_id'>
 			<tuv xml:lang="en_US"><seg>Organization</seg></tuv>
 		</tu>
@@ -773,11 +792,11 @@
 		<tu tuid='contact_person.id'>
 			<tuv xml:lang="en_US"><seg>ID</seg></tuv>
 		</tu>
-		<tu tuid='contact_person.last_name'>
-			<tuv xml:lang="en_US"><seg>Last Name</seg></tuv>
+		<tu tuid='dao.contact_person.auth_password'>
+			<tuv xml:lang="en_US"><seg>Password</seg></tuv>
 		</tu>
-		<tu tuid='contact_person.title'>
-			<tuv xml:lang="en_US"><seg>Title</seg></tuv>
+		<tu tuid='dao.contact_person.last_login'>
+			<tuv xml:lang="en_US"><seg>Last Login</seg></tuv>
 		</tu>
 
 		<!-- Contexts -->
@@ -1455,9 +1474,6 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='tasks.add'>
 			<tuv xml:lang="en_US"><seg>Add Task</seg></tuv>
 		</tu>
-		<tu tuid='tasks.incomplete'>
-			<tuv xml:lang="en_US"><seg>Incomplete</seg></tuv>
-		</tu>
 		<tu tuid='tasks.complete'>
 			<tuv xml:lang="en_US"><seg>Complete</seg></tuv>
 		</tu>
@@ -1484,9 +1500,6 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='task.due_date'>
 			<tuv xml:lang="en_US"><seg>Due Date</seg></tuv>
 		</tu>
-		<tu tuid='task.id'>
-			<tuv xml:lang="en_US"><seg>Id</seg></tuv>
-		</tu>
 		<tu tuid='task.is_completed'>
 			<tuv xml:lang="en_US"><seg>Completed</seg></tuv>
 		</tu>
@@ -1495,9 +1508,6 @@ For example: *receipt*</seg></tuv>
 		</tu>
 		<tu tuid='task.source_id'>
 			<tuv xml:lang="en_US"><seg>Source ID</seg></tuv>
-		</tu>
-		<tu tuid='task.title'>
-			<tuv xml:lang="en_US"><seg>Title</seg></tuv>
 		</tu>
 		<tu tuid='task.updated_date'>
 			<tuv xml:lang="en_US"><seg>Last Updated</seg></tuv>
