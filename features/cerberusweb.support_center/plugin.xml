@@ -5,7 +5,7 @@
 	<description>Adds a Support Center community portal for public-facing support.</description>
 	<author>WebGroup Media, LLC.</author>
 	<revision>1</revision>
-	<link>http://www.cerb5.com/</link>
+	<link>http://wiki.cerb5.com/wiki/Support_Center</link>
 	<image>plugin.png</image>
  
 	<!-- Plugin Dependencies -->
@@ -35,6 +35,12 @@
 			<class name="Extension_SupportCenterMessageBadge" />
 			<class name="Extension_UmScController" />
 			<class name="Extension_UmScRssController" />
+		</file>
+		<file path="api/sc/uri/ajax.php">
+			<class name="UmScAjaxController" />
+		</file>
+		<file path="api/sc/uri/history.php">
+			<class name="UmSc_TicketHistoryView" />
 		</file>
 	</class_loader>
 

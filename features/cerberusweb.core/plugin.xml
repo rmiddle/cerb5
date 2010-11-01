@@ -33,7 +33,8 @@
 		<patch version="5.0.1" revision="864" file="patches/5.x/5.0.1.php" />
 		<patch version="5.1.0" revision="896" file="patches/5.x/5.1.0.php" />
 		<patch version="5.1.1" revision="898" file="patches/5.x/5.1.1.php" />
-		<patch version="5.2.0-dev" revision="903" file="patches/5.x/5.2.0.php" />
+		<patch version="5.1.2" revision="904" file="patches/5.x/5.1.2.php" />
+		<patch version="5.2.0-dev" revision="905" file="patches/5.x/5.2.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -120,6 +121,7 @@
 		</file>
 		
 		<file path="api/dao/contact_person.php">
+			<class name="Context_ContactPerson" />
 			<class name="DAO_ContactPerson" />
 			<class name="Model_ContactPerson" />
 			<class name="SearchFields_ContactPerson" />
@@ -359,6 +361,29 @@
 	<extensions>
 
 		<!-- Contexts -->
+		
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.contact_person</id>
+			<name>Contact Person</name>
+			<class>
+				<file>api/dao/contact_person.php</file>
+				<name>Context_ContactPerson</name>
+			</class>
+			<params>
+				<param key="link_options">
+					<value>
+						<!--<data key="create" />-->
+						<data key="find" />
+					</value>
+				</param>
+				<param key="events">
+					<value>
+						<data key="context.assigned" value="context.contact_person.assigned" />
+						<data key="context.commented" value="context.contact_person.commented" />
+					</value>
+				</param>
+			</params>
+		</extension>
 		
 		<extension point="devblocks.context">
 			<id>cerberusweb.contexts.address</id>

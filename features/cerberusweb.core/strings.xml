@@ -231,6 +231,9 @@
 		<tu tuid='common.name'>
 			<tuv xml:lang="en_US"><seg>Name</seg></tuv>
 		</tu>
+		<tu tuid='common.never'>
+			<tuv xml:lang="en_US"><seg>Never</seg></tuv>
+		</tu>
 		<tu tuid='common.no'>
 			<tuv xml:lang="en_US"><seg>no</seg></tuv>
 		</tu>
@@ -668,7 +671,7 @@
 			<tuv xml:lang="en_US"><seg>Organizations</seg></tuv>
 		</tu>
 		<tu tuid='addy_book.tab.people'>
-			<tuv xml:lang="en_US"><seg>People</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Registered Contacts</seg></tuv>
 		</tu>
 
 		<!-- Attachment -->
@@ -900,13 +903,10 @@
 		<!-- Header -->
 
 		<tu tuid='header.config'>
-			<tuv xml:lang="en_US"><seg>helpdesk setup</seg></tuv>
+			<tuv xml:lang="en_US"><seg>setup</seg></tuv>
 		</tu>
 		<tu tuid='header.history'>
 			<tuv xml:lang="en_US"><seg>history</seg></tuv>
-		</tu>
-		<tu tuid='header.group_setup'>
-			<tuv xml:lang="en_US"><seg>group setup</seg></tuv>
 		</tu>
 		<tu tuid='header.last_viewed'>
 			<tuv xml:lang="en_US"><seg>last viewed</seg></tuv>
