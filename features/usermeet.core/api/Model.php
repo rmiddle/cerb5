@@ -43,7 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
@@ -60,6 +60,23 @@ class Model_CommunitySession {
 	public $updated = 0;
 	private $_properties = array();
 
+	function login(Model_ContactPerson $contact) {
+		if(empty($contact) || empty($contact->id)) {
+			$this->logout();
+			return;
+		}
+		
+		$this->setProperty('sc_login', $contact);
+		
+		DAO_ContactPerson::update($contact->id, array(
+			DAO_ContactPerson::LAST_LOGIN => time(),
+		));
+	}
+	
+	function logout() {
+		$this->setProperty('sc_login', null);
+	}
+	
 	function setProperties($properties) {
 		$this->_properties = $properties;
 	}

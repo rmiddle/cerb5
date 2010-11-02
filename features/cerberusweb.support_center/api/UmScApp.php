@@ -43,7 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
@@ -51,15 +51,11 @@
 class UmScApp extends Extension_UsermeetTool {
 	const PARAM_PAGE_TITLE = 'common.page_title';
 	const PARAM_DEFAULT_LOCALE = 'common.locale';
-	const PARAM_LOGIN_HANDLER = 'common.login_handler';
+	const PARAM_LOGIN_EXTENSIONS = 'common.login_extensions';
 	const PARAM_VISIBLE_MODULES = 'common.visible_modules';
 	
 	const SESSION_CAPTCHA = 'write_captcha';
 	
-    function __construct($manifest) {
-        parent::__construct($manifest);
-    }
-    
     private function _getModules() {
     	static $modules = null;
 		
@@ -93,6 +89,56 @@ class UmScApp extends Extension_UsermeetTool {
     	}
 		
     	return $modules;
+    }
+    
+    public static function getLoginExtensions() {
+		$login_extensions = DevblocksPlatform::getExtensions('usermeet.login.authenticator');
+		uasort($login_extensions, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
+		return $login_extensions;
+    }
+    
+    public static function getLoginExtensionsEnabled($instance_id) {
+    	$login_extensions = self::getLoginExtensions();
+    	
+    	$enabled = array();
+
+		if(null != ($str = DAO_CommunityToolProperty::get($instance_id, self::PARAM_LOGIN_EXTENSIONS, ''))) {
+			$ids = explode(',', $str);
+			foreach($ids as $id) {
+				if(isset($login_extensions[$id]))
+					$enabled[$id] = $login_extensions[$id];
+			}
+		}
+		
+		return $enabled;
+    }
+    
+    public static function getLoginExtensionActive($instance_id, $as_instance=true) {
+    	$umsession = UmPortalHelper::getSession();
+    	$enabled = self::getLoginExtensionsEnabled($instance_id);
+    	
+    	$login_method = $umsession->getProperty('login_method', '');
+    	$manifest = null;
+
+    	// If we have a preference cookied, return it
+    	if(isset($enabled[$login_method]))
+    		$manifest = $enabled[$login_method];
+
+    	// Otherwise try to default to email+pass
+    	if(empty($manifest) && isset($enabled['sc.login.auth.default']))
+    		$manifest = $enabled['sc.login.auth.default'];
+    		
+    	// If all else fails, return the first enabled login handler
+    	if(empty($manifest))
+    		$manifest = array_shift($enabled);
+
+    	if(empty($manifest))
+    		return NULL;
+    		
+    	if($as_instance)
+    		return $manifest->createInstance();
+    	else
+    		return $manifest;
     }
     
     public function handleRequest(DevblocksHttpRequest $request) {
@@ -143,6 +189,9 @@ class UmScApp extends Extension_UsermeetTool {
         @$active_contact = $umsession->getProperty('sc_login',null);
         $tpl->assign('active_contact', $active_contact);
 
+        $login_extensions_enabled = UmScApp::getLoginExtensionsEnabled(UmPortalHelper::getCode());
+        $tpl->assign('login_extensions_enabled', $login_extensions_enabled);
+        
 		// Usermeet Session
 		if(null == ($fingerprint = UmPortalHelper::getFingerprint())) {
 			die("A problem occurred.");
@@ -249,20 +298,11 @@ class UmScApp extends Extension_UsermeetTool {
         $page_title = DAO_CommunityToolProperty::get($instance->code, self::PARAM_PAGE_TITLE, 'Support Center');
 		$tpl->assign('page_title', $page_title);
 
-		// Login Handlers
-
-		$login_handlers = DevblocksPlatform::getExtensions('usermeet.login.authenticator');
-		uasort($login_handlers, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
-		$tpl->assign('login_handlers', $login_handlers);
-
-        $login_handler = DAO_CommunityToolProperty::get($instance->code, self::PARAM_LOGIN_HANDLER, '');
-		$tpl->assign('login_handler', $login_handler);
-
 		// Modules
 
         @$visible_modules = unserialize(DAO_CommunityToolProperty::get($instance->code, self::PARAM_VISIBLE_MODULES, ''));
 		$tpl->assign('visible_modules', $visible_modules);
-
+		
 		$all_modules = DevblocksPlatform::getExtensions('usermeet.sc.controller', true, true);
 		$modules = array();
 		
@@ -310,10 +350,6 @@ class UmScApp extends Extension_UsermeetTool {
 			
         DAO_CommunityToolProperty::set($instance->code, self::PARAM_VISIBLE_MODULES, serialize($aEnabledModules));
         DAO_CommunityToolProperty::set($instance->code, self::PARAM_PAGE_TITLE, $sPageTitle);
-
-		// Logins
-        @$sLoginHandler = DevblocksPlatform::importGPC($_POST['login_handler'],'string','');
-        DAO_CommunityToolProperty::set($instance->code, self::PARAM_LOGIN_HANDLER, $sLoginHandler);
 
 		// Default Locale
         @$sDefaultLocale = DevblocksPlatform::importGPC($_POST['default_locale'],'string','en_US');
@@ -487,7 +523,7 @@ class UmScLoginAuthenticator extends Extension_ScLoginAuthenticator {
 			DAO_ConfirmationCode::delete($code->id);
 			
 			// Log in the session
-			$umsession->setProperty('sc_login', $contact);
+			$umsession->login($contact);
 			
 			$address_uri = urlencode(str_replace(array('@','.'),array('_at_','_dot_'),$address->email));
 			header("Location: " . $url_writer->write('c=account&a=email&address='.$address_uri, true));
@@ -580,7 +616,7 @@ class UmScLoginAuthenticator extends Extension_ScLoginAuthenticator {
 				
 			// Success (delete token and one-time log in token)
 			DAO_ConfirmationCode::delete($code->id);
-			$umsession->setProperty('sc_login', $contact);
+			$umsession->login($contact);
 			header("Location: " . $url_writer->write('c=account&a=password', true));
 			exit;
 			
@@ -606,7 +642,7 @@ class UmScLoginAuthenticator extends Extension_ScLoginAuthenticator {
 		@$pass = DevblocksPlatform::importGPC($_REQUEST['password']);
 
 		// Clear the past session
-		$umsession->setProperty('sc_login', null);
+		$umsession->logout();
 		
 		try {
 			// Find the address
@@ -621,7 +657,7 @@ class UmScLoginAuthenticator extends Extension_ScLoginAuthenticator {
 			if(0 != strcmp(md5($contact->auth_salt.md5($pass)),$contact->auth_password))
 				throw new Exception("Login failed.");	
 			
-			$umsession->setProperty('sc_login', $contact);
+			$umsession->login($contact);
 			header("Location: " . $url_writer->write('', true));
 			exit;
 			
@@ -790,7 +826,7 @@ class ScOpenIDLoginAuthenticator extends Extension_ScLoginAuthenticator {
 			DAO_ConfirmationCode::delete($code->id);
 			
 			// Log in the session
-			$umsession->setProperty('sc_login', $contact);
+			$umsession->login($contact);
 			
 			$address_uri = urlencode(str_replace(array('@','.'),array('_at_','_dot_'),$address->email));
 			header("Location: " . $url_writer->write('c=account&a=email&address='.$address_uri, true));
@@ -883,7 +919,7 @@ class ScOpenIDLoginAuthenticator extends Extension_ScLoginAuthenticator {
 				
 			// Success (delete token and one-time log in token)
 			DAO_ConfirmationCode::delete($code->id);
-			$umsession->setProperty('sc_login', $contact);
+			$umsession->login($contact);
 			header("Location: " . $url_writer->write('c=account&a=openid', true));
 			exit;
 			
@@ -907,7 +943,7 @@ class ScOpenIDLoginAuthenticator extends Extension_ScLoginAuthenticator {
 		$tpl = DevblocksPlatform::getTemplateService();
 
 		// Clear the past session
-		$umsession->setProperty('sc_login', null);
+		$umsession->logout();
 		
 		try {
 			// Mode (Cancel)
@@ -930,7 +966,7 @@ class ScOpenIDLoginAuthenticator extends Extension_ScLoginAuthenticator {
 					$contact_id = DAO_OpenIdToContactPerson::getContactIdByOpenId($_REQUEST['openid_claimed_id']);
 					
 					if(null != ($contact = DAO_ContactPerson::get($contact_id))) {
-						$umsession->setProperty('sc_login', $contact);
+						$umsession->login($contact);
 						header("Location: " . $url_writer->write('', true));
 						exit;
 						
