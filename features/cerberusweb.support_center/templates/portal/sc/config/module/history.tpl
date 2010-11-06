@@ -7,17 +7,10 @@
 <br>
 
 <table cellpadding="2" cellspacing="1" border="0">
-{assign var=last_group_id value=0}
 <tr>
-	<td colspan="2"><H2>Global Fields</H2></td>
+	<td colspan="2"><H2>Custom Ticket Fields</H2></td>
 </tr>
 {foreach from=$ticket_fields item=field name=fields}
-	{assign var=field_group_id value=$field->group_id}
-	{if $field_group_id != $last_group_id}
-		<tr>
-			<td colspan="2"><H2>{$groups.$field_group_id->name} {$translate->_('portal.sc.cfg.history.fields')}</H2></td>
-		</tr>
-	{/if}
 	<tr>
 		<td valign="top" width="1%" nowrap="nowrap">
 			<input type="hidden" name="fields[]" value="{$field}">
@@ -27,10 +20,12 @@
 				<option value="2" {if 2==$show_fields.{$field}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.editable')|capitalize}</option>
 			</select>
 			<b>{$field->name|capitalize}</b>
+			{if $field->group_id != 0}
+				({$groups.$field_group_id->name} {$translate->_('portal.sc.cfg.history.fields')})
+			{/if}
 			<br>
 		</td>
 	</tr>
-	{assign var=last_group_id value=$field->group_id}
 {/foreach}
 
 </table>
