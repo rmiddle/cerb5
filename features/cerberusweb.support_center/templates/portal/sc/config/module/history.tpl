@@ -11,7 +11,6 @@
 <tr>
 	<td colspan="2"><H2>Global Fields</H2></td>
 </tr>
-//{foreach from=$ticket_fields item=f key=f_id}
 {foreach from=$ticket_fields item=field name=fields}
 	{assign var=field_group_id value=$field->group_id}
 	{if $field_group_id != $last_group_id}
