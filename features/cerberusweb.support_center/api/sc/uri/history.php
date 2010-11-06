@@ -114,19 +114,20 @@ class UmScHistoryController extends Extension_UmScController {
 				$ticket_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
 				$tpl->assign('ticket_fields', $ticket_fields);
 
-				$ticket_field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Ticket::ID, $ticket[SearchFields_Ticket::TICKET_ID]));
+				$ticket_field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TICKET, $ticket[SearchFields_Ticket::TICKET_ID]));
 				$tpl->assign('ticket_field_values', $ticket_field_values);
 				$tpl->assign('ticket', $ticket);
 				$tpl->assign('messages', $messages);
 				$tpl->assign('attachments', $attachments);
 
-				$display_next_assigned_to = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_NEXT_ASSIGNED_TO, 0);
-				$tpl->assign('display_next_assigned_to', $display_next_assigned_to);
-	
-				$cf_select_serial = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(),self::PARAM_CF_SELECT, '');
-				$cf_select = !empty($cf_select_serial) ? unserialize($cf_select_serial) : array();
-				$tpl->assign('cf_select', $cf_select);
-   
+				if(null != ($show_fields = DAO_CommunityToolProperty::get($instance->code, self::PARAM_HISTORY_FIELDS, null))) {
+					$tpl->assign('show_fields', @json_decode($show_fields, true));
+				}
+        
+				if(null != ($display_assigned_to = DAO_CommunityToolProperty::get($instance->code, self::PARAM_DISPLAY_ASSIGNED_TO, null))) {
+					$tpl->assign('display_assigned_to', $display_assigned_to);
+				}
+				
 				$tpl->display("devblocks:cerberusweb.support_center:portal_".UmPortalHelper::getCode() . ":support_center/history/display.tpl");
 			}
 		}
