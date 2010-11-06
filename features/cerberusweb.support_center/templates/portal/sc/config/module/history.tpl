@@ -6,9 +6,16 @@
 <b>{$translate->_('portal.sc.cfg.history.display_assigned_to')|capitalize}</b>
 <br>
 
+{if !empty($ticket_custom_fields)}
+{foreach from=$ticket_custom_fields item=field key=field_id}
+	{$account_fields[] = 'ticket_custom_'|cat:$field_id}
+	{$account_labels[] = ''|cat:$field->name|cat:' ('|cat:$field_types.{$field->type}|cat:')'}
+{/foreach}
+{/if}
+
 <table cellpadding="2" cellspacing="1" border="0">
 <tr>
-	<td colspan="2"><H2>Custom Ticket Fields</H2></td>
+	<td colspan="2"><H2>Ticket Fields</H2></td>
 </tr>
 {foreach from=$ticket_fields item=field name=fields}
 	<tr>

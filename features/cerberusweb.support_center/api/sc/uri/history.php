@@ -286,10 +286,10 @@ class UmScHistoryController extends Extension_UmScController {
 		
 		// Contact: Fields
 		$ticket_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
-		$tpl->assign('ticket_fields', $ticket_fields);
+		$tpl->assign('$ticket_custom_fields', $ticket_fields);
 
-//		$types = Model_CustomField::getTypes();
-//		$tpl->assign('field_types', $types);
+		$types = Model_CustomField::getTypes();
+		$tpl->assign('field_types', $types);
 
 		$tpl->display("devblocks:cerberusweb.support_center::portal/sc/config/module/history.tpl");
 	}
