@@ -8,8 +8,8 @@
 
 {if !empty($ticket_custom_fields)}
 {foreach from=$ticket_custom_fields item=field key=field_id}
-	{$account_fields[] = 'ticket_custom_'|cat:$field_id}
-	{$account_labels[] = ''|cat:$field->name|cat:' ('|cat:$field_types.{$field->type}|cat:')'}
+	{$ticket_fields[] = 'ticket_custom_'|cat:$field_id}
+	{$ticket_labels[] = ''|cat:$field->name|cat:' ('|cat:$field_types.{$field->type}|cat:')'}
 {/foreach}
 {/if}
 
@@ -18,9 +18,10 @@
 	<td colspan="2"><H2>Ticket Fields</H2></td>
 </tr>
 {foreach from=$ticket_fields item=field name=fields}
+{foreach from=$ticket_fields item=field name=fields}
 	<tr>
 		<td valign="top" width="1%" nowrap="nowrap">
-			<input type="hidden" name="fields[]" value="{$field}">
+		<input type="hidden" name="fields[]" value="{$field}">
 			<select name="fields_visible[]">
 				<option value="0">{$translate->_('portal.sc.cfg.history.hidden')|capitalize}</option>
 				<option value="1" {if 1==$show_fields.{$field}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.read_only')|capitalize}</option>
@@ -28,7 +29,7 @@
 			</select>
 			<b>{$field->name|capitalize}</b>
 			{if $field->group_id != 0}
-				({$groups.$field_group_id->name} {$translate->_('portal.sc.cfg.history.fields')})
+				({$groups.$field->group_id->name} {$translate->_('portal.sc.cfg.history.fields')})
 			{/if}
 			<br>
 		</td>
