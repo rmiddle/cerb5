@@ -1,7 +1,7 @@
 <?php
 class UmScHistoryController extends Extension_UmScController {
-	const PARAM_NEXT_ASSIGNED_TO = 'history.next_assigned_to';
-	const PARAM_CF_SELECT = 'history.cf_select';
+	const PARAM_DISPLAY_ASSIGNED_TO = 'history.display_assigned_to';
+	const PARAM_HISTORY_FIELDS = 'history.fields';
 	function isVisible() {
 		$umsession = UmPortalHelper::getSession();
 		$active_contact = $umsession->getProperty('sc_login', null);
@@ -273,34 +273,43 @@ class UmScHistoryController extends Extension_UmScController {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl_path = dirname(dirname(dirname(dirname(__FILE__)))) . '/templates/';
 
-		$settings = DevblocksPlatform::getPluginSettingsService();
+		if(null != ($show_fields = DAO_CommunityToolProperty::get($instance->code, self::PARAM_HISTORY_FIELDS, null))) {
+			$tpl->assign('show_fields', @json_decode($show_fields, true));
+		}
         
-		$next_assigned_to = DAO_CommunityToolProperty::get($instance->code, self::PARAM_NEXT_ASSIGNED_TO, 0);
-		$tpl->assign('next_assigned_to', $next_assigned_to);
+		if(null != ($display_assigned_to = DAO_CommunityToolProperty::get($instance->code, self::PARAM_DISPLAY_ASSIGNED_TO, null))) {
+			$tpl->assign('display_assigned_to', $display_assigned_to);
+		}
 
 		$groups = DAO_Group::getAll();
 		$tpl->assign('groups', $groups);
 		
 		// Contact: Fields
-		$ticket_fields = DAO_CustomField::getBySource('cerberusweb.fields.source.ticket');
+		$ticket_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
 		$tpl->assign('ticket_fields', $ticket_fields);
 
-		$cf_select_serial = DAO_CommunityToolProperty::get($instance->code,self::PARAM_CF_SELECT, '');
-		$cf_select = !empty($cf_select_serial) ? unserialize($cf_select_serial) : array();
-		$tpl->assign('cf_select', $cf_select);
-		
-		$tpl->display("file:${tpl_path}portal/sc/config/module/history.tpl");
+		$types = Model_CustomField::getTypes();
+		$tpl->assign('field_types', $types);
+
+		$tpl->display("devblocks:cerberusweb.support_center::portal/sc/config/module/history.tpl");
 	}
 	
 	function saveConfiguration(Model_CommunityTool $instance) {
-		@$iNextAssignedTo = DevblocksPlatform::importGPC($_POST['next_assigned_to'],'integer',0);
-		DAO_CommunityToolProperty::set($instance->code, self::PARAM_NEXT_ASSIGNED_TO, $iNextAssignedTo);
+		@$display_assigned_to = DevblocksPlatform::importGPC($_POST['display_assigned_to'],'integer',0);
+		@$tFields = DevblocksPlatform::importGPC($_POST['fields'],'array',array());
+        @$tFieldsVisible = DevblocksPlatform::importGPC($_POST['fields_visible'],'array',array());
 
-		$ticket_fields = DAO_CustomField::getBySource('cerberusweb.fields.source.ticket');
-		foreach ($ticket_fields as $id => $value) {
-			@$cf_select[$id] = DevblocksPlatform::importGPC($_POST['cf_select_'.$id],'integer',0);
-		}
-		DAO_CommunityToolProperty::set($instance->code, self::PARAM_CF_SELECT, serialize($cf_select));
+        $fields = array();
+        
+        if(is_array($tFields))
+        foreach($tFields as $idx => $field) {
+        	$mode = $tFieldsVisible[$idx];
+        	if(!is_null($mode))
+        		$fields[$field] = intval($mode);
+        }
+		
+        DAO_CommunityToolProperty::set($instance->code, self::PARAM_DISPLAY_ASSIGNED_TO, $display_assigned_to);       
+        DAO_CommunityToolProperty::set($instance->code, self::PARAM_HISTORY_FIELDS, json_encode($fields));
 	}
 };
 
