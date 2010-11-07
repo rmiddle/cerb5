@@ -114,10 +114,6 @@ class UmScHistoryController extends Extension_UmScController {
 				$context_workers = CerberusContexts::getWorkers(CerberusContexts::CONTEXT_TICKET, $ticket[SearchFields_Ticket::TICKET_ID]);
 				$tpl->assign('context_workers', $context_workers);
 
-echo "<pre>";
-print_r($context_workers);
-echo "</pre>";
-
 				// Custom fields
 				$ticket_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
 				$tpl->assign('ticket_fields', $ticket_fields);
