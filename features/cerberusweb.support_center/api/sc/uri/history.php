@@ -291,9 +291,6 @@ class UmScHistoryController extends Extension_UmScController {
 		
 		$types = Model_CustomField::getTypes();
 		$tpl->assign('field_types', $types);
-echo "<pre>";
-print_r($types);
-echo "<pre>";
 		
 		$tpl->display("devblocks:cerberusweb.support_center::portal/sc/config/module/history.tpl");
 	}
