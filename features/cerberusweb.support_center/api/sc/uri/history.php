@@ -111,7 +111,7 @@ class UmScHistoryController extends Extension_UmScController {
 				$tpl->assign('groups', $groups);
 
 				// context_workers
-				$context_workers = CerberusContexts::getWorkers(CerberusContexts::CONTEXT_TICKET, $id);
+				$context_workers = CerberusContexts::getWorkers(CerberusContexts::CONTEXT_TICKET, $ticket[SearchFields_Ticket::TICKET_ID]);
 				$tpl->assign('context_workers', $context_workers);
 
 echo "<pre>";
@@ -122,7 +122,7 @@ echo "</pre>";
 				$ticket_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
 				$tpl->assign('ticket_fields', $ticket_fields);
 
-				$ticket_field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TICKET, $id));
+				$ticket_field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TICKET, $ticket[SearchFields_Ticket::TICKET_ID]));
 				$tpl->assign('ticket_field_values', $ticket_field_values);
 				$tpl->assign('ticket', $ticket);
 				$tpl->assign('messages', $messages);
