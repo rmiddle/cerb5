@@ -1,9 +1,21 @@
-<select name="display_assigned_to">
-	<option {if $display_assigned_to == 0}selected{/if} value="0">{$translate->_('portal.sc.cfg.history.display_assigned_to.hide')|capitalize}</option>
-	<option {if $display_assigned_to == 1}selected{/if} value="1">{$translate->_('portal.sc.cfg.history.display_assigned_to.firstname')|capitalize}</option>
-	<option {if $display_assigned_to == 2}selected{/if} value="2">{$translate->_('portal.sc.cfg.history.display_assigned_to.fullname')|capitalize}</option>
-</select>
-<b>{$translate->_('portal.sc.cfg.history.display_assigned_to')|capitalize}</b>
+<table cellpadding="2" cellspacing="1" border="0">
+<tr>
+	<td colspan="2"><H2>Ticket Fields</H2></td>
+</tr>
+
+<tr>
+	<td>
+		<select name="display_assigned_to">
+			<option {if $display_assigned_to == 0}selected{/if} value="0">{$translate->_('portal.sc.cfg.history.display_assigned_to.hide')|capitalize}</option>
+			<option {if $display_assigned_to == 1}selected{/if} value="1">{$translate->_('portal.sc.cfg.history.display_assigned_to.firstname')|capitalize}</option>
+			<option {if $display_assigned_to == 2}selected{/if} value="2">{$translate->_('portal.sc.cfg.history.display_assigned_to.fullname')|capitalize}</option>
+		</select>
+	</td>
+	<td>
+		<b>{$translate->_('portal.sc.cfg.history.display_assigned_to')|capitalize}</b>
+	</td>
+</tr>
+</table>
 <br>
 
 {if !empty($ticket_custom_fields)}
@@ -12,7 +24,6 @@
 	{$ticket_labels[] = ''|cat:$field->name|cat:' ('|cat:$field_types.{$field->type}|cat:')'}
 {/foreach}
 {/if}
-
 
 <table cellpadding="2" cellspacing="1" border="0">
 <tr>
