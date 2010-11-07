@@ -39,7 +39,7 @@
 				<option value="1" {if 1==$show_fields.{$field}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.read_only')|capitalize}</option>
 				<option value="2" {if 2==$show_fields.{$field}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.editable')|capitalize}</option>
 			</select>
-			<b>{'$field->name|cat:' ('|cat:$field_types.{$field->type}|cat:')'|capitalize}</b>
+			<b>{$field->name|cat:('|cat:$field_types.{$field->type}|cat:')|capitalize}</b>
 {*			{if $field->group_id != 0}
 				({$groups.$field->group_id->name} {$translate->_('portal.sc.cfg.history.fields')})
 			{/if}
