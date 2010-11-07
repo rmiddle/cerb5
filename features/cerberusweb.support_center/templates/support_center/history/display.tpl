@@ -10,11 +10,13 @@
 	 &nbsp; 
 	<b>{$translate->_('ticket.updated')|capitalize}:</b> <abbr title="{$ticket.t_updated_date|devblocks_date}">{$ticket.t_updated_date|devblocks_prettytime}</abbr>
 	&nbsp;
-	{if $display_next_assigned_to != 0}
-		<b>{$translate->_('portal.sc.cfg.history.next_assigned_to.label')|capitalize}:</b> 
-		{if $ticket.t_next_worker_id == 0}{$translate->_('portal.sc.cfg.history.next_assigned_to.unassigned')|capitalize}{else}{$cust_worker = DAO_Worker::get($ticket.t_next_worker_id)}{if $display_next_assigned_to == 1}{$cust_worker->first_name}{else}{$cust_worker->getName()}{/if}{/if}
+{*	
+	{if $display_display_assigned_to != 0}
+		<b>{$translate->_('portal.sc.cfg.history.display_assigned_to.label')|capitalize}:</b> 
+		{if $ticket.t_next_worker_id == 0}{$translate->_('portal.sc.cfg.history.display_assigned_to.unassigned')|capitalize}{else}{$cust_worker = DAO_Worker::get($ticket.t_next_worker_id)}{if $display_assigned_to == 1}{$cust_worker->first_name}{else}{$cust_worker->getName()}{/if}{/if}
 		&nbsp; 	 
 	{/if}
+*}
 	<br>
 	
 	<div style="padding:5px;">
@@ -47,6 +49,7 @@
 </div>
 
 {* Custom Fields *}
+{*
 <div id="custom_fields_div">
 <form action="{devblocks_url}c=history{/devblocks_url}" method="post" name="">
 <input type="hidden" name="a" value="saveTicketCustomProperties">
@@ -64,7 +67,7 @@
 							<b>{$f->name}:</b>
 						</td>
 						<td valign="top" width="99%">
-							{if $cf_select.$f_id == 2} {* Read Write Version *}
+							{if $cf_select.$f_id == 2} *}{* Read Write Version *} {*
 								<input type="hidden" name="field_ids[]" value="{$f_id}">
 								{assign var=display_submit value=1}
 								{if $f->type=='S'}
@@ -109,7 +112,7 @@
 										{/foreach}
 									</select>
 								{/if}
-							{else}  {* Read Only Version *}
+							{else}  *}{* Read Only Version *}{*
 								{if $f->type=='S'}
 									{$ticket_field_values.$f_id|escape}<br>
 								{elseif $f->type=='U'}
@@ -152,7 +155,7 @@
 	{/if}
 </form>
 </div>
-
+*}
 {* Message History *}
 {$badge_extensions = DevblocksPlatform::getExtensions('cerberusweb.support_center.message.badge', true)}
 {foreach from=$messages item=message key=message_id}
