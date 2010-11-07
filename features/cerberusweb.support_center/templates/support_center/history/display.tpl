@@ -10,13 +10,15 @@
 	 &nbsp; 
 	<b>{$translate->_('ticket.updated')|capitalize}:</b> <abbr title="{$ticket.t_updated_date|devblocks_date}">{$ticket.t_updated_date|devblocks_prettytime}</abbr>
 	&nbsp;
-{*	
+	
 	{if $display_display_assigned_to != 0}
 		<b>{$translate->_('portal.sc.cfg.history.display_assigned_to.label')|capitalize}:</b> 
-		{if $ticket.t_next_worker_id == 0}{$translate->_('portal.sc.cfg.history.display_assigned_to.unassigned')|capitalize}{else}{$cust_worker = DAO_Worker::get($ticket.t_next_worker_id)}{if $display_assigned_to == 1}{$cust_worker->first_name}{else}{$cust_worker->getName()}{/if}{/if}
-		&nbsp; 	 
+		{if !empty($context_workers)}{$translate->_('portal.sc.cfg.history.display_assigned_to.unassigned')|capitalize}{/if}
+		{foreach from=$context_workers item=worker key=worker_id}
+			{if $display_assigned_to == 1}{$worker->first_name}{else}{$worker->getName()}{/if}&nbsp; 	 
+		{/foreach}
 	{/if}
-*}
+
 	<br>
 	
 	<div style="padding:5px;">
