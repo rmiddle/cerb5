@@ -15,6 +15,8 @@
 		<b>{$translate->_('portal.sc.cfg.history.display_assigned_to.label')|capitalize}:</b> 
 		{if !empty($context_workers)}{$translate->_('portal.sc.cfg.history.display_assigned_to.unassigned')|capitalize}{/if}
 		{foreach from=$context_workers item=worker key=worker_id}
+			{$worker->first_name}
+			{$worker->getName()}
 			{if $display_assigned_to == 1}{$worker->first_name}{else}{$worker->getName()}{/if}&nbsp; 	 
 		{/foreach}
 	{*{/if}*}
