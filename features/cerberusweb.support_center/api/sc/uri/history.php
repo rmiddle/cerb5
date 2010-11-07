@@ -132,6 +132,7 @@ class UmScHistoryController extends Extension_UmScController {
 					$tpl->assign('display_assigned_to', $display_assigned_to);
 				}
 echo "<pre>";	
+echo "test test test<br>";
 print_r($display_assigned_to);
 print_r($show_fields);
 echo "</pre>";				
