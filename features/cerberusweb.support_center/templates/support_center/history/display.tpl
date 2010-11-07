@@ -88,7 +88,7 @@
 										<label><input type="checkbox" name="field_{$f_id}[]" value="{$opt|escape}" {if isset($ticket_field_values.$f_id.$opt)}checked="checked"{/if}> {$opt}</label><br>
 									{/foreach}
 								{elseif $f->type=='D'}
-									<select name="field_{$f_id}">{* [TODO] Fix selected *}
+									<select name="field_{$f_id}"> *} {* [TODO] Fix selected *} {*
 										<option value=""></option>
 										{foreach from=$f->options item=opt}
 											<option value="{$opt|escape}" {if $opt==$ticket_field_values.$f_id}selected{/if}>{$opt}</option>
