@@ -1,6 +1,6 @@
 <table cellpadding="2" cellspacing="1" border="0">
 <tr>
-	<td colspan="2"><H2>Ticket Fields</H2></td>
+	<td colspan="2"><H2>Ticket History Misc</H2></td>
 </tr>
 
 <tr>
