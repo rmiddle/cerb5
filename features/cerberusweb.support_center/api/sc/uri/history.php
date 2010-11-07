@@ -294,8 +294,8 @@ echo "</pre>";
 		$tpl->assign('groups', $groups);
 		
 		// Contact: Fields
-		$ticket_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
-		$tpl->assign('$ticket_custom_fields', $ticket_fields);
+		$ticket_custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
+		$tpl->assign('$ticket_custom_fields', $ticket_custom_fields);
 		
 		$types = Model_CustomField::getTypes();
 		$tpl->assign('field_types', $types);
@@ -305,20 +305,20 @@ echo "</pre>";
 	
 	function saveConfiguration(Model_CommunityTool $instance) {
 		@$display_assigned_to = DevblocksPlatform::importGPC($_POST['display_assigned_to'],'integer',0);
-		@$tFields = DevblocksPlatform::importGPC($_POST['fields'],'array',array());
-        @$tFieldsVisible = DevblocksPlatform::importGPC($_POST['fields_visible'],'array',array());
+		@$tFields = DevblocksPlatform::importGPC($_POST['ticket_fields'],'array',array());
+        @$tFieldsVisible = DevblocksPlatform::importGPC($_POST['ticket_fields_visible'],'array',array());
 
-        $fields = array();
+        $ticket_fields = array();
         
         if(is_array($tFields))
-        foreach($tFields as $idx => $field) {
+        foreach($tFields as $idx => $ticket_field) {
         	$mode = $tFieldsVisible[$idx];
         	if(!is_null($mode))
-        		$fields[$field] = intval($mode);
+        		$ticket_fields[$ticket_field] = intval($mode);
         }
 		
         DAO_CommunityToolProperty::set($instance->code, self::PARAM_DISPLAY_ASSIGNED_TO, $display_assigned_to);       
-        DAO_CommunityToolProperty::set($instance->code, self::PARAM_HISTORY_FIELDS, json_encode($fields));
+        DAO_CommunityToolProperty::set($instance->code, self::PARAM_HISTORY_FIELDS, json_encode($ticket_fields));
 	}
 };
 
