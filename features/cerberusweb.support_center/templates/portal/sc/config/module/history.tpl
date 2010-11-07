@@ -13,20 +13,21 @@
 {/foreach}
 {/if}
 
+{*
 <table cellpadding="2" cellspacing="1" border="0">
 <tr>
 	<td colspan="2"><H2>Ticket Fields</H2></td>
 </tr>
 {foreach from=$ticket_fields item=field name=fields}
 	<tr>
-		<td valign="top" width="1%" nowrap="nowrap">
-		<input type="hidden" name="fields[]" value="{$field}">
+		<td>
+			<input type="hidden" name="fields[]" value="{$field}">
 			<select name="fields_visible[]">
 				<option value="0">{$translate->_('portal.sc.cfg.history.hidden')|capitalize}</option>
 				<option value="1" {if 1==$show_fields.{$field}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.read_only')|capitalize}</option>
 				<option value="2" {if 2==$show_fields.{$field}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.editable')|capitalize}</option>
 			</select>
-			<b>{$field->name|capitalize}</b>
+			<b>{$ticket_labels.{$smarty.foreach.fields.index}|capitalize}</b>
 			{if $field->group_id != 0}
 				({$groups.$field->group_id->name} {$translate->_('portal.sc.cfg.history.fields')})
 			{/if}
@@ -36,3 +37,5 @@
 {/foreach}
 
 </table>
+*}
+<br>
