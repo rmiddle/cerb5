@@ -13,11 +13,12 @@
 {/foreach}
 {/if}
 
-{*
+
 <table cellpadding="2" cellspacing="1" border="0">
 <tr>
 	<td colspan="2"><H2>Ticket Fields</H2></td>
 </tr>
+{*
 {foreach from=$ticket_fields item=field name=fields}
 	<tr>
 		<td>
@@ -35,7 +36,7 @@
 		</td>
 	</tr>
 {/foreach}
+*}
 
 </table>
-*}
 <br>
