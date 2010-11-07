@@ -131,7 +131,10 @@ class UmScHistoryController extends Extension_UmScController {
 				if(null != ($display_assigned_to = DAO_CommunityToolProperty::get($instance->code, self::PARAM_DISPLAY_ASSIGNED_TO, null))) {
 					$tpl->assign('display_assigned_to', $display_assigned_to);
 				}
-				
+echo "<pre>";	
+print_r($display_assigned_to);
+print_r($show_fields);
+echo "</pre>";				
 				$tpl->display("devblocks:cerberusweb.support_center:portal_".UmPortalHelper::getCode() . ":support_center/history/display.tpl");
 			}
 		}
