@@ -18,13 +18,6 @@
 </table>
 <br>
 
-{if !empty($ticket_custom_fields)}
-{foreach from=$ticket_custom_fields item=field key=field_id}
-	{$ticket_fields[] = 'ticket_custom_'|cat:$field_id}
-	{$ticket_labels[] = ''|cat:$field->name|cat:' ('|cat:$field_types.{$field->type}|cat:')'}
-{/foreach}
-{/if}
-
 <table cellpadding="2" cellspacing="1" border="0">
 <tr>
 	<td colspan="2"><H2>Ticket Fields</H2></td>
@@ -39,11 +32,10 @@
 				<option value="1" {if 1==$show_fields.{$field}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.read_only')|capitalize}</option>
 				<option value="2" {if 2==$show_fields.{$field}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.editable')|capitalize}</option>
 			</select>
-			<b>{$field->name|capitalize} ( {$field_types.{$field->type}} )</b>
-{*			{if $field->group_id != 0}
+			<b>{$field->name|capitalize}</b> ({$field_types.{$field->type}})
+			{if $field->group_id != 0}
 				({$groups.$field->group_id->name} {$translate->_('portal.sc.cfg.history.fields')})
 			{/if}
-*}
 			<br>
 		</td>
 	</tr>
