@@ -1,7 +1,7 @@
 <select name="display_assigned_to">
-	<option {if $next_assigned_to == 0}selected{/if} value="0">{$translate->_('portal.sc.cfg.history.display_assigned_to.hide')|capitalize}</option>
-	<option {if $next_assigned_to == 1}selected{/if} value="1">{$translate->_('portal.sc.cfg.history.display_assigned_to.firstname')|capitalize}</option>
-	<option {if $next_assigned_to == 2}selected{/if} value="2">{$translate->_('portal.sc.cfg.history.display_assigned_to.fullname')|capitalize}</option>
+	<option {if $display_assigned_to == 0}selected{/if} value="0">{$translate->_('portal.sc.cfg.history.display_assigned_to.hide')|capitalize}</option>
+	<option {if $display_assigned_to == 1}selected{/if} value="1">{$translate->_('portal.sc.cfg.history.display_assigned_to.firstname')|capitalize}</option>
+	<option {if $display_assigned_to == 2}selected{/if} value="2">{$translate->_('portal.sc.cfg.history.display_assigned_to.fullname')|capitalize}</option>
 </select>
 <b>{$translate->_('portal.sc.cfg.history.display_assigned_to')|capitalize}</b>
 <br>
