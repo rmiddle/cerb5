@@ -26,7 +26,7 @@
 {foreach from=$ticket_fields item=field name=fields}
 	<tr>
 		<td>
-			<input type="hidden" name="fields[]" value="ticket_custom{$field->id}">
+			<input type="hidden" name="fields[]" value="ticket_custom_{$field->id}">
 			<select name="fields_visible[]">
 				<option value="0">{$translate->_('portal.sc.cfg.history.hidden')|capitalize}</option>
 				<option value="1" {if 1==$show_fields.{$field}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.read_only')|capitalize}</option>
