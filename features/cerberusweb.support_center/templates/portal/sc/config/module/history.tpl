@@ -26,11 +26,11 @@
 {foreach from=$ticket_fields item=field name=fields}
 	<tr>
 		<td>
-			<input type="hidden" name="fields[]" value="ticket_custom_{$field->id}">
+			<input type="hidden" name="fields[]" value="{$field->id}">
 			<select name="fields_visible[]">
 				<option value="0">{$translate->_('portal.sc.cfg.history.hidden')|capitalize}</option>
-				<option value="1" {if 1==$show_fields.{$field}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.read_only')|capitalize}</option>
-				<option value="2" {if 2==$show_fields.{$field}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.editable')|capitalize}</option>
+				<option value="1" {if 1==$show_fields.{$field->id}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.read_only')|capitalize}</option>
+				<option value="2" {if 2==$show_fields.{$field->id}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.editable')|capitalize}</option>
 			</select>
 			<b>{$field->name|capitalize}</b> ({$field_types.{$field->type}})
 			{if $field->group_id != 0}
