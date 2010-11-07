@@ -11,13 +11,13 @@
 	<b>{$translate->_('ticket.updated')|capitalize}:</b> <abbr title="{$ticket.t_updated_date|devblocks_date}">{$ticket.t_updated_date|devblocks_prettytime}</abbr>
 	&nbsp;
 
-	{if $display_assigned_to != 0}
+	{*{if $display_assigned_to != 0}*}
 		<b>{$translate->_('portal.sc.cfg.history.display_assigned_to.label')|capitalize}:</b> 
 		{if !empty($context_workers)}{$translate->_('portal.sc.cfg.history.display_assigned_to.unassigned')|capitalize}{/if}
 		{foreach from=$context_workers item=worker key=worker_id}
 			{if $display_assigned_to == 1}{$worker->first_name}{else}{$worker->getName()}{/if}&nbsp; 	 
 		{/foreach}
-	{/if}
+	{*{/if}*}
 
 	<br>
 	
