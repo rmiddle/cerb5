@@ -29,11 +29,11 @@
 <tr>
 	<td colspan="2"><H2>Ticket Fields</H2></td>
 </tr>
-{*
+
 {foreach from=$ticket_fields item=field name=fields}
 	<tr>
 		<td>
-			<input type="hidden" name="fields[]" value="{$field}">
+{*			<input type="hidden" name="fields[]" value="{$field}">
 			<select name="fields_visible[]">
 				<option value="0">{$translate->_('portal.sc.cfg.history.hidden')|capitalize}</option>
 				<option value="1" {if 1==$show_fields.{$field}}selected="selected"{/if}>{$translate->_('portal.sc.cfg.history.read_only')|capitalize}</option>
@@ -43,11 +43,12 @@
 			{if $field->group_id != 0}
 				({$groups.$field->group_id->name} {$translate->_('portal.sc.cfg.history.fields')})
 			{/if}
+*}
 			<br>
 		</td>
 	</tr>
 {/foreach}
-*}
+
 
 </table>
 <br>
