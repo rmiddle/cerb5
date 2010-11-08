@@ -38,37 +38,6 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		<tu tuid='usermeet.ui.community.cfg.profile_id'>
 			<tuv xml:lang="en_US"><seg>Profile ID:</seg></tuv>
 		</tu>
-
-		<tu tuid='portal.sc.cfg.history.display_assigned_to'>
-			<tuv xml:lang="en_US"><seg>Allow users to see who ticket is assigned to?</seg></tuv>
-		</tu>
-		<tu tuid='portal.sc.cfg.history.display_assigned_to.label'>
-			<tuv xml:lang="en_US"><seg>Currently Assigned Worker</seg></tuv>
-		</tu>
-		<tu tuid='portal.sc.cfg.history.display_assigned_to.hide'>
-			<tuv xml:lang="en_US"><seg>hide</seg></tuv>
-		</tu>
-		<tu tuid='portal.sc.cfg.history.display_assigned_to.firstname'>
-			<tuv xml:lang="en_US"><seg>First Name Only</seg></tuv>
-		</tu>
-		<tu tuid='portal.sc.cfg.history.display_assigned_to.fullname'>
-			<tuv xml:lang="en_US"><seg>Full Name</seg></tuv>
-		</tu>
-		<tu tuid='portal.sc.cfg.history.display_assigned_to.unassigned'>
-			<tuv xml:lang="en_US"><seg>Unassigned</seg></tuv>
-		</tu>
-		<tu tuid='portal.sc.cfg.history.hidden'>
-			<tuv xml:lang="en_US"><seg>Hidden</seg></tuv>
-		</tu>
-		<tu tuid='portal.sc.cfg.history.read_only'>
-			<tuv xml:lang="en_US"><seg>Read Only</seg></tuv>
-		</tu>
-		<tu tuid='portal.sc.cfg.history.editable'>
-			<tuv xml:lang="en_US"><seg>Editable</seg></tuv>
-		</tu>
-		<tu tuid='portal.sc.cfg.history.fields'>
-			<tuv xml:lang="en_US"><seg>Fields</seg></tuv>
-		</tu>
 	</body>
 </tmx>
 <!-- 
