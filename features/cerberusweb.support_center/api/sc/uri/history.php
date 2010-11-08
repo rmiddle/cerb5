@@ -124,18 +124,21 @@ class UmScHistoryController extends Extension_UmScController {
 				$tpl->assign('messages', $messages);
 				$tpl->assign('attachments', $attachments);
 
-				if(null != ($show_fields = DAO_CommunityToolProperty::get($instance->code, self::PARAM_HISTORY_FIELDS, null))) {
+				// Show fields		
+				if(null != ($show_fields = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_HISTORY_FIELDS, null))) {
 					$tpl->assign('show_fields', @json_decode($show_fields, true));
 				}
-        
-				if(null != ($display_assigned_to = DAO_CommunityToolProperty::get($instance->code, self::PARAM_DISPLAY_ASSIGNED_TO, null))) {
-					$tpl->assign('display_assigned_to', $display_assigned_to);
+				
+				if(null != ($display_assigned_to = DAO_CommunityToolProperty::get(UmPortalHelper::getCode(), self::PARAM_DISPLAY_ASSIGNED_TO, null))) {
+					$tpl->assign('display_assigned_to', @json_decode($display_assigned_to, true));
 				}
+				
 echo "<pre>";	
 echo "test test test<br>";
 print_r($display_assigned_to);
 print_r($show_fields);
-echo "</pre>";				
+echo "</pre>";
+
 				$tpl->display("devblocks:cerberusweb.support_center:portal_".UmPortalHelper::getCode() . ":support_center/history/display.tpl");
 			}
 		}
