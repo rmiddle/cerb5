@@ -132,13 +132,13 @@ class DAO_Worker extends C4_ORMHelper {
 				$active_workers[$worker->id] = $worker;
 				
 			} else {
-				if($idle_kick_limit) {
+//				if($idle_kick_limit) {
 					// Kill all sessions for this worker
-					foreach($workers_to_sessions[$worker->id] as $session_key => $session_data) {
-						$session->clear($session_key);
-					}
-					$idle_kick_limit--;
-				}
+//					foreach($workers_to_sessions[$worker->id] as $session_key => $session_data) {
+//						$session->clear($session_key);
+//					}
+//					$idle_kick_limit--;
+//				}
 			}
 		}
 		
