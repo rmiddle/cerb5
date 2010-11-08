@@ -96,7 +96,7 @@ class DAO_Worker extends C4_ORMHelper {
 		return self::getAll(false, true);
 	}
 	
-	static function getAllOnline($idle_limit=600, $idle_kick_limit=0) {
+	static function getAllOnline($idle_limit=86400, $idle_kick_limit=0) {
 		$session = DevblocksPlatform::getSessionService();
 
 		$sessions = $session->getAll();
