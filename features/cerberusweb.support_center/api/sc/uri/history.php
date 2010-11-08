@@ -295,7 +295,7 @@ echo "</pre>";
 		
 		// Contact: Fields
 		$ticket_custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
-		$tpl->assign('$ticket_custom_fields', $ticket_custom_fields);
+		$tpl->assign('ticket_custom_fields', $ticket_custom_fields);
 		
 		$types = Model_CustomField::getTypes();
 		$tpl->assign('field_types', $types);
