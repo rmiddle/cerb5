@@ -133,12 +133,6 @@ class UmScHistoryController extends Extension_UmScController {
 					$tpl->assign('display_assigned_to', @json_decode($display_assigned_to, true));
 				}
 				
-echo "<pre>";	
-echo "test test test<br>";
-print_r($display_assigned_to);
-print_r($show_fields);
-echo "</pre>";
-
 				$tpl->display("devblocks:cerberusweb.support_center:portal_".UmPortalHelper::getCode() . ":support_center/history/display.tpl");
 			}
 		}
