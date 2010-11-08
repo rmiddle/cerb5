@@ -201,7 +201,21 @@ class UmScHistoryController extends Extension_UmScController {
 		// Custom field saves
 		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
 		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
-
+					
+		if(is_array($show_fields))
+			foreach($show_fields as $field_name => $visibility) {
+				if(2 != $visibility)
+					continue;
+			
+				@$val = DevblocksPlatform::importGPC($_POST[$field_name],'string','');
+							
+				// Handle specific fields
+				if('ticket_custom_'==substr($field_name,0,14)) {
+					$field_id = intval(substr($field_name,14));
+					$ticket_customfields[$field_id] = $val;
+				}
+			}
+		
 		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('portal',UmPortalHelper::getCode(),'history',$ticket[SearchFields_Ticket::TICKET_MASK])));		
 	}
 		

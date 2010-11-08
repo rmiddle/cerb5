@@ -62,9 +62,9 @@
 					<td width="1%" nowrap="nowrap" valign="top"><b>{$field->name|escape}:</b></td>
 					<td width="99%">
 						{if 1==$show_fields.{$field_id}}
-							{include file="devblocks:cerberusweb.support_center:portal_{$portal_code}:support_center/account/customfields_readonly.tpl" values=$ticket_custom_field_values}
+							{include file="devblocks:cerberusweb.support_center:portal_{$portal_code}:support_center/history/customfields_readonly.tpl" values=$ticket_custom_field_values}
 						{elseif 2==$show_fields.{$field_id}}
-							{include file="devblocks:cerberusweb.support_center:portal_{$portal_code}:support_center/account/customfields_writeable.tpl" values=$ticket_custom_field_values field_prefix=""}
+							{include file="devblocks:cerberusweb.support_center:portal_{$portal_code}:support_center/history/customfields_writeable.tpl" values=$ticket_custom_field_values field_prefix="ticket_custom"}
 						{else}
 						{/if}
 					</td>
