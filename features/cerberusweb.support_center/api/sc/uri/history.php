@@ -115,11 +115,11 @@ class UmScHistoryController extends Extension_UmScController {
 				$tpl->assign('context_workers', $context_workers);
 
 				// Custom fields
-				$ticket_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
-				$tpl->assign('ticket_fields', $ticket_fields);
+				$ticket_custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
+				$tpl->assign('ticket_custom_fields', $ticket_custom_fields);
 
-				$ticket_field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TICKET, $ticket[SearchFields_Ticket::TICKET_ID]));
-				$tpl->assign('ticket_field_values', $ticket_field_values);
+				$ticket_custom_fields_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TICKET, $ticket[SearchFields_Ticket::TICKET_ID]));
+				$tpl->assign('ticket_custom_fields_values', $ticket_custom_fields_values);
 				$tpl->assign('ticket', $ticket);
 				$tpl->assign('messages', $messages);
 				$tpl->assign('attachments', $attachments);
