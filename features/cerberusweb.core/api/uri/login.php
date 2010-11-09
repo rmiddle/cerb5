@@ -181,7 +181,7 @@ class ChSignInPage extends CerberusPageExtension {
 			$worker = CerberusApplication::getActiveWorker();
 			
 			// Please be honest
-			$online_workers = DAO_Worker::getAllOnline(86400, 100);
+			$online_workers = DAO_Worker::getAllOnline(86400, 0);
 			if(!isset($online_workers[$worker->id]) && $honesty->w <= count($online_workers) && 100 > $honesty->w) {
 				$online_workers = DAO_Worker::getAllOnline(600, 1);
 				if($honesty->w <= count($online_workers)) {
