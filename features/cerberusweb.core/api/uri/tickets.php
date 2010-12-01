@@ -1501,8 +1501,8 @@ class ChTicketsPage extends CerberusPageExtension {
 
 		// Custom field saves
 		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
-		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
- 		
+		DAO_CustomFieldValue::handleFormPost(CerberusContexts::CONTEXT_TICKET, $ticket_id, $field_ids);
+
 		// Worker reply
 		$properties = array(
 		    'draft_id' => $draft_id,
