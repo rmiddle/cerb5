@@ -50,10 +50,6 @@
 class ChInternalController extends DevblocksControllerExtension {
 	const ID = 'core.controller.internal';
 	
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	/*
 	 * Request Overload
 	 */
@@ -186,6 +182,114 @@ class ChInternalController extends DevblocksControllerExtension {
 		if(is_array($context_ids))
 		foreach($context_ids as $context_id)
 			DAO_ContextLink::deleteLink($context, $context_id, $from_context, $from_context_id);
+	}
+	
+	// Autocomplete
+	
+	function autocompleteAction() {
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+		@$term = DevblocksPlatform::importGPC($_REQUEST['term'],'string','');
+		
+		$list = array();
+		
+		// [TODO] This should be handled by the context extension
+		switch($context) {
+			case CerberusContexts::CONTEXT_ADDRESS:
+				list($results, $null) = DAO_Address::search(
+					array(),
+					array(
+						array(
+							DevblocksSearchCriteria::GROUP_OR,
+							new DevblocksSearchCriteria(SearchFields_Address::LAST_NAME,DevblocksSearchCriteria::OPER_LIKE,$term.'%'),
+							new DevblocksSearchCriteria(SearchFields_Address::FIRST_NAME,DevblocksSearchCriteria::OPER_LIKE,$term.'%'),
+							new DevblocksSearchCriteria(SearchFields_Address::EMAIL,DevblocksSearchCriteria::OPER_LIKE,$term.'%'),
+						),
+					),
+					25,
+					0,
+					SearchFields_Address::NUM_NONSPAM,
+					false,
+					false
+				);
+				
+				foreach($results AS $row){
+					$entry = new stdClass();
+					$entry->label = trim($row[SearchFields_Address::FIRST_NAME] . ' ' . $row[SearchFields_Address::LAST_NAME] . ' <' .$row[SearchFields_Address::EMAIL] . '>');
+					$entry->value = $row[SearchFields_Address::ID]; 
+					$list[] = $entry;
+				}
+				break;
+				
+			case CerberusContexts::CONTEXT_GROUP:
+				list($results, $null) = DAO_Group::search(
+					array(),
+					array(
+						new DevblocksSearchCriteria(SearchFields_Group::NAME,DevblocksSearchCriteria::OPER_LIKE,$term.'%'),
+					),
+					25,
+					0,
+					DAO_Group::TEAM_NAME,
+					true,
+					false
+				);
+				
+				foreach($results AS $row){
+					$entry = new stdClass();
+					$entry->label = $row[SearchFields_Group::NAME];
+					$entry->value = $row[SearchFields_Group::ID]; 
+					$list[] = $entry;
+				}
+				break;
+				
+			case CerberusContexts::CONTEXT_ORG:
+				list($results, $null) = DAO_ContactOrg::search(
+					array(),
+					array(
+						new DevblocksSearchCriteria(SearchFields_ContactOrg::NAME,DevblocksSearchCriteria::OPER_LIKE,$term.'%'),
+					),
+					25,
+					0,
+					SearchFields_ContactOrg::NAME,
+					true,
+					false
+				);
+				
+				foreach($results AS $row){
+					$entry = new stdClass();
+					$entry->label = $row[SearchFields_ContactOrg::NAME];
+					$entry->value = $row[SearchFields_ContactOrg::ID]; 
+					$list[] = $entry;
+				}
+				break;
+				
+			case CerberusContexts::CONTEXT_WORKER:
+				list($results, $null) = DAO_Worker::search(
+					array(),
+					array(
+						array(
+							DevblocksSearchCriteria::GROUP_OR,
+							new DevblocksSearchCriteria(SearchFields_Worker::LAST_NAME,DevblocksSearchCriteria::OPER_LIKE,$term.'%'),
+							new DevblocksSearchCriteria(SearchFields_Worker::FIRST_NAME,DevblocksSearchCriteria::OPER_LIKE,$term.'%'),
+						),
+					),
+					25,
+					0,
+					SearchFields_Worker::FIRST_NAME,
+					true,
+					false
+				);
+				
+				foreach($results AS $row){
+					$entry = new stdClass();
+					$entry->label = $row[SearchFields_Worker::FIRST_NAME] . ' ' . $row[SearchFields_Worker::LAST_NAME];
+					$entry->value = $row[SearchFields_Worker::ID]; 
+					$list[] = $entry;
+				}
+				break;
+		}
+		
+		echo json_encode($list);
+		exit;
 	}
 	
 	// Snippets

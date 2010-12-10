@@ -53,7 +53,7 @@
 	{assign var=list_id value=$result.f_list_id}
 	{assign var=worker_id value=$result.f_worker_id}
 	{assign var=mood value=$result.f_quote_mood}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 		<tr class="{$tableRowClass}">
 			<td align="center" rowspan="2">{*<input type="checkbox" name="row_id[]" value="{$result.tl_id}">*}</td>
 			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">
@@ -117,7 +117,7 @@
 			{elseif $column=="tl_string_override"}
 				<td>
 					{math assign=height equation="25+(25*floor(x/65))" x=$english_string->string_default|count_characters format="%d"}
-					<textarea name="translations[]" style="width:98%;height:{$height}px;border:1px solid rgb(80,80,80);" rows="3" cols="45">{if !empty($result.$column)}{$result.$column|escape}{/if}</textarea>
+					<textarea name="translations[]" style="width:98%;height:{$height}px;border:1px solid rgb(80,80,80);" rows="3" cols="45">{if !empty($result.$column)}{$result.$column}{/if}</textarea>
 				</td>
 			{elseif $column=="tl_string_id"}
 				<td valign="top">{$result.$column}&nbsp;</td>
@@ -168,3 +168,5 @@
 </table>
 </form>
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

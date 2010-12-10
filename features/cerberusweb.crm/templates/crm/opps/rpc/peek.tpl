@@ -16,13 +16,13 @@
 		<tr>
 			<td width="0%" nowrap="nowrap" align="right" valign="top">{$translate->_('crm.opportunity.email_address')|capitalize}: </td>
 			<td width="100%">
-				<input type="text" name="email" id="emailinput" value="{$address->email|escape}" class="required email" style="border:1px solid rgb(180,180,180);padding:2px;width:98%;">
+				<input type="text" name="email" id="emailinput" value="{$address->email}" class="required email" style="border:1px solid rgb(180,180,180);padding:2px;width:98%;">
 			</td>
 		</tr>
 		<tr>
 			<td width="0%" nowrap="nowrap" align="right" valign="top">{$translate->_('crm.opportunity.name')|capitalize}: </td>
 			<td width="100%">
-				<input type="text" name="name" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;" value="{$opp->name|escape}" class="required" autocomplete="off">
+				<input type="text" name="name" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;" value="{$opp->name}" class="required" autocomplete="off">
 			</td>
 		</tr>
 		<tr>
@@ -44,14 +44,14 @@
 		<tr>
 			<td width="0%" nowrap="nowrap" valign="top" align="right">{'common.owners'|devblocks_translate|capitalize}: </td>
 			<td width="100%">
-				<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-add"></span></button>
+				<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-view"></span></button>
+				<ul class="chooser-container bubbles" style="display:block;">
 				{if !empty($context_workers)}
-				<ul class="chooser-container bubbles">
 					{foreach from=$context_workers item=context_worker}
-					<li>{$context_worker->getName()|escape}<input type="hidden" name="worker_id[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
+					<li>{$context_worker->getName()}<input type="hidden" name="worker_id[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
 					{/foreach}
-				</ul>
 				{/if}
+				</ul>
 			</td>
 		</tr>
 		<tr>
@@ -110,12 +110,12 @@
 <script type="text/javascript">
 	$popup = genericAjaxPopupFetch('peek');
 	$popup.one('popup_open',function(event,ui) {
-		$(this).dialog('option','title', '{'Opportunity'|devblocks_translate|escape:'quotes'}');
+		$(this).dialog('option','title', '{'Opportunity'|devblocks_translate}');
 		ajax.emailAutoComplete('#emailinput');
 		$("#formOppPeek").validate();
 		$('#formOppPeek :input:text:first').focus();
 	} );
 	$('#formOppPeek button.chooser_worker').each(function() {
-		ajax.chooser(this,'cerberusweb.contexts.worker','worker_id');
+		ajax.chooser(this,'cerberusweb.contexts.worker','worker_id', { autocomplete:true });
 	});
 </script>

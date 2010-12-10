@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2010111101);
+define("APP_BUILD", 2010120901);
 define("APP_VERSION", '5.3.0-dev');
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
@@ -645,6 +645,7 @@ class CerberusContexts {
 	const CONTEXT_ADDRESS = 'cerberusweb.contexts.address';
 	const CONTEXT_ATTACHMENT = 'cerberusweb.contexts.attachment';
 	const CONTEXT_BUCKET = 'cerberusweb.contexts.bucket';
+	const CONTEXT_CALL = 'cerberusweb.contexts.call';
 	const CONTEXT_CONTACT_PERSON = 'cerberusweb.contexts.contact_person';
 	const CONTEXT_FEEDBACK = 'cerberusweb.contexts.feedback';
 	const CONTEXT_GROUP = 'cerberusweb.contexts.group';

@@ -57,7 +57,7 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 		<tr class="{$tableRowClass}">
 			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" value="{$result.c_id}"></td>
 			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}"><a href="{devblocks_url}c=contacts&tab=orgs&page=display&id={$result.c_id}{/devblocks_url}" class="subject">{$result.c_name}</a> <a href="javascript:;" onclick="genericAjaxPopup('peek','c=contacts&a=showOrgPeek&id={$result.c_id}&view_id={$view->id}',null,false,'600');"><span class="ui-icon ui-icon-newwin" style="display:inline-block;vertical-align:middle;" title="{$translate->_('views.peek')}"></span></a></td>
@@ -73,7 +73,7 @@
 			{elseif $column=="c_created"}
 			<td title="{$result.c_created|devblocks_date}">{$result.c_created|devblocks_prettytime}&nbsp;</td>
 			{else}
-			<td>{$result.$column|escape}</td>
+			<td>{$result.$column}</td>
 			{/if}
 		{/foreach}
 		</tr>
@@ -116,3 +116,5 @@
 </table>
 </form>
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

@@ -38,7 +38,7 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 		<tr class="{$tableRowClass}">
 			{if !empty($result.a_first_name) || !empty($result.a_last_name)}
 				{$display_name = ''}
@@ -57,8 +57,8 @@
 				{$display_name = "Contact"}
 			{/if}
 			
-			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" title="{$display_name|escape}" value="{$result.c_id}"></td>
-			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}"><b class="subject">{$display_name|escape}</b></td>
+			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" title="{$display_name}" value="{$result.c_id}"></td>
+			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}"><b class="subject">{$display_name}</b></td>
 		</tr>
 		<tr class="{$tableRowClass}">
 		{foreach from=$view->view_columns item=column name=columns}
@@ -105,3 +105,5 @@
 </table>
 </form>
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

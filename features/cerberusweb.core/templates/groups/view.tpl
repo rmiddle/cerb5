@@ -50,7 +50,7 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 		<tr class="{$tableRowClass}">
 			<td align="center"><input type="checkbox" name="row_id[]" value="{$result.g_id}"></td>
 		{foreach from=$view->view_columns item=column name=columns}
@@ -61,7 +61,7 @@
 			<td><a href="javascript:;" onclick="genericAjaxPopup('peek','c=config&a=showWorkerPeek&id={$result.w_id}&view_id={$view->id|escape:'url'}',null,false,'550');" class="subject" style="{if $result.w_is_disabled}color:rgb(120,0,0);font-style:italic;{/if}">{$result.$column}</a>&nbsp;</td>
 			*}
 			{else}
-			<td>{$result.$column|escape}</td>
+			<td>{$result.$column}</td>
 			{/if}
 		{/foreach}
 		</tr>
@@ -108,3 +108,5 @@
 </table>
 </form>
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

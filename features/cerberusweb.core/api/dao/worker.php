@@ -523,6 +523,10 @@ class DAO_Worker extends C4_ORMHelper {
 		
 		// Virtuals
 		foreach($params as $param) {
+			// [TODO] This needs to be handled better (GROUP_AND/GROUP_OR)
+			if(is_array($param))
+				continue;
+			
 			$param_key = $param->field;
 			settype($param_key, 'string');
 			switch($param_key) {
@@ -1110,10 +1114,6 @@ class DAO_WorkerPref extends DevblocksORMHelper {
 };
 
 class Context_Worker extends Extension_DevblocksContext {
-    function __construct($manifest) {
-        parent::__construct($manifest);
-    }
-
     function getPermalink($context_id) {
     	// [TODO] Profiles
     	$url_writer = DevblocksPlatform::getUrlService();

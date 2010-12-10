@@ -91,11 +91,12 @@
 				</tbody>
 				
 				{else}
-				<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+				<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 				<tr class="{$tableRowClass}">
 					<td align="center" rowspan="2"><input type="checkbox" name="ticket_id[]" value="{$result.t_id}"></td>
 					<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">
-						<a href="{devblocks_url}c=display&id={$result.t_mask}{/devblocks_url}" class="subject">{if $result.t_is_deleted}<span class="cerb-sprite sprite-delete2_gray"></span> {elseif $result.t_is_closed}<span class="cerb-sprite sprite-check_gray" title="{$translate->_('status.closed')}"></span> {elseif $result.t_is_waiting}<span class="cerb-sprite sprite-clock"></span> {/if}{$result.t_subject|escape}</a> 
+						{if $result.t_is_deleted}<span class="cerb-sprite sprite-delete2_gray"></span> {elseif $result.t_is_closed}<span class="cerb-sprite sprite-check_gray" title="{$translate->_('status.closed')}"></span> {elseif $result.t_is_waiting}<span class="cerb-sprite sprite-clock"></span> {/if}
+						<a href="{devblocks_url}c=display&id={$result.t_mask}{/devblocks_url}" class="subject">{$result.t_subject}</a> 
 						<a href="javascript:;" onclick="genericAjaxPopup('peek','c=tickets&a=showPreview&view_id={$view->id}&tid={$result.t_id}', null, false, '650');"><span class="ui-icon ui-icon-newwin" style="display:inline-block;vertical-align:middle;" title="{$translate->_('views.peek')}"></span></a>
 						
 						{$object_workers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_TICKET, array_keys($data), CerberusContexts::CONTEXT_WORKER)}
@@ -119,9 +120,9 @@
 					{elseif $column=="t_id"}
 					<td><a href="{devblocks_url}c=display&id={$result.t_id}{/devblocks_url}">{$result.t_id}</a></td>
 					{elseif $column=="t_mask"}
-					<td><a href="{devblocks_url}c=display&id={$result.t_mask}{/devblocks_url}">{$result.t_mask|escape}</a></td>
+					<td><a href="{devblocks_url}c=display&id={$result.t_mask}{/devblocks_url}">{$result.t_mask}</a></td>
 					{elseif $column=="t_subject"}
-					<td title="{$result.t_subject}">{$result.t_subject|escape}</td>
+					<td title="{$result.t_subject}">{$result.t_subject}</td>
 					{elseif $column=="t_is_waiting"}
 					<td>{if $result.t_is_waiting}<span class="cerb-sprite sprite-clock"></span>{else}{/if}</td>
 					{elseif $column=="t_is_closed"}
@@ -147,7 +148,7 @@
 					{elseif $column=="t_team_id"}
 					<td>
 						{assign var=ticket_team_id value=$result.t_team_id}
-						{$teams.$ticket_team_id->name|escape}
+						{$teams.$ticket_team_id->name}
 					</td>
 					{elseif $column=="t_category_id"}
 						{assign var=ticket_team_id value=$result.t_team_id}
@@ -158,7 +159,7 @@
 									<a href="javascript:;" onclick="genericAjaxPopup('peek','c=groups&a=showInboxFilterPanel&id=0&group_id={$ticket_team_id}&ticket_id={$result.t_id}&view_id={$view->id}',null,false,'600');">{$translate->_('mail.view.add_filter')}</a>
 								{/if}
 							{else}
-								{$buckets.$ticket_category_id->name|escape}
+								{$buckets.$ticket_category_id->name}
 							{/if}
 						</td>
 					{elseif $column=="t_last_action_code"}
@@ -185,7 +186,7 @@
 						{/if}
 					</td>
 					{else}
-					<td>{if $result.$column}{$result.$column|escape}{/if}</td>
+					<td>{if $result.$column}{$result.$column}{/if}</td>
 					{/if}
 				{/foreach}
 				</tr>
@@ -302,5 +303,6 @@
 		}
 	});
 </script>
-
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

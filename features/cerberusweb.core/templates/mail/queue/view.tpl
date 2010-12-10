@@ -51,19 +51,19 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 		<tr class="{$tableRowClass}">
 			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" value="{$result.m_id}"></td>
 			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">
 				{if !$result.m_is_queued}
 					{if $result.m_type=="mail.compose"}
-						<a href="{devblocks_url}c=tickets&a=compose&id={$result.m_id|escape:'url'}{/devblocks_url}" class="subject">{if empty($result.m_subject)}(no subject){else}{$result.m_subject}{/if}</a>
+						<a href="{devblocks_url}c=tickets&a=compose&id={$result.m_id}{/devblocks_url}" class="subject">{if empty($result.m_subject)}(no subject){else}{$result.m_subject}{/if}</a>
 					{elseif $result.m_type=="mail.open_ticket"}
-						<a href="{devblocks_url}c=tickets&a=create&id={$result.m_id|escape:'url'}{/devblocks_url}" class="subject">{if empty($result.m_subject)}(no subject){else}{$result.m_subject}{/if}</a>
+						<a href="{devblocks_url}c=tickets&a=create&id={$result.m_id}{/devblocks_url}" class="subject">{if empty($result.m_subject)}(no subject){else}{$result.m_subject}{/if}</a>
 					{elseif $result.m_type=="ticket.reply"}
-						<a href="{devblocks_url}c=display&id={$result.m_ticket_id|escape:'url'}{/devblocks_url}#draft{$result.m_id|escape:'url'}" class="subject">{if empty($result.m_subject)}(no subject){else}{$result.m_subject}{/if}</a>
+						<a href="{devblocks_url}c=display&id={$result.m_ticket_id}{/devblocks_url}#draft{$result.m_id}" class="subject">{if empty($result.m_subject)}(no subject){else}{$result.m_subject}{/if}</a>
 					{elseif $result.m_type=="ticket.forward"}
-						<a href="{devblocks_url}c=display&id={$result.m_ticket_id|escape:'url'}{/devblocks_url}#draft{$result.m_id|escape:'url'}" class="subject">{if empty($result.m_subject)}(no subject){else}{$result.m_subject}{/if}</a>
+						<a href="{devblocks_url}c=display&id={$result.m_ticket_id}{/devblocks_url}#draft{$result.m_id}" class="subject">{if empty($result.m_subject)}(no subject){else}{$result.m_subject}{/if}</a>
 					{/if}
 				{else}
 					<b class="subject">{if empty($result.m_subject)}(no subject){else}{$result.m_subject}{/if}</b>
@@ -98,7 +98,7 @@
 				{/if}
 			</td>
 			{else}
-			<td>{$result.$column|escape}</td>
+			<td>{$result.$column}</td>
 			{/if}
 		{/foreach}
 		</tr>
@@ -142,3 +142,5 @@
 </table>
 </form>
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

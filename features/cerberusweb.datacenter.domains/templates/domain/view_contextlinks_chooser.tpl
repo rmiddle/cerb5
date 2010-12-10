@@ -38,9 +38,9 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 		<tr class="{$tableRowClass}">
-			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" title="{$result.w_name|escape}" value="{$result.w_id}"></td>
+			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" title="{$result.w_name}" value="{$result.w_id}"></td>
 			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">
 				<a href="{devblocks_url}c=datacenter.domains&m=domain&id={$result.w_id}{/devblocks_url}" class="subject">{$result.w_name}</a>
 			</td>
@@ -53,7 +53,7 @@
 				{if empty($servers)}{$servers = DAO_Server::getAll()}{/if}
 				<td>
 					{if !empty($result.$column) && isset($servers.{$result.$column})}
-						{$servers.{$result.$column}->name|escape}
+						{$servers.{$result.$column}->name}
 					{/if}
 				</td>
 			{elseif $column=="w_created"}
@@ -97,3 +97,5 @@
 </table>
 </form>
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

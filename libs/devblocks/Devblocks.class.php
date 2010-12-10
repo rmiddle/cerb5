@@ -3,7 +3,7 @@ include_once(DEVBLOCKS_PATH . "api/Model.php");
 include_once(DEVBLOCKS_PATH . "api/DAO.php");
 include_once(DEVBLOCKS_PATH . "api/Extension.php");
 
-define('PLATFORM_BUILD',2010040401);
+define('PLATFORM_BUILD',2010120101);
 
 /**
  * A platform container for plugin/extension registries.
@@ -211,9 +211,16 @@ class DevblocksPlatform extends DevblocksEngine {
 	static function stripHTML($str) {
 		// Strip all CRLF and tabs, spacify </TD>
 		$str = str_ireplace(
-			array("\r","\n","\t","</TD>"),
+			array("\r","\n","\t","</td>"),
 			array('','',' ',' '),
 			trim($str)
+		);
+		
+		// Handle XHTML variations
+		$str = str_ireplace(
+			array("<br />", "<br/>"),
+			"<br>",
+			$str
 		);
 		
 		// Turn block tags into a linefeed
@@ -4135,6 +4142,10 @@ class _DevblocksTemplateManager {
 			$instance->caching = 0;
 			$instance->cache_lifetime = 0;
 			$instance->compile_check = (defined('DEVELOPMENT_MODE') && DEVELOPMENT_MODE) ? true : false;
+			
+			// Auto-escape HTML output
+			$instance->loadFilter('variable','htmlspecialchars');
+			//$instance->register->variableFilter(array('_DevblocksTemplateManager','variable_filter_esc'));
 			
 			// Devblocks plugins
 			$instance->register->block('devblocks_url', array('_DevblocksTemplateManager', 'block_devblocks_url'));

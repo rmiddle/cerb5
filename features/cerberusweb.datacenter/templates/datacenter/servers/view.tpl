@@ -52,11 +52,11 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 		<tr class="{$tableRowClass}">
 			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" value="{$result.s_id}"></td>
 			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">
-				<a href="{devblocks_url}c=datacenter&a=server&id={$result.s_id}{/devblocks_url}" class="subject">{$result.s_name|escape}</a><a href="javascript:;" onclick="genericAjaxPopup('peek','c=datacenter&a=showServerPeek&view_id={$view->id}&id={$result.s_id}', null, false, '500');"><span class="ui-icon ui-icon-newwin" style="display:inline-block;vertical-align:middle;" title="{$translate->_('views.peek')}"></span></a>
+				<a href="{devblocks_url}c=datacenter&a=server&id={$result.s_id}{/devblocks_url}" class="subject">{$result.s_name}</a><a href="javascript:;" onclick="genericAjaxPopup('peek','c=datacenter&a=showServerPeek&view_id={$view->id}&id={$result.s_id}', null, false, '500');"><span class="ui-icon ui-icon-newwin" style="display:inline-block;vertical-align:middle;" title="{$translate->_('views.peek')}"></span></a>
 			</td>
 		</tr>
 		<tr class="{$tableRowClass}">
@@ -109,3 +109,5 @@
 </table>
 </form>
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

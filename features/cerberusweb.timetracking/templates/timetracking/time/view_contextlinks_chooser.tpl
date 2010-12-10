@@ -49,14 +49,14 @@
 		{assign var=worker_name value=$generic_worker}
 	{/if}
 	
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 		<tr class="{$tableRowClass}">
 			{if isset($activities.$activity_id->name)}
 				{$title = 'timetracking.ui.tracked_desc'|devblocks_translate:$worker_name:$result.tt_time_actual_mins:$activities.$activity_id->name}
 			{else}
 				{$title = '%s tracked %s mins'|devblocks_translate:$worker_name:$result.tt_time_actual_mins}
 			{/if}					
-			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" title="{$title|escape}" value="{$result.tt_id}"></td>
+			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" title="{$title}" value="{$result.tt_id}"></td>
 			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">
 				{if $result.tt_is_closed}<span class="cerb-sprite sprite-check_gray" title=""></span>{/if}
 				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=timetracking&a=showEntry&id={$result.tt_id}&view_id={$view->id}',null,false,'500');" class="subject">{$title}</a>
@@ -95,7 +95,7 @@
 					<a href="{$source->getLink($source_id)}">{$source->getLinkText($source_id)}</a>{/if}&nbsp;
 				</td>
 			{else}
-			<td>{$result.$column|escape}</td>
+			<td>{$result.$column}</td>
 			{/if}
 		{/foreach}
 		</tr>
@@ -133,3 +133,5 @@
 </table>
 </form>
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

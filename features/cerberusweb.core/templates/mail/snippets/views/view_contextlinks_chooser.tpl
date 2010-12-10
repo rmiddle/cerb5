@@ -38,9 +38,9 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 		<tr class="{$tableRowClass}">
-		<td align="center"><input type="checkbox" name="row_id[]" title="{$result.s_title|escape}" value="{$result.s_id}::{$result.s_context|escape}"></td>
+		<td align="center"><input type="checkbox" name="row_id[]" title="{$result.s_title}" value="{$result.s_id}::{$result.s_context}"></td>
 		{foreach from=$view->view_columns item=column name=columns}
 			{if substr($column,0,3)=="cf_"}
 				{include file="devblocks:cerberusweb.core::internal/custom_fields/view/cell_renderer.tpl"}
@@ -65,7 +65,7 @@
 			{elseif $column=="su_hits"}
 			<td>{if empty($result.$column)}0{else}{$result.$column}{/if}&nbsp;</td>
 			{else}
-			<td>{$result.$column|escape}</td>
+			<td>{$result.$column}</td>
 			{/if}
 		{/foreach}
 		</tr>
@@ -103,3 +103,5 @@
 </table>
 </form>
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

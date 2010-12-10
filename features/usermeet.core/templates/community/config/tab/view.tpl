@@ -49,7 +49,7 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 		<tr class="{$tableRowClass}">
 			<td align="center"><input type="checkbox" name="row_id[]" value="{$result.ct_id}"></td>
 		{foreach from=$view->view_columns item=column name=columns}
@@ -58,7 +58,7 @@
 				{include file="devblocks:cerberusweb.core::internal/custom_fields/view/cell_renderer.tpl"}
 			{elseif $column=="ct_name"}
 			<td>
-				<a href="{devblocks_url}c=community&portal={$result.ct_code}{/devblocks_url}" class="subject">{if !empty($result.ct_name)}{$result.ct_name|escape}{elseif isset($tool_extensions.$extid)}{$tool_extensions.$extid->name|escape}{else}(no name){/if}</a>&nbsp;
+				<a href="{devblocks_url}c=community&portal={$result.ct_code}{/devblocks_url}" class="subject">{if !empty($result.ct_name)}{$result.ct_name}{elseif isset($tool_extensions.$extid)}{$tool_extensions.$extid->name}{else}(no name){/if}</a>&nbsp;
 			</td>
 			{elseif $column=="ct_extension_id"}
 			<td>
@@ -68,7 +68,7 @@
 				{/if}
 			</td>
 			{else}
-			<td>{$result.$column|escape}</td>
+			<td>{$result.$column}</td>
 			{/if}
 		{/foreach}
 		</tr>
@@ -112,3 +112,5 @@
 </table>
 </form>
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

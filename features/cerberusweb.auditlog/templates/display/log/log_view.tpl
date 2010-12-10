@@ -44,7 +44,7 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 		<tr class="{$tableRowClass}">
 			<td align="center" rowspan="1"><input type="checkbox" name="row_id[]" value="{$result.l_id}"></td>
 		{foreach from=$view->view_columns item=column name=columns}
@@ -73,6 +73,16 @@
 						{$result.l_change_value|devblocks_date}
 					{elseif $change_field=="created_date"}
 						{$result.l_change_value|devblocks_date}
+					{elseif $change_field=="last_action_code"}
+						{if $result.l_change_value == "O"}
+							{$translate->_('ticket.last_action.opened')}
+						{elseif $result.l_change_value == "R"}
+							{$translate->_('ticket.last_action.recipient_reply')}
+						{elseif $result.l_change_value == "W"}
+							{$translate->_('ticket.last_action.worker_reply')}
+						{else}
+							{$result.l_change_value}
+						{/if}
 					{elseif $change_field=="due_date"}
 						{$result.l_change_value|devblocks_date}
 					{elseif $change_field=="is_waiting" || $change_field=="is_deleted" || $change_field=="is_closed"}
@@ -91,7 +101,7 @@
 					&nbsp;
 				</td>
 			{else}
-			<td>{$result.$column|escape}</td>
+			<td>{$result.$column}</td>
 			{/if}
 		{/foreach}
 		</tr>
@@ -132,3 +142,5 @@
 </table>
 </form>
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

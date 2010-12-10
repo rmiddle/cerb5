@@ -54,7 +54,7 @@
 	
 	{assign var=worker_id value=$result.f_worker_id}
 	{assign var=mood value=$result.f_quote_mood}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD'||getEventTarget(event)=='DIV') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 		<tr class="{$tableRowClass}">
 			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" value="{$result.f_id}"></td>
 		{foreach from=$view->view_columns item=column name=columns}
@@ -85,9 +85,9 @@
 					{/if}
 				</td>
 			{elseif $column=="f_source_url"}
-				<td><a href="{$result.f_source_url|escape}" target="_blank" title="{$result.f_source_url|escape}">{$result.f_source_url|truncate:35:'...':true:false}</a>&nbsp;</td>
+				<td><a href="{$result.f_source_url}" target="_blank" title="{$result.f_source_url}">{$result.f_source_url|truncate:35:'...':true:false}</a>&nbsp;</td>
 			{else}
-				<td>{$result.$column|escape}</td>
+				<td>{$result.$column}</td>
 			{/if}
 		{/foreach}
 		</tr>
@@ -138,3 +138,5 @@
 </table>
 </form>
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

@@ -49,7 +49,7 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
 		<tr class="{$tableRowClass}">
 			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" value="{$result.a_id}"></td>
 			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">
@@ -67,15 +67,15 @@
 			{elseif $column=="m_is_outgoing"}
 			<td>{if $result.m_is_outgoing}{$translate->_('mail.sent')}{else}{$translate->_('mail.received')}{/if}&nbsp;</td>
 			{elseif $column=="t_mask"}
-				<td><a href="{devblocks_url}c=display&id={$result.t_mask}{/devblocks_url}" title="{$result.t_subject|escape}">{$result.t_mask}</a></td>
+				<td><a href="{devblocks_url}c=display&id={$result.t_mask}{/devblocks_url}" title="{$result.t_subject}">{$result.t_mask}</a></td>
 			{elseif $column=="t_id"}
-				<td><a href="{devblocks_url}c=display&id={$result.t_mask}{/devblocks_url}" title="{$result.t_subject|escape}">{$result.t_id}</a></td>
+				<td><a href="{devblocks_url}c=display&id={$result.t_mask}{/devblocks_url}" title="{$result.t_subject}">{$result.t_id}</a></td>
 			{elseif $column=="t_subject"}
-				<td><a href="{devblocks_url}c=display&id={$result.t_mask}{/devblocks_url}" title="{$result.t_subject|escape}">{$result.t_subject|truncate:45:'...'}</a></td>
+				<td><a href="{devblocks_url}c=display&id={$result.t_mask}{/devblocks_url}" title="{$result.t_subject}">{$result.t_subject|truncate:45:'...'}</a></td>
 			{elseif $column=="ad_email"}
-				<td><a href="javascript:;" onclick="genericAjaxPopup('peek','c=contacts&a=showAddressPeek&email={$result.ad_email|escape:'url'}&view_id={$view->id}',null,false,'500');" title="{$result.ad_email|escape}">{$result.ad_email|truncate:64:'...':true:true}</a></td>
+				<td><a href="javascript:;" onclick="genericAjaxPopup('peek','c=contacts&a=showAddressPeek&email={$result.ad_email|escape:'url'}&view_id={$view->id}',null,false,'500');" title="{$result.ad_email}">{$result.ad_email|truncate:64:'...':true:true}</a></td>
 			{else}
-			<td>{$result.$column|escape}</td>
+			<td>{$result.$column}</td>
 			{/if}
 		{/foreach}
 		</tr>
@@ -119,3 +119,5 @@
 </table>
 </form>
 <br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}
