@@ -530,12 +530,15 @@ class CerberusParser {
 					} 				
 					
 					if ($settings->get('cerberusweb.core',CerberusSettings::DISABLE_WORKER_EMAIL_TO_CUSTOMER,'0')) {
-						$comment_id = DAO_TicketComment::create(array(
-							DAO_TicketComment::ADDRESS_ID => $fromAddressInst->id,
-							DAO_TicketComment::CREATED => time(),
-							DAO_TicketComment::TICKET_ID => $id,
-							DAO_TicketComment::COMMENT => $message->body,
-						));
+						$fields = array(
+							DAO_Comment::CREATED => time(),
+							DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_TICKET,
+							DAO_Comment::CONTEXT_ID => $id,
+							DAO_Comment::ADDRESS_ID => $fromAddressInst->id,
+							DAO_Comment::COMMENT => $message->body,
+						);
+						$comment_id = DAO_Comment::create($fields);
+
 					} else {
 						$result = CerberusMail::sendTicketMessage(array(
 					        'ticket_id' => $id,
