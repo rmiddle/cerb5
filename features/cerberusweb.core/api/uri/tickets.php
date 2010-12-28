@@ -1254,10 +1254,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		@$spam_training = DevblocksPlatform::importGPC($_REQUEST['spam_training'],'string','');
 		@$ticket_reopen = DevblocksPlatform::importGPC(@$_REQUEST['ticket_reopen'],'string','');
 
-		if(isset($ticket_reopen) && !empty($ticket_reopen)) {
-			$due = strtotime($ticket_reopen);
-		}
-		
 		$fields = array(
 			DAO_Ticket::SUBJECT => $subject,
 		);
