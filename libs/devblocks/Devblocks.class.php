@@ -2951,7 +2951,22 @@ class _DevblocksSearchEngineMysqlFulltext {
 		DevblocksPlatform::clearCache(DevblocksPlatform::CACHE_TABLES);
 		
 		return (false !== $result) ? true : false;
-	}	
+	}
+	
+	public function delete($ns, $ids) {
+		if(!is_array($ids))
+			$ids = array($ids);
+			
+		if(empty($ns) || empty($ids))
+			return;
+			
+		$result = mysql_query(sprintf("DELETE FROM fulltext_%s WHERE id IN (%s) ",
+			$this->escapeNamespace($ns),
+			implode(',', $ids)
+		), $this->_db);
+		
+		return (false !== $result) ? true : false;
+	}
 };
 
 class _DevblocksEventManager {
@@ -4209,47 +4224,51 @@ class _DevblocksTemplateManager {
 		
 		$whole = '';
 
+		// Prefix
 		if($is_delta) {
 			if($diffsecs > 0)
 				$whole .= '+';
-			if($diffsecs < 0)
+			elseif($diffsecs < 0)
 				$whole .= '-';
 		}
 		
 		// The past
 		if($diffsecs >= 0) {
 			if($diffsecs >= 31557600) { // years
-				$whole .= floor($diffsecs/31557600).'yr';
+				$whole .= floor($diffsecs/31557600).' year';
 			} elseif($diffsecs >= 2592000) { // mo
-				$whole .= floor($diffsecs/2592000).'mo';
+				$whole .= floor($diffsecs/2592000).' month';
 			} elseif($diffsecs >= 86400) { // days
-				$whole .= floor($diffsecs/86400).'d';
+				$whole .= floor($diffsecs/86400).' day';
 			} elseif($diffsecs >= 3600) { // hours
-				$whole .= floor($diffsecs/3600).'h';
+				$whole .= floor($diffsecs/3600).' hour';
 			} elseif($diffsecs >= 60) { // mins
-				$whole .= floor($diffsecs/60).'m';
+				$whole .= floor($diffsecs/60).' min';
 			} elseif($diffsecs >= 0) { // secs
-				$whole .= $diffsecs.'s';
+				$whole .= $diffsecs.' sec';
 			}
-			
-			if(!$is_delta)
-				$whole .= ' ago';
 			
 		} else { // The future
 			if($diffsecs <= -31557600) { // years
-				$whole .= floor($diffsecs/-31557600).'yr';
+				$whole .= floor($diffsecs/-31557600).' year';
 			} elseif($diffsecs <= -2592000) { // mo
-				$whole .= floor($diffsecs/-2592000).'mo';
+				$whole .= floor($diffsecs/-2592000).' month';
 			} elseif($diffsecs <= -86400) { // days
-				$whole .= floor($diffsecs/-86400).'d';
+				$whole .= floor($diffsecs/-86400).' day';
 			} elseif($diffsecs <= -3600) { // hours
-				$whole .= floor($diffsecs/-3600).'h';
+				$whole .= floor($diffsecs/-3600).' hour';
 			} elseif($diffsecs <= -60) { // mins
-				$whole .= floor($diffsecs/-60).'m';
+				$whole .= floor($diffsecs/-60).' min';
 			} elseif($diffsecs <= 0) { // secs
-				$whole .= $diffsecs.'s';
+				$whole .= $diffsecs.' sec';
 			}
 		}
+
+		// Pluralize
+		$whole .= (1 == abs(intval($whole))) ? '' : 's';
+
+		if($diffsecs > 0 && !$is_delta)
+			$whole .= ' ago';
 		
 		return $whole;
 	}	
