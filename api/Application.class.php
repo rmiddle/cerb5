@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011010401);
+define("APP_BUILD", 2011010801);
 define("APP_VERSION", '5.3.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -306,6 +306,7 @@ class CerberusApplication extends DevblocksApplication {
 		
 		// Clean up missing plugins
 		DAO_Platform::cleanupPluginTables();
+		DAO_Platform::maint();
 		
 		// Registry
 		$plugins = DevblocksPlatform::getPluginRegistry();
