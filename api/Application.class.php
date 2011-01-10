@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011010801);
+define("APP_BUILD", 2011010901);
 define("APP_VERSION", '5.3.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -678,9 +678,6 @@ class CerberusContexts {
 			case 'cerberusweb.contexts.group':
 				self::_getGroupContext($context_object, $labels, $values, $prefix);
 				break;
-			case 'cerberusweb.contexts.kb_article':
-				self::_getKbArticleContext($context_object, $labels, $values, $prefix);
-				break;
 			case 'cerberusweb.contexts.message':
 				self::_getMessageContext($context_object, $labels, $values, $prefix);
 				break;
@@ -872,95 +869,6 @@ class CerberusContexts {
 		
 		return true;
 	}
-	
-	/**
-	 * 
-	 * @param $article
-	 * @param $token_labels
-	 * @param $token_values
-	 * @param $prefix
-	 */
-	private static function _getKbArticleContext($article, &$token_labels, &$token_values, $prefix=null) {
-		if(is_null($prefix))
-			$prefix = 'Article:';
-		
-		$translate = DevblocksPlatform::getTranslationService();
-		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_KB_ARTICLE);
-		
-		// Polymorph
-		if(is_numeric($article)) {
-			$article = DAO_KbArticle::get($article);
-		} elseif($article instanceof Model_KbArticle) {
-			// It's what we want already.
-		} else {
-			$article = null;
-		}
-		/* @var $article Model_KbArticle */
-			
-		// Token labels
-		$token_labels = array(
-			'content' => $prefix.$translate->_('kb_article.content'),
-			'id' => $prefix.$translate->_('common.id'),
-			'title' => $prefix.$translate->_('kb_article.title'),
-			'updated|date' => $prefix.$translate->_('kb_article.updated'),
-			'views' => $prefix.$translate->_('kb_article.views'),
-		);
-		
-		if(is_array($fields))
-		foreach($fields as $cf_id => $field) {
-			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
-		}
-
-		// Token values
-		$token_values = array();
-		
-		// Token values
-		if(null != $article) {
-			$token_values['content'] = $article->getContent();
-			$token_values['id'] = $article->id;
-			$token_values['title'] = $article->title;
-			$token_values['updated'] = $article->updated;
-			$token_values['views'] = $article->views;
-			
-			// Categories
-			if(null != ($categories = $article->getCategories()) && is_array($categories)) {
-				$token_values['categories'] = array();
-				
-				foreach($categories as $category_id => $trail) {
-					foreach($trail as $step_id => $step) {
-						if(!isset($token_values['categories'][$category_id]))
-							$token_values['categories'][$category_id] = array();
-						$token_values['categories'][$category_id][$step_id] = $step->name;
-					}
-				}
-			}
-			
-			$token_values['custom'] = array();
-			
-			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_KB_ARTICLE, $article->id));
-			if(is_array($field_values) && !empty($field_values)) {
-				foreach($field_values as $cf_id => $cf_val) {
-					if(!isset($fields[$cf_id]))
-						continue;
-					
-					// The literal value
-					if(null != $article)
-						$token_values['custom'][$cf_id] = $cf_val;
-					
-					// Stringify
-					if(is_array($cf_val))
-						$cf_val = implode(', ', $cf_val);
-						
-					if(is_string($cf_val)) {
-						if(null != $article)
-							$token_values['custom_'.$cf_id] = $cf_val;
-					}
-				}
-			}
-		}
-		
-		return true;
-	}	
 	
 	/**
 	 * 
