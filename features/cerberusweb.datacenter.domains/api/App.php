@@ -68,11 +68,10 @@ class Page_Domains extends CerberusPageExtension {
 		$visit = CerberusApplication::getVisit();
 
 		$response = DevblocksPlatform::getHttpResponse();
-		$tpl->assign('request_path', implode('/',$response->path));
 
 		// Remember the last tab/URL
 		if(null == ($selected_tab = @$response->path[1])) {
-			//$selected_tab = $visit->get(CerberusVisit::KEY_ACTIVITY_TAB, '');
+			$selected_tab = $visit->get('cerberusweb.datacenter.domain.tab', '');
 		}
 		$tpl->assign('selected_tab', $selected_tab);
 

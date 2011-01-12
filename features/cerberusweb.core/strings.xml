@@ -417,6 +417,12 @@
 		<tu tuid='common.worklist'>
 			<tuv xml:lang="en_US"><seg>worklist</seg></tuv>
 		</tu>
+		<tu tuid='common.workspace'>
+			<tuv xml:lang="en_US"><seg>Workspace</seg></tuv>
+		</tu>
+		<tu tuid='common.workspaces'>
+			<tuv xml:lang="en_US"><seg>Workspaces</seg></tuv>
+		</tu>
 		<tu tuid='common.year'>
 			<tuv xml:lang="en_US"><seg>year</seg></tuv>
 		</tu>
@@ -1023,12 +1029,6 @@
 		<tu tuid='home.my_tickets.view.title'>
 			<tuv xml:lang="en_US"><seg>Mail for %s</seg></tuv>
 		</tu>
-		<tu tuid='home.workspaces.rename'>
-			<tuv xml:lang="en_US"><seg>Rename Workspace</seg></tuv>
-		</tu>
-		<tu tuid='home.workspaces.worklist.add.existing'>
-			<tuv xml:lang="en_US"><seg>Existing</seg></tuv>
-		</tu>
 		<tu tuid='home.workspaces.worklist.add.new'>
 			<tuv xml:lang="en_US"><seg>New</seg></tuv>
 		</tu>
@@ -1281,9 +1281,6 @@
 		</tu>
 		<tu tuid='mail.workspaces.none'>
 			<tuv xml:lang="en_US"><seg>You haven't created any custom worklists.</seg></tuv>
-		</tu>
-		<tu tuid='mail.workspaces.workspace'>
-			<tuv xml:lang="en_US"><seg>Workspace</seg></tuv>
 		</tu>
 		
 		<!-- Mail Queue -->

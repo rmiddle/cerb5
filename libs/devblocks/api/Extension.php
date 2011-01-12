@@ -48,14 +48,13 @@ abstract class Extension_DevblocksContext extends DevblocksExtension {
     abstract function getPermalink($context_id);
     abstract function getContext($object, &$token_labels, &$token_values, $prefix=null);
     abstract function getChooserView();
-    abstract function getView($context, $context_id, $options=array());
+    function getViewClass() {
+    	return @$this->manifest->params['view_class'];
+    }
+    abstract function getView($context=null, $context_id=null, $options=array());
 };
 
 abstract class DevblocksHttpResponseListenerExtension extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-    
 	function run(DevblocksHttpResponse $request, Smarty $tpl) {
 	}
 }
@@ -63,10 +62,6 @@ abstract class DevblocksHttpResponseListenerExtension extends DevblocksExtension
 abstract class Extension_DevblocksStorageEngine extends DevblocksExtension {
 	protected $_options = array();
 
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	abstract function renderConfig(Model_DevblocksStorageProfile $profile);
 	abstract function saveConfig(Model_DevblocksStorageProfile $profile);
 	abstract function testConfig();
@@ -87,10 +82,6 @@ abstract class Extension_DevblocksStorageEngine extends DevblocksExtension {
 };
 
 abstract class Extension_DevblocksStorageSchema extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	abstract function render();
 	abstract function renderConfig();
 	abstract function saveConfig();

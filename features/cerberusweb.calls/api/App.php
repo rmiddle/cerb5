@@ -325,10 +325,6 @@ class CallsActivityTab extends Extension_ActivityTab {
 	const VIEW_ACTIVITY_CALLS = 'activity_calls';
 	
 	function showTab() {
-		// Remember the tab
-		$visit = CerberusApplication::getVisit();
-		$visit->set(CerberusVisit::KEY_ACTIVITY_TAB, 'calls');
-		
 		$tpl = DevblocksPlatform::getTemplateService();
 		
 		$defaults = new C4_AbstractViewModel();
@@ -351,10 +347,4 @@ class CallsActivityTab extends Extension_ActivityTab {
 	}
 }
 endif;
-
-// Workspace Sources
-
-class ChWorkspaceSource_Call extends Extension_WorkspaceSource {
-	const ID = 'calls.workspace.source.call';
-};
 

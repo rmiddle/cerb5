@@ -97,7 +97,6 @@ class UmCommunityPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		
 		$response = DevblocksPlatform::getHttpResponse();
-		$tpl->assign('request_path', implode('/',$response->path));
 		
 		$stack = $response->path;
 		array_shift($stack); // community
@@ -108,7 +107,7 @@ class UmCommunityPage extends CerberusPageExtension {
 			$tpl->assign('tool', $tool);
 			$tpl->assign('tool_manifests', DevblocksPlatform::getExtensions('usermeet.tool', false));
 
-//			$tab_manifests = DevblocksPlatform::getExtensions('cerberusweb.activity.tab', false);
+//			$tab_manifests = DevblocksPlatform::getExtensions(Extension_ActivityTab::POINT, false);
 //			uasort($tab_manifests, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
 //			$tpl->assign('tab_manifests', $tab_manifests);
 

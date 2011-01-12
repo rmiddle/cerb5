@@ -72,8 +72,12 @@ class ChContactsPage extends CerberusPageExtension {
 		$stack = $response->path;
 
 		@array_shift($stack); // contacts
-		@$selected_tab = array_shift($stack); // orgs|addresses|*
 		
+		// Remember the last tab/URL
+		$visit = CerberusApplication::getVisit();
+		if(null == ($selected_tab = @$response->path[1])) {
+			$selected_tab = $visit->get(Extension_AddressBookTab::POINT, '');
+		}
 		$tpl->assign('selected_tab', $selected_tab);
 		
 		// Allow a non-tab renderer
@@ -142,12 +146,33 @@ class ChContactsPage extends CerberusPageExtension {
 				
 		} // switch (tab)
 		
+		$tab_manifests = DevblocksPlatform::getExtensions(Extension_AddressBookTab::POINT, false);
+		uasort($tab_manifests, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
+		$tpl->assign('tab_manifests', $tab_manifests);
+		
 		$tpl->display('devblocks:cerberusweb.core::contacts/index.tpl');
 		return;
 	}
 	
+	// Ajax
+	function showTabAction() {
+		@$ext_id = DevblocksPlatform::importGPC($_REQUEST['ext_id'],'string','');
+		
+		$visit = CerberusApplication::getVisit();
+
+		if(null != ($tab_mft = DevblocksPlatform::getExtension($ext_id)) 
+			&& null != ($inst = $tab_mft->createInstance()) 
+			&& $inst instanceof Extension_AddressBookTab) {
+				$visit->set(Extension_AddressBookTab::POINT, $inst->manifest->params['uri']);
+				$inst->showTab();
+		}
+	}
+	
 	function showOrgsTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
+		$visit = CerberusApplication::getVisit();
+		
+		$visit->set(Extension_AddressBookTab::POINT, 'orgs');
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'View_ContactOrg';
@@ -161,6 +186,9 @@ class ChContactsPage extends CerberusPageExtension {
 	
 	function showAddysTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
+		$visit = CerberusApplication::getVisit();
+		
+		$visit->set(Extension_AddressBookTab::POINT, 'addresses');
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'View_Address';
@@ -176,6 +204,9 @@ class ChContactsPage extends CerberusPageExtension {
 	
 	function showPeopleTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
+		$visit = CerberusApplication::getVisit();
+		
+		$visit->set(Extension_AddressBookTab::POINT, 'people');
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'View_ContactPerson';
@@ -198,6 +229,9 @@ class ChContactsPage extends CerberusPageExtension {
 	
 	function showListsTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
+		$visit = CerberusApplication::getVisit();
+		
+		$visit->set(Extension_AddressBookTab::POINT, 'lists');
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'View_ContactList';
@@ -220,7 +254,10 @@ class ChContactsPage extends CerberusPageExtension {
 	
 	function showImportTabAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
+		$visit = CerberusApplication::getVisit();
 	
+		$visit->set(Extension_AddressBookTab::POINT, 'import');
+		
 		if(!$active_worker->hasPriv('core.addybook.import'))
 			return;
 		
@@ -554,7 +591,7 @@ class ChContactsPage extends CerberusPageExtension {
 	}
 	
 	// Ajax
-	function showTabAction() {
+	function showOrgTabAction() {
 		@$ext_id = DevblocksPlatform::importGPC($_REQUEST['ext_id'],'string','');
 		
 		if(null != ($tab_mft = DevblocksPlatform::getExtension($ext_id)) 

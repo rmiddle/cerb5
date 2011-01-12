@@ -1291,6 +1291,16 @@
         <seg>Arbeitsliste</seg>
       </tuv>
     </tu>
+    <tu tuid="common.workspace">
+      <tuv xml:lang="de_DE">
+        <seg>Arbeitsbereich</seg>
+      </tuv>
+    </tu>
+    <tu tuid="common.workspaces">
+      <tuv xml:lang="de_DE">
+        <seg>Arbeitsbereichen</seg>
+      </tuv>
+    </tu>
     <tu tuid="common.year">
       <tuv xml:lang="de_DE">
         <seg>Jahr</seg>
@@ -1909,11 +1919,6 @@
     <tu tuid="dashboard.remove_view">
       <tuv xml:lang="de_DE">
         <seg>Ticketliste aus Ansicht entfernen</seg>
-      </tuv>
-    </tu>
-    <tu tuid="dashboard.reorder">
-      <tuv xml:lang="de_DE">
-        <seg>Ansicht anpassen</seg>
       </tuv>
     </tu>
     <tu tuid="dashboard.switch">
@@ -2536,16 +2541,6 @@
         <seg>Arbeitsbereiche (Eigenschaften)</seg>
       </tuv>
     </tu>
-    <tu tuid="home.workspaces.rename">
-      <tuv xml:lang="de_DE">
-        <seg>Arbeitsbereich umbenennen</seg>
-      </tuv>
-    </tu>
-    <tu tuid="home.workspaces.worklist.add.existing">
-      <tuv xml:lang="de_DE">
-        <seg>Existent</seg>
-      </tuv>
-    </tu>
     <tu tuid="home.workspaces.worklist.add.new">
       <tuv xml:lang="de_DE">
         <seg>Neu</seg>
@@ -2804,11 +2799,6 @@
     <tu tuid="mail.workspaces.none">
       <tuv xml:lang="de_DE">
         <seg>Sie haben noch keine Arbeitslisten</seg>
-      </tuv>
-    </tu>
-    <tu tuid="mail.workspaces.workspace">
-      <tuv xml:lang="de_DE">
-        <seg>Arbeitsbereich</seg>
       </tuv>
     </tu>
     <tu tuid="mail_queue.is_queued">

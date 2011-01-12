@@ -70,16 +70,13 @@ class ChTicketsPage extends CerberusPageExtension {
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-
 		$visit = CerberusApplication::getVisit();
 		$active_worker = $visit->getWorker();
-		
 		$response = DevblocksPlatform::getHttpResponse();
-		$tpl->assign('request_path', implode('/',$response->path));
 		
 		// Remember the last tab/URL
 		if(null == ($selected_tab = @$response->path[1])) {
-			$selected_tab = $visit->get(CerberusVisit::KEY_MAIL_MODE, '');
+			$selected_tab = $visit->get(Extension_MailTab::POINT, '');
 		}
 		$tpl->assign('selected_tab', $selected_tab);
 		
@@ -221,9 +218,6 @@ class ChTicketsPage extends CerberusPageExtension {
 				$quick_search_type = $visit->get('quick_search_type');
 				$tpl->assign('quick_search_type', $quick_search_type);
 
-				$tab_manifests = DevblocksPlatform::getExtensions('cerberusweb.mail.tab', false);
-				$tpl->assign('tab_manifests', $tab_manifests);
-				
 				$tpl->display('devblocks:cerberusweb.core::tickets/index.tpl');
 				break;
 		}
@@ -272,17 +266,15 @@ class ChTicketsPage extends CerberusPageExtension {
 	
 	function showWorkflowTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		
 		$visit = CerberusApplication::getVisit();
 		$translate = DevblocksPlatform::getTranslationService();
+		$active_worker = CerberusApplication::getActiveWorker();
 		
 		// Remember the tab
-		$visit->set(CerberusVisit::KEY_MAIL_MODE, 'workflow');
+		$visit->set(Extension_MailTab::POINT, 'workflow');
 		
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
-		
-		$active_worker = CerberusApplication::getActiveWorker();
 		
 		$groups = DAO_Group::getAll();
 		$tpl->assign('groups', $groups);
@@ -360,7 +352,6 @@ class ChTicketsPage extends CerberusPageExtension {
 	
 	function showMessagesTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		
 		$visit = CerberusApplication::getVisit();
 		$active_worker = CerberusApplication::getActiveWorker();
 		
@@ -372,7 +363,7 @@ class ChTicketsPage extends CerberusPageExtension {
 //		);
 		
 		// Remember the tab
-		$visit->set(CerberusVisit::KEY_MAIL_MODE, 'messages');		
+		$visit->set(Extension_MailTab::POINT, 'messages');
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = CerberusApplication::VIEW_MAIL_MESSAGES;
@@ -401,7 +392,6 @@ class ChTicketsPage extends CerberusPageExtension {
 	
 	function showSearchTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		
 		$visit = CerberusApplication::getVisit();
 		$active_worker = CerberusApplication::getActiveWorker();
 		$memberships = $active_worker->getMemberships();
@@ -414,7 +404,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		);
 		
 		// Remember the tab
-		$visit->set(CerberusVisit::KEY_MAIL_MODE, 'search');		
+		$visit->set(Extension_MailTab::POINT, 'search');
 		
 		// [TODO] Convert to defaults
 		
@@ -448,11 +438,10 @@ class ChTicketsPage extends CerberusPageExtension {
 	function showDraftsTabAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
 		$visit = CerberusApplication::getVisit();
-		
 		$tpl = DevblocksPlatform::getTemplateService();
 
 		// Remember the tab
-		$visit->set(CerberusVisit::KEY_MAIL_MODE, 'drafts');
+		$visit->set(Extension_MailTab::POINT, 'drafts');
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'View_MailQueue';
@@ -684,11 +673,10 @@ class ChTicketsPage extends CerberusPageExtension {
 	function showSnippetsTabAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
 		$visit = CerberusApplication::getVisit();
-		
 		$tpl = DevblocksPlatform::getTemplateService();
 
 		// Remember the tab
-		$visit->set(CerberusVisit::KEY_MAIL_MODE, 'snippets');
+		$visit->set(Extension_MailTab::POINT, 'snippets');
 		
 		// [TODO] Use $defaults
 		$view = C4_AbstractViewLoader::getView('mail_snippets');
@@ -1195,6 +1183,9 @@ class ChTicketsPage extends CerberusPageExtension {
 		// Translate email to group id
 		if(is_array($group_settings))
 		foreach($group_settings as $settings_group_id => $settings) {
+			if(!is_array($settings) || !isset($settings[DAO_GroupSettings::SETTING_REPLY_FROM]))
+				continue;
+				
 			if(0==strcasecmp($settings[DAO_GroupSettings::SETTING_REPLY_FROM], $email)) {
 				$group_id = $settings_group_id;
 				break;

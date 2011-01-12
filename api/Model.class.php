@@ -1086,25 +1086,6 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 	}			
 };
 
-class Model_WorkerWorkspaceList {
-	public $id = 0;
-	public $worker_id = 0;
-	public $workspace = '';
-	public $source_extension = '';
-	public $list_view = '';
-	public $list_pos = 0;
-};
-
-class Model_WorkerWorkspaceListView {
-	public $title = 'New List';
-//	public $workspace = '';
-	public $columns = array();
-	public $num_rows = 10;
-	public $params = array();
-	public $sort_by = null;
-	public $sort_asc = 1;
-};
-
 class Model_Activity {
 	public $translation_code;
 	public $params;
@@ -1501,10 +1482,8 @@ class Model_MailToGroupRule {
 class CerberusVisit extends DevblocksVisit {
 	private $worker_id;
 
-	const KEY_ACTIVITY_TAB = 'activity_tab';
 	const KEY_VIEW_LAST_ACTION = 'view_last_action';
 	const KEY_MY_WORKSPACE = 'view_my_workspace';
-	const KEY_MAIL_MODE = 'mail_mode';
 	const KEY_WORKFLOW_FILTER = 'workflow_filter';
 
 	public function __construct() {

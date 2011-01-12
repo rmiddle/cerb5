@@ -67,12 +67,11 @@ class ChActivityPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		
 		$response = DevblocksPlatform::getHttpResponse();
-		$tpl->assign('request_path', implode('/',$response->path));
 
 		// Remember the last tab/URL
 		$visit = CerberusApplication::getVisit();
 		if(null == ($selected_tab = @$response->path[1])) {
-			$selected_tab = $visit->get(CerberusVisit::KEY_ACTIVITY_TAB, '');
+			$selected_tab = $visit->get(Extension_ActivityTab::POINT, '');
 		}
 		$tpl->assign('selected_tab', $selected_tab);
 
@@ -80,7 +79,7 @@ class ChActivityPage extends CerberusPageExtension {
 		$stack = $response->path;
 		array_shift($stack); // activity
 		
-		$tab_manifests = DevblocksPlatform::getExtensions('cerberusweb.activity.tab', false);
+		$tab_manifests = DevblocksPlatform::getExtensions(Extension_ActivityTab::POINT, false);
 		uasort($tab_manifests, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
 		$tpl->assign('tab_manifests', $tab_manifests);
 		
@@ -91,10 +90,13 @@ class ChActivityPage extends CerberusPageExtension {
 	function showTabAction() {
 		@$ext_id = DevblocksPlatform::importGPC($_REQUEST['ext_id'],'string','');
 		
+		$visit = CerberusApplication::getVisit();
+		
 		if(null != ($tab_mft = DevblocksPlatform::getExtension($ext_id)) 
 			&& null != ($inst = $tab_mft->createInstance()) 
 			&& $inst instanceof Extension_ActivityTab) {
-			$inst->showTab();
+				$visit->set(Extension_ActivityTab::POINT, $inst->manifest->params['uri']);
+				$inst->showTab();
 		}
 	}
 	

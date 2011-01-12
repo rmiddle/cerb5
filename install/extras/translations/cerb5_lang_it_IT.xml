@@ -476,6 +476,16 @@
         <seg></seg>
       </tuv>
     </tu>
+    <tu tuid="common.workspace">
+      <tuv xml:lang="it_IT">
+        <seg></seg>
+      </tuv>
+    </tu>
+    <tu tuid="common.workspaces">
+      <tuv xml:lang="it_IT">
+        <seg></seg>
+      </tuv>
+    </tu>
     <tu tuid="common.year">
       <tuv xml:lang="it_IT">
         <seg></seg>
@@ -744,11 +754,6 @@
     <tu tuid="dashboard.remove_view">
       <tuv xml:lang="it_IT">
         <seg>Remove ticket list from dashboard</seg>
-      </tuv>
-    </tu>
-    <tu tuid="dashboard.reorder">
-      <tuv xml:lang="it_IT">
-        <seg>arrange workspace </seg>
       </tuv>
     </tu>
     <tu tuid="dashboard.switch">
@@ -1362,11 +1367,6 @@
       </tuv>
     </tu>
     <tu tuid="mail.workspaces.none">
-      <tuv xml:lang="it_IT">
-        <seg></seg>
-      </tuv>
-    </tu>
-    <tu tuid="mail.workspaces.workspace">
       <tuv xml:lang="it_IT">
         <seg></seg>
       </tuv>
