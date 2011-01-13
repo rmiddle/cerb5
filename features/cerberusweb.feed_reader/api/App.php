@@ -79,8 +79,12 @@ class FeedsActivityTab extends Extension_ActivityTab {
 		$defaults->id = self::VIEW_ACTIVITY_FEEDS;
 		$defaults->renderSortBy = SearchFields_FeedItem::CREATED_DATE;
 		$defaults->renderSortAsc = 0;
+		$defaults->paramsDefault = array(
+			SearchFields_FeedItem::IS_CLOSED => new DevblocksSearchCriteria(SearchFields_FeedItem::IS_CLOSED,'=',0),
+		);
 		
 		$view = C4_AbstractViewLoader::getView(self::VIEW_ACTIVITY_FEEDS, $defaults);
+		C4_AbstractViewLoader::setView($view->id, $view);
 		
 		//$quick_search_type = $visit->get('crm.opps.quick_search_type');
 		//$tpl->assign('quick_search_type', $quick_search_type);
@@ -382,7 +386,90 @@ class Page_Feeds extends CerberusPageExtension {
 		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('explore',$hash,$orig_pos)));
 	}
+	
+	function viewFeedItemsUrlExploreAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
+		
+		$active_worker = CerberusApplication::getActiveWorker();
+		$url_writer = DevblocksPlatform::getUrlService();
+		
+		// Generate hash
+		$hash = md5($view_id.$active_worker->id.time()); 
+		
+		// Loop through view and get IDs
+		$view = C4_AbstractViewLoader::getView($view_id);
 
+		// Page start
+		@$explore_from = DevblocksPlatform::importGPC($_REQUEST['explore_from'],'integer',0);
+		if(empty($explore_from)) {
+			$orig_pos = 1+($view->renderPage * $view->renderLimit);
+		} else {
+			$orig_pos = 1;
+		}
+
+		$view->renderPage = 0;
+		$view->renderLimit = 25;
+		$pos = 0;
+		
+		do {
+			$models = array();
+			list($results, $total) = $view->getData();
+
+			// Summary row
+			if(0==$view->renderPage) {
+				$model = new Model_ExplorerSet();
+				$model->hash = $hash;
+				$model->pos = $pos++;
+				$model->params = array(
+					'title' => $view->name,
+					'created' => time(),
+//					'worker_id' => $active_worker->id,
+					'total' => $total,
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=activity&tab=feeds', true),
+					'toolbar_extension_id' => 'cerberusweb.feed_reader.item.explore.toolbar',
+				);
+				$models[] = $model; 
+				
+				$view->renderTotal = false; // speed up subsequent pages
+			}
+			
+			if(is_array($results))
+			foreach($results as $opp_id => $row) {
+				if($opp_id==$explore_from)
+					$orig_pos = $pos;
+				
+				$model = new Model_ExplorerSet();
+				$model->hash = $hash;
+				$model->pos = $pos++;
+				$model->params = array(
+					'id' => $row[SearchFields_FeedItem::ID],
+					'url' => $row[SearchFields_FeedItem::URL],
+					'is_closed' => $row[SearchFields_FeedItem::IS_CLOSED],
+				);
+				$models[] = $model; 
+			}
+			
+			DAO_ExplorerSet::createFromModels($models);
+			
+			$view->renderPage++;
+			
+		} while(!empty($results));
+		
+		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('explore',$hash,$orig_pos)));
+	}	
+
+	function exploreItemStatusAction() {
+		@$id = DevblocksPlatform::importGPC($_REQUEST['id'], 'integer', 0);
+		@$is_closed = DevblocksPlatform::importGPC($_REQUEST['is_closed'], 'integer', 0);
+		
+		if(empty($id))
+			return;
+		
+		DAO_FeedItem::update($id, array(
+			DAO_FeedItem::IS_CLOSED => ($is_closed) ? 1 : 0,
+		));
+	}
+	
 	function showFeedsManagerPopupAction() {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'], 'string', '');
 
@@ -436,5 +523,12 @@ class Page_Feeds extends CerberusPageExtension {
 			}
 		}
 	}
-	
+};
+
+class ExplorerToolbar_FeedReaderItem extends Extension_ExplorerToolbar {
+	function render(Model_ExplorerSet $item) {
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('item', $item);
+		$tpl->display('devblocks:cerberusweb.feed_reader::feeds/item/explorer_toolbar.tpl');
+	}
 };
