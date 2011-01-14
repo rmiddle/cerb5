@@ -227,7 +227,7 @@ class ChHomePage extends CerberusPageExtension {
 		}
 		
 		$view->renderPage = 0;
-		$view->renderLimit = 25;
+		$view->renderLimit = 250;
 		$pos = 0;
 		
 		do {
@@ -287,12 +287,16 @@ class ChHomePage extends CerberusPageExtension {
 	
 	function doWorkspaceInitAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
+		$visit = CerberusApplication::getVisit();
 		
 		$fields = array(
 			DAO_Workspace::NAME => 'My First Workspace',
 			DAO_Workspace::WORKER_ID => $active_worker->id,
 		);
 		$workspace_id = DAO_Workspace::create($fields);
+		
+		DAO_Workspace::setEndpointWorkspaces(Extension_HomeTab::POINT, $active_worker->id, $workspace_id);
+		$visit->set(Extension_HomeTab::POINT, 'w_'.$workspace_id);
 		
 		// My Tickets
 		
