@@ -984,7 +984,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		$tpl->assign('groups', $groups);
 		
 		// Custom Field contexts (tickets, orgs, etc.)
-		$tpl->assign('context_manifests', DAO_CustomField::getContexts());
+		$tpl->assign('context_manifests', Extension_DevblocksContext::getAll());
 		
 		// Custom Fields
 		$custom_fields =  DAO_CustomField::getAll();
@@ -1326,7 +1326,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 //		$tpl->assign('buckets', $buckets);
 		
 		// Custom Field Sources
-		$tpl->assign('context_manifests', DAO_CustomField::getContexts());
+		$tpl->assign('context_manifests', Extension_DevblocksContext::getAll());
 		
 		// Custom Fields
 		$custom_fields =  DAO_CustomField::getAll();
@@ -1342,7 +1342,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 		$visit->set(Extension_ConfigTab::POINT, 'fields');
 				
-		$tpl->assign('context_manifests', DAO_CustomField::getContexts());
+		$tpl->assign('context_manifests', Extension_DevblocksContext::getAll());
 		
 		$tpl->display('devblocks:cerberusweb.core::configuration/tabs/fields/index.tpl');
 	}

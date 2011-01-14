@@ -47,8 +47,8 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011011401);
-define("APP_VERSION", '5.3.0-beta1');
+define("APP_BUILD", 2011011402);
+define("APP_VERSION", '5.3.0-beta2');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
@@ -1358,7 +1358,7 @@ class CerberusSettingsDefaults {
 	const ATTACHMENTS_MAX_SIZE = 10; 
 	const PARSER_AUTO_REQ = 0; 
 	const PARSER_AUTO_REQ_EXCLUDE = ''; 
-	const AUTHORIZED_IPS = '';
+	const AUTHORIZED_IPS = "127.0.0.1\n::1\n";
 	const ACL_ENABLED = 0;
 };
 
