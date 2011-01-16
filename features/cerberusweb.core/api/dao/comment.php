@@ -26,6 +26,18 @@ class DAO_Comment extends DevblocksORMHelper {
             )
 	    );
 		
+		// New comment
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'comment.create',
+                array(
+                    'comment_id' => $id,
+                	'fields' => $fields,
+                )
+            )
+	    );		
+		
 		return $id;
 	}
 	

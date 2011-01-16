@@ -104,7 +104,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 		if(!$active_worker->isTeamManager($group_id) && !$active_worker->is_superuser) {
 			return;
 		} else {
-			$group = DAO_Group::getTeam($group_id);
+			$group = DAO_Group::get($group_id);
 			$tpl->assign('team', $group);
 		}
 		
@@ -638,7 +638,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 		if(!$active_worker->isTeamManager($group_id) && !$active_worker->is_superuser) {
 			return;
 		} else {
-			$group = DAO_Group::getTeam($group_id);
+			$group = DAO_Group::get($group_id);
 			$tpl->assign('team', $group);
 		}
 		
@@ -684,7 +684,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 		if(!$active_worker->isTeamManager($group_id) && !$active_worker->is_superuser) {
 			return;
 		} else {
-			$group = DAO_Group::getTeam($group_id);
+			$group = DAO_Group::get($group_id);
 			$tpl->assign('team', $group);
 		}
 		
@@ -751,7 +751,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 		if(!$active_worker->isTeamManager($group_id) && !$active_worker->is_superuser) {
 			return;
 		} else {
-			$group = DAO_Group::getTeam($group_id);
+			$group = DAO_Group::get($group_id);
 			$tpl->assign('team', $group);
 		}
 		
@@ -826,7 +826,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 		
 		$tpl->assign('view_id', $view_id);
 		
-		if(!empty($group_id) && null != ($group = DAO_Group::getTeam($group_id))) {
+		if(!empty($group_id) && null != ($group = DAO_Group::get($group_id))) {
 			$tpl->assign('group', $group);
 		}
 		
