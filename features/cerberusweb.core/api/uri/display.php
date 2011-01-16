@@ -151,7 +151,7 @@ class ChDisplayPage extends CerberusPageExtension {
 			))
 		);
 		
-		if (class_exists('View_TimeTracking',true)):
+		if (DevblocksPlatform::isPluginEnabled('cerberusweb.timetracking')) {
 			// Adds total time worked per ticket to the token list.
 			$db = DevblocksPlatform::getDatabaseService();
 			$total_time_hours = 0;
@@ -176,7 +176,7 @@ class ChDisplayPage extends CerberusPageExtension {
 	    	mysql_free_result($rs);
 			$tpl->assign('total_time_hours', $total_time_hours);
 			$tpl->assign('total_time_minutes', $total_time_minutes);
-        endif;
+        }
 
 		$tpl->display('devblocks:cerberusweb.core::display/index.tpl');
 	}
