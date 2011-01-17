@@ -96,7 +96,7 @@ class DAO_Worker extends C4_ORMHelper {
 		return self::getAll(false, true);
 	}
 	
-	static function getAllOnline($idle_limit=86400, $idle_kick_limit=0) {
+	static function getAllOnline($idle_limit=600, $idle_kick_limit=0) {
 		$session = DevblocksPlatform::getSessionService();
 
 		$sessions = $session->getAll();
@@ -135,13 +135,13 @@ class DAO_Worker extends C4_ORMHelper {
 				$active_workers[$worker->id] = $worker;
 				
 			} else {
-//				if($idle_kick_limit) {
+				if($idle_kick_limit) {
 					// Kill all sessions for this worker
-//					foreach($workers_to_sessions[$worker->id] as $session_key => $session_data) {
-//						$session->clear($session_key);
-//					}
-//					$idle_kick_limit--;
-//				}
+					foreach($workers_to_sessions[$worker->id] as $session_key => $session_data) {
+						$session->clear($session_key);
+					}
+					$idle_kick_limit--;
+				}
 			}
 		}
 		
