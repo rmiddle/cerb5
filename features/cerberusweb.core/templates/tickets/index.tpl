@@ -30,7 +30,7 @@
 	<ul>
 		{$tabs = [workflow]}
 		{$point = Extension_MailTab::POINT}
-		
+
 		<li><a href="{devblocks_url}ajax.php?c=tickets&a=showWorkflowTab&request={$response_uri|escape:'url'}{/devblocks_url}">{$translate->_('mail.workflow')|capitalize}</a></li>
 		
 		{if $active_worker->hasPriv('core.mail.search')}
