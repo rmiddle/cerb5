@@ -13,6 +13,8 @@ class DAO_Comment extends DevblocksORMHelper {
 		$db->Execute("INSERT INTO comment () VALUES ()");
 		$id = $db->LastInsertId();
 		
+		self::update($id, $fields);
+		
 		// New comment
 	    $eventMgr = DevblocksPlatform::getEventService();
 	    $eventMgr->trigger(
