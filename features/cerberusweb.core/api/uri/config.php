@@ -1855,7 +1855,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('config','mail')));
 	}
 	
-	// Form Submit
+		// Form Submit
 	function saveOutgoingMailSettingsAction() {
 		$translate = DevblocksPlatform::getTranslationService();
 		$worker = CerberusApplication::getActiveWorker();

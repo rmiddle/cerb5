@@ -19,6 +19,9 @@
 		{if !empty($task_worker_id) && isset($workers.$task_worker_id)}
 			<b>{'common.worker'|devblocks_translate|capitalize}:</b> {$workers.$task_worker_id->getName()} &nbsp;
 		{/if}
+		{if isset($total_time_minutes)}
+			<b>Total Ticket Time Worked: </b> {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp; 
+		{/if}
 		<br>
 		
 		<!-- Toolbar -->
