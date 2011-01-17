@@ -117,57 +117,60 @@
 							</tr>
 						{/if}
 							<tr>
-								<td valign="top" width="1%" nowrap="nowrap">
-									<input type="hidden" name="field_ids[]" value="{$f_id}">
-									<b>{$f->name}:</b>
-								</td>
-								<td valign="top" width="99%">
-									{if $f->type=='S'}
-										<input type="text" name="field_{$f_id}" size="45" maxlength="255" value="{$ticket_field_values.$f_id|escape}"><br>
-									{elseif $f->type=='U'}
-										<input type="text" name="field_{$f_id}" size="45" maxlength="255" value="{$ticket_field_values.$f_id|escape}">
-										{if !empty($ticket_field_values.$f_id)}<a href="{$ticket_field_values.$f_id|escape}" target="_blank">URL</a>{else}<i>(URL)</i>{/if}
-									{elseif $f->type=='N'}
-										<input type="text" name="field_{$f_id}" size="45" maxlength="255" value="{$ticket_field_values.$f_id|escape}"><br>
-									{elseif $f->type=='T'}
-										<textarea name="field_{$f_id}" rows="4" cols="50" style="width:98%;">{$ticket_field_values.$f_id}</textarea><br>
-									{elseif $f->type=='C'}
-										<input type="checkbox" name="field_{$f_id}" value="1" {if $ticket_field_values.$f_id}checked{/if}><br>
-									{elseif $f->type=='X'}
-										{foreach from=$f->options item=opt}
-										<label><input type="checkbox" name="field_{$f_id}[]" value="{$opt|escape}" {if isset($ticket_field_values.$f_id.$opt)}checked="checked"{/if}> {$opt}</label><br>
-										{/foreach}
-									{elseif $f->type=='D'}
-										<select name="field_{$f_id}">{* [TODO] Fix selected *}
-											<option value=""></option>
-											{foreach from=$f->options item=opt}
-											<option value="{$opt|escape}" {if $opt==$ticket_field_values.$f_id}selected{/if}>{$opt}</option>
-											{/foreach}
-										</select><br>
-									{elseif $f->type=='M'}
-										<select name="field_{$f_id}[]" size="5" multiple="multiple">
-											{foreach from=$f->options item=opt}
-											<option value="{$opt|escape}" {if isset($ticket_field_values.$f_id.$opt)}selected="selected"{/if}>{$opt}</option>
-											{/foreach}
-										</select><br>
-										<i><small>{$translate->_('common.tips.multi_select')}</small></i>
-									{elseif $f->type=='E'}
-										<input type="text" id="field_{$f_id}" name="field_{$f_id}" size="45" maxlength="255" value="{if !empty($ticket_field_values.$f_id)}{$ticket_field_values.$f_id|devblocks_date}{/if}">
-										<script type="text/javascript" language="JavaScript1.2">
-											devblocksAjaxDateChooser('#field_{$f_id}');
-										</script>
-									{elseif $f->type=='W'}
-										{if empty($workers)}
-											{$workers = DAO_Worker::getAllActive()}
-										{/if}
-										<select name="field_{$f_id}">
-											<option value=""></option>
-											{foreach from=$workers item=worker}
-											<option value="{$worker->id}" {if $worker->id==$ticket_field_values.$f_id}selected="selected"{/if}>{$worker->getName()}</option>
-											{/foreach}
-										</select>
-									{/if}	
-								</td>
+   										<td valign="top" width="1%" nowrap="nowrap">
+											<input type="hidden" name="field_ids[]" value="{$f_id}">
+											<b>{$f->name}:</b>
+										</td>
+										<td valign="top" width="99%">
+											{if $f->type=='S'}
+												<input type="text" name="field_{$f_id}" size="45" maxlength="255" value="{$ticket_field_values.$f_id|escape}"><br>
+											{elseif $f->type=='U'}
+												<input type="text" name="field_{$f_id}" size="45" maxlength="255" value="{$ticket_field_values.$f_id|escape}">
+												{if !empty($ticket_field_values.$f_id)}<a href="{$ticket_field_values.$f_id|escape}" target="_blank">URL</a>
+												{else}<i>(URL)</i>
+												{/if}
+											{elseif $f->type=='N'}
+												<input type="text" name="field_{$f_id}" size="45" maxlength="255" value="{$ticket_field_values.$f_id|escape}"><br>
+											{elseif $f->type=='T'}
+												<textarea name="field_{$f_id}" rows="4" cols="50" style="width:98%;">{$ticket_field_values.$f_id}</textarea><br>
+											{elseif $f->type=='C'}
+												<input type="checkbox" name="field_{$f_id}" value="1" {if $ticket_field_values.$f_id}checked{/if}><br>
+											{elseif $f->type=='X'}
+												{foreach from=$f->options item=opt}
+													<label><input type="checkbox" name="field_{$f_id}[]" value="{$opt|escape}" {if isset($ticket_field_values.$f_id.$opt)}checked="checked"{/if}> {$opt}</label><br>
+												{/foreach}
+											{elseif $f->type=='D'}
+												<select name="field_{$f_id}">{* [TODO] Fix selected *}
+													<option value=""></option>
+													{foreach from=$f->options item=opt}
+														<option value="{$opt|escape}" {if $opt==$ticket_field_values.$f_id}selected{/if}>{$opt}</option>
+													{/foreach}
+												</select><br>
+											{elseif $f->type=='M'}
+												<select name="field_{$f_id}[]" size="5" multiple="multiple">
+													{foreach from=$f->options item=opt}
+														<option value="{$opt|escape}" {if isset($ticket_field_values.$f_id.$opt)}selected="selected"{/if}>{$opt}</option>
+													{/foreach}
+												</select><br>
+												<i><small>{$translate->_('common.tips.multi_select')}</small></i>
+											{elseif $f->type=='E'}
+												<input type="text" id="field_{$f_id}" name="field_{$f_id}" size="45" maxlength="255" value="{if !empty($ticket_field_values.$f_id)}{$ticket_field_values.$f_id|devblocks_date}{/if}">
+												<script type="text/javascript" language="JavaScript1.2">
+													devblocksAjaxDateChooser('#field_{$f_id}');
+												</script>
+											{elseif $f->type=='W'}
+												{if empty($workers)}
+													{$workers = DAO_Worker::getAllActive()}
+												{/if}
+												<select name="field_{$f_id}">
+													<option value=""></option>
+													{foreach from=$workers item=worker}
+														<option value="{$worker->id}" {if $worker->id==$ticket_field_values.$f_id}selected="selected"{/if}>{$worker->getName()}</option>
+													{/foreach}
+												</select>
+											{/if}	
+										</td>
+
 							</tr>
 						{assign var=last_group_id value=$f->group_id}
 					{/if}
