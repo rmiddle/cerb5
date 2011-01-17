@@ -1,35 +1,41 @@
-Under Class CerberusApplication
-Function translateTeamCategoryCode
+Branch breakout
 
-I made the following changes.
+Master - The master branch this should be close to or the Same as WGM current master.  
 
-/**
-* Translates the string version of a group/bucket combo into their
-* respective IDs.
-*
-* @todo This needs a better name and home
-*/
-static function translateTeamCategoryCode($code) {
-$t_or_c = substr($code,0,1);
-$t_or_c_id = intval(substr($code,1));
+Jira/chd-xxxx - Branches starting with Jira cantained the required patches to complete the Jira issue with the same number.  URL: http://www.wgmdev.com/jira/browse/CHD-XXXX
 
-if($t_or_c=='c') {
-$categories = DAO_Bucket::getAll();
-$team_id = $categories[$t_or_c_id]->team_id;
-$category_id = $t_or_c_id;
-} else {
-$team_id = $t_or_c_id;
-if($t_or_c=='a') {
-$category_id = -1;
-} else {
-$category_id = 0;
-}
-}
+Jira Issue
 
-return array($team_id, $category_id);
-}
+chd-690  -> [Open Ticket / Send Mail] No error on empty requester field makes it appear the ticket is saved when it actually is not
+chd-1209 -> Change to Application.class.php - translateTeamCategoryCode(code)
+chd-1218 -> Add the abilty to filter based on inbox downloaded from
+chd-1278 -> [Custom FIelds] Allow you to set ticket fields when opening a new ticket for a customer
+chd-1343 -> Change "Full Headers" label when appropriate
+chd-1347 -> Run Every X Min shouldn't be shown on disabled items in the cron jobs list.. 
+chd-1367 -> [Parser] There isn't enough error checking before the unlink() call to trap all failing mail - Incomplete Patch
+chd-1397 -> Add limiter to email templates that limits them by groups you belong to.
+chd-1405 -> [ACL] Add an ACL to limit someone abilty to take a ticket.
+chd-1406 -> [ACL] Add a permission to limit worker ability to see who is logged in.
+chd-1419 -> Allow plugins to provide translation strings for Audit Log events
+chd-1558 -> [Time Tracking] Sum of all individual entries on the ticket display
+chd-1578 -> [Ticket] Replace hardcoded ticket status default with a configuireable one.
+chd-1594 -> [Support Center] After Confirmation Code is it possible to display a user friendly message?
+chd-1602 -> [Parser] The worker email treated as replies issue has come up several times - Incomplete Patch
+chd-1607 -> [Comments] Add Email workers next to Notify workers 
+chd-1618 -> [ACL] Add an ACL to hide the hide access to the "Mail -> Workflow Tab"
+chd-1656 -> [Time Tracker] Make the notes field longtext the same a comment instead of limited to just 255 Char.
 
-I did this so I could use this for reports were I need both inbox $category_id=0 and all I decided to use $category_id=-1 for.
+fix/ - This is the branch that contains all my fixes in one place.  If you are looking for all the features I have added into the system this is the branch you want.
+
+dev/XXX - Features not yet complete.  These are in various level of completion.
+
+X_X_X - Example 4_2_3 That would be version 4.2.3.  That would be the same as the master branch when WGM released 4.2.3
+
+X_X_X/fix/ - My fixes all in one place for the Version in question.
+
+X_X_X/jira/ - Jira fixes for the Version in question.
 
 /helpdesk/xxx  Braches spefic to helpdesk.
 
+Thanks
+Robert
