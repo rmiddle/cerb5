@@ -285,12 +285,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
 		
-		$memberships = $active_worker->getMemberships();
-
-		// Totals
-		$group_counts = DAO_WorkflowView::getGroupTotals();
-		$tpl->assign('group_counts', $group_counts);
-
 		// View
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'View_Ticket';
