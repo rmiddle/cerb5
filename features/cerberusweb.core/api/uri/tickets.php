@@ -280,16 +280,23 @@ class ChTicketsPage extends CerberusPageExtension {
 		$workflowView = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_MAIL_WORKFLOW, $defaults);
 		
 		$workflowView->addParamsHidden(array(
+			SearchFields_Ticket::REQUESTER_ID,
+			SearchFields_Ticket::TICKET_CLOSED,
+			SearchFields_Ticket::TICKET_DELETED,
+			SearchFields_Ticket::TICKET_WAITING,
+			SearchFields_Ticket::TICKET_CATEGORY_ID,
+			SearchFields_Ticket::CONTEXT_LINK,
+			SearchFields_Ticket::CONTEXT_LINK_ID,
 			SearchFields_Ticket::VIRTUAL_ASSIGNABLE,
 			SearchFields_Ticket::VIRTUAL_STATUS,
 			SearchFields_Ticket::VIRTUAL_WORKERS,
-		));
+		), true);
 		$workflowView->addParamsRequired(array(
 			SearchFields_Ticket::VIRTUAL_STATUS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_STATUS,'',array('open')),
 			SearchFields_Ticket::VIRTUAL_ASSIGNABLE => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_ASSIGNABLE,null,true),
 			SearchFields_Ticket::VIRTUAL_WORKERS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_WORKERS,null,array()),
 			'req_team_id' => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'in',array_keys($active_worker->getMemberships())),
-		));
+		), true);
 		
 		$workflowView->renderPage = 0;
 		$workflowView->renderSubtotalsClickable = 1;
@@ -384,7 +391,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		$view->addParamsDefault(array(
 			SearchFields_Ticket::VIRTUAL_STATUS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_STATUS,'',array('open','waiting')),
 			SearchFields_Ticket::TICKET_TEAM_ID => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'in',array_keys($memberships)), // censor
-		));
+		), true);
 		
 		$view->renderSubtotalsClickable = 1;
 		
@@ -416,19 +423,19 @@ class ChTicketsPage extends CerberusPageExtension {
 			SearchFields_MailQueue::QUEUE_FAILS,
 			SearchFields_MailQueue::QUEUE_PRIORITY,
 			SearchFields_MailQueue::TICKET_ID,
-		));
+		), true);
 		
 		$view->addParamsRequired(array(
 			SearchFields_MailQueue::WORKER_ID => new DevblocksSearchCriteria(SearchFields_MailQueue::WORKER_ID, DevblocksSearchCriteria::OPER_EQ, $active_worker->id),
 			SearchFields_MailQueue::IS_QUEUED => new DevblocksSearchCriteria(SearchFields_MailQueue::IS_QUEUED, DevblocksSearchCriteria::OPER_EQ, 0),
-		));
+		), true);
 		$view->addParamsHidden(array(
 			SearchFields_MailQueue::ID,
 			SearchFields_MailQueue::IS_QUEUED,
 			SearchFields_MailQueue::QUEUE_FAILS,
 			SearchFields_MailQueue::QUEUE_PRIORITY,
 			SearchFields_MailQueue::TICKET_ID,
-		));
+		), true);
 		
 		C4_AbstractViewLoader::setView($view->id,$view);
 		$tpl->assign('view', $view);
@@ -648,8 +655,8 @@ class ChTicketsPage extends CerberusPageExtension {
 		}
 		
 		$view->addParamsRequired(array(
-			'tmp_contexts' => new DevblocksSearchCriteria(SearchFields_Snippet::CONTEXT, DevblocksSearchCriteria::OPER_IN, array('cerberusweb.contexts.plaintext','cerberusweb.contexts.ticket','cerberusweb.contexts.worker')),
-		));
+			'_tmp_contexts' => new DevblocksSearchCriteria(SearchFields_Snippet::CONTEXT, DevblocksSearchCriteria::OPER_IN, array('','cerberusweb.contexts.ticket','cerberusweb.contexts.worker')),
+		), true);
 		
 		C4_AbstractViewLoader::setView($view->id,$view);
 		$tpl->assign('view', $view);
@@ -669,12 +676,12 @@ class ChTicketsPage extends CerberusPageExtension {
 		if(null == ($snippet = DAO_Snippet::get($snippet_id))) {
 			$snippet = new Model_Snippet();
 			$snippet->id = 0;
-			$snippet->context = !empty($context) ? $context : 'cerberusweb.contexts.plaintext';
+			$snippet->context = !empty($context) ? $context : '';
 		}
 		$tpl->assign('snippet', $snippet);
 		
 		switch($snippet->context) {
-			case 'cerberusweb.contexts.plaintext':
+			case '':
 				break;
 			case 'cerberusweb.contexts.ticket':
 				CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, null, $token_labels, $token_values);
@@ -1353,12 +1360,6 @@ class ChTicketsPage extends CerberusPageExtension {
 					$fields[DAO_Ticket::IS_WAITING] = 1;
 					$fields[DAO_Ticket::IS_CLOSED] = 0;
 					$fields[DAO_Ticket::IS_DELETED] = 0;
-					
-					if(!empty($ticket_reopen) && false !== ($due = strtotime($ticket_reopen))) {
-						$fields[DAO_Ticket::DUE_DATE] = $due;
-					} else {
-						$fields[DAO_Ticket::DUE_DATE] = 0;
-					}
 					break;
 				case 3: // deleted
 					$fields[DAO_Ticket::IS_WAITING] = 0;
@@ -1366,6 +1367,14 @@ class ChTicketsPage extends CerberusPageExtension {
 					$fields[DAO_Ticket::IS_DELETED] = 1;
 					$fields[DAO_Ticket::DUE_DATE] = 0;
 					break;
+			}
+			
+			if(1==$closed || 2==$closed) {
+				if(!empty($ticket_reopen) && false !== ($due = strtotime($ticket_reopen))) {
+					$fields[DAO_Ticket::DUE_DATE] = $due;
+				} else {
+					$fields[DAO_Ticket::DUE_DATE] = 0;
+				}
 			}
 		}
 		
