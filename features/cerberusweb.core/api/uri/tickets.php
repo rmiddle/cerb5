@@ -1284,20 +1284,27 @@ class ChTicketsPage extends CerberusPageExtension {
 
 		$tpl->assign('view_id', $view_id);
 		$tpl->assign('edit_mode', $edit_mode);
+
+		$messages = array();
 		
 		if(null != ($ticket = DAO_Ticket::get($tid))) {
 			/* @var $ticket Model_Ticket */
 		    $tpl->assign('ticket', $ticket);
+		    
+			$messages = $ticket->getMessages();
 		}
-		
-		$messages = $ticket->getMessages();
 		
 		// Do we have a specific message to look at?
 		if(!empty($msgid) && null != (@$message = $messages[$msgid])) {
 			 // Good
 		} else {
-			$message = end($messages);
-			$msgid = $message->id;
+			$message = null;
+			$msgid = null;
+			
+			if(is_array($messages)) {
+				if(null != ($message = end($messages)))
+					$msgid = $message->id;
+			}
 		}
 
 		if(!empty($message)) {
@@ -1383,6 +1390,12 @@ class ChTicketsPage extends CerberusPageExtension {
 					$fields[DAO_Ticket::IS_WAITING] = 1;
 					$fields[DAO_Ticket::IS_CLOSED] = 0;
 					$fields[DAO_Ticket::IS_DELETED] = 0;
+					
+					if(!empty($ticket_reopen) && false !== ($due = strtotime($ticket_reopen))) {
+						$fields[DAO_Ticket::DUE_DATE] = $due;
+					} else {
+						$fields[DAO_Ticket::DUE_DATE] = 0;
+					}
 					break;
 				case 3: // deleted
 					$fields[DAO_Ticket::IS_WAITING] = 0;
@@ -1409,11 +1422,6 @@ class ChTicketsPage extends CerberusPageExtension {
 				CerberusBayes::markTicketAsSpam($id);
 			elseif('N'==$spam_training)
 				CerberusBayes::markTicketAsNotSpam($id);
-		}
-		
-		if(!empty($ticket_reopen)) {
-			if(false !== ($due = strtotime($ticket_reopen)))
-				$fields[DAO_Ticket::DUE_DATE] = $due;
 		}
 		
 		DAO_Ticket::update($id, $fields);
