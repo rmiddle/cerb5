@@ -1364,7 +1364,6 @@ class ChTicketsPage extends CerberusPageExtension {
 	// Ajax
 	function savePreviewAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
-		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
 		@$subject = DevblocksPlatform::importGPC($_REQUEST['subject'],'string','');
 		@$closed = DevblocksPlatform::importGPC($_REQUEST['closed'],'integer',0);
 		@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
@@ -1462,13 +1461,6 @@ class ChTicketsPage extends CerberusPageExtension {
 				$notify_worker_ids
 			);
 		}		
-		
-		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'View_Ticket';
-		$defaults->id = $view_id;
-		
-		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
-		$view->render();
 		exit;
 	}
 	
