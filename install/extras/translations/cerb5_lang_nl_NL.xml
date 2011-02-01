@@ -3602,16 +3602,6 @@
         <seg>Voltooid</seg>
       </tuv>
     </tu>
-    <tu tuid="task.source_extension">
-      <tuv xml:lang="nl_NL">
-        <seg>Bron</seg>
-      </tuv>
-    </tu>
-    <tu tuid="task.source_id">
-      <tuv xml:lang="nl_NL">
-        <seg>Bron ID</seg>
-      </tuv>
-    </tu>
     <tu tuid="task.status.active">
       <tuv xml:lang="nl_NL">
         <seg>Actief</seg>
@@ -4317,27 +4307,27 @@
         <seg>Titel</seg>
       </tuv>
     </tu>
-    <tu tuid="worker_event.created_date">
+    <tu tuid="notification.created_date">
       <tuv xml:lang="nl_NL">
         <seg>Gemaakt</seg>
       </tuv>
     </tu>
-    <tu tuid="worker_event.id">
+    <tu tuid="notification.id">
       <tuv xml:lang="nl_NL">
         <seg>ID</seg>
       </tuv>
     </tu>
-    <tu tuid="worker_event.is_read">
+    <tu tuid="notification.is_read">
       <tuv xml:lang="nl_NL">
         <seg>Is gelezen</seg>
       </tuv>
     </tu>
-    <tu tuid="worker_event.message">
+    <tu tuid="notification.message">
       <tuv xml:lang="nl_NL">
         <seg>Bericht</seg>
       </tuv>
     </tu>
-    <tu tuid="worker_event.worker_id">
+    <tu tuid="notification.worker_id">
       <tuv xml:lang="nl_NL">
         <seg>Werknemer</seg>
       </tuv>
