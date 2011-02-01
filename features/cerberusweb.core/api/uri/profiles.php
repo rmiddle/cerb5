@@ -49,16 +49,18 @@
  */
 class Page_Profiles extends CerberusPageExtension {
 	function isVisible() {
-		// check login
-		$visit = CerberusApplication::getVisit();
-		return (empty($visit)) ? false : true;
+		// The current session must be a logged-in worker to use this page.
+		if(null == ($worker = CerberusApplication::getActiveWorker()))
+			return false;
+		return true;
 	}
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$active_worker = CerberusApplication::getActiveWorker();
-		
+		$visit = CerberusApplication::getVisit();
 		$response = DevblocksPlatform::getHttpResponse();
+		
 		$stack = $response->path;
 
 		@array_shift($stack); // profiles
@@ -73,11 +75,19 @@ class Page_Profiles extends CerberusPageExtension {
 		switch($type) {
 			case 'group':
 				@$group_id = intval(array_shift($stack));
-				
+				$point = 'cerberusweb.profiles.group.' . $group_id;
+
 				if(empty($group_id) || null == ($group = DAO_Group::get($group_id)))
 					throw new Exception();
 				
 				$tpl->assign('group', $group);
+				
+				// Remember the last tab/URL
+				if(null == ($selected_tab = @$response->path[3])) {
+					$selected_tab = $visit->get($point, '');
+				}
+				$tpl->assign('selected_tab', $selected_tab);
+				
 				$tpl->display('devblocks:cerberusweb.core::profiles/group/index.tpl');
 				break;
 				
@@ -93,11 +103,19 @@ class Page_Profiles extends CerberusPageExtension {
 						@$worker_id = intval($id);
 						break;
 				}
+
+				$point = 'cerberusweb.profiles.worker.' . $worker_id;
 				
 				if(empty($worker_id) || null == ($worker = DAO_Worker::get($worker_id)))
 					throw new Exception();
 					
 				$tpl->assign('worker', $worker);
+				
+				// Remember the last tab/URL
+				if(null == ($selected_tab = @$response->path[3])) {
+					$selected_tab = $visit->get($point, '');
+				}
+				$tpl->assign('selected_tab', $selected_tab);
 				
 				$tpl->display('devblocks:cerberusweb.core::profiles/worker/index.tpl');
 				break;

@@ -49,15 +49,10 @@
  */
 class ChDisplayPage extends CerberusPageExtension {
 	function isVisible() {
-		// check login
-		$session = DevblocksPlatform::getSessionService();
-		$visit = $session->getVisit();
-		
-		if(empty($visit)) {
+		// The current session must be a logged-in worker to use this page.
+		if(null == ($worker = CerberusApplication::getActiveWorker()))
 			return false;
-		} else {
-			return true;
-		}
+		return true;
 	}
 	
 	function render() {
@@ -482,15 +477,15 @@ class ChDisplayPage extends CerberusPageExtension {
 			if(is_array($notify_worker_ids) && !empty($notify_worker_ids))
 			foreach($notify_worker_ids as $notify_worker_id) {
 				$fields = array(
-					DAO_WorkerEvent::CREATED_DATE => time(),
-					DAO_WorkerEvent::WORKER_ID => $notify_worker_id,
-					DAO_WorkerEvent::URL => $url_writer->write('c=display&id='.$ticket->mask,true),
-					DAO_WorkerEvent::MESSAGE => sprintf("%s left a note for you on a ticket.",
+					DAO_Notification::CREATED_DATE => time(),
+					DAO_Notification::WORKER_ID => $notify_worker_id,
+					DAO_Notification::URL => $url_writer->write('c=display&id='.$ticket->mask,true),
+					DAO_Notification::MESSAGE => sprintf("%s left a note for you on a ticket.",
 						$worker->getName()
 					),
-					DAO_WorkerEvent::IS_READ => 0,
+					DAO_Notification::IS_READ => 0,
 				);
-				DAO_WorkerEvent::create($fields);
+				DAO_Notification::create($fields);
 			}
 		}
 		
