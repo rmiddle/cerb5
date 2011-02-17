@@ -196,7 +196,7 @@
 						<tr>
 							<td nowrap="nowrap" valign="top" colspan="2">
 								<label><input type="radio" name="closed" value="0" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','none');" {if !$ticket->is_closed && $reply_status==0} checked{/if}>{$translate->_('status.open')|capitalize}</label>
-								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','block');"{if !$ticket->is_closed && $reply_status==1} checked{/if}>{$translate->_('status.waiting')|capitalize}</label>
+								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','block');if($(replyClosed{$message->id}).val() == '') { $(replyClosed{$message->id}).text('+7 Days')); }" {if !$ticket->is_closed}checked{/if}>{$translate->_('status.waiting')|capitalize}</label>
 								{if $active_worker->hasPriv('core.ticket.actions.close') || ($ticket->is_closed && !$ticket->is_deleted)}<label><input type="radio" name="closed" value="1" onclick="toggleDiv('replyOpen{$message->id}','none');toggleDiv('replyClosed{$message->id}','block');" {if $ticket->is_closed || $reply_status==2} checked{/if}>{$translate->_('status.closed')|capitalize}</label>{/if}
 								<br>
 								<br>
