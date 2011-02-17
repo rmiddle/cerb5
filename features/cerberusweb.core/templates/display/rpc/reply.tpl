@@ -247,8 +247,8 @@
 
 <script type="text/javascript">
 	$(function() {
-		$("#closed").change(function(){
-			if ($("#closed:checked").val() == '2')
+		$("input[@name='closed']").change(function(){
+			if ($("input[@name='closed']:checked").val() == '2')
 				$("#replyClosed{$message->id}).text("+7 Days");
 		});
  
