@@ -52,7 +52,7 @@
 						<div id="ticketClosed" style="display:{if $ticket->is_closed || $ticket->is_waiting}block{else}none{/if};margin:5px 0px 5px 15px;">
 							<b>{$translate->_('display.reply.next.resume')}:</b><br>
 							<i>{$translate->_('display.reply.next.resume_eg')}</i><br>
-							<input type="text" name="ticket_reopen" size="55" value="{if !empty($ticket->due_date)}{$ticket->due_date|devblocks_date}{/if}"><br>
+							<input type="text" name="ticket_reopen" size="55" value="{if !empty($ticket->due_date)}{$ticket->due_date|devblocks_date}{else}{if $ticket->is_waiting}+7 Days{/if}{/if}"><br>
 							{$translate->_('display.reply.next.resume_blank')}<br>
 						</div>
 					</td>
