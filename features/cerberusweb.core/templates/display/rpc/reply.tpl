@@ -172,14 +172,14 @@
 						<tr>
 							<td nowrap="nowrap" valign="top" colspan="2">
 								<label><input type="radio" name="closed" value="0" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','none');" {if !$ticket->is_closed && $reply_status==0} checked{/if}>{$translate->_('status.open')|capitalize}</label>
-								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','block');"{if !$ticket->is_closed && $reply_status==1} checked{/if}>{$translate->_('status.waiting')|capitalize}</label>
+								<label><input type="radio" name="closed" id="waitingforreply" value="2" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','block');"{if !$ticket->is_closed && $reply_status==1} checked{/if}>{$translate->_('status.waiting')|capitalize}</label>
 								{if $active_worker->hasPriv('core.ticket.actions.close') || ($ticket->is_closed && !$ticket->is_deleted)}<label><input type="radio" name="closed" value="1" onclick="toggleDiv('replyOpen{$message->id}','none');toggleDiv('replyClosed{$message->id}','block');" {if $ticket->is_closed || $reply_status==2} checked{/if}>{$translate->_('status.closed')|capitalize}</label>{/if}
 								<br>
 								<br>
 								
 						      	<div id="replyClosed{$message->id}" style="display:{if $reply_status==0}none{else}block{/if};margin-left:10px;">
 						      	<b>{$translate->_('display.reply.next.resume')}</b> {$translate->_('display.reply.next.resume_eg')}<br> 
-						      	<input type="text" name="ticket_reopen" size="55" value="{if !empty($ticket->due_date)}{$ticket->due_date|devblocks_date}{/if}"><br>
+						      	<input type="text" name="ticket_reopen" id="ticket_reopen" size="55" value="{if !empty($ticket->due_date)}{$ticket->due_date|devblocks_date}}{else}{if $ticket->is_waiting}+7 Days{/if}{/if}"><br>
 						      	{$translate->_('display.reply.next.resume_blank')}<br>
 						      	<br>
 						      	</div>
@@ -246,12 +246,13 @@
 </div>
 
 <script type="text/javascript">
+	$('#waitingforreply').change(function(){
+		if ($('#waitingforreply').val() == '2')
+			if ($("#ticket_reopen").val() == '')
+				$("#ticket_reopen").val("+7 Days");
+	});
+
 	$(function() {
-		$("input[@name='closed']").change(function(){
-			if ($("input[@name='closed']:checked").val() == '2')
-				$("#replyClosed{$message->id}).text("+7 Days");
-		});
- 
 		// Autocompletes
 		ajax.emailAutoComplete('#reply{$message->id}_part1 input[name=to]', { multiple: true } );
 		ajax.emailAutoComplete('#reply{$message->id}_part1 input[name=cc]', { multiple: true } );

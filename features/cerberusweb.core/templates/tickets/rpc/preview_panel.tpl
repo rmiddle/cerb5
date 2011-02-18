@@ -46,14 +46,14 @@
 					<td width="0%" nowrap="nowrap" valign="top" align="right">{$translate->_('ticket.status')|capitalize}: </td>
 					<td width="100%">
 						<label><input type="radio" name="closed" value="0" onclick="toggleDiv('ticketClosed','none');" {if !$ticket->is_closed && !$ticket->is_waiting}checked{/if}>{$translate->_('status.open')|capitalize}</label>
-						<label><input type="radio" name="closed" value="2" onclick="toggleDiv('ticketClosed','block');" {if !$ticket->is_closed && $ticket->is_waiting}checked{/if}>{$translate->_('status.waiting')|capitalize}</label>
+						<label><input type="radio" name="closed" id="waitingforreply" value="2" onclick="toggleDiv('ticketClosed','block');" {if !$ticket->is_closed && $ticket->is_waiting}checked{/if}>{$translate->_('status.waiting')|capitalize}</label>
 						{if $active_worker->hasPriv('core.ticket.actions.close') || ($ticket->is_closed && !$ticket->is_deleted)}<label><input type="radio" name="closed" value="1" onclick="toggleDiv('ticketClosed','block');" {if $ticket->is_closed && !$ticket->is_deleted}checked{/if}>{$translate->_('status.closed')|capitalize}</label>{/if}
 						{if $active_worker->hasPriv('core.ticket.actions.delete') || ($ticket->is_deleted)}<label><input type="radio" name="closed" value="3" onclick="toggleDiv('ticketClosed','none');" {if $ticket->is_deleted}checked{/if}>{$translate->_('status.deleted')|capitalize}</label>{/if}
 						
 						<div id="ticketClosed" style="display:{if $ticket->is_closed || $ticket->is_waiting}block{else}none{/if};margin:5px 0px 5px 15px;">
 							<b>{$translate->_('display.reply.next.resume')}:</b><br>
 							<i>{$translate->_('display.reply.next.resume_eg')}</i><br>
-							<input type="text" name="ticket_reopen" size="55" value="{if !empty($ticket->due_date)}{$ticket->due_date|devblocks_date}{else}{if $ticket->is_waiting}+7 Days{/if}{/if}"><br>
+							<input type="text" name="ticket_reopen" id="ticket_reopen" size="55" value="{if !empty($ticket->due_date)}{$ticket->due_date|devblocks_date}{else}{if $ticket->is_waiting}+7 Days{/if}{/if}"><br>
 							{$translate->_('display.reply.next.resume_blank')}<br>
 						</div>
 					</td>
@@ -220,6 +220,11 @@
 </form>
 
 <script type="text/javascript">
+	$('#waitingforreply').change(function(){
+		if ($('#waitingforreply').val() == '2')
+			if ($("#ticket_reopen").val() == '')
+				$("#ticket_reopen").val("+7 Days");
+	});
 	// Popups
 	$popup = genericAjaxPopupFetch('peek');
 	$popup.one('popup_open',function(event,ui) {
