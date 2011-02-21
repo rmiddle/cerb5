@@ -66,6 +66,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		$visit = CerberusApplication::getVisit();
 		$active_worker = $visit->getWorker();
 		$response = DevblocksPlatform::getHttpResponse();
+        $settings = DevblocksPlatform::getPluginSettingsService();
 		
 		// Remember the last tab/URL
 		if(null == ($selected_tab = @$response->path[1])) {
