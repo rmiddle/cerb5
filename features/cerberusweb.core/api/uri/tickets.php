@@ -141,7 +141,7 @@ class ChTicketsPage extends CerberusPageExtension {
 				$tpl->assign('groups', $groups);
 
 				// Custom fields
-				$ticket_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Ticket::ID);
+				$ticket_fields = DAO_CustomField::getBySource(CerberusContexts::CONTEXT_TICKET);
 				$tpl->assign('ticket_fields', $ticket_fields);
 
 				$tpl->display('devblocks:cerberusweb.core::tickets/compose/index.tpl');
@@ -1518,7 +1518,7 @@ class ChTicketsPage extends CerberusPageExtension {
 
 		// Custom field saves
 		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
-		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
+		DAO_CustomFieldValue::handleFormPost(CerberusContexts::CONTEXT_TICKET, $ticket_id, $field_ids);
 		
 		if(!empty($ticket_id)) {
 			if(!empty($draft_id))
@@ -1646,7 +1646,7 @@ class ChTicketsPage extends CerberusPageExtension {
 
 		// Custom field saves
 		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
-		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
+		DAO_CustomFieldValue::handleFormPost(CerberusContexts::CONTEXT_TICKET, $ticket_id, $field_ids);
  		
 		// Worker reply
 		$properties = array(
