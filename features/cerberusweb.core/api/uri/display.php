@@ -336,7 +336,8 @@ class ChDisplayPage extends CerberusPageExtension {
 		if($do_surrender)
 			CerberusContexts::removeWorkers(CerberusContexts::CONTEXT_TICKET, $id, array($active_worker->id));
 
-		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('display',$id)));
+		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('display',$ticket->mask)));
+		exit;
 	}
 
 	function showMergePanelAction() {
