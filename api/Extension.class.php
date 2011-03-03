@@ -75,6 +75,46 @@ abstract class Extension_ConfigTab extends DevblocksExtension {
 	function saveTab() {}
 };
 
+abstract class Extension_PageSection extends DevblocksExtension {
+	const POINT = 'cerberusweb.ui.page.section';
+	
+	/**
+	 * @return DevblocksExtensionManifest[]|Extension_PageSection[]
+	 */
+	static function getExtensions($as_instances=true, $page_id=null) {
+		if(empty($page_id))
+			return DevblocksPlatform::getExtensions(self::POINT, $as_instances);
+
+		$results = array();
+		
+		$exts = DevblocksPlatform::getExtensions(self::POINT, false);
+		foreach($exts as $ext_id => $ext) {
+			if(0 == strcasecmp($page_id, $ext->params['page_id']))
+				$results[$ext_id] = $as_instances ? $ext->createInstance() : $ext;
+		}
+		
+		return $results;
+	}
+	
+	/**
+	 * 
+	 * @param string $uri
+	 * @return DevblocksExtensionManifest|Extension_PageSection
+	 */
+	static function getExtensionByPageUri($page_id, $uri, $as_instance=true) {
+		$manifests = self::getExtensions(false, $page_id);
+		
+		foreach($manifests as $mft) { /* @var $mft DevblocksExtensionManifest */
+			if(0==strcasecmp($uri, $mft->params['uri']))
+				return $as_instance ? $mft->createInstance() : $mft;
+		}
+		
+		return null;
+	}
+	
+	abstract function render();
+};
+
 abstract class Extension_PreferenceTab extends DevblocksExtension {
 	const POINT = 'cerberusweb.preferences.tab';
 	
@@ -284,4 +324,56 @@ abstract class CerberusCronPageExtension extends DevblocksExtension {
 	public function configure($instance) {}
 	
 	public function saveConfigurationAction() {}
+};
+
+abstract class Extension_UsermeetTool extends DevblocksExtension implements DevblocksHttpRequestHandler {
+	private $portal = '';
+	
+    /*
+     * Site Key
+     * Site Name
+     * Site URL
+     */
+    
+	/**
+	 * @param DevblocksHttpRequest
+	 * @return DevblocksHttpResponse
+	 */
+	public function handleRequest(DevblocksHttpRequest $request) {
+	    $path = $request->path;
+
+		@$a = DevblocksPlatform::importGPC($_REQUEST['a'],'string');
+	    
+		if(empty($a)) {
+    	    @$action = array_shift($path) . 'Action';
+		} else {
+	    	@$action = $a . 'Action';
+		}
+
+	    switch($action) {
+	        case NULL:
+	            // [TODO] Index/page render
+	            break;
+//	            
+	        default:
+			    // Default action, call arg as a method suffixed with Action
+				if(method_exists($this,$action)) {
+					call_user_func(array(&$this, $action)); // [TODO] Pass HttpRequest as arg?
+				}
+	            break;
+	    }
+	}
+	
+	public function writeResponse(DevblocksHttpResponse $response) {
+	}
+	
+	/**
+	 * @param Model_CommunityTool $instance
+	 */
+	public function configure(Model_CommunityTool $instance) {
+	}
+	
+	public function saveConfiguration(Model_CommunityTool $instance) {
+	}
+    
 };
