@@ -740,7 +740,7 @@ class View_DevblocksTemplate extends C4_AbstractView {
 //		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_WORKER);
 //		$tpl->assign('custom_fields', $custom_fields);
 
-		$tpl->display('devblocks:usermeet.core::community/display/tabs/templates/view.tpl');
+		$tpl->display('devblocks:cerberusweb.core::configuration/section/portal/tabs/templates/view.tpl');
 	}
 
 	function renderCriteria($field) {
@@ -958,7 +958,7 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-		$tpl->display('devblocks:cerberusweb.core::configuration/tabs/storage/profiles/view.tpl');
+		$tpl->display('devblocks:cerberusweb.core::configuration/section/storage_profiles/view.tpl');
 	}
 
 	function renderCriteria($field) {

@@ -12,9 +12,6 @@
 		<tu tuid='core.menu.address_book'>
 			<tuv xml:lang="en_US"><seg>address book</seg></tuv>
 		</tu>
-		<tu tuid='core.menu.mail'>
-			<tuv xml:lang="en_US"><seg>mail</seg></tuv>
-		</tu>
 		
 		<tu tuid='display.tab.comments'>
 			<tuv xml:lang="en_US"><seg>Comments (%s)</seg></tuv>
@@ -71,6 +68,9 @@
 		</tu>
 		<tu tuid='common.bucket'>
 			<tuv xml:lang="en_US"><seg>Bucket</seg></tuv>
+		</tu>
+		<tu tuid='common.buckets'>
+			<tuv xml:lang="en_US"><seg>Buckets</seg></tuv>
 		</tu>
 		<tu tuid='common.bulk_update'>
 			<tuv xml:lang="en_US"><seg>Bulk Update</seg></tuv>
@@ -207,11 +207,26 @@
 		<tu tuid='common.knowledgebase'>
 			<tuv xml:lang="en_US"><seg>Knowledgebase</seg></tuv>
 		</tu>
+		<tu tuid='common.mail'>
+			<tuv xml:lang="en_US"><seg>Mail</seg></tuv>
+		</tu>
+		<tu tuid='common.manager'>
+			<tuv xml:lang="en_US"><seg>Manager</seg></tuv>
+		</tu>
+		<tu tuid='common.managers'>
+			<tuv xml:lang="en_US"><seg>Managers</seg></tuv>
+		</tu>
 		<tu tuid='common.maximize'>
 			<tuv xml:lang="en_US"><seg>maximize</seg></tuv>
 		</tu>
 		<tu tuid='common.me'>
 			<tuv xml:lang="en_US"><seg>me</seg></tuv>
+		</tu>
+		<tu tuid='common.member'>
+			<tuv xml:lang="en_US"><seg>Member</seg></tuv>
+		</tu>
+		<tu tuid='common.members'>
+			<tuv xml:lang="en_US"><seg>Members</seg></tuv>
 		</tu>
 		<tu tuid='common.messages'>
 			<tuv xml:lang="en_US"><seg>Messages</seg></tuv>
@@ -715,6 +730,40 @@
 		</tu>
 		<tu tuid='attachment.storage_size'>
 			<tuv xml:lang="en_US"><seg>Size (bytes)</seg></tuv>
+		</tu>
+
+		<!-- Community Portal -->
+
+		<tu tuid='community_portal.code'>
+			<tuv xml:lang="en_US"><seg>Profile ID</seg></tuv>
+		</tu>
+		<tu tuid='community_portal.extension_id'>
+			<tuv xml:lang="en_US"><seg>Extension</seg></tuv>
+		</tu>
+		<tu tuid='community_portal.name'>
+			<tuv xml:lang="en_US"><seg>Name</seg></tuv>
+		</tu>
+		
+		<!-- Community -->
+		
+		<tu tuid='portal.cfg.add_tool'>
+			<tuv xml:lang="en_US"><seg>Add a New Community Portal:</seg></tuv>
+		</tu>
+		<tu tuid='portal.cfg.confirm_delete'>
+			<tuv xml:lang="en_US"><seg>Are you sure you want to permanently delete this community portal?</seg></tuv>
+		</tu>
+		<tu tuid='portal.cfg.htaccess_hint'>
+			<tuv xml:lang="en_US"><seg>(optional, friendly URLs for Apache Web Server users)</seg></tuv>
+		</tu>
+		<tu tuid='portal.cfg.installation'>
+			<tuv xml:lang="en_US"><seg>Installation</seg></tuv>
+		</tu>
+		<tu tuid='portal.cfg.installation_instructions'>
+			<tuv xml:lang="en_US"><seg>Place the index.php file in a new directory on the appropriate public website.  This directory can be named anything but will usually describe the portal.
+For example: http://www.cerberusweb.com/support/</seg></tuv>
+		</tu>
+		<tu tuid='portal.cfg.profile_id'>
+			<tuv xml:lang="en_US"><seg>Profile ID:</seg></tuv>
 		</tu>
 
 		<!-- Configuration -->
@@ -1448,14 +1497,6 @@ For example: *receipt*</seg></tuv>
 		</tu>
 		<tu tuid='tasks.ticket.tab.view'>
 			<tuv xml:lang="en_US"><seg>Ticket Tasks</seg></tuv>
-		</tu>
-		
-		<!-- Groups -->
-		<tu tuid='group.manager'>
-			<tuv xml:lang="en_US"><seg>manager</seg></tuv>
-		</tu>
-		<tu tuid='group.member'>
-			<tuv xml:lang="en_US"><seg>member</seg></tuv>
 		</tu>
 		
 		<!-- Task -->

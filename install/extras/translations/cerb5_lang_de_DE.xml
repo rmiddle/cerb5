@@ -946,6 +946,16 @@
         <seg>Last</seg>
       </tuv>
     </tu>
+    <tu tuid="common.mail">
+      <tuv xml:lang="de_DE">
+        <seg>Emails</seg>
+      </tuv>
+    </tu>
+    <tu tuid="common.manager">
+      <tuv xml:lang="de_DE">
+        <seg>Administrator</seg>
+      </tuv>
+    </tu>
     <tu tuid="common.maximize">
       <tuv xml:lang="de_DE">
         <seg>erweitern</seg>
@@ -954,6 +964,11 @@
     <tu tuid="common.me">
       <tuv xml:lang="de_DE">
         <seg>ich</seg>
+      </tuv>
+    </tu>
+    <tu tuid="common.member">
+      <tuv xml:lang="de_DE">
+        <seg>Mitglied</seg>
       </tuv>
     </tu>
     <tu tuid="common.messages">
@@ -1549,11 +1564,6 @@
     <tu tuid="core.menu.knowledgebase">
       <tuv xml:lang="de_DE">
         <seg>Wissensdatenbank</seg>
-      </tuv>
-    </tu>
-    <tu tuid="core.menu.mail">
-      <tuv xml:lang="de_DE">
-        <seg>Emails</seg>
       </tuv>
     </tu>
     <tu tuid="core.menu.research">
@@ -2409,16 +2419,6 @@
     <tu tuid="forumsthread.worker_id">
       <tuv xml:lang="de_DE">
         <seg>Mitarbeiter</seg>
-      </tuv>
-    </tu>
-    <tu tuid="group.manager">
-      <tuv xml:lang="de_DE">
-        <seg>Administrator</seg>
-      </tuv>
-    </tu>
-    <tu tuid="group.member">
-      <tuv xml:lang="de_DE">
-        <seg>Mitglied</seg>
       </tuv>
     </tu>
     <tu tuid="header.config">
@@ -3304,16 +3304,6 @@
     <tu tuid="portal.sc.cfg.reason_contacting_hint">
       <tuv xml:lang="de_DE">
         <seg>(z.B. "Ich möchte Informationen über Ihre weiteren Produkte")</seg>
-      </tuv>
-    </tu>
-    <tu tuid="portal.sc.cfg.save_more_feeds">
-      <tuv xml:lang="de_DE">
-        <seg>(speichern, um weitere RSS-Feeds hinzuzufügen)</seg>
-      </tuv>
-    </tu>
-    <tu tuid="portal.sc.cfg.save_to_add_followups">
-      <tuv xml:lang="de_DE">
-        <seg>(speichern, um weitere Follow-Ups hinzuzufügen)</seg>
       </tuv>
     </tu>
     <tu tuid="portal.sc.cfg.theme">
@@ -5012,62 +5002,62 @@ login</seg>
         <seg>Ein anderer Administrator führt gerade ein Update durch. Bitte warten...</seg>
       </tuv>
     </tu>
-    <tu tuid="usermeet.ui.community.cfg.add_community">
+    <tu tuid="portal.cfg.add_community">
       <tuv xml:lang="de_DE">
         <seg>Community hinzufügen</seg>
       </tuv>
     </tu>
-    <tu tuid="usermeet.ui.community.cfg.add_tool">
+    <tu tuid="portal.cfg.add_tool">
       <tuv xml:lang="de_DE">
         <seg>Neues Community-Portal hinzufügen:</seg>
       </tuv>
     </tu>
-    <tu tuid="usermeet.ui.community.cfg.changes_saved_date">
+    <tu tuid="portal.cfg.changes_saved_date">
       <tuv xml:lang="de_DE">
         <seg>Änderungen am/um %s gespeichert</seg>
       </tuv>
     </tu>
-    <tu tuid="usermeet.ui.community.cfg.communities">
+    <tu tuid="portal.cfg.communities">
       <tuv xml:lang="de_DE">
         <seg>Communities</seg>
       </tuv>
     </tu>
-    <tu tuid="usermeet.ui.community.cfg.community">
+    <tu tuid="portal.cfg.community">
       <tuv xml:lang="de_DE">
         <seg>Community:</seg>
       </tuv>
     </tu>
-    <tu tuid="usermeet.ui.community.cfg.community_name">
+    <tu tuid="portal.cfg.community_name">
       <tuv xml:lang="de_DE">
         <seg>Community Name:</seg>
       </tuv>
     </tu>
-    <tu tuid="usermeet.ui.community.cfg.community_name_hint">
+    <tu tuid="portal.cfg.community_name_hint">
       <tuv xml:lang="de_DE">
         <seg>(z.B. öffentliche Webseite)</seg>
       </tuv>
     </tu>
-    <tu tuid="usermeet.ui.community.cfg.confirm_delete">
+    <tu tuid="portal.cfg.confirm_delete">
       <tuv xml:lang="de_DE">
         <seg>Sind Sie sicher, dass dieses Community-Portal gelöscht werden soll?</seg>
       </tuv>
     </tu>
-    <tu tuid="usermeet.ui.community.cfg.htaccess_hint">
+    <tu tuid="portal.cfg.htaccess_hint">
       <tuv xml:lang="de_DE">
         <seg>(optional, bekannte URLs für ApacheWebServer-Nutzer)</seg>
       </tuv>
     </tu>
-    <tu tuid="usermeet.ui.community.cfg.installation">
+    <tu tuid="portal.cfg.installation">
       <tuv xml:lang="de_DE">
         <seg>Installation</seg>
       </tuv>
     </tu>
-    <tu tuid="usermeet.ui.community.cfg.installation_instructions">
+    <tu tuid="portal.cfg.installation_instructions">
       <tuv xml:lang="de_DE">
         <seg>Legen Sie die "index.php"-Datei in ein neues Verzeichnis auf der entsprechenden öffentlichen Webseite. Dieses Verzeichnis kann wahlweise benannt werden, beschreibt jedoch im Regelfall das Portal (z.B.: http://www.cerberusweb.com/support/).</seg>
       </tuv>
     </tu>
-    <tu tuid="usermeet.ui.community.cfg.profile_id">
+    <tu tuid="portal.cfg.profile_id">
       <tuv xml:lang="de_DE">
         <seg>Profil-ID</seg>
       </tuv>
