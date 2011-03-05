@@ -5,7 +5,7 @@
 | All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011030201);
+define("APP_BUILD", 2011030402);
 define("APP_VERSION", '5.4.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');

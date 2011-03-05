@@ -5,7 +5,7 @@
 | All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -49,6 +49,8 @@
  */
 
 class ChConfigurationPage extends CerberusPageExtension  {
+	const ID = 'core.page.configuration';
+	
 	function isVisible() {
 		// Must be logged in
 		if(null == ($worker = CerberusApplication::getActiveWorker()))
@@ -84,7 +86,7 @@ class ChConfigurationPage extends CerberusPageExtension  {
 		
 		// Remember the last tab/URL
 		if(null == ($section_uri = @$response->path[1])) {
-			if(null == ($section_uri = $visit->get(Extension_ConfigTab::POINT, '')))
+			if(null == ($section_uri = $visit->get(ChConfigurationPage::ID, '')))
 				$section_uri = 'branding';
 		}
 
