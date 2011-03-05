@@ -5,7 +5,7 @@
 | All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -68,13 +68,6 @@ abstract class CerberusPageExtension extends DevblocksExtension {
 	}
 };
 
-abstract class Extension_ConfigTab extends DevblocksExtension {
-	const POINT = 'cerberusweb.config.tab';
-	
-	function showTab() {}
-	function saveTab() {}
-};
-
 abstract class Extension_PageSection extends DevblocksExtension {
 	const POINT = 'cerberusweb.ui.page.section';
 	
@@ -110,6 +103,55 @@ abstract class Extension_PageSection extends DevblocksExtension {
 		}
 		
 		return null;
+	}
+	
+	abstract function render();
+};
+
+abstract class Extension_PageMenu extends DevblocksExtension {
+	const POINT = 'cerberusweb.ui.page.menu';
+	
+	/**
+	 * @return DevblocksExtensionManifest[]|Extension_PageMenu[]
+	 */
+	static function getExtensions($as_instances=true, $page_id=null) {
+		if(empty($page_id))
+			return DevblocksPlatform::getExtensions(self::POINT, $as_instances);
+
+		$results = array();
+		
+		$exts = DevblocksPlatform::getExtensions(self::POINT, false);
+		foreach($exts as $ext_id => $ext) {
+			if(0 == strcasecmp($page_id, $ext->params['page_id']))
+				$results[$ext_id] = $as_instances ? $ext->createInstance() : $ext;
+		}
+		
+		return $results;
+	}
+	
+	abstract function render();
+};
+
+abstract class Extension_PageMenuItem extends DevblocksExtension {
+	const POINT = 'cerberusweb.ui.page.menu.item';
+	
+	/**
+	 * @return DevblocksExtensionManifest[]|Extension_PageMenuItem[]
+	 */
+	static function getExtensions($as_instances=true, $page_id=null, $menu_id=null) {
+		if(empty($page_id) && empty($menu_id))
+			return DevblocksPlatform::getExtensions(self::POINT, $as_instances);
+
+		$results = array();
+		
+		$exts = DevblocksPlatform::getExtensions(self::POINT, false);
+		foreach($exts as $ext_id => $ext) {
+			if(empty($page_id) || 0 == strcasecmp($page_id, $ext->params['page_id']))
+				if(empty($menu_id) || 0 == strcasecmp($menu_id, $ext->params['menu_id']))
+					$results[$ext_id] = $as_instances ? $ext->createInstance() : $ext;
+		}
+		
+		return $results;
 	}
 	
 	abstract function render();
