@@ -69,7 +69,7 @@
 					<legend>Actions</legend>
 					{assign var=headers value=$message->getHeaders()}
 					<button name="saveDraft" type="button" onclick="if($(this).attr('disabled'))return;$(this).attr('disabled','disabled');genericAjaxPost('reply{$message->id}_part2',null,'c=display&a=saveDraftReply&is_ajax=1',function(json, ui) { var obj = $.parseJSON(json); $('#divDraftStatus{$message->id}').html(obj.html); $('#reply{$message->id}_part2 input[name=draft_id]').val(obj.draft_id); $('#reply{$message->id}_part1 button[name=saveDraft]').removeAttr('disabled'); } );"><span class="cerb-sprite sprite-check"></span> Save Draft</button>
-					<button type="button" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id={$ticket->team_id}',function(text) { insertAtCursor(document.getElementById('reply_{$message->id}'),text);document.getElementById('reply_{$message->id}').focus(); } );"><span class="cerb-sprite sprite-document_edit"></span> {$translate->_('display.reply.insert_sig')|capitalize}</button>
+					<button id="btnInsertReplySig{$message->id}" type="button" title="(Ctrl+Shift+G)" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id={$ticket->team_id}&bucket_id={$ticket->category_id}',function(txt) { $('#reply_{$message->id}').insertAtCursor(txt); } );"><span class="cerb-sprite sprite-document_edit"></span> {$translate->_('display.reply.insert_sig')|capitalize}</button>
 					{* Plugin Toolbar *}
 					{if !empty($reply_toolbaritems)}
 						{foreach from=$reply_toolbaritems item=renderer}
@@ -132,15 +132,14 @@
 {else}
 <textarea name="content" rows="20" cols="80" id="reply_{$message->id}" class="reply" style="width:98%;border:1px solid rgb(180,180,180);padding:5px;">
 {if !empty($draft)}{$draft->body}{else}
-{if !empty($signature) && $signature_pos}
+{if !empty($signature) && 1==$signature_pos}
 
-{$signature}{*Sig above, 2 lines necessary whitespace*}
-
+{$signature}{*Sig above*}
 
 {/if}{$quote_sender=$message->getSender()}{$quote_sender_personal=$quote_sender->getName()}{if !empty($quote_sender_personal)}{$reply_personal=$quote_sender_personal}{else}{$reply_personal=$quote_sender->email}{/if}{$reply_date=$message->created_date|devblocks_date:'D, d M Y'}{'display.reply.reply_banner'|devblocks_translate:$reply_date:$reply_personal}
 {$message->getContent()|trim|indent:1:'> '}
 
-{if !empty($signature) && !$signature_pos}{$signature}{/if}{*Sig below*}
+{if !empty($signature) && 2==$signature_pos}{$signature}{/if}{*Sig below*}
 {/if}
 </textarea>
 {/if}
@@ -277,7 +276,7 @@
 		ajax.emailAutoComplete('#reply{$message->id}_part1 input[name=bcc]', { multiple: true } );
 		
 		$('#reply{$message->id}_part1 input:text').blur(function(event) {
-			var name = event.target.name;
+			name = event.target.name;
 			$('#reply{$message->id}_part2 input:hidden[name='+name+']').val(event.target.value);
 		} );
 		
@@ -322,8 +321,38 @@
 				return false;
 			}
 		});
+
+		{if $pref_keyboard_shortcuts}
 		
-	} );
+		// Reply textbox
+		$('#reply_{$message->id}').keypress(function(event) {
+			if(!$(this).is(':focus'))
+				return;
+			
+			if(!event.ctrlKey) //!event.altKey && !event.ctrlKey && !event.metaKey
+				return;
+			
+			event.preventDefault();
+
+			if(event.ctrlKey && event.shiftKey) {
+				switch(event.which) {
+					case 7:  // (G) Insert Signature
+						try {
+							$('#btnInsertReplySig{$message->id}').click();
+						} catch(ex) { } 
+						break;
+					case 9:  // (I) Insert Snippet
+						try {
+							$('#reply{$message->id}_part1').find('.context-snippet').focus();
+						} catch(ex) { } 
+						break;
+				}
+			}
+		});
+		
+		{/if}
+		
+	});
 
 	function openSnippetsChooser(button) {
 		$chooser=genericAjaxPopup('chooser{$message->id}','c=internal&a=chooserOpen&context=cerberusweb.contexts.snippet&contexts=cerberusweb.contexts.ticket,cerberusweb.contexts.worker',null,true,'750');
@@ -357,4 +386,3 @@
 		});
 	}
 </script>
-

@@ -53,7 +53,9 @@ class DAO_Group extends C4_ORMHelper {
     
     const TEAM_ID = 'id';
     const TEAM_NAME = 'name';
-    const TEAM_SIGNATURE = 'signature';
+    const REPLY_ADDRESS_ID = 'reply_address_id';
+    const REPLY_PERSONAL = 'reply_personal';
+    const REPLY_SIGNATURE = 'reply_signature';
     const IS_DEFAULT = 'is_default';
     
 	// Teams
@@ -65,7 +67,7 @@ class DAO_Group extends C4_ORMHelper {
 	 * @return Model_Group
 	 */
 	static function get($id) {
-		$teams = DAO_Group::getTeams(array($id));
+		$teams = DAO_Group::getAll();
 		
 		if(isset($teams[$id]))
 			return $teams[$id];
@@ -85,10 +87,10 @@ class DAO_Group extends C4_ORMHelper {
 
 		$teams = array();
 		
-		$sql = sprintf("SELECT t.id , t.name, t.signature, t.is_default ".
-			"FROM team t ".
-			((is_array($ids) && !empty($ids)) ? sprintf("WHERE t.id IN (%s) ",implode(',',$ids)) : " ").
-			"ORDER BY t.name ASC"
+		$sql = sprintf("SELECT id , name, is_default, reply_address_id, reply_personal, reply_signature ".
+			"FROM team ".
+			((is_array($ids) && !empty($ids)) ? sprintf("WHERE id IN (%s) ",implode(',',$ids)) : " ").
+			"ORDER BY name ASC"
 		);
 		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
@@ -96,8 +98,10 @@ class DAO_Group extends C4_ORMHelper {
 			$team = new Model_Group();
 			$team->id = intval($row['id']);
 			$team->name = $row['name'];
-			$team->signature = $row['signature'];
 			$team->is_default = intval($row['is_default']);
+			$team->reply_address_id = $row['reply_address_id'];
+			$team->reply_personal = $row['reply_personal'];
+			$team->reply_signature = $row['reply_signature'];
 			$teams[$team->id] = $team;
 		}
 		
@@ -376,7 +380,6 @@ class DAO_Group extends C4_ORMHelper {
 		$cache = DevblocksPlatform::getCacheService();
 		$cache->remove(self::CACHE_ALL);
 		$cache->remove(self::CACHE_ROSTERS);
-		$cache->remove(CerberusApplication::CACHE_HELPDESK_FROMS);
 	}
 	
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
@@ -523,18 +526,166 @@ class Model_Group {
 	public $name;
 	public $count;
 	public $is_default = 0;
+	public $reply_address_id;
+	public $reply_personal;
+	public $reply_signature;
 	
 	public function getMembers() {
 		return DAO_Group::getTeamMembers($this->id);
+	}
+	
+	/**
+	 * 
+	 * @param integer $bucket_id
+	 * @return Model_AddressOutgoing
+	 */
+	public function getReplyTo($bucket_id=0) {
+		$from_id = 0;
+		$froms = DAO_AddressOutgoing::getAll();
+		
+		// Cascade to bucket
+		if(!empty($bucket_id)
+			&& null != ($bucket = DAO_Bucket::get($bucket_id))) {
+			
+			$from_id = $bucket->reply_address_id;
+		}
+
+		// Cascade to group
+		if(empty($from_id))
+			$from_id = $this->reply_address_id;
+		
+		// Cascade to global
+		if(empty($from_id) || !isset($froms[$from_id])) {
+			$from = DAO_AddressOutgoing::getDefault();
+			$from_id = $from->address_id;
+		}
+			
+		// Last check
+		if(!isset($froms[$from_id]))
+			return null;
+		
+		return $froms[$from_id];
+	}
+	
+	public function getReplyFrom($bucket_id=0) {
+		$from_id = 0;
+		$froms = DAO_AddressOutgoing::getAll();
+		
+		// Cascade to bucket
+		if(!empty($bucket_id)
+			&& null != ($bucket = DAO_Bucket::get($bucket_id))) {
+			
+			$from_id = $bucket->reply_address_id;
+		}
+
+		// Cascade to group
+		if(empty($from_id))
+			$from_id = $this->reply_address_id;
+		
+		// Cascade to global
+		if(empty($from_id) || !isset($froms[$from_id])) {
+			$from = DAO_AddressOutgoing::getDefault();
+			$from_id = $from->address_id;
+		}
+			
+		return $from_id;
+	}
+	
+	public function getReplyPersonal($bucket_id=0, $worker_model=null) {
+		$froms = DAO_AddressOutgoing::getAll();
+		$personal = null;
+		
+		// Cascade to bucket
+		if(!empty($bucket_id)
+			&& null != ($bucket = DAO_Bucket::get($bucket_id))) {
+			
+			$personal = $bucket->reply_personal;
+			
+			// Cascade to bucket address
+			if(empty($personal) && !empty($bucket->reply_address_id) && isset($froms[$bucket->reply_address_id])) {
+				$from = $froms[$bucket->reply_address_id];
+				$personal = $from->reply_personal;
+			}
+		}
+
+		// Cascade to group
+		if(empty($personal))
+			$personal = $this->reply_personal;
+			
+		// Cascade to group address
+		if(empty($personal) && !empty($this->reply_address_id) && isset($froms[$this->reply_address_id])) {
+			$from = $froms[$this->reply_address_id];
+			$personal = $from->reply_personal;
+		}
+		
+		// Cascade to global
+		if(empty($personal)) {
+			$from = DAO_AddressOutgoing::getDefault();
+			$personal = $from->reply_personal;
+		}
+		
+		// If we have a worker model, convert template tokens
+		if(empty($worker_model))
+			$worker_model = new Model_Worker();
+		
+		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+		$token_labels = array();
+		$token_values = array();
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $worker_model, $token_labels, $token_values);
+		$personal = $tpl_builder->build($personal, $token_values);
+		
+		return $personal;
+	}
+	
+	public function getReplySignature($bucket_id=0, $worker_model=null) {
+		$froms = DAO_AddressOutgoing::getAll();
+		$signature = null;
+		
+		// Cascade to bucket
+		if(!empty($bucket_id)
+			&& null != ($bucket = DAO_Bucket::get($bucket_id))) {
+			
+			$signature = $bucket->reply_signature;
+			
+			// Cascade to bucket address
+			if(empty($signature) && !empty($bucket->reply_address_id) && isset($froms[$bucket->reply_address_id])) {
+				$from = $froms[$bucket->reply_address_id];
+				$signature = $from->reply_signature;
+			}
+		}
+
+		// Cascade to group
+		if(empty($signature))
+			$signature = $this->reply_signature;
+			
+		// Cascade to group address
+		if(empty($signature) && !empty($this->reply_address_id) && isset($froms[$this->reply_address_id])) {
+			$from = $froms[$this->reply_address_id];
+			$signature = $from->reply_signature;
+		}
+		
+		// Cascade to global
+		if(empty($signature)) {
+			$from = DAO_AddressOutgoing::getDefault();
+			$signature = $from->reply_signature;
+		}
+		
+		// If we have a worker model, convert template tokens
+		if(!empty($worker_model)) {
+			$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+			$token_labels = array();
+			$token_values = array();
+			CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $worker_model, $token_labels, $token_values);
+			$signature = $tpl_builder->build($signature, $token_values);
+		}
+		
+		return $signature;
 	}
 };
 
 class DAO_GroupSettings {
 	const CACHE_ALL = 'ch_group_settings';
 	
-    const SETTING_REPLY_FROM = 'reply_from';
-    const SETTING_REPLY_PERSONAL = 'reply_personal';
-    const SETTING_REPLY_PERSONAL_WITH_WORKER = 'reply_personal_with_worker';
     const SETTING_SUBJECT_HAS_MASK = 'subject_has_mask';
     const SETTING_SUBJECT_PREFIX = 'subject_prefix';
     const SETTING_SPAM_THRESHOLD = 'group_spam_threshold';
@@ -557,11 +708,6 @@ class DAO_GroupSettings {
 		
 		$cache = DevblocksPlatform::getCacheService();
 		$cache->remove(self::CACHE_ALL);
-		
-		// Nuke our sender cache
-		if($key==self::SETTING_REPLY_FROM) {
-			$cache->remove(CerberusApplication::CACHE_HELPDESK_FROMS);
-		}
 	}
 	
 	static function get($group_id, $key, $default=null) {

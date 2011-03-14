@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011030402);
+define("APP_BUILD", 2011031401);
 define("APP_VERSION", '5.4.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -87,8 +87,6 @@ class CerberusApplication extends DevblocksApplication {
 	const VIEW_SEARCH = 'search';
 	const VIEW_MAIL_WORKFLOW = 'mail_workflow';
 	const VIEW_MAIL_MESSAGES = 'mail_messages';
-	
-	const CACHE_HELPDESK_FROMS = 'ch_helpdesk_froms';
 	
 	/**
 	 * @return CerberusVisit
@@ -604,35 +602,6 @@ class CerberusApplication extends DevblocksApplication {
 		
 	    return $matches;
 	}
-	
-	// [TODO] This probably has a better home
-	public static function getHelpdeskSenders() {
-		$cache = DevblocksPlatform::getCacheService();
-
-		if(null === ($froms = $cache->load(self::CACHE_HELPDESK_FROMS))) {
-			$froms = array();
-			$settings = DevblocksPlatform::getPluginSettingsService();
-			$group_settings = DAO_GroupSettings::getSettings();
-			
-			// Global sender
-			$from = strtolower($settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM));
-			@$froms[$from] = $from;
-			
-			// Group senders
-			if(is_array($group_settings))
-			foreach($group_settings as $group_id => $gs) {
-				@$from = strtolower($gs[DAO_GroupSettings::SETTING_REPLY_FROM]);
-				if(!empty($from))
-					@$froms[$from] = $from;
-			}
-			
-			asort($froms);
-			
-			$cache->save($froms, self::CACHE_HELPDESK_FROMS);
-		}
-		
-		return $froms;
-	}
 };
 
 interface IContextToken {
@@ -1001,10 +970,6 @@ class CerberusLicense {
 };
 
 class CerberusSettings {
-	const DEFAULT_REPLY_FROM = 'default_reply_from'; 
-	const DEFAULT_REPLY_PERSONAL = 'default_reply_personal'; 
-	const DEFAULT_SIGNATURE = 'default_signature'; 
-	const DEFAULT_SIGNATURE_POS = 'default_signature_pos'; 
 	const HELPDESK_TITLE = 'helpdesk_title'; 
 	const HELPDESK_LOGO_URL = 'helpdesk_logo_url'; 
 	const SMTP_HOST = 'smtp_host'; 
@@ -1025,10 +990,6 @@ class CerberusSettings {
 };
 
 class CerberusSettingsDefaults {
-	const DEFAULT_REPLY_FROM = 'do-not-reply@localhost'; //$_SERVER['SERVER_ADMIN'] 
-	const DEFAULT_REPLY_PERSONAL = ''; 
-	const DEFAULT_SIGNATURE = ''; 
-	const DEFAULT_SIGNATURE_POS = 0; 
 	const HELPDESK_TITLE = 'Cerberus Helpdesk :: Team-based E-mail Management'; 
 	const SMTP_HOST = 'localhost'; 
 	const SMTP_AUTH_ENABLED = 0; 

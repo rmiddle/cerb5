@@ -59,6 +59,14 @@ fieldset h1 {
 	font-size:120%;
 }
 
+fieldset.delete {
+	color:rgb(150,0,0);
+}
+
+fieldset.delete legend {
+	color:rgb(150,0,0);
+}
+
 select, textarea {
 	border:1px solid rgb(150,150,150);
 }
@@ -584,7 +592,7 @@ DIV.cerb-menu > UL {
 DIV.cerb-menu > UL > LI {
 	padding:5px 10px;
 	background-color:rgb(134,169,227);
-	border-left:1px dotted white;
+	border-left:1px solid white;
 	float:left;
 }
 
