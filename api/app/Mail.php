@@ -50,33 +50,20 @@
 class CerberusMail {
 	private function __construct() {}
 	
-	static function getMailerDefaults($team_id=0) {
-		@$group_smtp = DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, 0);
-		if($team_id == 0 || $group_smtp == 0) {
-			$settings = DevblocksPlatform::getPluginSettingsService();
+	static function getMailerDefaults() {
+		$settings = DevblocksPlatform::getPluginSettingsService();
 
-			return array(
-				'host' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_HOST,CerberusSettingsDefaults::SMTP_HOST),
-				'port' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_PORT,CerberusSettingsDefaults::SMTP_PORT),
-				'auth_user' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_USER,null),
-				'auth_pass' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_PASS,null),
-				'enc' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_ENCRYPTION_TYPE,CerberusSettingsDefaults::SMTP_ENCRYPTION_TYPE),
-				'max_sends' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_MAX_SENDS,CerberusSettingsDefaults::SMTP_MAX_SENDS),
-				'timeout' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_TIMEOUT,CerberusSettingsDefaults::SMTP_TIMEOUT),
-			);
-		} else {
-			return array(
-				'host' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_HOST,'localhost'),
-				'port' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_PORT,25),
-				'enc' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_ENC,'None'),
-				'auth_user' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_AUTH_USER,null),
-				'auth_pass' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_AUTH_PASS,null),
-				'timeout' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_TIMEOUT,30),
-				'max_sends' => DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_MAX_SENDS,20),
-			);
-		}
+		return array(
+			'host' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_HOST,CerberusSettingsDefaults::SMTP_HOST),
+			'port' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_PORT,CerberusSettingsDefaults::SMTP_PORT),
+			'auth_user' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_USER,null),
+			'auth_pass' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_AUTH_PASS,null),
+			'enc' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_ENCRYPTION_TYPE,CerberusSettingsDefaults::SMTP_ENCRYPTION_TYPE),
+			'max_sends' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_MAX_SENDS,CerberusSettingsDefaults::SMTP_MAX_SENDS),
+			'timeout' => $settings->get('cerberusweb.core',CerberusSettings::SMTP_TIMEOUT,CerberusSettingsDefaults::SMTP_TIMEOUT),
+		);
 	}
-		
+	
 	static function quickSend($to, $subject, $body, $from_addy=null, $from_personal=null) {
 		try {
 			$mail_service = DevblocksPlatform::getMailService();
@@ -85,12 +72,16 @@ class CerberusMail {
 	
 		    $settings = DevblocksPlatform::getPluginSettingsService();
 		    
-		    if(empty($from_addy))
-				@$from_addy = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
+		    if(empty($from_addy) || empty($from_personal)) {
+		    	if(null == ($replyto_default = DAO_AddressOutgoing::getDefault()))
+		    		throw new Exception("There is no default reply-to.");
+		    	
+		    	if(empty($from_addy))
+		    		$from_addy = $replyto_default->email;
+		    	if(empty($from_personal))
+		    		$from_personal = $replyto_default->getReplyPersonal();
+		    }
 		    
-		    if(empty($from_personal))
-				@$from_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL,CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
-			
 			$mail->setTo(array($to));
 			$mail->setFrom(array($from_addy => $from_personal));
 			$mail->setSubject($subject);
@@ -130,22 +121,10 @@ class CerberusMail {
 		@$ticket_reopen = $properties['ticket_reopen'];
 		
 		$worker = CerberusApplication::getActiveWorker();
-		
-		$settings = DevblocksPlatform::getPluginSettingsService();
-		$default_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
-		$default_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL,CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
-		
-		$team_from = DAO_GroupSettings::get($team_id,DAO_GroupSettings::SETTING_REPLY_FROM,'');
-		$team_personal = DAO_GroupSettings::get($team_id,DAO_GroupSettings::SETTING_REPLY_PERSONAL,'');
-		$team_personal_with_worker = DAO_GroupSettings::get($team_id,DAO_GroupSettings::SETTING_REPLY_PERSONAL_WITH_WORKER,0);
-		
-		$from = !empty($team_from) ? $team_from : $default_from;
-		$personal = !empty($team_personal) ? $team_personal : $default_personal;
-		
-		// Prefix the worker name on the personal line?
-		if(!empty($team_personal_with_worker) && !empty($worker)) {
-			$personal = $worker->getName() . ', ' . $personal;
-		}
+		$group = DAO_Group::get($team_id);
+
+		$from_replyto = $group->getReplyTo();
+		$personal = $group->getReplyPersonal(0, $worker);
 		
 		$mask = CerberusApplication::generateTicketMask();
 
@@ -174,7 +153,7 @@ class CerberusMail {
 			$log_headers = new Swift_Message_Headers();
 			$log_headers->setCharset(LANG_CHARSET_CODE);
 			$log_headers->set('To', $toStr);
-			$log_headers->set('From', !empty($personal) ? (sprintf("%s <%s>",$personal,$from)) : (sprintf('%s',$from)));
+			$log_headers->set('From', !empty($personal) ? (sprintf("%s <%s>",$personal,$from_replyto->email)) : (sprintf('%s',$from_replyto->email)));
 			$log_headers->set('Subject', $subject_mailed);
 			$log_headers->set('Date', date('r'));
 			
@@ -187,14 +166,8 @@ class CerberusMail {
 			
 		} else { // regular mail sending
 			try {
-				@$group_smtp = DAO_GroupSettings::get($team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, 0);
-				// objects
 				$mail_service = DevblocksPlatform::getMailService();
-				if ($group_smtp) {
-					$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults($team_id));
-				} else {
-					$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
-				}
+				$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 				$email = $mail_service->createMessage();
 		
 				$email->setTo($toList);
@@ -210,7 +183,7 @@ class CerberusMail {
 					$email->setBcc($bccList);
 				}
 				
-				$email->setFrom(array($from => $personal));
+				$email->setFrom(array($from_replyto->email => $personal));
 				$email->setSubject($subject_mailed);
 				$email->generateId();
 				
@@ -279,7 +252,7 @@ class CerberusMail {
 			}
 		}
 		
-		$fromAddressInst = CerberusApplication::hashLookupAddress($from, true);
+		$fromAddressInst = CerberusApplication::hashLookupAddress($from_replyto->email, true);
 		$fromAddressId = $fromAddressInst->id;
 		
 		// [TODO] this is redundant with the Parser code.  Should be refactored later
@@ -410,12 +383,8 @@ class CerberusMail {
 	
 	static function sendTicketMessage($properties=array()) {
 	    $settings = DevblocksPlatform::getPluginSettingsService();
-	    $helpdesk_senders = CerberusApplication::getHelpdeskSenders();
+	    $replyto_addresses = DAO_AddressOutgoing::getAll();
 	    
-		@$from_addy = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
-		@$from_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL,CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
-	    // [TODO] If we still don't have a $from_addy we need a graceful failure. 
-		
 		/*
 	    'draft_id'
 	    'message_id'
@@ -436,8 +405,13 @@ class CerberusMail {
 		'dont_send',
 		'dont_save_copy'
 		*/
-		
+
 		try {
+			// objects
+		    $mail_service = DevblocksPlatform::getMailService();
+		    $mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+			$mail = $mail_service->createMessage();
+	        
 		    // properties
 		    @$reply_message_id = $properties['message_id'];
 		    @$content = $properties['content'];
@@ -456,45 +430,28 @@ class CerberusMail {
 	        
 			if(null == ($ticket = DAO_Ticket::get($ticket_id)))
 				return;
-	
-			@$group_smtp = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, 0);
-			// objects
-		    $mail_service = DevblocksPlatform::getMailService();
-			if ($group_smtp) {
-				$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults($ticket->team_id));
-			} else {
-				$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
-			}
-			$mail = $mail_service->createMessage();
-	        
-			// [TODO] Check that message|ticket isn't NULL
+				
+			if(null == ($group = DAO_Group::get($ticket->team_id)))
+				return;
+				
+			$from_replyto = $group->getReplyTo($ticket->category_id);
+			$from_personal = $group->getReplyPersonal($ticket->category_id, $worker_id);
 			
 			// If this ticket isn't spam trained and our outgoing message isn't an autoreply
 			if($ticket->spam_training == CerberusTicketSpamTraining::BLANK
 				&& (!isset($properties['is_autoreply']) || !$properties['is_autoreply'])) {
 				CerberusBayes::markTicketAsNotSpam($ticket_id);
 			} 
-			
-			// Allow teams to override the default from/personal
-			@$group_reply = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_FROM, '');
-			@$group_personal = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_PERSONAL, '');
-			@$group_personal_with_worker = DAO_GroupSettings::get($ticket->team_id, DAO_GroupSettings::SETTING_REPLY_PERSONAL_WITH_WORKER, 0);
-
-			if(!empty($group_reply))
-				$from_addy = $group_reply;
 				
-			if(!empty($group_personal)) 
-				$from_personal = $group_personal;
-			
 			// Prefix the worker name on the personal line?
-			if(!empty($group_personal_with_worker)
-				&& null != ($reply_worker = DAO_Worker::get($worker_id))) {
-					$from_personal = $reply_worker->getName() .
-						(!empty($from_personal) ? (', ' . $from_personal) : "");
-			}
+//			if(!empty($group_personal_with_worker)
+//				&& null != ($reply_worker = DAO_Worker::get($worker_id))) {
+//					$from_personal = $reply_worker->getName() .
+//						(!empty($from_personal) ? (', ' . $from_personal) : "");
+//			}
 				
 			// Headers
-			$mail->setFrom(array($from_addy => $from_personal));
+			$mail->setFrom(array($from_replyto->email => $from_personal));
 			$mail->generateId();
 			
 			$headers = $mail->getHeaders();
@@ -546,12 +503,11 @@ class CerberusMail {
 					return;
 	
 				// Ourselves?
-				if(isset($helpdesk_senders[$first_address->email]))
+				if(isset($replyto_addresses[$first_address->id]))
 					return;
-			
-				$autoreply_limiter = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_AUTOREPLY_LIMITER,CerberusSettingsDefaults::DEFAULT_AUTOREPLY_LIMITER);
+					
 				// Make sure we haven't mailed this address an autoreply within 5 minutes
-				if($first_address->last_autoreply > 0 && $first_address->last_autoreply > time()-$autoreply_limiter) {
+				if($first_address->last_autoreply > 0 && $first_address->last_autoreply > time()-300) {
 					return;
 				}
 					
@@ -698,7 +654,7 @@ class CerberusMail {
 		
 		$change_fields = array();
 		
-		$fromAddressInst = CerberusApplication::hashLookupAddress($from_addy, true);
+		$fromAddressInst = CerberusApplication::hashLookupAddress($from_replyto->email, true);
 		$fromAddressId = $fromAddressInst->id;
 		
 		if((!isset($properties['dont_keep_copy']) || !$properties['dont_keep_copy'])
@@ -801,7 +757,6 @@ class CerberusMail {
 			}
 		}
 
-        // Who should handle the followup?
         if(isset($properties['context_workers'])) {
         	CerberusContexts::setWorkers(CerberusContexts::CONTEXT_TICKET, $ticket_id, $properties['context_workers']);
         }
@@ -838,15 +793,10 @@ class CerberusMail {
 	
 	static function reflect(CerberusParserMessage $message, $to) {
 		try {
-			// objects
 			$mail_service = DevblocksPlatform::getMailService();
 			$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 			$mail = $mail_service->createMessage();
 	
-		    $settings = DevblocksPlatform::getPluginSettingsService();
-			@$from_addy = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
-			@$from_personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL,CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
-			
 			$mail->setTo(array($to));
 
 			$headers = $mail->getHeaders();

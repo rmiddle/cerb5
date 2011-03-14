@@ -153,7 +153,7 @@ class ChTicketsPage extends CerberusPageExtension {
 				$tpl->assign('teams', $teams);
 				
 				// Destinations
-				$destinations = CerberusApplication::getHelpdeskSenders();
+				$destinations = DAO_AddressOutgoing::getAll();
 				$tpl->assign('destinations', $destinations);
 
 				// Group+Buckets				
@@ -1227,51 +1227,40 @@ class ChTicketsPage extends CerberusPageExtension {
 	
 	function getComposeSignatureAction() {
 		@$group_id = DevblocksPlatform::importGPC($_REQUEST['group_id'],'integer',0);
+		@$bucket_id = DevblocksPlatform::importGPC($_REQUEST['bucket_id'],'integer',0);
+		@$raw = DevblocksPlatform::importGPC($_REQUEST['raw'],'integer',0);
 		
-		$settings = DevblocksPlatform::getPluginSettingsService();
-		$group = DAO_Group::get($group_id);
-
-		$active_worker = CerberusApplication::getActiveWorker();
-		$sig = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_SIGNATURE,CerberusSettingsDefaults::DEFAULT_SIGNATURE);
-
-		if(!empty($group->signature)) {
-			$sig = $group->signature;
+		// Parsed or raw?
+		$active_worker = !empty($raw) ? null : CerberusApplication::getActiveWorker();
+		
+		if(empty($group_id) || null == ($group = DAO_Group::get($group_id))) {
+			$replyto_default = DAO_AddressOutgoing::getDefault();
+			echo $replyto_default->getReplySignature($active_worker);
+			
+		} else {
+			echo $group->getReplySignature($bucket_id, $active_worker);
 		}
-
-		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
-		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $active_worker, $token_labels, $token_values);
-		echo "\r\n", $tpl_builder->build($sig, $token_values), "\r\n";
 	}
 	
+	// [TODO] Refactor for group-based signatures
 	function getLogTicketSignatureAction() {
 		@$email = DevblocksPlatform::importGPC($_REQUEST['email'],'string','');
 		
 		$active_worker = CerberusApplication::getActiveWorker();
-		$group_settings = DAO_GroupSettings::getSettings();
+		$replyto_default = DAO_AddressOutgoing::getDefault();
 		
-		$group_id = 0;
-		
-		// Translate email to group id
-		if(is_array($group_settings))
-		foreach($group_settings as $settings_group_id => $settings) {
-			if(!is_array($settings) || !isset($settings[DAO_GroupSettings::SETTING_REPLY_FROM]))
-				continue;
-				
-			if(0==strcasecmp($settings[DAO_GroupSettings::SETTING_REPLY_FROM], $email)) {
-				$group_id = $settings_group_id;
-				break;
-			}
-		}
-		
-		if(!empty($group_id) && null != ($group = DAO_Group::get($group_id)) && !empty($group->signature)) {
-			$sig = $group->signature;
+		if(false !== ($address = DAO_Address::lookupAddress($email, false)))
+			$replyto = DAO_AddressOutgoing::get($address->id);
+			
+		if(!empty($replyto->reply_signature)) {
+			$sig = $replyto->reply_signature;
 		} else {
-			$sig = DevblocksPlatform::getPluginSetting('cerberusweb.core', CerberusSettings::DEFAULT_SIGNATURE, CerberusSettingsDefaults::DEFAULT_SIGNATURE);
+			$sig = $replyto_default->reply_signature;
 		}
-
+		
 		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
 		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $active_worker, $token_labels, $token_values);
-		echo "\r\n", $tpl_builder->build($sig, $token_values), "\r\n";
+		echo $tpl_builder->build($sig, $token_values);
 	}
 	
 	// Ajax
@@ -1498,7 +1487,6 @@ class ChTicketsPage extends CerberusPageExtension {
 			'context_workers' => $owner_ids,
 			'ticket_reopen' => $ticket_reopen,
 		);
-		
 		$ticket_id = CerberusMail::compose($properties);
 
 		// Custom field saves
@@ -1514,8 +1502,9 @@ class ChTicketsPage extends CerberusPageExtension {
 			$visit = CerberusApplication::getVisit(); /* @var CerberusVisit $visit */
 			$visit->set('compose.last_ticket', $ticket->mask);
 		}
-
+		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('tickets','compose')));
+		exit;
 	}
 	
 	function logTicketAction() {
@@ -1562,58 +1551,7 @@ class ChTicketsPage extends CerberusPageExtension {
 			$active_worker->getName()
 		);
 
-//		// Custom Fields
-//		
-//		if(!empty($aFieldIds))
-//		foreach($aFieldIds as $iIdx => $iFieldId) {
-//			if(!empty($iFieldId)) {
-//				$field =& $fields[$iFieldId]; /* @var $field Model_CustomField */
-//				$value = "";
-//				
-//				switch($field->type) {
-//					case Model_CustomField::TYPE_SINGLE_LINE:
-//					case Model_CustomField::TYPE_MULTI_LINE:
-//					case Model_CustomField::TYPE_URL:
-//						@$value = trim($aFollowUpA[$iIdx]);
-//						break;
-//					
-//					case Model_CustomField::TYPE_NUMBER:
-//						@$value = $aFollowUpA[$iIdx];
-//						if(!is_numeric($value) || 0 == strlen($value))
-//							$value = null;
-//						break;
-//						
-//					case Model_CustomField::TYPE_DATE:
-//						if(false !== ($time = strtotime($aFollowUpA[$iIdx])))
-//							@$value = intval($time);
-//						break;
-//						
-//					case Model_CustomField::TYPE_DROPDOWN:
-//						@$value = $aFollowUpA[$iIdx];
-//						break;
-//						
-//					case Model_CustomField::TYPE_MULTI_PICKLIST:
-//						@$value = DevblocksPlatform::importGPC($_POST['followup_a_'.$iIdx],'array',array());
-//						break;
-//						
-//					case Model_CustomField::TYPE_CHECKBOX:
-//						@$value = (isset($aFollowUpA[$iIdx]) && !empty($aFollowUpA[$iIdx])) ? 1 : 0;
-//						break;
-//						
-//					case Model_CustomField::TYPE_MULTI_CHECKBOX:
-//						@$value = DevblocksPlatform::importGPC($_POST['followup_a_'.$iIdx],'array',array());
-//						break;
-//						
-//					case Model_CustomField::TYPE_WORKER:
-//						@$value = DevblocksPlatform::importGPC($_POST['followup_a_'.$iIdx],'integer',0);
-//						break;
-//				}
-//				
-//				if((is_array($value) && !empty($value)) 
-//					|| (!is_array($value) && 0 != strlen($value)))
-//						$message->custom_fields[$iFieldId] = $value;
-//			}
-//		}
+		// [TODO] Custom fields
 		
 		// Parse
 		$ticket_id = CerberusParser::parseMessage($message);
