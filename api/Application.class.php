@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011031401);
+define("APP_BUILD", 2011032201);
 define("APP_VERSION", '5.4.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -706,6 +706,26 @@ class CerberusContexts {
 		asort($labels);
 		
 		return null;
+	}
+	
+	public static function scrubTokensWithRegexp(&$labels, &$values, $patterns=array()) {
+		foreach($patterns as $pattern) {
+			foreach(array_keys($labels) as $token) {
+				if(preg_match($pattern, $token)) {
+					unset($labels[$token]);
+				}
+			}
+			foreach(array_keys($values) as $token) {
+				if(false !== ($pos = strpos($token,'|')))
+					$token = substr($token,0,$pos);
+				
+				if(preg_match($pattern, $token)) {
+					unset($values[$token]);
+				}
+			}
+		}
+
+		return TRUE;
 	}
 	
 	/**
