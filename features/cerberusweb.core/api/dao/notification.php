@@ -68,23 +68,15 @@ class DAO_Notification extends DevblocksORMHelper {
 		
 		self::update($id, $fields);
 		
-		// Invalidate the worker notification count cache
+		// If a worker was provided
 		if(isset($fields[self::WORKER_ID])) {
+			// Invalidate the worker notification count cache
 			$cache = DevblocksPlatform::getCacheService();
 			self::clearCountCache($fields[self::WORKER_ID]);
+			
+			// Trigger notification
+			Event_NotificationReceivedByOwner::trigger($id, $fields[self::WORKER_ID]);
 		}
-		
-		// [TODO] Trigger the notification.create
-		$eventMgr = DevblocksPlatform::getEventService();
-	    $eventMgr->trigger(
-	        new Model_DevblocksEvent(
-	            'notification.create',
-                array(
-                    'id' => $id,
-                    'fields' => $fields,
-                )
-            )
-	    );
 		
 		return $id;
 	}
@@ -621,7 +613,7 @@ class Context_Notification extends Extension_DevblocksContext {
 			'id' => $prefix.$translate->_('common.id'),
 			'created|date' => $prefix.$translate->_('common.created'),
 			'message' => $prefix.'message',
-			'is_read' => $prefix.'is_read',
+			'is_read' => $prefix.'is read',
 			'url' => $prefix.$translate->_('common.url'),
 		);
 		
