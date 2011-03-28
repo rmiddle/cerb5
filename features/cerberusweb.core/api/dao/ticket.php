@@ -126,7 +126,7 @@ class DAO_Ticket extends C4_ORMHelper {
 	 * Enter description here...
 	 *
 	 * @param string $mask
-	 * return Model_Ticket
+	 * @return Model_Ticket
 	 */
 	static function getTicketByMask($mask) {
 		if(null != ($id = self::getTicketIdByMask($mask))) {
@@ -136,6 +136,11 @@ class DAO_Ticket extends C4_ORMHelper {
 		return NULL;
 	}
 	
+	/**
+	 * 
+	 * @param string $message_id
+	 * @return array
+	 */
 	static function getTicketByMessageId($message_id) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
@@ -534,6 +539,11 @@ class DAO_Ticket extends C4_ORMHelper {
     	}
 	}
 	
+	/**
+	 * 
+	 * @param integer $ticket_id
+	 * @return Model_Address[]
+	 */
 	static function getRequestersByTicket($ticket_id) {
 		$db = DevblocksPlatform::getDatabaseService();
 		$addresses = array();
@@ -2083,6 +2093,9 @@ class Context_Ticket extends Extension_DevblocksContext {
 			'created|date' => $prefix.$translate->_('ticket.created'),
 			'id' => $prefix.$translate->_('ticket.id'),
 			'mask' => $prefix.$translate->_('ticket.mask'),
+			'spam_score' => $prefix.$translate->_('ticket.spam_score'),
+			'spam_training' => $prefix.$translate->_('ticket.spam_training'),
+			'status' => $prefix.$translate->_('common.status'),
 			'subject' => $prefix.$translate->_('ticket.subject'),
 			'updated|date' => $prefix.$translate->_('ticket.updated'),
 			'url' => $prefix.$translate->_('common.url'),
@@ -2098,11 +2111,28 @@ class Context_Ticket extends Extension_DevblocksContext {
 		
 		// Ticket token values
 		if(null != $ticket) {
+			$token_values['created'] = $ticket[SearchFields_Ticket::TICKET_CREATED_DATE];
 			$token_values['id'] = $ticket[SearchFields_Ticket::TICKET_ID];
 			$token_values['mask'] = $ticket[SearchFields_Ticket::TICKET_MASK];
+			$token_values['spam_score'] = $ticket[SearchFields_Ticket::TICKET_SPAM_SCORE];
+			$token_values['spam_training'] = $ticket[SearchFields_Ticket::TICKET_SPAM_TRAINING];
 			$token_values['subject'] = $ticket[SearchFields_Ticket::TICKET_SUBJECT];
-			$token_values['created'] = $ticket[SearchFields_Ticket::TICKET_CREATED_DATE];
 			$token_values['updated'] = $ticket[SearchFields_Ticket::TICKET_UPDATED_DATE];
+			
+			// Status
+			@$is_closed = intval($ticket[SearchFields_Ticket::TICKET_CLOSED]);
+			@$is_waiting = intval($ticket[SearchFields_Ticket::TICKET_WAITING]);
+			@$is_deleted = intval($ticket[SearchFields_Ticket::TICKET_DELETED]);
+			if($is_deleted) {
+				$token_values['status'] = 'deleted';
+			} elseif($is_closed) {
+				$token_values['status'] = 'closed';
+			} elseif($is_waiting) {
+				$token_values['status'] = 'waiting';
+			} else {
+				$token_values['status'] = 'open';
+			}
+			
 			$token_values['custom'] = array();
 			
 			// URL

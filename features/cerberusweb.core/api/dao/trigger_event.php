@@ -272,6 +272,17 @@ class Model_TriggerEvent {
 	
 	private $_nodes = array();
 	
+	/**
+	 * @return Extension_DevblocksEvent
+	 */
+	public function getEvent() {
+		if(null == ($event = DevblocksPlatform::getExtension($this->event_point, true))
+			|| !$event instanceof Extension_DevblocksEvent)
+			return NULL;
+		
+		return $event;
+	}
+	
 	private function _getNodes() {
 		if(empty($this->_nodes))
 			$this->_nodes = DAO_DecisionNode::getByTrigger($this->id);
@@ -313,7 +324,7 @@ class Model_TriggerEvent {
 		}
 	}
 	
-	public function runDecisionTree($dictionary) {
+	public function runDecisionTree(&$dictionary) {
 		$nodes = $this->_getNodes();
 		$tree = $this->_getTree();
 		$path = array();
@@ -329,7 +340,7 @@ class Model_TriggerEvent {
 		return $path;
 	}
 	
-	private function _recurseRunTree($event, $nodes, $tree, $node_id, $dictionary, &$path) {
+	private function _recurseRunTree($event, $nodes, $tree, $node_id, &$dictionary, &$path) {
 		$logger = DevblocksPlatform::getConsoleLog("Assistant");
 		// Does our current node pass?
 		$pass = true;
@@ -370,7 +381,7 @@ class Model_TriggerEvent {
 							continue;
 
 						$action = $params['action'];
-						$event->runAction($action, $params, $dictionary);
+						$event->runAction($action, $this->id, $params, $dictionary);
 					}
 					break;
 			}			

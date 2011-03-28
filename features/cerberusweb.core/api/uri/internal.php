@@ -1299,10 +1299,6 @@ class ChInternalController extends DevblocksControllerExtension {
 		}
 	}
 	
-//	function showDecisionClonePopupAction() {
-//		
-//	}
-	
 	function saveDecisionDeletePopupAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer', 0);
 
@@ -1389,7 +1385,7 @@ class ChInternalController extends DevblocksControllerExtension {
 				return;
 				
 		$tpl->assign('event', $event);
-			
+		
 		// Template
 		switch($type) {
 			case 'switch':
@@ -1463,7 +1459,7 @@ class ChInternalController extends DevblocksControllerExtension {
 		if(null == ($event = DevblocksPlatform::getExtension($trigger->event_point, true)))
 			return; /* @var $event Extension_DevblocksEvent */
 			
-		$event->renderAction($action);
+		$event->renderAction($action, $trigger_id);
 	}
 
 	function saveDecisionPopupAction() {
@@ -1477,7 +1473,7 @@ class ChInternalController extends DevblocksControllerExtension {
 				$type = $model->node_type;
 				
 				// Title changed
-				if(0 != strcasecmp($model->title, $title) && !empty($title))
+				if(0 != strcmp($model->title, $title) && !empty($title))
 					DAO_DecisionNode::update($id, array(
 						DAO_DecisionNode::TITLE => $title,
 					));
@@ -1591,6 +1587,46 @@ class ChInternalController extends DevblocksControllerExtension {
 			if(!empty($trigger_id))
 				DAO_TriggerEvent::delete($trigger_id);
 		}
+	}
+	
+	function testDecisionEventSnippetsAction() {
+		@$prefix = DevblocksPlatform::importGPC($_REQUEST['prefix'],'string','');
+		@$field = DevblocksPlatform::importGPC($_REQUEST['field'],'string','');
+		@$trigger_id = DevblocksPlatform::importGPC($_REQUEST['trigger_id'],'integer',0);
+		
+		@$content = DevblocksPlatform::importGPC($_REQUEST[$prefix][$field],'string','');
+
+		if(null == ($trigger = DAO_TriggerEvent::get($trigger_id)))
+			return;
+			
+		$event = $trigger->getEvent();
+		$event_model = $event->generateSampleEventModel();
+		$event->setEvent($event_model);
+		$values = $event->getValues();
+		
+		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		$success = false;
+		$output = '';
+
+		if(isset($values)) {
+			// Try to build the template
+			if(false === ($out = $tpl_builder->build($content, $values))) {
+				// If we failed, show the compile errors
+				$errors = $tpl_builder->getErrors();
+				$success= false;
+				$output = @array_shift($errors);
+			} else {
+				// If successful, return the parsed template
+				$success = true;
+				$output = $out;
+			}
+		}
+
+		$tpl->assign('success', $success);
+		$tpl->assign('output', $output);
+		$tpl->display('devblocks:cerberusweb.core::internal/renderers/test_results.tpl');
 	}
 	
 	// Utils
