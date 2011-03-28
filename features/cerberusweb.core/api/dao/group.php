@@ -689,13 +689,6 @@ class DAO_GroupSettings {
     const SETTING_SUBJECT_HAS_MASK = 'subject_has_mask';
     const SETTING_SUBJECT_PREFIX = 'subject_prefix';
     const SETTING_TICKET_REPLY_STATUS = 'ticket_reply_status';
-    const SETTING_SPAM_THRESHOLD = 'group_spam_threshold';
-    const SETTING_SPAM_ACTION = 'group_spam_action';
-    const SETTING_SPAM_ACTION_PARAM = 'group_spam_action_param';
-    const SETTING_AUTO_REPLY = 'auto_reply';
-    const SETTING_AUTO_REPLY_ENABLED = 'auto_reply_enabled';
-    const SETTING_CLOSE_REPLY = 'close_reply';
-    const SETTING_CLOSE_REPLY_ENABLED = 'close_reply_enabled';
 	const SETTING_SMTP_IS_ENABLED = 'smtp_is_enabled';
 	const SETTING_SMTP_HOST = 'smtp_host';
 	const SETTING_SMTP_PORT = 'smtp_port';

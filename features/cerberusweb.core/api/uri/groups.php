@@ -100,7 +100,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 		$active_worker = CerberusApplication::getActiveWorker();
 		$visit = CerberusApplication::getVisit();
 		
-		$visit->set('cerberusweb.group.tab', 'mail');
+		$visit->set('cerberusweb.groups.tab', 'mail');
 		
 		if(!$active_worker->isTeamManager($group_id) && !$active_worker->is_superuser) {
 			return;
@@ -112,33 +112,11 @@ class ChGroupsPage extends CerberusPageExtension  {
 		$team_categories = DAO_Bucket::getByTeam($group_id);
 		$tpl->assign('categories', $team_categories);
 	    
-		$default_reply_to = DAO_AddressOutgoing::getDefault();
-		$tpl->assign('default_reply_to', $default_reply_to);
-		
-		$replyto_addresses = DAO_AddressOutgoing::getAll();
-		$tpl->assign('replyto_addresses', $replyto_addresses);
-		
 		$group_settings = DAO_GroupSettings::getSettings($group_id);
 		$tpl->assign('group_settings', $group_settings);
 		
-		@$tpl->assign('group_spam_threshold', $group_settings[DAO_GroupSettings::SETTING_SPAM_THRESHOLD]);
-		@$tpl->assign('group_spam_action', $group_settings[DAO_GroupSettings::SETTING_SPAM_ACTION]);
-		@$tpl->assign('group_spam_action_param', $group_settings[DAO_GroupSettings::SETTING_SPAM_ACTION_PARAM]);
 		$ticket_reply_status = DAO_GroupSettings::get($group_id,DAO_GroupSettings::SETTING_TICKET_REPLY_STATUS,255);
 		@$tpl->assign('ticket_reply_status', $ticket_reply_status);
- 		
-		// Signature
-		$worker_token_labels = array();
-		$worker_token_values = array();
-		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, null, $worker_token_labels, $worker_token_values);
-		$tpl->assign('worker_token_labels', $worker_token_labels);
-		
-		// Auto-replies
-		$ticket_token_labels = array();
-		$ticket_token_values = array();
-		CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, null, $ticket_token_labels, $ticket_token_values);
-		$tpl->assign('ticket_token_labels', $ticket_token_labels);
-		
 		// Template
 		$tpl->display('devblocks:cerberusweb.core::groups/manage/index.tpl');
 	}
@@ -150,7 +128,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 		$active_worker = CerberusApplication::getActiveWorker();
 		$visit = CerberusApplication::getVisit();
 
-		$visit->set('cerberusweb.group.tab', 'inbox');
+		$visit->set('cerberusweb.groups.tab', 'inbox');
 		
 		$tpl->assign('group_id', $group_id);
 		
@@ -574,15 +552,8 @@ class ChGroupsPage extends CerberusPageExtension  {
 	    	return;
 	    	
 	    //========== GENERAL
-	    @$auto_reply_enabled = DevblocksPlatform::importGPC($_REQUEST['auto_reply_enabled'],'integer',0);
-	    @$auto_reply = DevblocksPlatform::importGPC($_REQUEST['auto_reply'],'string','');
-	    @$close_reply_enabled = DevblocksPlatform::importGPC($_REQUEST['close_reply_enabled'],'integer',0);
-	    @$close_reply = DevblocksPlatform::importGPC($_REQUEST['close_reply'],'string','');
 	    @$subject_has_mask = DevblocksPlatform::importGPC($_REQUEST['subject_has_mask'],'integer',0);
 	    @$subject_prefix = DevblocksPlatform::importGPC($_REQUEST['subject_prefix'],'string','');
-	    @$spam_threshold = DevblocksPlatform::importGPC($_REQUEST['spam_threshold'],'integer',80);
-	    @$spam_action = DevblocksPlatform::importGPC($_REQUEST['spam_action'],'integer',0);
-	    @$spam_moveto = DevblocksPlatform::importGPC($_REQUEST['spam_action_moveto'],'integer',0);
 	    @$ticket_reply_status = DevblocksPlatform::importGPC($_REQUEST['ticket_reply_status'],'integer',255);
  
 	    @$smtp_is_enabled = DevblocksPlatform::importGPC($_REQUEST['smtp_is_enabled'],'integer',0);
@@ -605,13 +576,6 @@ class ChGroupsPage extends CerberusPageExtension  {
 	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SUBJECT_HAS_MASK, $subject_has_mask);
 	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_TICKET_REPLY_STATUS, $ticket_reply_status);
 	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SUBJECT_PREFIX, $subject_prefix);
-	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SPAM_THRESHOLD, $spam_threshold);
-	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SPAM_ACTION, $spam_action);
-	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SPAM_ACTION_PARAM, $spam_moveto);
-	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_AUTO_REPLY_ENABLED, $auto_reply_enabled);
-	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_AUTO_REPLY, $auto_reply);
-	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_CLOSE_REPLY_ENABLED, $close_reply_enabled);
-	    DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_CLOSE_REPLY, $close_reply);
 
 		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_IS_ENABLED, $smtp_is_enabled);
 		DAO_GroupSettings::set($team_id, DAO_GroupSettings::SETTING_SMTP_HOST, $smtp_host);
@@ -633,7 +597,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 		$active_worker = CerberusApplication::getActiveWorker();
 		$visit = CerberusApplication::getVisit();
 		
-		$visit->set('cerberusweb.group.tab', 'members');
+		$visit->set('cerberusweb.groups.tab', 'members');
 		
 		if(!$active_worker->isTeamManager($group_id) && !$active_worker->is_superuser) {
 			return;
@@ -682,7 +646,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 		$visit = CerberusApplication::getVisit();
 		$active_worker = CerberusApplication::getActiveWorker();
 		
-		$visit->set('cerberusweb.group.tab', 'buckets');		
+		$visit->set('cerberusweb.groups.tab', 'buckets');
 
 		if(!$active_worker->isTeamManager($group_id) && !$active_worker->is_superuser) {
 			return;
@@ -820,7 +784,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 		$active_worker = CerberusApplication::getActiveWorker();
 		$visit = CerberusApplication::getVisit();
 		
-		$visit->set('cerberusweb.group.tab', 'fields');		
+		$visit->set('cerberusweb.groups.tab', 'fields');		
 		
 		if(!$active_worker->isTeamManager($group_id) && !$active_worker->is_superuser) {
 			return;
