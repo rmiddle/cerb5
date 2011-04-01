@@ -4,10 +4,17 @@
 {if isset($editable_params.$filter_workers)}
 	<tr>
 		<td style="padding-right:20px;" nowrap="nowrap" valign="top">
-			&laquo; <a href="javascript:;" onclick="ajax.viewRemoveFilter('{$view_id}', ['*_workers']);"> any owner</a>
+			&laquo; <a href="javascript:;" onclick="ajax.viewRemoveFilter('{$view_id}', ['*_workers']);"> any watcher</a>
+		</td>
+	</tr>
+{else}
+	<tr>
+		<td style="padding-right:20px;" nowrap="nowrap" valign="top">
+			<a href="javascript:;" onclick="ajax.viewAddFilter('{$view_id}', '*_workers', '', {  } );" style="font-weight:bold;">(none)</a>
 		</td>
 	</tr>
 {/if}
+
 {foreach from=$counts item=category key=category_id}
 	<tr>
 		<td style="padding-right:20px;" nowrap="nowrap" valign="top">

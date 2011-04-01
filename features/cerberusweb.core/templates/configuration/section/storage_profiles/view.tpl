@@ -21,7 +21,7 @@
 
 	{* Column Headers *}
 	<tr>
-		{*<th style="text-align:center"><input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);"></th>*}
+		{*<th style="text-align:center"><input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);this.blur();$rows=$(this).closest('table').find('tbody > tr');if($(this).is(':checked')) { $rows.addClass('selected'); } else { $rows.removeClass('selected'); }"></th>*}
 		{foreach from=$view->view_columns item=header name=headers}
 			{* start table header, insert column title and link *}
 			<th nowrap="nowrap">
@@ -49,10 +49,10 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
+	<tbody style="cursor:pointer;">
 		{*
 		<tr class="{$tableRowClass}">
-			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" value="{$result.d_id}"></td>
+			<td align="center" rowspan="2" nowrap="nowrap" style="padding:5px;"><input type="checkbox" name="row_id[]" value="{$result.d_id}"></td>
 		</tr>
 		*}
 		<tr class="{$tableRowClass}">
@@ -75,7 +75,7 @@
 	<tr>
 		<td colspan="2">
 			{if 0 && $active_worker && $active_worker->is_superuser}
-				<button type="button" onclick="genericAjaxPopup('peek','c=config&a=handleSectionAction&section=storage_profiles&action=showStorageProfileBulkPanel&view_id={$view->id}&ids=' + Devblocks.getFormEnabledCheckboxValues('viewForm{$view->id}','row_id[]'),null,false,'500');"><span class="cerb-sprite sprite-folder_gear"></span> bulk update</button>
+				<button type="button" onclick="genericAjaxPopup('peek','c=config&a=handleSectionAction&section=storage_profiles&action=showStorageProfileBulkPanel&view_id={$view->id}&ids=' + Devblocks.getFormEnabledCheckboxValues('viewForm{$view->id}','row_id[]'),null,false,'500');"><span class="cerb-sprite2 sprite-folder-gear"></span> bulk update</button>
 			{/if}
 		</td>
 	</tr>

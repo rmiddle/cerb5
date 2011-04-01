@@ -28,12 +28,12 @@
 			</td>
 		</tr>
 		<tr>
-			<td width="1%" valign="top" nowrap="nowrap"><b>{'common.owners'|devblocks_translate|capitalize}:</b></td>
+			<td width="1%" valign="top" nowrap="nowrap"><b>{'common.watchers'|devblocks_translate|capitalize}:</b></td>
 			<td width="99%" valign="top">
 				<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-view"></span></button>
 				<ul class="chooser-container bubbles" style="display:block;">
-				{if !empty($context_workers)}
-					{foreach from=$context_workers item=context_worker}
+				{if !empty($context_watchers)}
+					{foreach from=$context_watchers item=context_worker}
 					<li>{$context_worker->getName()}<input type="hidden" name="worker_id[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
 					{/foreach}
 				{/if}
@@ -61,8 +61,8 @@
 	<b>{'common.notify_workers'|devblocks_translate}:</b>
 	<button type="button" class="chooser_notify_worker"><span class="cerb-sprite sprite-view"></span></button>
 	<ul class="chooser-container bubbles" style="display:block;">
-		{if !empty($context_workers)}
-			{foreach from=$context_workers item=context_worker}
+		{if !empty($context_watchers)}
+			{foreach from=$context_watchers item=context_worker}
 			{if $context_worker->id != $active_worker->id}
 				<li>{$context_worker->getName()}<input type="hidden" name="notify_worker_ids[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
 			{/if}
@@ -71,13 +71,14 @@
 	</ul>
 </fieldset>
 
-<button type="button" onclick="genericAjaxPopupPostCloseReloadView('peek','frmFeedItemPopup','{$view_id}',false,'feeditem_save');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>
-{if $model->id && ($active_worker->is_superuser || $active_worker->id == $model->worker_id)}<button type="button" onclick="if(confirm('Permanently delete this feed item?')) { this.form.do_delete.value='1';genericAjaxPopupPostCloseReloadView('peek','frmFeedItemPopup','{$view_id}'); } "><span class="cerb-sprite sprite-forbidden"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
+<button type="button" onclick="genericAjaxPopupPostCloseReloadView('peek','frmFeedItemPopup','{$view_id}',false,'feeditem_save');"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')|capitalize}</button>
+{if $model->id && ($active_worker->is_superuser || $active_worker->id == $model->worker_id)}<button type="button" onclick="if(confirm('Permanently delete this feed item?')) { this.form.do_delete.value='1';genericAjaxPopupPostCloseReloadView('peek','frmFeedItemPopup','{$view_id}'); } "><span class="cerb-sprite2 sprite-minus-circle-frame"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
 
 {if !empty($model->id)}
 <div style="float:right;">
 	<a href="{devblocks_url}c=feeds&i=item&id={$model->id}{/devblocks_url}">view full record</a>
 </div>
+<br clear="all">
 {/if}
 </form>
 

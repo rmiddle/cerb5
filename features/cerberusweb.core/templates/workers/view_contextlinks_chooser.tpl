@@ -38,7 +38,7 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
+	<tbody style="cursor:pointer;">
 		<tr class="{$tableRowClass}">
 		<td align="center"><input type="checkbox" name="row_id[]" title="{$result.w_first_name}{if $result.w_last_name} {$result.w_last_name}{/if}" value="{$result.w_id}"></td>
 		{foreach from=$view->view_columns item=column name=columns}
@@ -72,7 +72,7 @@
 <table cellpadding="2" cellspacing="0" border="0" width="100%">
 	<tr>
 		<td align="left" valign="top" id="{$view->id}_actions">
-			<button type="button" class="devblocks-chooser-add-selected"><span class="cerb-sprite sprite-add"></span> Add Selected</button>
+			<button type="button" class="devblocks-chooser-add-selected"><span class="cerb-sprite2 sprite-plus-circle-frame"></span> Add Selected</button>
 		</td>
 		<td align="right" valign="top" nowrap="nowrap">
 			{math assign=fromRow equation="(x*y)+1" x=$view->renderPage y=$view->renderLimit}

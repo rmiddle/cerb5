@@ -25,7 +25,10 @@
 
 	{* Column Headers *}
 	<tr>
-		<th style="text-align:center"><input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);"></th>
+		<th style="text-align:center"><input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);this.blur();$rows=$(this).closest('table').find('tbody > tr');if($(this).is(':checked')) { $rows.addClass('selected'); } else { $rows.removeClass('selected'); }"></th>
+		<th style="text-align:center">
+			<a href="javascript:;">{'common.follow'|devblocks_translate|capitalize}</a>
+		</th>
 		{foreach from=$view->view_columns item=header name=headers}
 			{* start table header, insert column title and link *}
 			<th nowrap="nowrap">
@@ -46,6 +49,7 @@
 	</tr>
 
 	{* Column Data *}
+	{$object_watchers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_ADDRESS, array_keys($data), CerberusContexts::CONTEXT_WORKER)}
 	{foreach from=$data item=result key=idx name=results}
 
 	{if $smarty.foreach.results.iteration % 2}
@@ -53,10 +57,13 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
+	<tbody style="cursor:pointer;">
 		<tr class="{$tableRowClass}">
-			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" value="{$result.a_id}"></td>
-			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">{if $result.a_is_banned}(banned) {/if}<a href="javascript:;" onclick="genericAjaxPopup('peek','c=contacts&a=showAddressPeek&email={$result.a_email|escape:'url'}&view_id={$view->id}',null,false,'550');" class="subject">{$result.a_email}</a></td>
+			<td align="center" rowspan="2" nowrap="nowrap" style="padding:5px;"><input type="checkbox" name="row_id[]" value="{$result.a_id}"></td>
+			<td align="center" rowspan="2" nowrap="nowrap" style="padding:5px;">
+				{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" context=CerberusContexts::CONTEXT_ADDRESS context_id=$result.a_id}
+			</td>
+			<td colspan="{$smarty.foreach.headers.total}">{if $result.a_is_banned}(banned) {/if}<a href="javascript:;" onclick="genericAjaxPopup('peek','c=contacts&a=showAddressPeek&email={$result.a_email|escape:'url'}&view_id={$view->id}',null,false,'550');" class="subject">{$result.a_email}</a></td>
 		</tr>
 		<tr class="{$tableRowClass}">
 		{foreach from=$view->view_columns item=column name=columns}
@@ -88,7 +95,7 @@
 	<tr>
 		<td colspan="2">
 			{if 'context'==$view->renderTemplate}<button type="button" onclick="removeSelectedContextLinks('{$view->id}');">Unlink</button>{/if}
-			{if $active_worker->hasPriv('core.addybook.addy.actions.update')}<button type="button" onclick="ajax.showAddressBatchPanel('{$view->id}',this);"><span class="cerb-sprite sprite-folder_gear"></span> {$translate->_('common.bulk_update')|lower}</button>{/if}
+			{if $active_worker->hasPriv('core.addybook.addy.actions.update')}<button type="button" onclick="ajax.showAddressBatchPanel('{$view->id}',this);"><span class="cerb-sprite2 sprite-folder-gear"></span> {$translate->_('common.bulk_update')|lower}</button>{/if}
 		</td>
 	</tr>
 	{/if}

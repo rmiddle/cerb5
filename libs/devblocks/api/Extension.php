@@ -646,9 +646,9 @@ class DevblocksEventHelper {
 			DAO_Comment::create($fields);
 		}
 		
-		// Owner
+		// Watchers
 		if(isset($params['worker_id']) && !empty($params['worker_id']))
-			CerberusContexts::setWorkers(CerberusContexts::CONTEXT_TASK, $task_id, $params['worker_id']);
+			CerberusContexts::setWatchers(CerberusContexts::CONTEXT_TASK, $task_id, $params['worker_id']);
 		
 		// [TODO] Notify
 
@@ -741,8 +741,8 @@ class DevblocksEventHelper {
 		);
 		
 		// Don't reset owners to 'blank', but allow overrides from GUI log ticket form
-		//if(!empty($owner_ids))
-	    	//$properties['context_workers'] = $owner_ids;
+		//if(!empty($watcher_ids))
+	    	//$properties['context_watchers'] = $watcher_ids;
 		
 		CerberusMail::sendTicketMessage($properties);
 		
@@ -783,8 +783,8 @@ abstract class Extension_DevblocksEventCondition extends DevblocksExtension {
 		return $extensions;
 	}
 	
-	abstract function render(Extension_DevblocksEvent $event, $params=array(), $seq=null);
-	abstract function run($token, $params, $values);
+	abstract function render(Extension_DevblocksEvent $event, Model_TriggerEvent $trigger, $params=array(), $seq=null);
+	abstract function run($token, Model_TriggerEvent $trigger, $params, $values);
 }
 
 abstract class Extension_DevblocksEventAction extends DevblocksExtension {
@@ -797,8 +797,8 @@ abstract class Extension_DevblocksEventAction extends DevblocksExtension {
 		return $extensions;
 	}
 	
-	abstract function render(Extension_DevblocksEvent $event, $params=array(), $seq=null);
-	abstract function run($token, $params, &$values);
+	abstract function render(Extension_DevblocksEvent $event, Model_TriggerEvent $trigger, $params=array(), $seq=null);
+	abstract function run($token, Model_TriggerEvent $trigger, $params, &$values);
 }
 
 abstract class DevblocksHttpResponseListenerExtension extends DevblocksExtension {

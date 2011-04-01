@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011033001);
+define("APP_BUILD", 2011033101);
 define("APP_VERSION", '5.4.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -750,7 +750,7 @@ class CerberusContexts {
 		return true;
 	}
 	
-	static public function getWorkers($context, $context_id) {
+	static public function getWatchers($context, $context_id) {
 		list($results, $null) = DAO_Worker::search(
 			array(
 				SearchFields_Worker::ID,
@@ -778,8 +778,11 @@ class CerberusContexts {
 		return $workers;
 	}
 	
-	static public function setWorkers($context, $context_id, $worker_ids) {
-		$current_workers = self::getWorkers($context, $context_id);
+	static public function setWatchers($context, $context_id, $worker_ids) {
+		if(!is_array($worker_ids))
+			$worker_ids = array($worker_ids);
+		
+		$current_workers = self::getWatchers($context, $context_id);
 		
 		// Remove
 		if(is_array($current_workers))
@@ -795,12 +798,18 @@ class CerberusContexts {
 		}
 	}
 
-	static public function addWorkers($context, $context_id, $worker_ids) {
+	static public function addWatchers($context, $context_id, $worker_ids) {
+		if(!is_array($worker_ids))
+			$worker_ids = array($worker_ids);
+		
 		foreach($worker_ids as $worker_id)
 			DAO_ContextLink::setLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $worker_id);
 	}
 	
-	static public function removeWorkers($context, $context_id, $worker_ids) {
+	static public function removeWatchers($context, $context_id, $worker_ids) {
+		if(!is_array($worker_ids))
+			$worker_ids = array($worker_ids);
+			
 		foreach($worker_ids as $worker_id)
 			DAO_ContextLink::deleteLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $worker_id);
 	}
