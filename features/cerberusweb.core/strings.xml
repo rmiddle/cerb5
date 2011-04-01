@@ -186,9 +186,6 @@
 		<tu tuid='common.fnr'>
 			<tuv xml:lang="en_US"><seg>fetch &amp; retrieve</seg></tuv>
 		</tu>
-		<tu tuid='common.follow'>
-			<tuv xml:lang="en_US"><seg>follow</seg></tuv>
-		</tu>
 		<tu tuid='common.group'>
 			<tuv xml:lang="en_US"><seg>Group</seg></tuv>
 		</tu>
@@ -302,6 +299,9 @@
 		</tu>
 		<tu tuid='common.next'>
 			<tuv xml:lang="en_US"><seg>next</seg></tuv>
+		</tu>
+		<tu tuid='common.notify_watchers_and'>
+			<tuv xml:lang="en_US"><seg>Notify watchers and</seg></tuv>
 		</tu>
 		<tu tuid='common.notify_workers'>
 			<tuv xml:lang="en_US"><seg>Notify workers</seg></tuv>
@@ -420,9 +420,6 @@
 		<tu tuid='common.undelete'>
 			<tuv xml:lang="en_US"><seg>Undelete</seg></tuv>
 		</tu>
-		<tu tuid='common.unfollow'>
-			<tuv xml:lang="en_US"><seg>unfollow</seg></tuv>
-		</tu>
 		<tu tuid='common.update'>
 			<tuv xml:lang="en_US"><seg>update</seg></tuv>
 		</tu>
@@ -440,6 +437,9 @@
 		</tu>
 		<tu tuid='common.watchers'>
 			<tuv xml:lang="en_US"><seg>watchers</seg></tuv>
+		</tu>
+		<tu tuid='common.watchers.add_me'>
+			<tuv xml:lang="en_US"><seg>Notify me about new activity</seg></tuv>
 		</tu>
 		<tu tuid='common.week'>
 			<tuv xml:lang="en_US"><seg>week</seg></tuv>
