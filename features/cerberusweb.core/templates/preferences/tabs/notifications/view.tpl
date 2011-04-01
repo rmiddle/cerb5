@@ -25,7 +25,7 @@
 
 	{* Column Headers *}
 	<tr>
-		<th style="text-align:center"><input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);"></th>
+		<th style="text-align:center"><input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);this.blur();$rows=$(this).closest('table').find('tbody > tr');if($(this).is(':checked')) { $rows.addClass('selected'); } else { $rows.removeClass('selected'); }"></th>
 		{foreach from=$view->view_columns item=header name=headers}
 			{* start table header, insert column title and link *}
 			<th nowrap="nowrap">
@@ -53,7 +53,7 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
+	<tbody style="cursor:pointer;">
 		<tr class="{$tableRowClass}">
 			<td align="center">		
 				<input type="checkbox" name="row_id[]" value="{$result.we_id}">
@@ -63,7 +63,7 @@
 				<td valign="top">{$result.we_id}&nbsp;</td>
 			{elseif $column=="we_message"}
 				<td valign="top">
-					{if $result.we_is_read}<span class="cerb-sprite sprite-check_gray"></span>{/if}<a href="{devblocks_url}c=preferences&a=redirectRead&id={$result.we_id}{/devblocks_url}" class="subject">{$result.we_message}</a>			
+					{if $result.we_is_read}<span class="cerb-sprite2 sprite-tick-circle-frame-gray"></span>{/if}<a href="{devblocks_url}c=preferences&a=redirectRead&id={$result.we_id}{/devblocks_url}" class="subject">{$result.we_message}</a>			
 				</td>
 			{elseif $column=="we_created_date"}
 				<td valign="top"><abbr title="{$result.we_created_date|devblocks_date}">{$result.we_created_date|devblocks_prettytime}</abbr>&nbsp;</td>
@@ -80,7 +80,7 @@
 			{elseif $column=="we_url"}
 				<td valign="top"><a href="{devblocks_url}c=preferences&a=redirectRead&id={$result.we_id}{/devblocks_url}">{$result.$column}</a>&nbsp;</td>
 			{elseif $column=="we_is_read"}
-				<td valign="top">{if $result.$column}<span class="cerb-sprite sprite-check_gray"></span>{/if}&nbsp;</td>
+				<td valign="top">{if $result.$column}<span class="cerb-sprite2 sprite-tick-circle-frame-gray"></span>{/if}&nbsp;</td>
 			{else}
 				<td valign="top">{$result.$column}&nbsp;</td>
 			{/if}
@@ -95,7 +95,7 @@
 	<tr>
 		<td colspan="2">
 			<button id="btnExplore{$view->id}" type="button" onclick="this.form.explore_from.value=$(this).closest('form').find('tbody input:checkbox:checked:first').val();this.form.a.value='viewNotificationsExplore';this.form.submit();"><span class="cerb-sprite sprite-media_play_green"></span> {'common.explore'|devblocks_translate|lower}</button>
-			<button type="button" onclick="genericAjaxPopup('peek','c=preferences&a=showNotificationsBulkPanel&view_id={$view->id}&ids=' + Devblocks.getFormEnabledCheckboxValues('viewForm{$view->id}','row_id[]'),null,false,'500');"><span class="cerb-sprite sprite-folder_gear"></span> {'common.bulk_update'|devblocks_translate|lower}</button>
+			<button type="button" onclick="genericAjaxPopup('peek','c=preferences&a=showNotificationsBulkPanel&view_id={$view->id}&ids=' + Devblocks.getFormEnabledCheckboxValues('viewForm{$view->id}','row_id[]'),null,false,'500');"><span class="cerb-sprite2 sprite-folder-gear"></span> {'common.bulk_update'|devblocks_translate|lower}</button>
 		</td>
 	</tr>
 	{/if}

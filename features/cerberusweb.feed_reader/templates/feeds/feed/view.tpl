@@ -25,7 +25,7 @@
 
 	{* Column Headers *}
 	<tr>
-		<th style="text-align:center"><input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);this.blur();"></th>
+		<th style="text-align:center"><input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);this.blur();$rows=$(this).closest('table').find('tbody > tr');if($(this).is(':checked')) { $rows.addClass('selected'); } else { $rows.removeClass('selected'); }"></th>
 		{foreach from=$view->view_columns item=header name=headers}
 			{* start table header, insert column title and link *}
 			<th nowrap="nowrap">
@@ -44,6 +44,7 @@
 	</tr>
 
 	{* Column Data *}
+	{$object_watchers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_CALL, array_keys($data), CerberusContexts::CONTEXT_WORKER)}
 	{foreach from=$data item=result key=idx name=results}
 
 	{if $smarty.foreach.results.iteration % 2}
@@ -51,17 +52,16 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
+	<tbody style="cursor:pointer;">
 		<tr class="{$tableRowClass}">
-			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" value="{$result.t_id}"></td>
-			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">
+			<td align="center" rowspan="2" nowrap="nowrap" style="padding:5px;"><input type="checkbox" name="row_id[]" value="{$result.t_id}"></td>
+			<td colspan="{$smarty.foreach.headers.total}">
 				<a href="{devblocks_url}c=calls&id={$result.t_id}{/devblocks_url}" class="subject">{$result.t_name}</a> 
 				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=feeds&a=showEntry&id={$result.t_id}&view_id={$view->id}',null,false,'550');"><span class="ui-icon ui-icon-newwin" style="display:inline-block;vertical-align:middle;" title="{$translate->_('views.peek')}"></span></a>
 				
-				{$object_workers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_CALL, array_keys($data), CerberusContexts::CONTEXT_WORKER)}
-				{if isset($object_workers.{$result.t_id})}
+				{if isset($object_watchers.{$result.t_id})}
 				<div style="display:inline;padding-left:5px;">
-				{foreach from=$object_workers.{$result.t_id} key=worker_id item=worker name=workers}
+				{foreach from=$object_watchers.{$result.t_id} key=worker_id item=worker name=workers}
 					{if isset($workers.{$worker_id})}
 						<span style="color:rgb(150,150,150);">
 						{$workers.{$worker_id}->getName()}{if !$smarty.foreach.workers.last}, {/if}

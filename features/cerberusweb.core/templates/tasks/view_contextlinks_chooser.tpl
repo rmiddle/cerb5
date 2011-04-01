@@ -31,6 +31,7 @@
 	</tr>
 
 	{* Column Data *}
+	{$object_watchers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_TASK, array_keys($data), CerberusContexts::CONTEXT_WORKER)}
 	{foreach from=$data item=result key=idx name=results}
 
 	{if $smarty.foreach.results.iteration % 2}
@@ -38,19 +39,18 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
+	<tbody style="cursor:pointer;">
 		<tr class="{$tableRowClass}">
-			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" title="{$result.t_title}" value="{$result.t_id}"></td>
-			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">
+			<td align="center" rowspan="2" nowrap="nowrap"><input type="checkbox" name="row_id[]" title="{$result.t_title}" value="{$result.t_id}"></td>
+			<td colspan="{$smarty.foreach.headers.total}">
 				{if $result.t_is_completed}
-					<span class="cerb-sprite sprite-check_gray" title="{$result.t_completed_date|devblocks_date}"></span>
+					<span class="cerb-sprite2 sprite-tick-circle-frame-gray" title="{$result.t_completed_date|devblocks_date}"></span>
 				{/if}
 				<a href="{devblocks_url}c=tasks&d=display&id={$result.t_id}{/devblocks_url}" class="subject" target="_blank">{if !empty($result.t_title)}{$result.t_title}{else}New Task{/if}</a>
 				
-				{$object_workers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_TASK, array_keys($data), CerberusContexts::CONTEXT_WORKER)}
-				{if isset($object_workers.{$result.t_id})}
+				{if isset($object_watchers.{$result.t_id})}
 				<div style="display:inline;padding-left:5px;">
-				{foreach from=$object_workers.{$result.t_id} key=worker_id item=worker name=workers}
+				{foreach from=$object_watchers.{$result.t_id} key=worker_id item=worker name=workers}
 					{if isset($workers.{$worker_id})}
 						<span style="color:rgb(150,150,150);">
 						{$workers.{$worker_id}->getName()}{if !$smarty.foreach.workers.last}, {/if}
@@ -95,7 +95,7 @@
 			{elseif $column=="t_is_completed"}
 				<td>
 					{if $result.t_is_completed}
-					<span class="cerb-sprite sprite-check_gray"></span>
+					<span class="cerb-sprite2 sprite-tick-circle-frame-gray"></span>
 					{/if}
 				</td>
 			{else}
@@ -109,7 +109,7 @@
 <table cellpadding="2" cellspacing="0" border="0" width="100%">
 	<tr>
 		<td align="left" valign="top" id="{$view->id}_actions">
-			<button type="button" class="devblocks-chooser-add-selected"><span class="cerb-sprite sprite-add"></span> Add Selected</button>
+			<button type="button" class="devblocks-chooser-add-selected"><span class="cerb-sprite2 sprite-plus-circle-frame"></span> Add Selected</button>
 		</td>
 		<td align="right" valign="top" nowrap="nowrap">
 			{math assign=fromRow equation="(x*y)+1" x=$view->renderPage y=$view->renderLimit}

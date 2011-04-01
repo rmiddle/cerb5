@@ -42,12 +42,12 @@
 			</td>
 		</tr>
 		<tr>
-			<td width="0%" nowrap="nowrap" valign="top" align="right">{'common.owners'|devblocks_translate|capitalize}: </td>
+			<td width="0%" nowrap="nowrap" valign="top" align="right">{'common.watchers'|devblocks_translate|capitalize}: </td>
 			<td width="100%">
 				<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-view"></span></button>
 				<ul class="chooser-container bubbles" style="display:block;">
-				{if !empty($context_workers)}
-					{foreach from=$context_workers item=context_worker}
+				{if !empty($context_watchers)}
+					{foreach from=$context_watchers item=context_worker}
 					<li>{$context_worker->getName()}<input type="hidden" name="worker_id[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
 					{/foreach}
 				{/if}
@@ -89,8 +89,8 @@
 	<b>{'common.notify_workers'|devblocks_translate}:</b>
 	<button type="button" class="chooser_notify_worker"><span class="cerb-sprite sprite-view"></span></button>
 	<ul class="chooser-container bubbles" style="display:block;">
-		{if !empty($context_workers)}
-			{foreach from=$context_workers item=context_worker}
+		{if !empty($context_watchers)}
+			{foreach from=$context_watchers item=context_worker}
 			{if $context_worker->id != $active_worker->id}
 				<li>{$context_worker->getName()}<input type="hidden" name="notify_worker_ids[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
 			{/if}
@@ -100,8 +100,8 @@
 </fieldset>
 
 {if $active_worker->hasPriv('crm.opp.actions.create')}
-	<button type="button" onclick="if($('#formOppPeek').validate().form()) { genericAjaxPopupPostCloseReloadView('peek','formOppPeek','{$view_id}',false,'opp_save'); } "><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
-	{if !empty($opp)}<button type="button" onclick="if(confirm('Are you sure you want to permanently delete this opportunity?')) { this.form.do_delete.value='1';genericAjaxPopupClose('peek');genericAjaxPost('formOppPeek', 'view{$view_id}'); } "><span class="cerb-sprite sprite-delete2"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
+	<button type="button" onclick="if($('#formOppPeek').validate().form()) { genericAjaxPopupPostCloseReloadView('peek','formOppPeek','{$view_id}',false,'opp_save'); } "><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')}</button>
+	{if !empty($opp)}<button type="button" onclick="if(confirm('Are you sure you want to permanently delete this opportunity?')) { this.form.do_delete.value='1';genericAjaxPopupClose('peek');genericAjaxPost('formOppPeek', 'view{$view_id}'); } "><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
 {else}
 	<div class="error">You do not have permission to modify this record.</div>
 {/if}
@@ -111,6 +111,7 @@
 <div style="float:right;">
 	<a href="{devblocks_url}c=crm&a=opps&id={$opp->id}{/devblocks_url}">view full record</a>
 </div>
+<br clear="all">
 {/if}
 </form>
 

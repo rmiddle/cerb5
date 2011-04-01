@@ -8,14 +8,14 @@
 	<tr>
 		<td width="100%">
 			<table cellpadding="1" cellspacing="0" border="0" width="100%">
-				{if !empty($context_workers) && !isset($context_workers.{$active_worker->id})}
+				{if !empty($context_watchers) && !isset($context_watchers.{$active_worker->id})}
 				<tr>
 					<td width="100%" colspan="2">
 						<div class="ui-widget">
 							<div class="ui-state-error ui-corner-all" style="padding: 0 .7em; margin: 0.2em; "> 
 								<p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
 									{$worker_string = ''}
-									{foreach from=$context_workers item=worker name=workers}
+									{foreach from=$context_watchers item=worker name=workers}
 										{$worker_string = $worker_string|cat:'<b>'|cat:$worker->getName()|cat:'</b>'}{if !$smarty.foreach.workers.last}{$worker_string = $worker_string|cat:' and '}{/if}
 									{/foreach}
 									{'display.reply.warn_assigned'|devblocks_translate:$worker_string nofilter}
@@ -68,7 +68,7 @@
 				<fieldset style="display:inline-block;">
 					<legend>Actions</legend>
 					{assign var=headers value=$message->getHeaders()}
-					<button name="saveDraft" type="button" onclick="if($(this).attr('disabled'))return;$(this).attr('disabled','disabled');genericAjaxPost('reply{$message->id}_part2',null,'c=display&a=saveDraftReply&is_ajax=1',function(json, ui) { var obj = $.parseJSON(json); $('#divDraftStatus{$message->id}').html(obj.html); $('#reply{$message->id}_part2 input[name=draft_id]').val(obj.draft_id); $('#reply{$message->id}_part1 button[name=saveDraft]').removeAttr('disabled'); } );"><span class="cerb-sprite sprite-check"></span> Save Draft</button>
+					<button name="saveDraft" type="button" onclick="if($(this).attr('disabled'))return;$(this).attr('disabled','disabled');genericAjaxPost('reply{$message->id}_part2',null,'c=display&a=saveDraftReply&is_ajax=1',function(json, ui) { var obj = $.parseJSON(json); $('#divDraftStatus{$message->id}').html(obj.html); $('#reply{$message->id}_part2 input[name=draft_id]').val(obj.draft_id); $('#reply{$message->id}_part1 button[name=saveDraft]').removeAttr('disabled'); } );"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> Save Draft</button>
 					<button id="btnInsertReplySig{$message->id}" type="button" title="(Ctrl+Shift+G)" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id={$ticket->team_id}&bucket_id={$ticket->category_id}',function(txt) { $('#reply_{$message->id}').insertAtCursor(txt); } );"><span class="cerb-sprite sprite-document_edit"></span> {$translate->_('display.reply.insert_sig')|capitalize}</button>
 					{* Plugin Toolbar *}
 					{if !empty($reply_toolbaritems)}
@@ -84,7 +84,7 @@
 						Insert: 
 						<input type="text" size="25" class="context-snippet autocomplete">
 						<button type="button" onclick="openSnippetsChooser(this);"><span class="cerb-sprite sprite-view"></span></button>
-						<button type="button" onclick="genericAjaxPopup('peek','c=tickets&a=showSnippetsPeek&id=0&context=cerberusweb.contexts.ticket&context_id={$ticket->id}',null,false,'550');"><span class="cerb-sprite sprite-add"></span></button>
+						<button type="button" onclick="genericAjaxPopup('peek','c=tickets&a=showSnippetsPeek&id=0&context=cerberusweb.contexts.ticket&context_id={$ticket->id}',null,false,'550');"><span class="cerb-sprite2 sprite-plus-circle-frame"></span></button>
 					</div>
 				</fieldset>
 			</div>
@@ -210,13 +210,13 @@
 								<div style="margin-left:10px;">
 								<b>{$translate->_('display.reply.next.handle_reply')}</b><br>
 								<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-view"></span></button>
-								{if !empty($context_workers)}
 								<ul class="chooser-container bubbles">
-									{foreach from=$context_workers item=context_worker}
+								{if !empty($context_watchers)}
+									{foreach from=$context_watchers item=context_worker}
 									<li>{$context_worker->getName()}<input type="hidden" name="worker_id[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
 									{/foreach}
-								</ul>
 								{/if}
+								</ul>
 						      	<br>
 						      	<br>
 						      	
@@ -258,9 +258,9 @@
 	</tr>
 	<tr>
 		<td>
-			<button type="button" onclick="if($('#reply{$message->id}_part1').validate().form()) { genericAjaxPost('reply{$message->id}_part2',null,'c=display&a=saveDraftReply&is_ajax=1',function(json) { $('#reply{$message->id}_part2').submit(); } ); } "><span class="cerb-sprite sprite-check"></span> {if $is_forward}{$translate->_('display.ui.forward')|capitalize}{else}{$translate->_('display.ui.send_message')}{/if}</button>
+			<button type="button" onclick="if($('#reply{$message->id}_part1').validate().form()) { genericAjaxPost('reply{$message->id}_part2',null,'c=display&a=saveDraftReply&is_ajax=1',function(json) { $('#reply{$message->id}_part2').submit(); } ); } "><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {if $is_forward}{$translate->_('display.ui.forward')|capitalize}{else}{$translate->_('display.ui.send_message')}{/if}</button>
 			<button type="button" onclick="if($('#reply{$message->id}_part1').validate().form()) { this.form.a.value='saveDraftReply'; this.form.submit(); } "><span class="cerb-sprite sprite-media_pause"></span> {$translate->_('display.ui.continue_later')|capitalize}</button>
-			<button type="button" onclick="if(confirm('Are you sure you want to discard this reply?')) { if(0!==this.form.draft_id.value.length) { genericAjaxGet('', 'c=tickets&a=deleteDraft&draft_id='+escape(this.form.draft_id.value)); $('#draft'+escape(this.form.draft_id.value)).remove(); } $('#reply{$message->id}').html(''); } "><span class="cerb-sprite sprite-delete"></span> {$translate->_('display.ui.discard')|capitalize}</button>
+			<button type="button" onclick="if(confirm('Are you sure you want to discard this reply?')) { if(0!==this.form.draft_id.value.length) { genericAjaxGet('', 'c=tickets&a=deleteDraft&draft_id='+escape(this.form.draft_id.value)); $('#draft'+escape(this.form.draft_id.value)).remove(); } $('#reply{$message->id}').html(''); } "><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('display.ui.discard')|capitalize}</button>
 		</td>
 	</tr>
 </table>

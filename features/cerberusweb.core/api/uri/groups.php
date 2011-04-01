@@ -400,7 +400,7 @@ class ChGroupsPage extends CerberusPageExtension  {
 						);
 					}
 					break;
-				// Owners
+				// Watchers
 				case 'owner':
 					@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['do_owner'],'array',array());
 					if(!empty($worker_ids))
