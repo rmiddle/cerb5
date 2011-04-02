@@ -160,9 +160,10 @@ pre.emailbody {
 }
 
 button {
+	background-color:rgb(230,230,230);
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(240,240,240)), to(rgb(210,210,210)));
 	background: -moz-linear-gradient(top, rgb(240,240,240), rgb(210,210,210));
-	background-color:rgb(230,230,230);
+	background: -o-linear-gradient(top, rgb(240,240,240), rgb(210,210,210));
 	cursor:pointer;
 	
 	color:rgb(50,50,50);
@@ -176,9 +177,10 @@ button {
 }
 
 button:hover {
+	background-color:rgb(160,198,254);
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(238,242,245)), to(rgb(160,198,254)));
 	background: -moz-linear-gradient(top, rgb(238,242,245), rgb(160,198,254));
-	background-color:rgb(160,198,254);
+	background: -o-linear-gradient(top, rgb(238,242,245), rgb(160,198,254));
 	cursor:pointer;
 	
 	border:1px solid rgb(130,165,226);
@@ -191,9 +193,10 @@ button:hover {
 }
 
 button.green {
+	background-color:rgb(223,240,177);
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(223,240,177)), to(rgb(184,211,118)));
 	background: -moz-linear-gradient(top, rgb(223,240,177), rgb(184,211,118));
-	background-color:rgb(223,240,177);
+	background: -o-linear-gradient(top, rgb(223,240,177), rgb(184,211,118));
 	cursor:pointer;
 	
 	color:rgb(64,106,36);
@@ -201,16 +204,18 @@ button.green {
 }
 
 button.green:hover {
+	background-color:rgb(223,240,177);
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(223,240,177)), to(rgb(154,180,90)));
 	background: -moz-linear-gradient(top, rgb(223,240,177), rgb(154,180,90));
+	background: -o-linear-gradient(top, rgb(223,240,177), rgb(154,180,90));
 	border:1px solid rgb(16,132,19);
-	background-color:rgb(223,240,177);
 }
 
 button.red {
+	background-color:rgb(214,63,48);
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(250,125,125)), to(rgb(195,45,45)));
 	background: -moz-linear-gradient(top, rgb(250,125,125), rgb(195,45,45));
-	background-color:rgb(214,63,48);
+	background: -o-linear-gradient(top, rgb(250,125,125), rgb(195,45,45));
 	cursor:pointer;
 	border:1px solid rgb(170,0,0);
 	
@@ -218,9 +223,10 @@ button.red {
 }
 
 button.red:hover {
+	background-color:rgb(208,55,46);
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(250,125,125)), to(rgb(145,15,15)));
 	background: -moz-linear-gradient(top, rgb(250,125,125), rgb(145,15,15));
-	background-color:rgb(208,55,46);
+	background: -o-linear-gradient(top, rgb(250,125,125), rgb(145,15,15));
 	border:1px solid rgb(100,5,5);
 }
 
@@ -255,9 +261,10 @@ UL.navmenu LI A {
 }
 
 UL.navmenu LI.selected {
+	background-color: rgb(134, 169, 227);
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(98,132,221)), to(rgb(134, 169, 227)));
 	background: -moz-linear-gradient(top, rgb(98,132,221), rgb(134, 169, 227));
-	background-color: rgb(134, 169, 227);
+	background: -o-linear-gradient(top, rgb(98,132,221), rgb(134, 169, 227));
 }
 
 UL.navmenu LI.selected A {
@@ -293,9 +300,10 @@ UL.submenu A {
 /* Worklists */
 
 table.worklist {
+	background-color:rgb(134,169,227);
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(134,169,227)), to(rgb(98,132,221)));
 	background: -moz-linear-gradient(top, rgb(134,169,227), rgb(98,132,221));
-	background-color:rgb(134,169,227);
+	background: -o-linear-gradient(top, rgb(134,169,227), rgb(98,132,221));
 }
 
 table.worklist td {
@@ -449,13 +457,13 @@ DIV.bubble {
 	padding:0 0.2em 0 0.2em;
 	margin:2px;
 	display:inline-block;
-	color:rgb(74,110,158);
+	color:rgb(49,116,165);
 	background-color:rgb(232,242,254);
 	border:1px solid rgb(197,219,236);	
 }
 
 DIV.bubble A {
-	color:rgb(74,110,158);
+	color:rgb(49,116,165);
 	text-decoration:none;
 }
 
@@ -477,34 +485,21 @@ UL.bubbles LI {
 	white-space:nowrap;
 	padding:0 0.2em 0 0.2em;
 	margin:2px;
-	color:rgb(74,110,158);
+	color:rgb(49,116,165);
 	border:1px solid rgb(197,219,236);
 	
 	border-radius: 5px;	
 	-moz-border-radius: 5px;
 	-webkit-border-radius: 5px;
 	
-	background: -webkit-gradient(linear, left top, left bottom, from(rgb(232,242,254)), to(rgb(255,255,255)));
-	background: -moz-linear-gradient(top,  rgb(232,242,254),  rgb(255,255,255));
-	background-color:rgb(232,242,254);
+	background:rgb(255,255,255) none;
+	background: -webkit-gradient(linear, left top, left bottom, from(rgb(255,255,255)), to(rgb(232,242,254)));
+	background: -moz-linear-gradient(top, rgb(255,255,255), rgb(232,242,254));
+	background: -o-linear-gradient(top, rgb(255,255,255),  rgb(232,242,254));
 }
-
-UL.bubbles LI.bubble-blue {
-	color:rgb(74,110,158);
-	background-color:rgb(232,242,254);
-	border:1px solid rgb(197,219,236);
-}
-
-/*
-UL.bubbles LI.bubble-red {
-	color:rgb(220,50,50);
-	background-color:rgb(255,230,230);
-	border:1px solid rgb(220,120,120);
-}
-*/
 
 UL.bubbles LI  A {
-	color:rgb(74,110,158);
+	color:rgb(49,116,165);
 	text-decoration:none;
 }
 
@@ -522,9 +517,10 @@ DIV.badge {
 	-moz-border-radius:5px;
 	-webkit-border-radius:5px;
 	
+	background-color:rgb(175,175,175);
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(185,185,185)), to(rgb(165,165,165)));
 	background: -moz-linear-gradient(top, rgb(185,185,185), rgb(165,165,165));
-	background-color:rgb(175,175,175);
+	background: -o-linear-gradient(top, rgb(185,185,185), rgb(165,165,165));
 
 	color:rgb(255,255,255);
 	border:1px solid rgb(150,150,150);
@@ -535,9 +531,10 @@ DIV.badge A {
 }
 
 DIV.badge-lightgray {
+	background-color:rgb(230,230,230);
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(240,240,240)), to(rgb(230,230,230)));
 	background: -moz-linear-gradient(top, rgb(240,240,240), rgb(230,230,230));
-	background-color:rgb(230,230,230);
+	background: -o-linear-gradient(top, rgb(240,240,240), rgb(230,230,230));
 	
 	color:rgb(120,120,120);
 	border:1px solid rgb(200,200,200);
@@ -550,6 +547,7 @@ DIV.badge-lightgray A {
 DIV.badge-red {
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(220,0,0)), to(rgb(210,0,0)));
 	background: -moz-linear-gradient(top, rgb(220,0,0), rgb(210,0,0));
+	background: -o-linear-gradient(top, rgb(220,0,0), rgb(210,0,0));
 	background-color:rgb(210,0,0);
 	
 	color:rgb(255,255,255);
@@ -557,9 +555,10 @@ DIV.badge-red {
 }
 
 DIV.badge-green {
+	background-color:rgb(0,150,0);
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(0,150,0)), to(rgb(0,120,0)));
 	background: -moz-linear-gradient(top, rgb(0,150,0), rgb(0,120,0));
-	background-color:rgb(0,150,0);
+	background: -o-linear-gradient(top, rgb(0,150,0), rgb(0,120,0));
 	
 	color:rgb(255,255,255);
 	border:1px solid rgb(0,100,0);
@@ -941,18 +940,64 @@ button span.cerb-sprite2 { display:inline-block; }
 .ui-state-highlight, .ui-widget-content .ui-state-highlight { background: #fbec88 none; }
 .ui-state-error, .ui-widget-content .ui-state-error { background: #fef1ec none; } 
 
-.ui-tabs { border: 0px; padding: 0px; }
-.ui-tabs .ui-tabs-panel { background: #ffffff none; padding: 0px; margin: 5px 0px; 0px; 0px; }
-.ui-tabs .ui-tabs-nav { background: #ffffff none; border: none; border-bottom: 1px solid rgb(197,219,236); }
-.ui-tabs .ui-tabs-nav li { margin: 0 0.2em 0 0; background: rgb(232,242,254) none; }
-.ui-tabs .ui-tabs-nav li.ui-state-default a { color: rgb(74,110,158); }
-.ui-tabs .ui-tabs-nav li.ui-tabs-selected { padding-bottom: 0px; background: rgb(255,255,255) none; }
-.ui-tabs .ui-tabs-nav li.ui-tabs-selected a { color: rgb(74,110,158); font-weight:bold; }
+.ui-tabs {
+	border: 0px;
+	padding: 0px;
+}
+.ui-tabs .ui-tabs-panel {
+	background: #ffffff none;
+	padding: 0px;
+	margin: 5px 0px; 0px; 0px;
+}
+.ui-tabs .ui-tabs-nav {
+	background: #ffffff none;
+	border: none;
+	border-bottom: 1px solid rgb(200,200,200);
+	-moz-border-radius:0;
+	-webkit-border-radius:0;
+	border-radius:0;
+}
+.ui-tabs .ui-tabs-nav li {
+	margin: 0 0.2em 0 0;
+	background: rgb(245,245,245) none;
+	background: -webkit-gradient(linear, left top, left bottom, from(rgb(255,255,255)), to(rgb(240,240,240)));
+	background: -moz-linear-gradient(top, rgb(255,255,255), rgb(240,240,240));
+	background: -o-linear-gradient(top, rgb(255,255,255), rgb(240,240,240));
+	border:1px solid rgb(200,200,200);
+}
+.ui-tabs .ui-tabs-nav li a {
+	padding:0.5em 0.6em;
+}
+.ui-tabs .ui-tabs-nav li.ui-state-hover {
+	background:rgb(255,255,255) none;
+	border:1px solid rgb(150,150,150);
+}
+.ui-tabs .ui-tabs-nav li.ui-state-default a {
+	color: rgb(100,100,100);
+}
+.ui-tabs .ui-tabs-nav li.ui-state-hover a {
+	color: rgb(74,110,158);
+}
+.ui-tabs .ui-tabs-nav li.ui-tabs-selected { 
+	padding-bottom: 0px;
+	background: rgb(255,255,255) none;
+	background: -webkit-gradient(linear, left top, left bottom, from(rgb(239,249,255)), to(rgb(255,255,255)));
+	background: -moz-linear-gradient(top, rgb(239,249,255), rgb(255,255,255));
+	background: -o-linear-gradient(top, rgb(239,249,255), rgb(255,255,255));
+	border:1px solid rgb(121,183,231);
+	border-bottom:none;
+}
+.ui-tabs .ui-tabs-nav li.ui-tabs-selected a { 
+	color: rgb(74,110,158);
+	font-weight:bold;
+	border-bottom:1px solid rgb(255,255,255);
+}
 
 .ui-dialog .ui-dialog-titlebar { 
+	background-color:rgb(98,132,221);
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(134,169,227)), to(rgb(98,132,221)));
 	background: -moz-linear-gradient(top, rgb(134,169,227), rgb(98,132,221));
-	background-color:rgb(98,132,221);
+	background: -o-linear-gradient(top, rgb(134,169,227), rgb(98,132,221));
 	border: 0px; 
 	font-size: 14px;
 	font-weight:bold; 

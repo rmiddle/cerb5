@@ -28,7 +28,7 @@
 	{* Column Headers *}
 	<thead>
 	<tr>
-		<th style="text-align:center">
+		<th style="text-align:center;width:100px;">
 			<a href="javascript:;">{'common.watchers'|devblocks_translate|capitalize}</a>
 		</th>
 		
@@ -148,6 +148,5 @@
 	</tr>
 </table>
 </form>
-<br>
 
 {include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}
