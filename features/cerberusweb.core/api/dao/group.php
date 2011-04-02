@@ -1100,22 +1100,25 @@ class Context_Group extends Extension_DevblocksContext {
 		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
 		$view->name = 'Groups';
 		
-		$params = array();
+		$params_req = array();
 		
 		if(!empty($context) && !empty($context_id)) {
-			$params = array(
+			$params_req = array(
 				new DevblocksSearchCriteria(SearchFields_Group::CONTEXT_LINK,'=',$context),
 				new DevblocksSearchCriteria(SearchFields_Group::CONTEXT_LINK_ID,'=',$context_id),
 			);
 		}
 		
-		if(isset($options['filter_open']))
-			true; // Do nothing
-		
-		$view->addParams($params, true);
+		$view->addParamsRequired($params_req, true);
 		
 		$view->renderTemplate = 'context';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;
 	}
+};
+
+class Model_TeamMember {
+	public $id;
+	public $team_id;
+	public $is_manager = 0;
 };

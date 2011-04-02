@@ -2299,24 +2299,51 @@ class Context_Ticket extends Extension_DevblocksContext {
 		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
 		$view->name = 'Tickets';
 		
-		$params = array();
+		$params_req = array();
 		
 		if(!empty($context) && !empty($context_id)) {
-			$params = array(
+			$params_req = array(
 				new DevblocksSearchCriteria(SearchFields_Ticket::CONTEXT_LINK,'=',$context),
 				new DevblocksSearchCriteria(SearchFields_Ticket::CONTEXT_LINK_ID,'=',$context_id),
 			);
 		}
-
-		if(isset($options['filter_open'])) {
-			$params[] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',0);
-			$params[] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',0);
-		}
 		
-		$view->addParams($params, true);
+		$view->addParamsRequired($params_req, true);
 		
 		$view->renderTemplate = 'context';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;
 	}
+};
+
+class Model_TicketViewLastAction {
+	// [TODO] Recycle the bulk update constants for these actions?
+	const ACTION_NOT_SPAM = 'not_spam';
+	const ACTION_SPAM = 'spam';
+	const ACTION_CLOSE = 'close';
+	const ACTION_DELETE = 'delete';
+	const ACTION_MOVE = 'move';
+	const ACTION_WAITING = 'waiting';
+	const ACTION_NOT_WAITING = 'not_waiting';
+
+	public $ticket_ids = array(); // key = ticket id, value=old value
+	public $action = ''; // spam/closed/move, etc.
+	public $action_params = array(); // DAO Actions Taken
+};
+
+class CerberusTicketStatus {
+	const OPEN = 0;
+	const CLOSED = 1;
+};
+
+class CerberusTicketSpamTraining { // [TODO] Append 'Enum' to class name?
+	const BLANK = '';
+	const NOT_SPAM = 'N';
+	const SPAM = 'S';
+};
+
+class CerberusTicketActionCode {
+	const TICKET_OPENED = 'O';
+	const TICKET_CUSTOMER_REPLY = 'R';
+	const TICKET_WORKER_REPLY = 'W';
 };
