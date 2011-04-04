@@ -25,8 +25,13 @@
 		{/foreach}
 	{else}
 		{assign var=field value=$param->field} 
-		{$view_filters.$field->db_label|capitalize} 
-		{$param->operator}
+		{$view_filters.$field->db_label|capitalize}
+		{* [TODO] Add operator labels to platform *}
+		{if $param->operator=='in'}
+			is
+		{else} 
+			{$param->operator}
+		{/if}
 		<b>{$view->renderCriteriaParam($param)}</b>
 		
 		{if $nested}{if $smarty.foreach.params.first}({/if}
@@ -36,7 +41,7 @@
 	{/if}
 		
 	{if !$nested && !$readonly}</label><br>{/if}
-	{if !$nested && $readonly}<a href="javascript:;" onclick="ajax.viewRemoveFilter('{$view->id}', ['{$param_key}']);" style="position:relative;top:-10px;left:10px;margin-left:-10px;display:none;"><span class="cerb-sprite2 sprite-cross-circle-frame"></span></a></li>{/if}
+	{if !$nested && $readonly}<a href="javascript:;" class="delete" onclick="ajax.viewRemoveFilter('{$view->id}', ['{$param_key}']);" style="position:relative;top:-10px;left:10px;margin-left:-10px;display:none;"><span class="cerb-sprite2 sprite-cross-circle-frame"></span></a></li>{/if}
 {/foreach}
 {if $readonly}</ul>{/if}
 {else}{*empty*}
