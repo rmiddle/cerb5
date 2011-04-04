@@ -1,17 +1,17 @@
 {$view_editable_params = $view->getEditableParams()}
 <table cellpadding="2" cellspacing="0" border="0" width="100%">
-<tbody class="summary" style="">
+<tbody class="summary">
 <tr>
 	<td colspan="2">
 		<a href="javascript:;" onclick="$frm=$(this).closest('form');genericAjaxGet('','c=internal&a=viewToggleFilters&id={$view->id}&show=' + ($frm.find('tbody.full').toggle().is(':hidden')?'0':'1'));" style="font-weight:bold;">{'common.filters'|devblocks_translate|capitalize}:</a>
 		{include file="devblocks:cerberusweb.core::internal/views/criteria_list_params.tpl" params=$view_editable_params readonly=true}
 		<script type="text/javascript">
-		$('#viewCustomFilters{$view->id} TBODY.summary UL.bubbles LI').hover(
+		$('#viewCustomFilters{$view->id} TBODY.summary TD:first').hover(
 			function() {
-				$(this).find('a').show();
+				$(this).find('a.delete').show();
 			},
 			function() {
-				$(this).find('a').hide();
+				$(this).find('a.delete').hide();
 			}
 		);
 		</script>
