@@ -563,7 +563,7 @@ class View_ContactOrg extends C4_AbstractView implements IAbstractView_Subtotals
 	}
 	
 	function getSubtotalFields() {
-		$all_fields = $this->getFields();
+		$all_fields = $this->getParamsAvailable();
 		
 		$fields = array();
 
@@ -598,7 +598,7 @@ class View_ContactOrg extends C4_AbstractView implements IAbstractView_Subtotals
 		return $fields;
 	}
 	
-	function getSubtotalCounts($column=null) {
+	function getSubtotalCounts($column) {
 		$counts = array();
 		$fields = $this->getFields();
 
