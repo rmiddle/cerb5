@@ -301,7 +301,7 @@
 			focus:function(event, ui) {
 				return false;
 			},
-			selectFirst: true,
+			autoFocus:true,
 			select:function(event, ui) {
 				$this = $(this);
 				$textarea = $('#reply_{$message->id}');
