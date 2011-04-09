@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011040501);
+define("APP_BUILD", 2011040901);
 define("APP_VERSION", '5.4.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -558,52 +558,6 @@ class CerberusApplication extends DevblocksApplication {
 	        $hash_mask_to_id[$mask] = $ticket_id;
 	    }
 	    return $ticket_id;
-	}
-	
-	/**
-	 * Enter description here...
-	 * [TODO] Move this into a better API holding place
-	 *
-	 * @param integer $group_id
-	 * @param integer $ticket_id
-	 * @param integer $only_rule_id
-	 * @return Model_GroupInboxFilter[]|false
-	 */
-	static public function runGroupRouting($group_id, $ticket_id, $only_rule_id=0) {
-		static $moveMap = array();
-		$dont_move = false;
-		
-		if(false != ($matches = Model_GroupInboxFilter::getMatches($group_id, $ticket_id, $only_rule_id))) { /* @var $match Model_GroupInboxFilter */
-			if(is_array($matches))
-			foreach($matches as $idx => $match) {
-				/* =============== Prevent recursive assignments =============
-				* If we ever get into a situation where many rules are sending a ticket
-				* back and forth between them, ignore the last move action in the chain  
-				* which is trying to start over.
-				*/
-				if(isset($match->actions['move'])) { 
-					if(!isset($moveMap[$ticket_id])) {
-						$moveMap[$ticket_id] = array();
-					} else {
-						if(isset($moveMap[$ticket_id][$group_id])) {
-							$dont_move = true;
-						}
-					}
-					
-					$moveMap[$ticket_id][$group_id] = $match->id;
-				}
-	
-				// Stop any move actions if we're going to loop again
-				if($dont_move) {
-					unset($matches[$idx]->actions['move']);
-				}
-				
-				// Run filter actions
-				$match->run(array($ticket_id));
-			}
-		}
-		
-	    return $matches;
 	}
 };
 
@@ -1149,7 +1103,6 @@ class C4_ORMHelper extends DevblocksORMHelper {
 
 			$has_multiple_values = false;
 			switch($custom_fields[$field_id]->type) {
-				case Model_CustomField::TYPE_MULTI_PICKLIST:
 				case Model_CustomField::TYPE_MULTI_CHECKBOX:
 					$has_multiple_values = true;
 					break;

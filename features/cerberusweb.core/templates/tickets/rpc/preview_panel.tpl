@@ -154,13 +154,6 @@
 									<option value="{$opt}" {if $opt==$custom_field_values.$f_id}selected{/if}>{$opt}</option>
 									{/foreach}
 								</select><br>
-							{elseif $f->type=='M'}
-								<select name="field_{$f_id}[]" size="5" multiple="multiple">
-									{foreach from=$f->options item=opt}
-									<option value="{$opt}" {if isset($custom_field_values.$f_id.$opt)}selected="selected"{/if}>{$opt}</option>
-									{/foreach}
-								</select><br>
-								<i><small>{$translate->_('common.tips.multi_select')}</small></i>
 							{elseif $f->type=='E'}
 								<input type="text" name="field_{$f_id}" size="35" maxlength="255" value="{if !empty($custom_field_values.$f_id)}{$custom_field_values.$f_id|devblocks_date}{/if}"><button type="button" onclick="devblocksAjaxDateChooser(this.form.field_{$f_id},'#dateCustom{$f_id}');">&nbsp;<span class="cerb-sprite sprite-calendar"></span>&nbsp;</button>
 								<div id="dateCustom{$f_id}"></div>
@@ -190,7 +183,7 @@
 		
 		<fieldset>
 			<legend>{'common.comment'|devblocks_translate|capitalize}</legend>
-			<textarea name="comment" rows="5" cols="45" style="width:98%;"></textarea>
+			<textarea name="comment" rows="5" cols="60" style="width:98%;"></textarea>
 			<div class="notify" style="display:none;">
 				<b>{'common.notify_watchers_and'|devblocks_translate}:</b>
 				<button type="button" class="chooser_notify_worker"><span class="cerb-sprite sprite-view"></span></button>
@@ -218,13 +211,16 @@
 		$("#peekTabs").tabs();
 		$("#ticketPeekContent").css('width','100%');
 		$("#ticketPeekProps").show();
-		$(this).find('textarea[name=comment]').keyup(function() {
-			if($(this).val().length > 0) {
-				$(this).next('DIV.notify').show();
-			} else {
-				$(this).next('DIV.notify').hide();
-			}
-		});
+		$(this).find('textarea[name=comment]')
+			.elastic()
+			.keyup(function() {
+				if($(this).val().length > 0) {
+					$(this).next('DIV.notify').show();
+				} else {
+					$(this).next('DIV.notify').hide();
+				}
+			})
+			;
 		$(this).focus();
 	});
 	
