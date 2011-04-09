@@ -159,13 +159,6 @@
 														<option value="{$opt|escape}" {if $opt==$ticket_field_values.$f_id}selected{/if}>{$opt}</option>
 													{/foreach}
 												</select><br>
-											{elseif $f->type=='M'}
-												<select name="field_{$f_id}[]" size="5" multiple="multiple">
-													{foreach from=$f->options item=opt}
-														<option value="{$opt|escape}" {if isset($ticket_field_values.$f_id.$opt)}selected="selected"{/if}>{$opt}</option>
-													{/foreach}
-												</select><br>
-												<i><small>{$translate->_('common.tips.multi_select')}</small></i>
 											{elseif $f->type=='E'}
 												<input type="text" id="field_{$f_id}" name="field_{$f_id}" size="45" maxlength="255" value="{if !empty($ticket_field_values.$f_id)}{$ticket_field_values.$f_id|devblocks_date}{/if}">
 												<script type="text/javascript" language="JavaScript1.2">
