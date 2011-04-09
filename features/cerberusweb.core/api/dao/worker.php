@@ -336,9 +336,6 @@ class DAO_Worker extends C4_ORMHelper {
 			$db->qstr(CerberusContexts::CONTEXT_WORKER)
 		));
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' worker context link targets.');
-		
-		// [TODO] Clear out workers from any group_inbox_filter rows
-		
 	}
 	
 	static function delete($id) {
@@ -384,6 +381,9 @@ class DAO_Worker extends C4_ORMHelper {
 		
 		// Context links
 		DAO_ContextLink::delete(CerberusContexts::CONTEXT_WORKER, $id);
+		
+		// Virtual Attendants
+		DAO_TriggerEvent::deleteByOwner(CerberusContexts::CONTEXT_WORKER, $id);		
 		
 		// Invalidate caches
 		self::clearCache();

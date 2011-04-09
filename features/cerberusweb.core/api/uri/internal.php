@@ -1276,7 +1276,7 @@ class ChInternalController extends DevblocksControllerExtension {
 	 * Triggers
 	 */
 
-	function showAssistantTabAction() {
+	function showAttendantTabAction() {
 		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
 		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
 		@$point = DevblocksPlatform::importGPC($_REQUEST['point'],'string','');
@@ -1293,7 +1293,7 @@ class ChInternalController extends DevblocksControllerExtension {
 		
 		// Remember tab
 		if(!empty($point))
-			$visit->set($point, 'assistant');
+			$visit->set($point, 'attendant');
 
 		$tpl->assign('context', $context);
 		$tpl->assign('context_id', $context_id);
@@ -1551,6 +1551,7 @@ class ChInternalController extends DevblocksControllerExtension {
 	function doDecisionAddConditionAction() {
 		@$condition = DevblocksPlatform::importGPC($_REQUEST['condition'],'string', '');
 		@$trigger_id = DevblocksPlatform::importGPC($_REQUEST['trigger_id'],'integer', 0);
+		@$seq = DevblocksPlatform::importGPC($_REQUEST['seq'],'integer', 0);
 
 		$tpl = DevblocksPlatform::getTemplateService();
 
@@ -1563,13 +1564,15 @@ class ChInternalController extends DevblocksControllerExtension {
 		
 		$tpl->assign('trigger', $trigger);
 		$tpl->assign('event', $event);
+		$tpl->assign('seq', $seq);
 			
-		$event->renderCondition($condition, $trigger);
+		$event->renderCondition($condition, $trigger, null, $seq);
 	}
 	
 	function doDecisionAddActionAction() {
 		@$action = DevblocksPlatform::importGPC($_REQUEST['action'],'string', '');
 		@$trigger_id = DevblocksPlatform::importGPC($_REQUEST['trigger_id'],'integer', 0);
+		@$seq = DevblocksPlatform::importGPC($_REQUEST['seq'],'integer', 0);
 
 		$tpl = DevblocksPlatform::getTemplateService();
 
@@ -1582,8 +1585,9 @@ class ChInternalController extends DevblocksControllerExtension {
 			
 		$tpl->assign('trigger', $trigger);
 		$tpl->assign('event', $event);
+		$tpl->assign('seq', $seq);
 			
-		$event->renderAction($action, $trigger);
+		$event->renderAction($action, $trigger, null, $seq);
 	}
 
 	function saveDecisionPopupAction() {
@@ -1644,18 +1648,45 @@ class ChInternalController extends DevblocksControllerExtension {
 				break;
 				
 			case 'outcome':
-				@$condition_ids = DevblocksPlatform::importGPC($_REQUEST['conditions'],'array',array());
-				$parsed = $this->_parseConditions($condition_ids, $_POST);
+				@$nodes = DevblocksPlatform::importGPC($_REQUEST['nodes'],'array',array());
+
+				$groups = array();
+				$group_key = null;
+				
+				foreach($nodes as $k) {
+					switch($k) {
+						case 'any':
+						case 'all':
+							$groups[] = array(
+								'any' => ($k=='any'?1:0),
+								'conditions' => array(),
+							);
+							end($groups);
+							$group_key = key($groups);
+							break;
+							
+						default:
+							if(!is_numeric($k))
+								continue;
+							
+							// [TODO] Sanitize
+							$condition = $_POST['condition'.$k];
+							$groups[$group_key]['conditions'][] = $condition;
+							break;
+					}
+				}
+				
 				DAO_DecisionNode::update($id, array(
-					DAO_DecisionNode::PARAMS_JSON => json_encode($parsed), 
+					DAO_DecisionNode::PARAMS_JSON => json_encode(array('groups'=>$groups)), 
 				));
 				break;
 				
 			case 'action':
 				@$action_ids = DevblocksPlatform::importGPC($_REQUEST['actions'],'array',array());
-				$parsed = $this->_parseActions($action_ids, $_POST);
+				$params = array();
+				$params['actions'] = $this->_parseActions($action_ids, $_POST);
 				DAO_DecisionNode::update($id, array(
-					DAO_DecisionNode::PARAMS_JSON => json_encode($parsed), 
+					DAO_DecisionNode::PARAMS_JSON => json_encode($params), 
 				));
 				break;
 				
@@ -1664,24 +1695,14 @@ class ChInternalController extends DevblocksControllerExtension {
 		}
 	}
 	
-	private function _parseConditions($condition_ids, $scope) {
-		$object = array();
-		
-		foreach($condition_ids as $condition_id) {
-			$object[] = $scope['condition'.$condition_id];
-		}
-		
-		return $object;
-	}
-	
 	private function _parseActions($action_ids, $scope) {
-		$object = array();
+		$objects = array();
 		
 		foreach($action_ids as $action_id) {
-			$object[] = $scope['action'.$action_id];
+			$objects[] = $scope['action'.$action_id];
 		}
 		
-		return $object;
+		return $objects;
 	}
 
 	function showDecisionNodeMenuAction() {

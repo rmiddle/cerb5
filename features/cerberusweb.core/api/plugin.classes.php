@@ -800,7 +800,7 @@ class Event_MailReceivedByWatcher extends Extension_DevblocksEvent {
 	
 	function getActionExtensions() { // $id
 		$actions = array(
-			//'add_owners' => array('label' => 'Add owners'),
+			'add_watchers' => array('label' =>'Add watchers'),
 			//'set_spam_training' => array('label' => 'Set spam training'),
 			//'set_status' => array('label' => 'Set status'),
 			'set_subject' => array('label' => 'Set subject'),
@@ -1169,18 +1169,23 @@ class Event_MailClosedInGroup extends Extension_DevblocksEvent {
 	}
 	
 	function getActionExtensions() {
-		$actions = array(
-			'create_comment' => array('label' =>'Create a comment'),
-			'create_notification' => array('label' =>'Create a notification'),
-			'create_task' => array('label' =>'Create a task'),
-			'create_ticket' => array('label' =>'Create a ticket'),
-			'move_to_bucket' => array('label' => 'Move to bucket'),
-			//'move_to_group' => array('label' => 'Move to group'),
-			'send_email' => array('label' => 'Send email'),
-			'send_email_recipients' => array('label' => 'Send email to recipients'),
-			'set_spam_training' => array('label' => 'Set spam training'),
-			'set_status' => array('label' => 'Set status'),
-		);
+		$actions = 
+			array(
+				'add_watchers' => array('label' =>'Add watchers'),
+				'create_comment' => array('label' =>'Create a comment'),
+				'create_notification' => array('label' =>'Create a notification'),
+				'create_task' => array('label' =>'Create a task'),
+				'create_ticket' => array('label' =>'Create a ticket'),
+				'move_to_bucket' => array('label' => 'Move to bucket'),
+				//'move_to_group' => array('label' => 'Move to group'),
+				'send_email' => array('label' => 'Send email'),
+				'send_email_recipients' => array('label' => 'Send email to recipients'),
+				'set_spam_training' => array('label' => 'Set spam training'),
+				'set_status' => array('label' => 'Set status'),
+			)
+			+ DevblocksEventHelper::getActionCustomFields(CerberusContexts::CONTEXT_TICKET)
+			;
+			
 		return $actions;
 	}
 	
@@ -1195,6 +1200,10 @@ class Event_MailClosedInGroup extends Extension_DevblocksEvent {
 		$tpl->assign('token_labels', $labels);
 			
 		switch($token) {
+			case 'add_watchers':
+				DevblocksEventHelper::renderActionAddWatchers();
+				break;
+			
 			case 'send_email':
 				DevblocksEventHelper::renderActionSendEmail();
 				break;
@@ -1250,6 +1259,10 @@ class Event_MailClosedInGroup extends Extension_DevblocksEvent {
 			return;
 		
 		switch($token) {
+			case 'add_watchers':
+				DevblocksEventHelper::runActionAddWatchers($params, $values, CerberusContexts::CONTEXT_TICKET, $ticket_id);
+				break;
+			
 			case 'send_email':
 				DevblocksEventHelper::runActionSendEmail($params, $values);
 				break;
@@ -1488,6 +1501,9 @@ class Event_MailMovedToGroup extends Extension_DevblocksEvent {
 	function getConditionExtensions() {
 		$labels = $this->getLabels();
 		
+		$labels['ticket_initial_message_header'] = 'Initial message email header';
+		$labels['ticket_latest_message_header'] = 'Latest message email header';
+		
 		$types = array(
 			'ticket_initial_message_content' => Model_CustomField::TYPE_MULTI_LINE,
 			'ticket_initial_message_created|date' => Model_CustomField::TYPE_DATE,
@@ -1543,6 +1559,9 @@ class Event_MailMovedToGroup extends Extension_DevblocksEvent {
 			'ticket_subject' => Model_CustomField::TYPE_SINGLE_LINE,
 			'ticket_updated|date' => Model_CustomField::TYPE_DATE,
 			'ticket_url' => Model_CustomField::TYPE_URL,
+		
+			'ticket_initial_message_header' => null,
+			'ticket_latest_message_header' => null,
 		);
 
 		$conditions = $this->_importLabelsTypesAsConditions($labels, $types);
@@ -1571,6 +1590,10 @@ class Event_MailMovedToGroup extends Extension_DevblocksEvent {
 				break;
 			case 'ticket_status':
 				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_group/condition_status.tpl');
+				break;
+			case 'ticket_initial_message_header':
+			case 'ticket_latest_message_header':
+				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_group/condition_header.tpl');
 				break;
 		}
 
@@ -1651,6 +1674,40 @@ class Event_MailMovedToGroup extends Extension_DevblocksEvent {
 				$pass = ($not) ? !$pass : $pass;
 				break;
 				
+			case 'ticket_initial_message_header':
+			case 'ticket_latest_message_header':
+				$not = (substr($params['oper'],0,1) == '!');
+				$oper = ltrim($params['oper'],'!');
+				@$header = $params['header'];
+				@$param_value = $params['value'];
+				
+				// Lazy load
+				$token_msgid = str_replace('_header', '_id', $token);
+				$value = DAO_MessageHeader::getOne($values[$token_msgid], $header);
+				
+				// Operators
+				switch($oper) {
+					case 'is':
+						$pass = (0==strcasecmp($value,$param_value));
+						break;
+					case 'like':
+						$regexp = DevblocksPlatform::strToRegExp($param_value);
+						$pass = @preg_match($regexp, $value);
+						break;
+					case 'contains':
+						$pass = (false !== stripos($value, $param_value)) ? true : false;
+						break;
+					case 'regexp':
+						$pass = @preg_match($param_value, $value);
+						break;
+					default:
+						$pass = false;
+						break;
+				}
+				
+				$pass = ($not) ? !$pass : $pass;
+				break;
+				
 			default:
 				$pass = false;
 				break;
@@ -1660,18 +1717,23 @@ class Event_MailMovedToGroup extends Extension_DevblocksEvent {
 	}
 	
 	function getActionExtensions() {
-		$actions = array(
-			'create_comment' => array('label' =>'Create a comment'),
-			'create_notification' => array('label' =>'Create a notification'),
-			'create_task' => array('label' =>'Create a task'),
-			'create_ticket' => array('label' =>'Create a ticket'),
-			'move_to_bucket' => array('label' => 'Move to bucket'),
-			//'move_to_group' => array('label' => 'Move to group'),
-			'send_email' => array('label' => 'Send email'),
-			'send_email_recipients' => array('label' => 'Send email to recipients'),
-			'set_spam_training' => array('label' => 'Set spam training'),
-			'set_status' => array('label' => 'Set status'),
-		);
+		$actions = 
+			array(
+				'add_watchers' => array('label' =>'Add watchers'),
+				'create_comment' => array('label' =>'Create a comment'),
+				'create_notification' => array('label' =>'Create a notification'),
+				'create_task' => array('label' =>'Create a task'),
+				'create_ticket' => array('label' =>'Create a ticket'),
+				'move_to_bucket' => array('label' => 'Move to bucket'),
+				'move_to_group' => array('label' => 'Move to group'),
+				'send_email' => array('label' => 'Send email'),
+				'send_email_recipients' => array('label' => 'Send email to recipients'),
+				'set_spam_training' => array('label' => 'Set spam training'),
+				'set_status' => array('label' => 'Set status'),
+			)
+			+ DevblocksEventHelper::getActionCustomFields(CerberusContexts::CONTEXT_TICKET)
+			;
+		
 		return $actions;
 	}
 	
@@ -1686,6 +1748,10 @@ class Event_MailMovedToGroup extends Extension_DevblocksEvent {
 		$tpl->assign('token_labels', $labels);
 			
 		switch($token) {
+			case 'add_watchers':
+				DevblocksEventHelper::renderActionAddWatchers();
+				break;
+			
 			case 'send_email':
 				DevblocksEventHelper::renderActionSendEmail();
 				break;
@@ -1727,6 +1793,12 @@ class Event_MailMovedToGroup extends Extension_DevblocksEvent {
 				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_group/action_move_to_bucket.tpl');
 				break;
 				
+			case 'move_to_group':
+				// [TODO] Share
+				$groups = DAO_Group::getAll();
+				$tpl->assign('groups', $groups);
+				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_group/action_move_to_group.tpl');
+				break;
 		}
 		
 		$tpl->clearAssign('params');
@@ -1742,6 +1814,10 @@ class Event_MailMovedToGroup extends Extension_DevblocksEvent {
 			return;
 		
 		switch($token) {
+			case 'add_watchers':
+				DevblocksEventHelper::runActionAddWatchers($params, $values, CerberusContexts::CONTEXT_TICKET, $ticket_id);
+				break;
+			
 			case 'send_email':
 				DevblocksEventHelper::runActionSendEmail($params, $values);
 				break;
@@ -2162,18 +2238,23 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 	}
 	
 	function getActionExtensions() {
-		$actions = array(
-			'create_comment' => array('label' =>'Create a comment'),
-			'create_notification' => array('label' =>'Create a notification'),
-			'create_task' => array('label' =>'Create a task'),
-			'create_ticket' => array('label' =>'Create a ticket'),
-			'move_to_bucket' => array('label' => 'Move to bucket'),
-			//'move_to_group' => array('label' => 'Move to group'),
-			'send_email' => array('label' => 'Send email'),
-			'send_email_recipients' => array('label' => 'Send email to recipients'),
-			'set_spam_training' => array('label' => 'Set spam training'),
-			'set_status' => array('label' => 'Set status'),
-		);
+		$actions = 
+			array(
+				'add_watchers' => array('label' =>'Add watchers'),
+				'create_comment' => array('label' =>'Create a comment'),
+				'create_notification' => array('label' =>'Create a notification'),
+				'create_task' => array('label' =>'Create a task'),
+				'create_ticket' => array('label' =>'Create a ticket'),
+				'move_to_bucket' => array('label' => 'Move to bucket'),
+				'move_to_group' => array('label' => 'Move to group'),
+				'send_email' => array('label' => 'Send email'),
+				'send_email_recipients' => array('label' => 'Send email to recipients'),
+				'set_spam_training' => array('label' => 'Set spam training'),
+				'set_status' => array('label' => 'Set status'),
+			)
+			+ DevblocksEventHelper::getActionCustomFields(CerberusContexts::CONTEXT_TICKET)
+			;
+		
 		return $actions;
 	}
 	
@@ -2188,6 +2269,10 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 		$tpl->assign('token_labels', $labels);
 			
 		switch($token) {
+			case 'add_watchers':
+				DevblocksEventHelper::renderActionAddWatchers();
+				break;
+				
 			case 'send_email':
 				DevblocksEventHelper::renderActionSendEmail();
 				break;
@@ -2223,10 +2308,17 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 				break;
 				
 			case 'move_to_bucket':
-				// [TODO] Use trigger cache
+				// [TODO] Share
 				$buckets = DAO_Bucket::getByTeam($trigger->owner_context_id);
 				$tpl->assign('buckets', $buckets);
 				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_group/action_move_to_bucket.tpl');
+				break;
+				
+			case 'move_to_group':
+				// [TODO] Use trigger cache
+				$groups = DAO_Group::getAll();
+				$tpl->assign('groups', $groups);
+				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_group/action_move_to_group.tpl');
 				break;
 				
 		}
@@ -2244,6 +2336,10 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 			return;
 		
 		switch($token) {
+			case 'add_watchers':
+				DevblocksEventHelper::runActionAddWatchers($params, $values, CerberusContexts::CONTEXT_TICKET, $ticket_id);
+				break;
+			
 			case 'send_email':
 				DevblocksEventHelper::runActionSendEmail($params, $values);
 				break;
