@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011041501);
+define("APP_BUILD", 2011041601);
 define("APP_VERSION", '5.4.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -935,7 +935,7 @@ class CerberusContexts {
 			$message = CerberusContexts::formatActivityLogEntry($entry_array, 'plaintext');
 			@$url = reset($entry_array['urls']); 
 			
-			if(0 != strcasecmp($url,substr($url,0,4)))
+			if(0 != strcasecmp('http',substr($url,0,4)))
 				$url = $url_writer->write($url, true);
 			
 			foreach($watcher_ids as $watcher_id) {
@@ -943,6 +943,8 @@ class CerberusContexts {
 				if($actor_context == CerberusContexts::CONTEXT_WORKER
 					&& $actor_context_id == $watcher_id)
 						continue;
+				
+				// [TODO] Filter by worker watcher prefs
 						
 				DAO_Notification::create(array(
 					DAO_Notification::CREATED_DATE => time(),
