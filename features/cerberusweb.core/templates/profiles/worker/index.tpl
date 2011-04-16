@@ -48,7 +48,7 @@
 		{/if}
 
 		{$tabs[] = 'activity'}
-		<li><a href="#activity">Activity</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabActivityLog&scope=actor&point={$point}&context={CerberusContexts::CONTEXT_WORKER}&context_id={$worker->id}{/devblocks_url}">{'common.activity_log'|devblocks_translate|capitalize}</a></li>
 
 		{$tabs[] = 'links'}
 		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.worker&point={$point}&id={$worker->id}{/devblocks_url}">Watching ({$watching_total})</a></li>
@@ -73,10 +73,6 @@
 		{/if}
 		{/if}
 	</ul>
-	
-	<div id="activity">
-		[[ nothing here yet ]]
-	</div>
 </div> 
 <br>
 
@@ -91,7 +87,7 @@
 		
 		{if $active_worker->is_superuser}
 		$('#btnProfileWorkerEdit').bind('click', function() {
-			$popup = genericAjaxPopup('peek','c=config&a=showWorkerPeek&id={$worker->id}',null,false,'550');
+			$popup = genericAjaxPopup('peek','c=config&a=handleSectionAction&section=workers&action=showWorkerPeek&id={$worker->id}',null,false,'550');
 			$popup.one('worker_save', function(event) {
 				event.stopPropagation();
 				document.location.href = '{devblocks_url}c=profiles&k=worker&id={$worker->id}-{$worker->getName()|devblocks_permalink}{/devblocks_url}';

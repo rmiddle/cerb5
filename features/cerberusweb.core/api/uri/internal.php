@@ -239,6 +239,68 @@ class ChInternalController extends DevblocksControllerExtension {
 			DAO_ContextLink::deleteLink($context, $context_id, $from_context, $from_context_id);
 	}
 
+	// Context Activity Log
+	
+	function showTabActivityLogAction() {
+		@$scope = DevblocksPlatform::importGPC($_REQUEST['scope'],'string','target');
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer');
+		@$point = DevblocksPlatform::importGPC($_REQUEST['point'],'string');
+		
+		$visit = CerberusApplication::getVisit();
+		$tpl = DevblocksPlatform::getTemplateService();
+
+		if(empty($context) || empty($context_id))
+			return;
+		
+		// Remember tab
+		if(!empty($point))
+			$visit->set($point, 'activity');
+		
+		if(0 == strcasecmp('target',$scope)) {
+			$params = array(
+				SearchFields_ContextActivityLog::TARGET_CONTEXT => new DevblocksSearchCriteria(SearchFields_ContextActivityLog::TARGET_CONTEXT,'=',$context),
+				SearchFields_ContextActivityLog::TARGET_CONTEXT_ID => new DevblocksSearchCriteria(SearchFields_ContextActivityLog::TARGET_CONTEXT_ID,'=',$context_id),
+			);
+		} else { // actor
+			$params = array(
+				SearchFields_ContextActivityLog::ACTOR_CONTEXT => new DevblocksSearchCriteria(SearchFields_ContextActivityLog::ACTOR_CONTEXT,'=',$context),
+				SearchFields_ContextActivityLog::ACTOR_CONTEXT_ID => new DevblocksSearchCriteria(SearchFields_ContextActivityLog::ACTOR_CONTEXT_ID,'=',$context_id),
+			);
+		}
+
+		$defaults = new C4_AbstractViewModel();
+		$defaults->class_name = 'View_ContextActivityLog';
+		$defaults->view_columns = array(
+			SearchFields_ContextActivityLog::CREATED
+		);
+		$defaults->renderLimit = 10;
+		$defaults->renderSortBy = SearchFields_ContextActivityLog::CREATED;
+		$defaults->renderSortAsc = false;
+		
+		if(null != ($view = C4_AbstractViewLoader::getView(View_ContextActivityLog::DEFAULT_ID, $defaults))) {
+			$view->addColumnsHidden(array(
+				SearchFields_ContextActivityLog::ACTOR_CONTEXT_ID,
+				SearchFields_ContextActivityLog::TARGET_CONTEXT_ID,
+				SearchFields_ContextActivityLog::ID,
+			), true);
+			
+			$view->addParamsHidden(array(
+				SearchFields_ContextActivityLog::ACTOR_CONTEXT_ID,
+				SearchFields_ContextActivityLog::TARGET_CONTEXT_ID,
+				SearchFields_ContextActivityLog::ID,
+			), true);
+			
+			$view->addParamsRequired($params, true);
+			
+			C4_AbstractViewLoader::setView($view->id, $view);
+			
+			$tpl->assign('view', $view);
+		}
+		
+		$tpl->display('devblocks:cerberusweb.core::internal/activity_log/tab.tpl');
+	}
+	
 	// Autocomplete
 
 	function autocompleteAction() {
@@ -381,6 +443,7 @@ class ChInternalController extends DevblocksControllerExtension {
 		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
 		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
 		@$follow = DevblocksPlatform::importGPC($_REQUEST['follow'],'integer',0);
+		@$full = DevblocksPlatform::importGPC($_REQUEST['full'],'integer',0);
 		
 		// [TODO] Verify context + context_id
 		
@@ -389,6 +452,7 @@ class ChInternalController extends DevblocksControllerExtension {
 		
 		$tpl->assign('context', $context);
 		$tpl->assign('context_id', $context_id);
+		$tpl->assign('full', $full);
 		
 		// Add or remove watcher as current worker
 		if($follow) {
@@ -1839,10 +1903,10 @@ class ChInternalController extends DevblocksControllerExtension {
 		$tpl->assign('context_id', $context_id);
 
 		// Automatically tell anybody associated with this context object
-		$workers = CerberusContexts::getWatchers($context, $context_id);
-		if(isset($workers[$active_worker->id]))
-			unset($workers[$active_worker->id]);
-		$tpl->assign('notify_workers', $workers);
+//		$workers = CerberusContexts::getWatchers($context, $context_id);
+//		if(isset($workers[$active_worker->id]))
+//			unset($workers[$active_worker->id]);
+//		$tpl->assign('notify_workers', $workers);
 
 		$tpl->display('devblocks:cerberusweb.core::internal/comments/peek.tpl');
 	}
@@ -1866,6 +1930,8 @@ class ChInternalController extends DevblocksControllerExtension {
 		if(empty($context) || empty($context_id) || empty($comment))
 			return;
 
+		@$also_notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
+		
 		$fields = array(
 			DAO_Comment::CONTEXT => $context,
 			DAO_Comment::CONTEXT_ID => $context_id,
@@ -1873,22 +1939,13 @@ class ChInternalController extends DevblocksControllerExtension {
 			DAO_Comment::COMMENT => $comment,
 			DAO_Comment::CREATED => time(),
 		);
-		$comment_id = DAO_Comment::create($fields);
+		$comment_id = DAO_Comment::create($fields, $also_notify_worker_ids);
 
 		// Attachments
 		if(!empty($file_ids))
 		foreach($file_ids as $file_id) {
 			DAO_AttachmentLink::create(intval($file_id), CerberusContexts::CONTEXT_COMMENT, $comment_id);
 		}
-
-		// Notifications
-		@$notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
-		DAO_Comment::triggerCommentNotifications(
-			$context,
-			$context_id,
-			$active_worker,
-			$notify_worker_ids
-		);
 	}
 
 	function commentDeleteAction() {

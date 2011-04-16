@@ -7,7 +7,7 @@ class DAO_Comment extends DevblocksORMHelper {
 	const ADDRESS_ID = 'address_id';
 	const COMMENT = 'comment';
 
-	static function create($fields) {
+	static function create($fields, $also_notify_worker_ids=array()) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
 		$db->Execute("INSERT INTO comment () VALUES ()");
@@ -15,7 +15,30 @@ class DAO_Comment extends DevblocksORMHelper {
 		
 		self::update($id, $fields);
 		
-		// New comment
+		/*
+		 * Log the activity of a new comment being created
+		 */
+		
+		$context = DevblocksPlatform::getExtension($fields[self::CONTEXT], true); /* @var $context Extension_DevblocksContext */
+		$meta = $context->getMeta($fields[self::CONTEXT_ID]);
+		
+		$entry = array(
+			'message' => '{{actor}} commented on {{object}} {{target}}: {{content}}',
+			'variables' => array(
+				'object' => mb_convert_case($context->manifest->name, MB_CASE_LOWER),
+				'target' => $meta['name'],
+				'content' => $fields[self::COMMENT],
+				),
+			'urls' => array(
+				'target' => $meta['permalink'] . '/comments#'.$id,
+				)
+		);
+		CerberusContexts::logActivity('comment.create', $fields[self::CONTEXT], $fields[self::CONTEXT_ID], $entry, null, null, $also_notify_worker_ids);		
+		
+		/*
+		 * Send a new comment event
+		 */
+		
 	    $eventMgr = DevblocksPlatform::getEventService();
 	    $eventMgr->trigger(
 	        new Model_DevblocksEvent(
@@ -113,42 +136,6 @@ class DAO_Comment extends DevblocksORMHelper {
 		mysql_free_result($rs);
 		
 		return $objects;
-	}
-	
-	/**
-	 * 
-	 * @param string $context
-	 * @param integer $context_id
-	 * @param Model_Worker $active_worker
-	 * @param array $notify_worker_ids
-	 * @return bool
-	 */
-	static function triggerCommentNotifications($context, $context_id, $active_worker, $notify_worker_ids) {
-		$translate = DevblocksPlatform::getTranslationService();
-
-		if(null == ($extension = DevblocksPlatform::getExtension($context, true)))
-			return FALSE;
-			
-		if(null == (@$string = $extension->manifest->params['events'][0]['context.commented']))
-			$string = 'context.default.commented';
-			
-		// URL
-		if(null == ($url = $extension->getPermalink($context_id)))
-			return FALSE;
-			
-		// Notifications
-		if(is_array($notify_worker_ids) && !empty($notify_worker_ids))
-		foreach($notify_worker_ids as $notify_worker_id) {
-			$fields = array(
-				DAO_Notification::CREATED_DATE => time(),
-				DAO_Notification::WORKER_ID => $notify_worker_id,
-				DAO_Notification::URL => $url,
-				DAO_Notification::MESSAGE => vsprintf($translate->_($string), $active_worker->getName()),
-			);
-			DAO_Notification::create($fields);
-		}
-		
-		return TRUE;
 	}
 	
 	static function deleteByContext($context, $context_ids) {
@@ -599,12 +586,16 @@ class Context_Comment extends Extension_DevblocksContext {
 		return FALSE;
 	}
 	
-    function getPermalink($context_id) {
-    	// [TODO] Defer to link
-    	return null;
-    	//$url_writer = DevblocksPlatform::getUrlService();
-    	//return $url_writer->write('c=tasks&action=display&id='.$context_id, true);
-    }
+	function getMeta($context_id) {
+		//$comment = DAO_Comment::get($context_id);
+		$url_writer = DevblocksPlatform::getUrlService();
+		
+		return array(
+			'id' => $context_id,
+			'name' => '',
+			'permalink' => '',
+		);
+	}
 
 	function getContext($comment, &$token_labels, &$token_values, $prefix=null) {
 		if(is_null($prefix))

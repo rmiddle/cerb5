@@ -42,6 +42,9 @@
 		<tu tuid='common.access_denied'>
 			<tuv xml:lang="en_US"><seg>Access denied.</seg></tuv>
 		</tu>
+		<tu tuid='common.activity_log'>
+			<tuv xml:lang="en_US"><seg>Activity Log</seg></tuv>
+		</tu>
 		<tu tuid='common.add'>
 			<tuv xml:lang="en_US"><seg>add</seg></tuv>
 		</tu>
@@ -891,49 +894,25 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 
 		<!-- Contexts -->
 		
-		<tu tuid='context.default.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned something to you.</seg></tuv>
+		<!-- ContextActivityLog -->
+		
+		<tu tuid='dao.context_activity_log.activity_point'>
+			<tuv xml:lang="en_US"><seg>Activity</seg></tuv>
 		</tu>
-		<tu tuid='context.default.commented'>
-			<tuv xml:lang="en_US"><seg>%s left a comment for you.</seg></tuv>
+		<tu tuid='dao.context_activity_log.actor_context'>
+			<tuv xml:lang="en_US"><seg>Actor Context</seg></tuv>
 		</tu>
-		<tu tuid='context.address.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned a contact to you.</seg></tuv>
+		<tu tuid='dao.context_activity_log.actor_context_id'>
+			<tuv xml:lang="en_US"><seg>Actor Context ID</seg></tuv>
 		</tu>
-		<tu tuid='context.address.commented'>
-			<tuv xml:lang="en_US"><seg>%s commented on a contact.</seg></tuv>
+		<tu tuid='dao.context_activity_log.entry'>
+			<tuv xml:lang="en_US"><seg>Entry</seg></tuv>
 		</tu>
-		<!--
-		<tu tuid='context.group.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned a group to you.</seg></tuv>
+		<tu tuid='dao.context_activity_log.target_context'>
+			<tuv xml:lang="en_US"><seg>Target Context</seg></tuv>
 		</tu>
-		<tu tuid='context.group.commented'>
-			<tuv xml:lang="en_US"><seg>%s commented on a group.</seg></tuv>
-		</tu>
-		-->
-		<tu tuid='context.org.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned an organization to you.</seg></tuv>
-		</tu>
-		<tu tuid='context.org.commented'>
-			<tuv xml:lang="en_US"><seg>%s commented on an organization.</seg></tuv>
-		</tu>
-		<tu tuid='context.task.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned a task to you.</seg></tuv>
-		</tu>
-		<tu tuid='context.task.commented'>
-			<tuv xml:lang="en_US"><seg>%s commented on a task.</seg></tuv>
-		</tu>
-		<tu tuid='context.ticket.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned a ticket to you.</seg></tuv>
-		</tu>
-		<tu tuid='context.ticket.commented'>
-			<tuv xml:lang="en_US"><seg>%s commented on a ticket.</seg></tuv>
-		</tu>
-		<tu tuid='context.worker.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned a worker to you.</seg></tuv>
-		</tu>
-		<tu tuid='context.worker.commented'>
-			<tuv xml:lang="en_US"><seg>%s commented on another worker.</seg></tuv>
+		<tu tuid='dao.context_activity_log.target_context_id'>
+			<tuv xml:lang="en_US"><seg>Target Context ID</seg></tuv>
 		</tu>
 
 		<!-- Cron -->

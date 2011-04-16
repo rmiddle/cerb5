@@ -1,145 +1,18 @@
 <?php
-class Context_Server extends Extension_DevblocksContext {
-	function getMeta($context_id) {
-		$server = DAO_Server::get($context_id);
-		$url_writer = DevblocksPlatform::getUrlService();
-		
-		return array(
-			'id' => $server->id,
-			'name' => $server->name,
-			'permalink' => $url_writer->write(sprintf("c=datacenter&tab=server&id=%d",$context_id), true),
-		);
-	}
-    
-	function getContext($server, &$token_labels, &$token_values, $prefix=null) {
-		if(is_null($prefix))
-			$prefix = 'Server:';
-		
-		$translate = DevblocksPlatform::getTranslationService();
-		$fields = DAO_CustomField::getByContext('cerberusweb.contexts.datacenter.server');
-		
-		// Polymorph
-		if(is_numeric($server)) {
-			$server = DAO_Server::get($server);
-		} elseif($server instanceof Model_Server) {
-			// It's what we want already.
-		} else {
-			$server = null;
-		}
-			
-		// Token labels
-		$token_labels = array(
-			'name' => $prefix.$translate->_('common.name'),
-		);
-		
-		if(is_array($fields))
-		foreach($fields as $cf_id => $field) {
-			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
-		}
-
-		// Token values
-		$token_values = array();
-		
-		// Custom token values
-		if(null != $server) {
-			$token_values['id'] = $server->id;
-			$token_values['name'] = $server->name;
-			$token_values['custom'] = array();
-			
-			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds('cerberusweb.contexts.datacenter.server', $server->id));
-			if(is_array($field_values) && !empty($field_values)) {
-				foreach($field_values as $cf_id => $cf_val) {
-					if(!isset($fields[$cf_id]))
-						continue;
-					
-					// The literal value
-					if(null != $server)
-						$token_values['custom'][$cf_id] = $cf_val;
-					
-					// Stringify
-					if(is_array($cf_val))
-						$cf_val = implode(', ', $cf_val);
-						
-					if(is_string($cf_val)) {
-						if(null != $server)
-							$token_values['custom_'.$cf_id] = $cf_val;
-					}
-				}
-			}
-		}
-		
-		// Addy
-//		$merge_token_labels = array();
-//		$merge_token_values = array();
-//		CerberusContexts::getContext(CerberusContexts::CONTEXT_ADDRESS, @$id_map['address_id'], $merge_token_labels, $merge_token_values, null, true);
-//
-//		CerberusContexts::merge(
-//			'contact_',
-//			'Contact:',
-//			$merge_token_labels,
-//			$merge_token_values,
-//			$token_labels,
-//			$token_values
-//		);
-		
-		return true;		
-	}
-
-	function getChooserView() {
-		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
-		$defaults = new C4_AbstractViewModel();
-		$defaults->id = $view_id;
-		$defaults->is_ephemeral = true;
-		$defaults->class_name = $this->getViewClass();
-		
-		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
-		
-		$view->renderSortBy = SearchFields_Server::NAME;
-		$view->renderSortAsc = true;
-		$view->renderLimit = 10;
-		$view->renderTemplate = 'contextlinks_chooser';
-		
-		C4_AbstractViewLoader::setView($view_id, $view);
-		return $view;		
-	}
-	
-	function getView($context=null, $context_id=null, $options=array()) {
-		$view_id = str_replace('.','_',$this->id);
-		
-		$defaults = new C4_AbstractViewModel();
-		$defaults->id = $view_id; 
-		$defaults->class_name = $this->getViewClass();
-		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
-		//$view->name = 'Sites';
-		
-		$params_req = array();
-		
-		if(!empty($context) && !empty($context_id)) {
-			$params_req = array(
-				new DevblocksSearchCriteria(SearchFields_Server::CONTEXT_LINK,'=',$context),
-				new DevblocksSearchCriteria(SearchFields_Server::CONTEXT_LINK_ID,'=',$context_id),
-			);
-		}
-		
-		$view->addParamsRequired($params_req, true);
-		
-		$view->renderTemplate = 'context';
-		C4_AbstractViewLoader::setView($view_id, $view);
-		return $view;
-	}
-};
-
-class DAO_Server extends C4_ORMHelper {
-	const CACHE_ALL = 'cerberus_cache_servers_all';
-	
+class DAO_ContextActivityLog extends C4_ORMHelper {
 	const ID = 'id';
-	const NAME = 'name';
+	const ACTIVITY_POINT = 'activity_point';
+	const ACTOR_CONTEXT = 'actor_context';
+	const ACTOR_CONTEXT_ID = 'actor_context_id';
+	const TARGET_CONTEXT = 'target_context';
+	const TARGET_CONTEXT_ID = 'target_context_id';
+	const CREATED = 'created';
+	const ENTRY_JSON = 'entry_json';
 
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$sql = "INSERT INTO server () VALUES ()";
+		$sql = "INSERT INTO context_activity_log () VALUES ()";
 		$db->Execute($sql);
 		$id = $db->LastInsertId();
 		
@@ -149,23 +22,11 @@ class DAO_Server extends C4_ORMHelper {
 	}
 	
 	static function update($ids, $fields) {
-		parent::_update($ids, 'server', $fields);
-		self::clearCache();
+		parent::_update($ids, 'context_activity_log', $fields);
 	}
 	
 	static function updateWhere($fields, $where) {
-		parent::_updateWhere('server', $fields, $where);
-		self::clearCache();
-	}
-	
-	static function getAll($nocache=false) {
-	    $cache = DevblocksPlatform::getCacheService();
-	    if($nocache || null === ($servers = $cache->load(self::CACHE_ALL))) {
-    	    $servers = self::getWhere();
-    	    $cache->save($servers, self::CACHE_ALL);
-	    }
-	    
-	    return $servers;
+		parent::_updateWhere('context_activity_log', $fields, $where);
 	}
 	
 	/**
@@ -173,16 +34,16 @@ class DAO_Server extends C4_ORMHelper {
 	 * @param mixed $sortBy
 	 * @param mixed $sortAsc
 	 * @param integer $limit
-	 * @return Model_Server[]
+	 * @return Model_ContextActivityLog[]
 	 */
-	static function getWhere($where=null, $sortBy='name', $sortAsc=true, $limit=null) {
+	static function getWhere($where=null, $sortBy=null, $sortAsc=true, $limit=null) {
 		$db = DevblocksPlatform::getDatabaseService();
 
 		list($where_sql, $sort_sql, $limit_sql) = self::_getWhereSQL($where, $sortBy, $sortAsc, $limit);
 		
 		// SQL
-		$sql = "SELECT id, name ".
-			"FROM server ".
+		$sql = "SELECT id, activity_point, actor_context, actor_context_id, target_context, target_context_id, created, entry_json ".
+			"FROM context_activity_log ".
 			$where_sql.
 			$sort_sql.
 			$limit_sql
@@ -194,7 +55,7 @@ class DAO_Server extends C4_ORMHelper {
 
 	/**
 	 * @param integer $id
-	 * @return Model_Server	 */
+	 * @return Model_ContextActivityLog	 */
 	static function get($id) {
 		$objects = self::getWhere(sprintf("%s = %d",
 			self::ID,
@@ -209,15 +70,21 @@ class DAO_Server extends C4_ORMHelper {
 	
 	/**
 	 * @param resource $rs
-	 * @return Model_Server[]
+	 * @return Model_ContextActivityLog[]
 	 */
 	static private function _getObjectsFromResult($rs) {
 		$objects = array();
 		
 		while($row = mysql_fetch_assoc($rs)) {
-			$object = new Model_Server();
+			$object = new Model_ContextActivityLog();
 			$object->id = $row['id'];
-			$object->name = $row['name'];
+			$object->activity_point = $row['activity_point'];
+			$object->actor_context = $row['actor_context'];
+			$object->actor_context_id = $row['actor_context_id'];
+			$object->target_context = $row['target_context'];
+			$object->target_context_id = $row['target_context_id'];
+			$object->created = $row['created'];
+			$object->entry_json = $row['entry_json'];
 			$objects[$object->id] = $object;
 		}
 		
@@ -235,15 +102,13 @@ class DAO_Server extends C4_ORMHelper {
 		
 		$ids_list = implode(',', $ids);
 		
-		$db->Execute(sprintf("DELETE FROM server WHERE id IN (%s)", $ids_list));
-		
-		self::clearCache();
+		$db->Execute(sprintf("DELETE FROM context_activity_log WHERE id IN (%s)", $ids_list));
 		
 		return true;
 	}
 	
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
-		$fields = SearchFields_Server::getFields();
+		$fields = SearchFields_ContextActivityLog::getFields();
 		
 		// Sanitize
 		if(!isset($fields[$sortBy]))
@@ -252,42 +117,50 @@ class DAO_Server extends C4_ORMHelper {
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
 		
 		$select_sql = sprintf("SELECT ".
-			"server.id as %s, ".
-			"server.name as %s ",
-				SearchFields_Server::ID,
-				SearchFields_Server::NAME
+			"context_activity_log.id as %s, ".
+			"context_activity_log.activity_point as %s, ".
+			"context_activity_log.actor_context as %s, ".
+			"context_activity_log.actor_context_id as %s, ".
+			"context_activity_log.target_context as %s, ".
+			"context_activity_log.target_context_id as %s, ".
+			"context_activity_log.created as %s, ".
+			"context_activity_log.entry_json as %s ",
+				SearchFields_ContextActivityLog::ID,
+				SearchFields_ContextActivityLog::ACTIVITY_POINT,
+				SearchFields_ContextActivityLog::ACTOR_CONTEXT,
+				SearchFields_ContextActivityLog::ACTOR_CONTEXT_ID,
+				SearchFields_ContextActivityLog::TARGET_CONTEXT,
+				SearchFields_ContextActivityLog::TARGET_CONTEXT_ID,
+				SearchFields_ContextActivityLog::CREATED,
+				SearchFields_ContextActivityLog::ENTRY_JSON
 			);
 			
-		$join_sql = "FROM server ".
-			// [JAS]: Dynamic table joins
-			(isset($tables['context_link']) ? "INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.datacenter.server' AND context_link.to_context_id = server.id) " : " ")
-		;
+		$join_sql = "FROM context_activity_log ";
 		
 		// Custom field joins
-		list($select_sql, $join_sql, $has_multiple_values) = self::_appendSelectJoinSqlForCustomFieldTables(
-			$tables,
-			$params,
-			'server.id',
-			$select_sql,
-			$join_sql
-		);
+		//list($select_sql, $join_sql, $has_multiple_values) = self::_appendSelectJoinSqlForCustomFieldTables(
+		//	$tables,
+		//	$params,
+		//	'context_activity_log.id',
+		//	$select_sql,
+		//	$join_sql
+		//);
+		$has_multiple_values = false; // [TODO] Temporary when custom fields disabled
 				
 		$where_sql = "".
 			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
-		
-		$result = array(
-			'primary_table' => 'server',
+	
+		return array(
+			'primary_table' => 'context_activity_log',
 			'select' => $select_sql,
 			'join' => $join_sql,
 			'where' => $where_sql,
 			'has_multiple_values' => $has_multiple_values,
 			'sort' => $sort_sql,
 		);
-		
-		return $result;
-	}	
+	}
 	
     /**
      * Enter description here...
@@ -303,7 +176,7 @@ class DAO_Server extends C4_ORMHelper {
      */
     static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
 		$db = DevblocksPlatform::getDatabaseService();
-	
+		
 		// Build search queries
 		$query_parts = self::getSearchQueryComponents($columns,$params,$sortBy,$sortAsc);
 
@@ -317,10 +190,9 @@ class DAO_Server extends C4_ORMHelper {
 			$select_sql.
 			$join_sql.
 			$where_sql.
-			($has_multiple_values ? 'GROUP BY server.id ' : '').
+			($has_multiple_values ? 'GROUP BY context_activity_log.id ' : '').
 			$sort_sql;
 			
-		// [TODO] Could push the select logic down a level too
 		if($limit > 0) {
     		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
 		} else {
@@ -336,14 +208,14 @@ class DAO_Server extends C4_ORMHelper {
 			foreach($row as $f => $v) {
 				$result[$f] = $v;
 			}
-			$object_id = intval($row[SearchFields_Server::ID]);
+			$object_id = intval($row[SearchFields_ContextActivityLog::ID]);
 			$results[$object_id] = $result;
 		}
 
 		// [JAS]: Count all
 		if($withCounts) {
 			$count_sql = 
-				($has_multiple_values ? "SELECT COUNT(DISTINCT server.id) " : "SELECT COUNT(server.id) ").
+				($has_multiple_values ? "SELECT COUNT(DISTINCT context_activity_log.id) " : "SELECT COUNT(context_activity_log.id) ").
 				$join_sql.
 				$where_sql;
 			$total = $db->GetOne($count_sql);
@@ -354,18 +226,17 @@ class DAO_Server extends C4_ORMHelper {
 		return array($results,$total);
 	}
 
-	static public function clearCache() {
-		$cache = DevblocksPlatform::getCacheService();
-		$cache->remove(self::CACHE_ALL);
-	}
 };
 
-class SearchFields_Server implements IDevblocksSearchFields {
-	const ID = 's_id';
-	const NAME = 's_name';
-	
-	const CONTEXT_LINK = 'cl_context_from';
-	const CONTEXT_LINK_ID = 'cl_context_from_id';
+class SearchFields_ContextActivityLog implements IDevblocksSearchFields {
+	const ID = 'c_id';
+	const ACTIVITY_POINT = 'c_activity_point';
+	const ACTOR_CONTEXT = 'c_actor_context';
+	const ACTOR_CONTEXT_ID = 'c_actor_context_id';
+	const TARGET_CONTEXT = 'c_target_context';
+	const TARGET_CONTEXT_ID = 'c_target_context_id';
+	const CREATED = 'c_created';
+	const ENTRY_JSON = 'c_entry_json';
 	
 	/**
 	 * @return DevblocksSearchField[]
@@ -374,21 +245,24 @@ class SearchFields_Server implements IDevblocksSearchFields {
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		$columns = array(
-			self::ID => new DevblocksSearchField(self::ID, 'server', 'id', $translate->_('common.id')),
-			self::NAME => new DevblocksSearchField(self::NAME, 'server', 'name', $translate->_('common.name')),
-			
-			self::CONTEXT_LINK => new DevblocksSearchField(self::CONTEXT_LINK, 'context_link', 'from_context', null),
-			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
+			self::ID => new DevblocksSearchField(self::ID, 'context_activity_log', 'id', $translate->_('common.id')),
+			self::ACTIVITY_POINT => new DevblocksSearchField(self::ACTIVITY_POINT, 'context_activity_log', 'activity_point', $translate->_('dao.context_activity_log.activity_point')),
+			self::ACTOR_CONTEXT => new DevblocksSearchField(self::ACTOR_CONTEXT, 'context_activity_log', 'actor_context', $translate->_('dao.context_activity_log.actor_context')),
+			self::ACTOR_CONTEXT_ID => new DevblocksSearchField(self::ACTOR_CONTEXT_ID, 'context_activity_log', 'actor_context_id', $translate->_('dao.context_activity_log.actor_context_id')),
+			self::TARGET_CONTEXT => new DevblocksSearchField(self::TARGET_CONTEXT, 'context_activity_log', 'target_context', $translate->_('dao.context_activity_log.target_context')),
+			self::TARGET_CONTEXT_ID => new DevblocksSearchField(self::TARGET_CONTEXT_ID, 'context_activity_log', 'target_context_id', $translate->_('dao.context_activity_log.target_context_id')),
+			self::CREATED => new DevblocksSearchField(self::CREATED, 'context_activity_log', 'created', $translate->_('common.created')),
+			self::ENTRY_JSON => new DevblocksSearchField(self::ENTRY_JSON, 'context_activity_log', 'entry_json', $translate->_('dao.context_activity_log.entry')),
 		);
 		
 		// Custom Fields
-		$fields = DAO_CustomField::getByContext('cerberusweb.contexts.datacenter.server');
+		//$fields = DAO_CustomField::getByContext(CerberusContexts::XXX);
 
-		if(is_array($fields))
-		foreach($fields as $field_id => $field) {
-			$key = 'cf_'.$field_id;
-			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
-		}
+		//if(is_array($fields))
+		//foreach($fields as $field_id => $field) {
+		//	$key = 'cf_'.$field_id;
+		//	$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+		//}
 		
 		// Sort by label (translation-conscious)
 		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
@@ -397,39 +271,52 @@ class SearchFields_Server implements IDevblocksSearchFields {
 	}
 };
 
-class Model_Server {
+class Model_ContextActivityLog {
 	public $id;
-	public $name;
+	public $activity_point;
+	public $actor_context;
+	public $actor_context_id;
+	public $target_context;
+	public $target_context_id;
+	public $created;
+	public $entry_json;
 };
 
-class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
-	const DEFAULT_ID = 'server';
+class View_ContextActivityLog extends C4_AbstractView implements IAbstractView_Subtotals {
+	const DEFAULT_ID = 'context_activity_log';
 
 	function __construct() {
 		$translate = DevblocksPlatform::getTranslationService();
 	
 		$this->id = self::DEFAULT_ID;
-		$this->name = $translate->_('Servers');
-		$this->renderLimit = 25;
-		$this->renderSortBy = SearchFields_Server::NAME;
-		$this->renderSortAsc = true;
+		// [TODO] Name the worklist view
+		$this->name = 'Activity Log'; //$translate->_('ContextActivityLog');
+		$this->renderLimit = 10;
+		$this->renderSortBy = SearchFields_ContextActivityLog::CREATED;
+		$this->renderSortAsc = false;
 
 		$this->view_columns = array(
-			SearchFields_Server::ID,
+			SearchFields_ContextActivityLog::CREATED,
 		);
-		// Filter cols
 		$this->addColumnsHidden(array(
+			SearchFields_ContextActivityLog::ACTOR_CONTEXT_ID,
+			SearchFields_ContextActivityLog::TARGET_CONTEXT,
+			SearchFields_ContextActivityLog::TARGET_CONTEXT_ID,
+			SearchFields_ContextActivityLog::ID,
 		));
 		
-		// Filter params
 		$this->addParamsHidden(array(
+			SearchFields_ContextActivityLog::ACTOR_CONTEXT_ID,
+			SearchFields_ContextActivityLog::TARGET_CONTEXT,
+			SearchFields_ContextActivityLog::TARGET_CONTEXT_ID,
+			SearchFields_ContextActivityLog::ID,
 		));
 		
 		$this->doResetCriteria();
 	}
 
 	function getData() {
-		$objects = DAO_Server::search(
+		$objects = DAO_ContextActivityLog::search(
 			$this->view_columns,
 			$this->getParams(),
 			$this->renderLimit,
@@ -440,11 +327,11 @@ class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
 		);
 		return $objects;
 	}
-
-	function getDataSample($size) {
-		return $this->_doGetDataSample('DAO_Server', $size);
-	}
 	
+	function getDataSample($size) {
+		return $this->_doGetDataSample('DAO_ContextActivityLog', $size);
+	}
+
 	function getSubtotalFields() {
 		$all_fields = $this->getParamsAvailable();
 		
@@ -456,9 +343,11 @@ class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
 			
 			switch($field_key) {
 				// DAO
-//				case SearchFields_Server::EXAMPLE:
-//					$pass = true;
-//					break;
+				case SearchFields_ContextActivityLog::ACTIVITY_POINT:
+				case SearchFields_ContextActivityLog::ACTOR_CONTEXT:
+				case SearchFields_ContextActivityLog::TARGET_CONTEXT:
+					$pass = true;
+					break;
 					
 				// Valid custom fields
 				default:
@@ -482,14 +371,20 @@ class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
 			return array();
 		
 		switch($column) {
-//			case SearchFields_Server::EXAMPLE:
-//				$counts = $this->_getSubtotalCountForStringColumn('DAO_Server', $column);
+			case SearchFields_ContextActivityLog::ACTIVITY_POINT:
+			case SearchFields_ContextActivityLog::ACTOR_CONTEXT:
+			case SearchFields_ContextActivityLog::TARGET_CONTEXT:
+				$counts = $this->_getSubtotalCountForStringColumn('DAO_ContextActivityLog', $column);
+				break;
+
+//			case SearchFields_ContextActivityLog::IS_COMPLETED:
+//				$counts = $this->_getSubtotalCountForBooleanColumn('DAO_Task', $column);
 //				break;
 			
 			default:
 				// Custom fields
 				if('cf_' == substr($column,0,3)) {
-					$counts = $this->_getSubtotalCountForCustomColumn('DAO_Server', $column, 's.id');
+					$counts = $this->_getSubtotalCountForCustomColumn('DAO_Task', $column, 't.id');
 				}
 				
 				break;
@@ -506,18 +401,11 @@ class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
 		$tpl->assign('view', $this);
 
 		// Custom fields
-		$custom_fields = DAO_CustomField::getByContext('cerberusweb.contexts.datacenter.server');
-		$tpl->assign('custom_fields', $custom_fields);
+		//$custom_fields = DAO_CustomField::getByContext(CerberusContexts::XXX);
+		//$tpl->assign('custom_fields', $custom_fields);
 
-		switch($this->renderTemplate) {
-			case 'contextlinks_chooser':
-				$tpl->display('devblocks:cerberusweb.datacenter::datacenter/servers/view_contextlinks_chooser.tpl');
-				break;
-			default:
-				$tpl->assign('view_template', 'devblocks:cerberusweb.datacenter::datacenter/servers/view.tpl');
-				$tpl->display('devblocks:cerberusweb.core::internal/views/subtotals_and_view.tpl');
-				break;
-		}
+		$tpl->assign('view_template', 'devblocks:cerberusweb.core::internal/activity_log/view.tpl');
+		$tpl->display('devblocks:cerberusweb.core::internal/views/subtotals_and_view.tpl');
 	}
 
 	function renderCriteria($field) {
@@ -525,18 +413,24 @@ class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
 		$tpl->assign('id', $this->id);
 
 		switch($field) {
-			case SearchFields_Server::NAME:
+			case SearchFields_ContextActivityLog::ACTIVITY_POINT:
+			case SearchFields_ContextActivityLog::ACTOR_CONTEXT:
+			case SearchFields_ContextActivityLog::TARGET_CONTEXT:
+			case SearchFields_ContextActivityLog::ENTRY_JSON:
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
-			case SearchFields_Server::ID:
+			case SearchFields_ContextActivityLog::ID:
+			case SearchFields_ContextActivityLog::ACTOR_CONTEXT_ID:
+			case SearchFields_ContextActivityLog::TARGET_CONTEXT_ID:
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__number.tpl');
 				break;
 			case 'placeholder_bool':
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
-			case 'placeholder_date':
+			case SearchFields_ContextActivityLog::CREATED:
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
+			/*
 			default:
 				// Custom Fields
 				if('cf_' == substr($field,0,3)) {
@@ -545,6 +439,7 @@ class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
 					echo ' ';
 				}
 				break;
+			*/
 		}
 	}
 
@@ -560,14 +455,17 @@ class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
 	}
 
 	function getFields() {
-		return SearchFields_Server::getFields();
+		return SearchFields_ContextActivityLog::getFields();
 	}
 
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
 		switch($field) {
-			case SearchFields_Server::NAME:
+			case SearchFields_ContextActivityLog::ACTIVITY_POINT:
+			case SearchFields_ContextActivityLog::ACTOR_CONTEXT:
+			case SearchFields_ContextActivityLog::TARGET_CONTEXT:
+			case SearchFields_ContextActivityLog::ENTRY_JSON:
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
@@ -575,11 +473,14 @@ class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
-			case SearchFields_Server::ID:
+				
+			case SearchFields_ContextActivityLog::ID:
+			case SearchFields_ContextActivityLog::ACTOR_CONTEXT_ID:
+			case SearchFields_ContextActivityLog::TARGET_CONTEXT_ID:
 				$criteria = new DevblocksSearchCriteria($field,$oper,$value);
 				break;
 				
-			case 'placeholder_date':
+			case SearchFields_ContextActivityLog::CREATED:
 				@$from = DevblocksPlatform::importGPC($_REQUEST['from'],'string','');
 				@$to = DevblocksPlatform::importGPC($_REQUEST['to'],'string','');
 
@@ -594,12 +495,14 @@ class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
 				$criteria = new DevblocksSearchCriteria($field,$oper,$bool);
 				break;
 				
+			/*
 			default:
 				// Custom Fields
 				if(substr($field,0,3)=='cf_') {
 					$criteria = $this->_doSetCriteriaCustomField($field, substr($field,3));
 				}
 				break;
+			*/
 		}
 
 		if(!empty($criteria)) {
@@ -627,14 +530,16 @@ class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
 			switch($k) {
 				// [TODO] Implement actions
 				case 'example':
-					//$change_fields[DAO_Server::EXAMPLE] = 'some value';
+					//$change_fields[DAO_ContextActivityLog::EXAMPLE] = 'some value';
 					break;
+				/*
 				default:
 					// Custom fields
 					if(substr($k,0,3)=="cf_") {
 						$custom_fields[substr($k,3)] = $v;
 					}
 					break;
+				*/
 			}
 		}
 
@@ -642,12 +547,12 @@ class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
 
 		if(empty($ids))
 		do {
-			list($objects,$null) = DAO_Server::search(
+			list($objects,$null) = DAO_ContextActivityLog::search(
 				array(),
 				$this->getParams(),
 				100,
 				$pg++,
-				SearchFields_Server::ID,
+				SearchFields_ContextActivityLog::ID,
 				true,
 				false
 			);
@@ -659,10 +564,10 @@ class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
 		for($x=0;$x<=$batch_total;$x+=100) {
 			$batch_ids = array_slice($ids,$x,100);
 			
-			DAO_Server::update($batch_ids, $change_fields);
+			DAO_ContextActivityLog::update($batch_ids, $change_fields);
 
 			// Custom Fields
-			self::_doBulkSetCustomFields('cerberusweb.contexts.datacenter.server', $custom_fields, $batch_ids);
+			//self::_doBulkSetCustomFields(ChCustomFieldSource_ContextActivityLog::ID, $custom_fields, $batch_ids);
 			
 			unset($batch_ids);
 		}
@@ -670,3 +575,4 @@ class View_Server extends C4_AbstractView implements IAbstractView_Subtotals {
 		unset($ids);
 	}			
 };
+
