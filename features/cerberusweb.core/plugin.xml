@@ -36,7 +36,7 @@
 		<patch version="5.1.2" revision="904" file="patches/5.x/5.1.2.php" />
 		<patch version="5.2.0" revision="905" file="patches/5.x/5.2.0.php" />
 		<patch version="5.3.0" revision="916" file="patches/5.x/5.3.0.php" />
-		<patch version="5.4.0" revision="931" file="patches/5.x/5.4.0.php" />
+		<patch version="5.4.0" revision="932" file="patches/5.x/5.4.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -56,6 +56,10 @@
 	<!-- Exported Classes -->
 	
 	<class_loader>
+		<file path="api/listeners.classes.php">
+			<class name="EventListener_Triggers" />
+		</file>
+		
 		<file path="api/plugin.classes.php">
 			<class name="ChPageController" />
 			<class name="ChRssSource_Notification" />
@@ -153,6 +157,13 @@
 			<class name="Model_ContactOrg" />
 			<class name="SearchFields_ContactOrg" />
 			<class name="View_ContactOrg" />
+		</file>
+		
+		<file path="api/dao/context_activity_log.php">
+			<class name="DAO_ContextActivityLog" />
+			<class name="Model_ContextActivityLog" />
+			<class name="SearchFields_ContextActivityLog" />
+			<class name="View_ContextActivityLog" />
 		</file>
 		
 		<file path="api/dao/context_link.php">
@@ -440,12 +451,6 @@
 						<data key="workspace" />
 					</value>
 				</param>
-				<param key="events">
-					<value>
-						<data key="context.assigned" value="context.contact_person.assigned" />
-						<data key="context.commented" value="context.contact_person.commented" />
-					</value>
-				</param>
 			</params>
 		</extension>
 		
@@ -463,12 +468,6 @@
 						<data key="create" />
 						<data key="find" />
 						<data key="workspace" />
-					</value>
-				</param>
-				<param key="events">
-					<value>
-						<data key="context.assigned" value="context.address.assigned" />
-						<data key="context.commented" value="context.address.commented" />
 					</value>
 				</param>
 			</params>
@@ -489,14 +488,6 @@
 					</value>
 				</param>
 				-->
-				<param key="events">
-					<!--
-					<value>
-						<data key="context.assigned" value="context.group.assigned" />
-						<data key="context.commented" value="context.group.commented" />
-					</value>
-					-->
-				</param>
 			</params>
 		</extension>
 		
@@ -515,14 +506,6 @@
 						<data key="workspace" />
 					</value>
 				</param>
-				<param key="events">
-					<!--
-					<value>
-						<data key="context.assigned" value="context.group.assigned" />
-						<data key="context.commented" value="context.group.commented" />
-					</value>
-					-->
-				</param>
 			</params>
 		</extension>
 		
@@ -539,14 +522,6 @@
 					<value>
 						<data key="workspace" />
 					</value>
-				</param>
-				<param key="events">
-					<!--
-					<value>
-						<data key="context.assigned" value="context.group.assigned" />
-						<data key="context.commented" value="context.group.commented" />
-					</value>
-					-->
 				</param>
 			</params>
 		</extension>
@@ -565,14 +540,6 @@
 						<data key="workspace" />
 					</value>
 				</param>
-				<param key="events">
-					<!--
-					<value>
-						<data key="context.assigned" value="context.group.assigned" />
-						<data key="context.commented" value="context.group.commented" />
-					</value>
-					-->
-				</param>
 			</params>
 		</extension>		
 		
@@ -590,12 +557,6 @@
 						<data key="create" />
 						<data key="find" />
 						<data key="workspace" />
-					</value>
-				</param>
-				<param key="events">
-					<value>
-						<data key="context.assigned" value="context.org.assigned" />
-						<data key="context.commented" value="context.org.commented" />
 					</value>
 				</param>
 			</params>
@@ -619,14 +580,6 @@
 						<data key="workspace" />
 					</value>
 				</param>
-				<param key="events">
-					<!--
-					<value>
-						<data key="context.assigned" value="context.task.assigned" />
-						<data key="context.commented" value="context.task.commented" />
-					</value>
-					-->
-				</param>
 			</params>
 		</extension>
 		
@@ -646,12 +599,6 @@
 						<data key="workspace" />
 					</value>
 				</param>
-				<param key="events">
-					<value>
-						<data key="context.assigned" value="context.task.assigned" />
-						<data key="context.commented" value="context.task.commented" />
-					</value>
-				</param>
 			</params>
 		</extension>
 
@@ -668,12 +615,6 @@
 					<value>
 						<data key="find" />
 						<data key="workspace" />
-					</value>
-				</param>
-				<param key="events">
-					<value>
-						<data key="context.assigned" value="context.ticket.assigned" />
-						<data key="context.commented" value="context.ticket.commented" />
 					</value>
 				</param>
 			</params>
@@ -695,14 +636,6 @@
 						-->
 						<data key="workspace" />
 					</value>
-				</param>
-				<param key="events">
-					<!--
-					<value>
-						<data key="context.assigned" value="context.worker.assigned" />
-						<data key="context.commented" value="context.worker.commented" />
-					</value>
-					-->
 				</param>
 			</params>
 		</extension>
@@ -801,8 +734,6 @@
 			<params>
 				<param key="events">
 					<value>
-						<data key="context_link.assigned" />
-						<data key="context_link.set" />
 						<data key="cron.heartbeat" />
 						<data key="cron.maint" />
 						<data key="dao.ticket.update" />

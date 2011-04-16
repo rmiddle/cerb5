@@ -194,7 +194,7 @@ class DAO_Notification extends DevblocksORMHelper {
 		$fields = SearchFields_Notification::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1) || !in_array($sortBy,$columns))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1)) // || !in_array($sortBy,$columns))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, array(),$fields,$sortBy);
@@ -353,8 +353,8 @@ class View_Notification extends C4_AbstractView implements IAbstractView_Subtota
 		$this->renderSortAsc = false;
 
 		$this->view_columns = array(
-			SearchFields_Notification::MESSAGE,
 			SearchFields_Notification::CREATED_DATE,
+			SearchFields_Notification::MESSAGE,
 		);
 		$this->addColumnsHidden(array(
 			SearchFields_Notification::ID,
@@ -649,11 +649,17 @@ class Context_Notification extends Extension_DevblocksContext {
 		return FALSE;
 	}
 	
-    function getPermalink($context_id) {
-    	$url_writer = DevblocksPlatform::getUrlService();
-    	return $url_writer->write('c=preferences&action=redirectRead&id='.$context_id, true);
-    }
-
+	function getMeta($context_id) {
+		$notification = DAO_Notification::get($context_id);
+		$url_writer = DevblocksPlatform::getUrlService();
+		
+		return array(
+			'id' => $notification->id,
+			'name' => $notification->message,
+			'permalink' => $url_writer->write('c=preferences&action=redirectRead&id='.$context_id, true),
+		);
+	}
+	
 	function getContext($notification, &$token_labels, &$token_values, $prefix=null) {
 		if(is_null($prefix))
 			$prefix = 'Notification:';

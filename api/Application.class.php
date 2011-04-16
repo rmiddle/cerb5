@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011040901);
+define("APP_BUILD", 2011041501);
 define("APP_VERSION", '5.4.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -769,6 +769,191 @@ class CerberusContexts {
 			
 		foreach($worker_ids as $worker_id)
 			DAO_ContextLink::deleteLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $worker_id);
+	}
+	
+	static public function formatActivityLogEntry($entry, $format=null) {
+		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+		$url_writer = DevblocksPlatform::getUrlService();
+		
+		$vars = $entry['variables']; 
+		
+		switch($format) {
+			case 'html':
+				// HTML formatting and incorporating URLs
+				if(is_array($vars))
+				foreach($vars as $k => $v) {
+					$vars[$k] = htmlentities($v, ENT_QUOTES, LANG_CHARSET_CODE);
+				}
+				
+				if(isset($entry['urls']))
+				foreach($entry['urls'] as $token => $url) {
+					if(0 != strcasecmp('http',substr($url,0,4)))
+						$url = $url_writer->write($url, true);
+					
+					$vars[$token] = '<a href="'.$url.'" style="font-weight:bold;">'.$vars[$token].'</a>';
+				}
+				break;
+				
+			case 'markdown':
+				if(isset($entry['urls']))
+				foreach($entry['urls'] as $token => $url) {
+					if(0 != strcasecmp('http',substr($url,0,4)))
+						$url = $url_writer->write($url, true);
+					
+					$vars[$token] = '['.$vars[$token].']('.$url.')';
+				}
+				break;
+				
+			case 'email':
+				@$url = reset($entry['urls']);
+				
+				if(empty($url))
+					break;
+					
+				if(0 != strcasecmp('http',substr($url,0,4)))
+					$url = $url_writer->write($url, true);
+					
+				$entry['message'] .= ' <' . $url . '>'; 
+				break;
+				
+			default:
+				break;
+		}
+		
+		if(!is_array($vars))
+			$vars = array();
+		
+		return $tpl_builder->build($entry['message'], $vars);
+	}
+	
+	static public function logActivity($activity_point, $target_context, $target_context_id, $entry_array, $actor_context=null, $actor_context_id=null, $also_notify_worker_ids=array()) {
+		// Forced actor
+		if(!empty($actor_context) && !empty($actor_context_id)) {
+			if(null != ($ctx = DevblocksPlatform::getExtension($actor_context, true))
+				&& $ctx instanceof Extension_DevblocksContext) {
+				$meta = $ctx->getMeta($actor_context_id);
+				$actor_name = $meta['name'];
+				$actor_url = $meta['permalink'];
+			}
+		}
+		
+		// Auto-detect the actor
+		if(empty($actor_context)) {
+			$actor_name = null;
+			$actor_context = null;
+			$actor_context_id = 0;
+			$actor_url = null;
+			
+			// See if we're inside of an attendant's running decision tree
+			if(EventListener_Triggers::getDepth() > 0
+				&& null != ($trigger_id = end(EventListener_Triggers::getTriggerLog())) 
+				&& !empty($trigger_id) 
+				&& null != ($trigger = DAO_TriggerEvent::get($trigger_id)) // [TODO] Use cache!! 
+			) {
+				/* @var $trigger Model_TriggerEvent */
+				
+				switch($trigger->owner_context) {
+					case CerberusContexts::CONTEXT_GROUP:
+						$group = DAO_Group::get($trigger->owner_context_id);
+						$actor_name = $group->name . ' [' . $trigger->title . ']';
+						$actor_context = $trigger->owner_context;
+						$actor_context_id = $trigger->owner_context_id;
+						$actor_url = sprintf("c=profiles&type=group&who=%d", $actor_context_id);
+						break;
+						
+					case CerberusContexts::CONTEXT_WORKER:
+						$worker = DAO_Worker::get($trigger->owner_context_id);
+						$actor_name = $worker->getName() . ' [' . $trigger->title . ']';
+						$actor_context = $trigger->owner_context;
+						$actor_context_id = $trigger->owner_context_id;
+						$actor_url = sprintf("c=profiles&type=worker&who=%d", $actor_context_id);
+						break;
+				}
+				
+			// Otherwise see if we have an active session
+			} elseif(null != ($active_worker = CerberusApplication::getActiveWorker())) {
+				$actor_name = $active_worker->getName();
+				$actor_context = CerberusContexts::CONTEXT_WORKER;
+				$actor_context_id = $active_worker->id;
+				$actor_url = sprintf("c=profiles&type=worker&who=%d", $actor_context_id);
+			}
+		}
+		
+		if(empty($actor_context)) {
+			$actor_name = 'The system';
+		}
+		
+		$entry_array['variables']['actor'] = $actor_name;
+		
+		if(!empty($actor_url))
+			$entry_array['urls']['actor'] = $actor_url;
+		
+		// Activity Log
+		DAO_ContextActivityLog::create(array(
+			DAO_ContextActivityLog::ACTIVITY_POINT => $activity_point,
+			DAO_ContextActivityLog::CREATED => time(),
+			DAO_ContextActivityLog::ACTOR_CONTEXT => $actor_context,
+			DAO_ContextActivityLog::ACTOR_CONTEXT_ID =>$actor_context_id,
+			DAO_ContextActivityLog::TARGET_CONTEXT => $target_context,
+			DAO_ContextActivityLog::TARGET_CONTEXT_ID => $target_context_id,
+			DAO_ContextActivityLog::ENTRY_JSON => json_encode($entry_array),
+		));
+		
+		// Tell target watchers about the activity
+		
+		$watchers = array();
+		
+		// Merge in watchers of the actor (if not a worker)
+		if(CerberusContexts::CONTEXT_WORKER != $actor_context) {
+			$watchers = array_merge(
+				$watchers,
+				array_keys(CerberusContexts::getWatchers($actor_context, $actor_context_id))
+			);
+		}
+		
+		// And watchers of the target (if not a worker)
+		if(CerberusContexts::CONTEXT_WORKER != $target_context) {
+			$watchers = array_merge(
+				$watchers,
+				array_keys(CerberusContexts::getWatchers($target_context, $target_context_id))
+			);
+		}
+		
+		// Include the 'also notify' list
+		$watchers = array_merge(
+			$watchers,
+			$also_notify_worker_ids
+		);
+		
+		// Remove dupe watchers
+		$watcher_ids = array_unique($watchers);
+		
+		$url_writer = DevblocksPlatform::getUrlService();
+		
+		// Fire off notifications
+		if(is_array($watcher_ids)) {
+			$message = CerberusContexts::formatActivityLogEntry($entry_array, 'plaintext');
+			@$url = reset($entry_array['urls']); 
+			
+			if(0 != strcasecmp($url,substr($url,0,4)))
+				$url = $url_writer->write($url, true);
+			
+			foreach($watcher_ids as $watcher_id) {
+				// Skip a watcher if they are the actor
+				if($actor_context == CerberusContexts::CONTEXT_WORKER
+					&& $actor_context_id == $watcher_id)
+						continue;
+						
+				DAO_Notification::create(array(
+					DAO_Notification::CREATED_DATE => time(),
+					DAO_Notification::IS_READ => 0,
+					DAO_Notification::WORKER_ID => $watcher_id,
+					DAO_Notification::MESSAGE => $message,
+					DAO_Notification::URL => $url,
+				));
+			}
+		}
+		
 	}
 	
 	private static function _getAttachmentContext($attachment, &$token_labels, &$token_values, $prefix=null) {

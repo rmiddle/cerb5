@@ -428,7 +428,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
 
 		$tpl = DevblocksPlatform::getTemplateService();
-				$tpl->assign('id',$id);
+		$tpl->assign('id',$id);
 		
 		$message = DAO_Message::get($id);
 		$ticket = DAO_Ticket::get($message->ticket_id);
@@ -454,6 +454,8 @@ class ChDisplayPage extends CerberusPageExtension {
 		
 		$worker = CerberusApplication::getActiveWorker();
 		
+		@$also_notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
+		
 		$fields = array(
 			DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_MESSAGE,
 			DAO_Comment::CONTEXT_ID => $id,
@@ -461,26 +463,7 @@ class ChDisplayPage extends CerberusPageExtension {
 			DAO_Comment::ADDRESS_ID => $worker->getAddress()->id,
 			DAO_Comment::COMMENT => $content,
 		);
-		$note_id = DAO_Comment::create($fields);
-		
-		if(null != ($ticket = DAO_Ticket::get($ticket_id))) {
-			// Notifications
-			$url_writer = DevblocksPlatform::getUrlService();
-			@$notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
-			if(is_array($notify_worker_ids) && !empty($notify_worker_ids))
-			foreach($notify_worker_ids as $notify_worker_id) {
-				$fields = array(
-					DAO_Notification::CREATED_DATE => time(),
-					DAO_Notification::WORKER_ID => $notify_worker_id,
-					DAO_Notification::URL => $url_writer->write('c=display&id='.$ticket->mask,true),
-					DAO_Notification::MESSAGE => sprintf("%s left a note for you on a ticket.",
-						$worker->getName()
-					),
-					DAO_Notification::IS_READ => 0,
-				);
-				DAO_Notification::create($fields);
-			}
-		}
+		$note_id = DAO_Comment::create($fields, $also_notify_worker_ids);
 		
 		$this->_renderNotes($id);
 	}
@@ -493,7 +476,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$active_worker = CerberusApplication::getActiveWorker();  /* @var $active_worker Model_Worker */
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-				$tpl->assign('id',$id);
+		$tpl->assign('id',$id);
 		$tpl->assign('is_forward',$is_forward);
 		
 		$message = DAO_Message::get($id);

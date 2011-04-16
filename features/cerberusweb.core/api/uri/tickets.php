@@ -1427,6 +1427,8 @@ class ChTicketsPage extends CerberusPageExtension {
 
 		// Comments
 		if(!empty($comment)) {
+			@$also_notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
+			
 			$fields = array(
 				DAO_Comment::CREATED => time(),
 				DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_TICKET,
@@ -1434,28 +1436,7 @@ class ChTicketsPage extends CerberusPageExtension {
 				DAO_Comment::COMMENT => $comment,
 				DAO_Comment::ADDRESS_ID => $active_worker->getAddress()->id,
 			);
-			$comment_id = DAO_Comment::create($fields);
-			
-			// Notifications
-			@$notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
-			
-			$notify_worker_ids = array_merge(
-				$notify_worker_ids,
-				array_keys(CerberusContexts::getWatchers(CerberusContexts::CONTEXT_TICKET, $id))
-			);
-			$notify_worker_ids = array_diff( // Remove ourselves
-				$notify_worker_ids,
-				array($active_worker->id)
-			);
-
-			if(!empty($notify_worker_ids)) {
-				DAO_Comment::triggerCommentNotifications(
-					CerberusContexts::CONTEXT_TICKET,
-					$id,
-					$active_worker,
-					$notify_worker_ids
-				);
-			}
+			$comment_id = DAO_Comment::create($fields, $also_notify_worker_ids);
 		}		
 		exit;
 	}
@@ -1533,11 +1514,9 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		@$draft_id = DevblocksPlatform::importGPC($_POST['draft_id'],'integer');		
 		
-		@$send_to_requesters = DevblocksPlatform::importGPC($_POST['send_to_requesters'],'integer',0);
 		@$closed = DevblocksPlatform::importGPC($_POST['closed'],'integer',0);
-		@$move_bucket = DevblocksPlatform::importGPC($_POST['bucket_id'],'string','');
-		@$watcher_ids = DevblocksPlatform::importGPC($_POST['worker_id'],'array',array());
 		@$ticket_reopen = DevblocksPlatform::importGPC($_POST['ticket_reopen'],'string','');
+		@$watcher_ids = DevblocksPlatform::importGPC($_POST['worker_id'],'array',array());
 		
 		// ********
 		
@@ -1560,17 +1539,33 @@ class ChTicketsPage extends CerberusPageExtension {
 		$message->headers['from'] = $from_address;
 
 		$message->body = sprintf(
-			"(... This message was manually created by %s on behalf of the requesters ...)\r\n",
-			$active_worker->getName()
-		);
-
+				"#### This message was logged by %s on behalf of the requesters\n".
+				"\n",
+				$active_worker->getName()
+			).
+			$content;
+		
+		// Files
+		if(isset($_FILES['attachment']))
+		foreach($_FILES['attachment']['name'] as $idx => $tmp_name) {
+			@$tmp_file = $_FILES['attachment']['tmp_name'][$idx];
+			if(empty($tmp_file))
+				continue;
+			$file = new ParserFile();
+			$file->setTempFile($tmp_file, $_FILES['attachment']['type'][$idx]);
+			$file->file_size = $_FILES['attachment']['size'][$idx];
+			$message->files[$tmp_name] = $file;
+		}
+			
 		// [TODO] Custom fields
 		
 		// Parse
+		// [TODO] Parser override not spam
 		$ticket_id = CerberusParser::parseMessage($message);
 		
-		$ticket = DAO_Ticket::get($ticket_id);
-		
+		if(!empty($draft_id))
+			DAO_MailQueue::delete($draft_id);
+			
 		// Add additional requesters to ticket
 		if(is_array($fromList) && !empty($fromList))
 		foreach($fromList as $requester) {
@@ -1579,34 +1574,36 @@ class ChTicketsPage extends CerberusPageExtension {
 			$host = empty($requester->host) ? 'localhost' : $requester->host;
 			DAO_Ticket::createRequester($requester->mailbox . '@' . $host, $ticket_id);
 		}
+		
+		$fields = array();
 
-		// Custom field saves
-		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
-		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
- 		
-		// Worker reply
-		$properties = array(
-		    'draft_id' => $draft_id,
-		    'message_id' => $ticket->first_message_id,
-		    'ticket_id' => $ticket_id,
-		    'subject' => $subject,
-		    'content' => $content,
-		    'files' => @$_FILES['attachment'],
-		    'closed' => $closed,
-		    'bucket_id' => $move_bucket,
-		    'ticket_reopen' => $ticket_reopen,
-		    'agent_id' => $active_worker->id,
-			'dont_send' => (false==$send_to_requesters),
-		);
-		
-		// Don't reset watchers to 'blank', but allow overrides from GUI log ticket form
-		if(!empty($watcher_ids))
-	    	$properties['context_watchers'] = $watcher_ids;
-		
-		if(CerberusMail::sendTicketMessage($properties)) {
-			if(!empty($draft_id))
-				DAO_MailQueue::delete($draft_id);
+		// Status
+		if(!empty($closed)) {
+			switch($closed) {
+				case 1:
+					$fields[DAO_Ticket::IS_WAITING] = 0;
+					$fields[DAO_Ticket::IS_CLOSED] = 1;
+					$fields[DAO_Ticket::IS_DELETED] = 0;
+					break;
+				case 2:
+					$fields[DAO_Ticket::IS_WAITING] = 1;
+					$fields[DAO_Ticket::IS_CLOSED] = 0;
+					$fields[DAO_Ticket::IS_DELETED] = 0;
+					break;
+			}
+			
+			if(false !== (@$ticket_reopen = strtotime($ticket_reopen)))
+				$fields[DAO_Ticket::DUE_DATE] = $ticket_reopen; 
 		}
+		
+		// Watchers
+		if(!empty($watcher_ids))
+			CerberusContexts::addWatchers(CerberusContexts::CONTEXT_TICKET, $ticket_id, $watcher_ids);
+		
+		if(!empty($fields))
+			DAO_Ticket::update($ticket_id, $fields);
+		
+		$ticket = DAO_Ticket::get($ticket_id);			
 		
 		// ********
 
