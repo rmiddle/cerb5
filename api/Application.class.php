@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011041601);
+define("APP_BUILD", 2011041701);
 define("APP_VERSION", '5.4.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -767,9 +767,25 @@ class CerberusContexts {
 			DAO_ContextLink::deleteLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $worker_id);
 	}
 	
-	static public function formatActivityLogEntry($entry, $format=null) {
+	static public function formatActivityLogEntry($entry, $format=null, $scrub_tokens=array()) {
 		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
 		$url_writer = DevblocksPlatform::getUrlService();
+		$translate = DevblocksPlatform::getTranslationService();
+		
+		// Load the translated version of the message
+
+		$entry['message'] = $translate->_($entry['message']);
+		
+		// Scrub desired tokens
+		
+		if(is_array($scrub_tokens) && !empty($scrub_tokens)) {
+			foreach($scrub_tokens as $token) {
+				// Scrub tokens and only preserve trailing whitespace
+				$entry['message'] = preg_replace('#\s*\{\{'.$token.'\}\}(\s*)#', '\1', $entry['message']);
+			}
+		}
+		
+		// Variables
 		
 		$vars = $entry['variables']; 
 		
