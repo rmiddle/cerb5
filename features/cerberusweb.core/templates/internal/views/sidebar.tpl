@@ -4,7 +4,7 @@
 	</legend>
 	<ul class="cerb-popupmenu cerb-float" style="margin-top:-5px;">
 		{foreach from=$subtotal_fields item=field_model key=field_key}
-		<li><a href="javascript:;" onclick="genericAjaxGet('view{$view_id}_sidebar','c=internal&a=viewSubtotal&category={$field_key}&view_id={$view_id}');">{$field_model->db_label|capitalize}</a></li>
+		<li><a href="javascript:;" onclick="$('#view{$view_id}_sidebar').fadeTo('normal', 0.2);genericAjaxGet('','c=internal&a=viewSubtotal&category={$field_key}&view_id={$view_id}',function(html) { $('#view{$view_id}_sidebar').html(html).fadeTo('normal',1.0).find('FIELDSET:first TABLE:first TD:first A:first').focus(); });">{$field_model->db_label|capitalize}</a></li>
 		{/foreach}
 	</ul>
 
@@ -12,7 +12,7 @@
 	{foreach from=$subtotal_counts item=category}
 		<tr>
 			<td style="padding-right:10px;" nowrap="nowrap" valign="top">
-				{if !empty($category.filter)}<a href="javascript:;" onclick="ajax.viewAddFilter('{$view_id}', '{$category.filter.field}', '{$category.filter.oper}', { {foreach from=$category.filter.values name=values item=value key=key}'{$key}':'{$value}'{if !$smarty.foreach.values.last},{/if}{/foreach} } );">{/if}
+				{if !empty($category.filter)}<a href="javascript:;" onclick="ajax.viewAddFilter('{$view_id}', '{$category.filter.field}', '{$category.filter.oper}', { {foreach from=$category.filter.values name=values item=value key=key}'{$key}':'{$value|escape:'quotes'}'{if !$smarty.foreach.values.last},{/if}{/foreach} } );">{/if}
 				<span style="font-weight:bold;" title="{$category.label}">{$category.label|truncate:25}</span>
 				{if !empty($category.filter)}</a>{/if}
 			</td>
@@ -24,7 +24,7 @@
 		{foreach from=$category.children item=subcategory}
 		<tr>
 			<td style="padding-left:10px;padding-right:10px;" nowrap="nowrap" valign="top">
-				{if !empty($subcategory.filter)}<a href="javascript:;" onclick="ajax.viewAddFilter('{$view_id}', '{$subcategory.filter.field}', '{$subcategory.filter.oper}', { {foreach from=$subcategory.filter.values name=values item=value key=key}'{$key}':'{$value}'{if !$smarty.foreach.values.last},{/if}{/foreach} } );">{/if}
+				{if !empty($subcategory.filter)}<a href="javascript:;" onclick="ajax.viewAddFilter('{$view_id}', '{$subcategory.filter.field}', '{$subcategory.filter.oper}', { {foreach from=$subcategory.filter.values name=values item=value key=key}'{$key}':'{$value|escape:'quotes'}'{if !$smarty.foreach.values.last},{/if}{/foreach} } );">{/if}
 				<span>{$subcategory.label}</span>
 				{if !empty($subcategory.filter)}</a>{/if}
 			</td>
