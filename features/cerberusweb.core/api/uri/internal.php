@@ -391,26 +391,13 @@ class ChInternalController extends DevblocksControllerExtension {
 				break;
 
 			case CerberusContexts::CONTEXT_WORKER:
-				list($results, $null) = DAO_Worker::search(
-					array(),
-					array(
-						array(
-							DevblocksSearchCriteria::GROUP_OR,
-							new DevblocksSearchCriteria(SearchFields_Worker::LAST_NAME,DevblocksSearchCriteria::OPER_LIKE,$term.'%'),
-							new DevblocksSearchCriteria(SearchFields_Worker::FIRST_NAME,DevblocksSearchCriteria::OPER_LIKE,$term.'%'),
-						),
-					),
-					25,
-					0,
-					SearchFields_Worker::FIRST_NAME,
-					true,
-					false
-				);
+				$results = DAO_Worker::autocomplete($term);
 
-				foreach($results AS $row){
+				if(is_array($results))
+				foreach($results as $worker_id => $worker){
 					$entry = new stdClass();
-					$entry->label = $row[SearchFields_Worker::FIRST_NAME] . ' ' . $row[SearchFields_Worker::LAST_NAME];
-					$entry->value = $row[SearchFields_Worker::ID];
+					$entry->label = $worker->getName();
+					$entry->value = sprintf("%d", $worker_id);
 					$list[] = $entry;
 				}
 				break;
@@ -1369,17 +1356,11 @@ class ChInternalController extends DevblocksControllerExtension {
 		$tpl->assign('context_id', $context_id);
 			
 		// Events
-		// [TODO] Filter by context
 		$events = Extension_DevblocksEvent::getByContext($context, false);
 		$tpl->assign('events', $events);
 		
 		// Triggers
-		$triggers = DAO_TriggerEvent::getWhere(sprintf("%s = %s AND %s = %d",
-			DAO_TriggerEvent::OWNER_CONTEXT,
-			C4_ORMHelper::qstr($context),
-			DAO_TriggerEvent::OWNER_CONTEXT_ID,
-			$context_id
-		));
+		$triggers = DAO_TriggerEvent::getByOwner($context, $context_id);
 		$tpl->assign('triggers', $triggers);
 		
 		$tpl->display('devblocks:cerberusweb.core::internal/decisions/assistant/tab.tpl');
@@ -1443,16 +1424,7 @@ class ChInternalController extends DevblocksControllerExtension {
 			}
 		}
 		
-		$children = DAO_DecisionNode::getWhere(
-			sprintf("%s = %d AND %s = %d",
-				DAO_DecisionNode::TRIGGER_ID,
-				$trigger_id,			
-				DAO_DecisionNode::PARENT_ID,
-				$id			
-			),
-			DAO_DecisionNode::POS,
-			true
-		);
+		$children = DAO_DecisionNode::getByTriggerParent($trigger_id, $id);
 		$tpl->assign('children', $children);
 		
 		$tpl->display('devblocks:cerberusweb.core::internal/decisions/editors/_reorder.tpl');
@@ -1607,7 +1579,6 @@ class ChInternalController extends DevblocksControllerExtension {
 
 		$tpl = DevblocksPlatform::getTemplateService();
 
-		// [TODO] Cache
 		if(null == ($trigger = DAO_TriggerEvent::get($trigger_id)))
 			return;
 			
@@ -1628,7 +1599,6 @@ class ChInternalController extends DevblocksControllerExtension {
 
 		$tpl = DevblocksPlatform::getTemplateService();
 
-		// [TODO] Cache
 		if(null == ($trigger = DAO_TriggerEvent::get($trigger_id)))
 			return;
 			
@@ -1642,6 +1612,23 @@ class ChInternalController extends DevblocksControllerExtension {
 		$event->renderAction($action, $trigger, null, $seq);
 	}
 
+	function showDecisionTreeAction() {
+		@$trigger_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer', 0);
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+
+		if(null == ($trigger = DAO_TriggerEvent::get($trigger_id)))
+			return;
+		
+		if(null == ($event = DevblocksPlatform::getExtension($trigger->event_point, false)))
+			return; /* @var $event Extension_DevblocksEvent */
+			
+		$tpl->assign('trigger', $trigger);
+		$tpl->assign('event', $event);
+		
+		$tpl->display('devblocks:cerberusweb.core::internal/decisions/tree.tpl');
+	}
+	
 	function saveDecisionPopupAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer', 0);
 		@$title = DevblocksPlatform::importGPC($_REQUEST['title'],'string', '');

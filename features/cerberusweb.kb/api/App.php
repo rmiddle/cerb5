@@ -92,9 +92,12 @@ class ChKbPage extends CerberusPageExtension {
 					
 					$breadcrumbs = $article->getCategories();
 					$tpl->assign('breadcrumbs', $breadcrumbs);
+					$tpl->display('devblocks:cerberusweb.kb::kb/display/index.tpl');
+					
+				} else {
+					DevblocksPlatform::redirect(new DevblocksHttpResponse(array('kb','browse')));
+					exit;
 				}
-				
-				$tpl->display('devblocks:cerberusweb.kb::kb/display/index.tpl');
 				break;
 				
 			case 'category':
@@ -252,13 +255,13 @@ class ChKbBrowseTab extends Extension_KnowledgebaseTab {
 				
 				// Articles
 				if(empty($root_id)) {
-					$view->addParams(array(
+					$view->addParamsRequired(array(
 						new DevblocksSearchCriteria(SearchFields_KbArticle::CATEGORY_ID,DevblocksSearchCriteria::OPER_IS_NULL,true),
 					), true);
 					$view->name = $translate->_('kb.view.uncategorized');
 					
 				} else {
-					$view->addParams(array(
+					$view->addParamsRequired(array(
 						new DevblocksSearchCriteria(SearchFields_KbArticle::CATEGORY_ID,'=',$root_id),
 					), true);
 					$view->name = vsprintf($translate->_('kb.view.articles'), $categories[$root_id]->name);

@@ -310,7 +310,7 @@ class DAO_Task extends C4_ORMHelper {
 			switch($param_key) {
 				case SearchFields_Task::VIRTUAL_WATCHERS:
 					$has_multiple_values = true;
-					$from_context = 'cerberusweb.contexts.task';
+					$from_context = CerberusContexts::CONTEXT_TASK;
 					$from_index = 't.id';
 					
 					// Join and return anything
@@ -534,6 +534,11 @@ class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 					$pass = true;
 					break;
 					
+				// Virtuals
+				case SearchFields_Task::VIRTUAL_WATCHERS:
+					$pass = true;
+					break;
+					
 				// Valid custom fields
 				default:
 					if('cf_' == substr($field_key,0,3))
@@ -562,6 +567,10 @@ class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 
 			case SearchFields_Task::IS_COMPLETED:
 				$counts = $this->_getSubtotalCountForBooleanColumn('DAO_Task', $column);
+				break;
+				
+			case SearchFields_Task::VIRTUAL_WATCHERS:
+				$counts = $this->_getSubtotalCountForWatcherColumn('DAO_Task', $column);
 				break;
 			
 			default:
@@ -614,6 +623,7 @@ class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 	function renderCriteria($field) {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id', $this->id);
+		$tpl->assign('view', $this);
 		
 		switch($field) {
 			case SearchFields_Task::TITLE:
