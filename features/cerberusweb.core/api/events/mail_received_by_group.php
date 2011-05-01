@@ -161,6 +161,7 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 	function getConditionExtensions() {
 		$labels = $this->getLabels();
 		
+		$labels['header'] = 'Header';
 		$labels['is_first'] = 'Message is first in conversation';
 		$labels['sender_is_worker'] = 'Message sender is a worker';
 		
@@ -202,6 +203,8 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 			'ticket_subject' => Model_CustomField::TYPE_SINGLE_LINE,
 			'ticket_updated|date' => Model_CustomField::TYPE_DATE,
 			'ticket_url' => Model_CustomField::TYPE_URL,
+		
+			'header' => null,
 		);
 
 		$conditions = $this->_importLabelsTypesAsConditions($labels, $types);
@@ -225,6 +228,10 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 				break;
 			case 'ticket_status':
 				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_group/condition_status.tpl');
+				break;
+			// [TODO] Internalize
+			case 'header':
+				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_group/condition_header.tpl');
 				break;
 		}
 
@@ -281,6 +288,38 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 				$pass = ($not) ? !$pass : $pass;
 				break;
 				
+			case 'header':
+				$not = (substr($params['oper'],0,1) == '!');
+				$oper = ltrim($params['oper'],'!');
+				@$header = $params['header'];
+				@$param_value = $params['value'];
+				
+				// Lazy load
+				$value = DAO_MessageHeader::getOne($values['id'], $header);
+				
+				// Operators
+				switch($oper) {
+					case 'is':
+						$pass = (0==strcasecmp($value,$param_value));
+						break;
+					case 'like':
+						$regexp = DevblocksPlatform::strToRegExp($param_value);
+						$pass = @preg_match($regexp, $value);
+						break;
+					case 'contains':
+						$pass = (false !== stripos($value, $param_value)) ? true : false;
+						break;
+					case 'regexp':
+						$pass = @preg_match($param_value, $value);
+						break;
+					default:
+						$pass = false;
+						break;
+				}
+				
+				$pass = ($not) ? !$pass : $pass;
+				break;				
+				
 			default:
 				$pass = false;
 				break;
@@ -299,8 +338,9 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 				'create_ticket' => array('label' =>'Create a ticket'),
 				'move_to_bucket' => array('label' => 'Move to bucket'),
 				'move_to_group' => array('label' => 'Move to group'),
+				'relay_email' => array('label' => 'Relay to external email'),
 				'send_email' => array('label' => 'Send email'),
-				'send_email_recipients' => array('label' => 'Send email to recipients'),
+				'send_email_recipients' => array('label' => 'Reply to recipients'),
 				'set_spam_training' => array('label' => 'Set spam training'),
 				'set_status' => array('label' => 'Set status'),
 			)
@@ -323,6 +363,12 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 		switch($token) {
 			case 'add_watchers':
 				DevblocksEventHelper::renderActionAddWatchers();
+				break;
+				
+			case 'relay_email':
+				// [TODO] Filter to group members
+				$group = DAO_Group::get($trigger->owner_context_id);
+				DevblocksEventHelper::renderActionRelayEmail(array_keys($group->getMembers()));
 				break;
 				
 			case 'send_email':
@@ -394,6 +440,10 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 			
 			case 'send_email':
 				DevblocksEventHelper::runActionSendEmail($params, $values);
+				break;
+				
+			case 'relay_email':
+				DevblocksEventHelper::runActionRelayEmail($params, $values, CerberusContexts::CONTEXT_TICKET, $ticket_id);
 				break;
 				
 			case 'send_email_recipients':
