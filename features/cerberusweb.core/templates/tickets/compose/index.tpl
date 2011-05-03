@@ -36,7 +36,7 @@
 				<tr>
 					<td width="0%" nowrap="nowrap" valign="middle" align="right"><b>To:</b>&nbsp;</td>
 					<td width="100%">
-						<input type="text" name="to" value="{$draft->params.to}" class="required" style="border:1px solid rgb(180,180,180);padding:2px;width:98%;">
+						<input type="text" name="to" value="{if !empty($draft)}{$draft->params.to}{else}{$defaults_to}{/if}" class="required" style="border:1px solid rgb(180,180,180);padding:2px;width:98%;">
 					</td>
 				</tr>
 				<tr>
@@ -121,25 +121,24 @@
 					<table cellpadding="2" cellspacing="0" border="0">
 						<tr>
 							<td nowrap="nowrap" valign="top" colspan="2">
+								<div style="margin-bottom:10px;">
+									<label>
+									<input type="checkbox" name="add_me_as_watcher" value="1"> 
+									{'common.watchers.add_me'|devblocks_translate}
+									</label>
+								</div>
+							
 								<label><input type="radio" name="closed" value="0" onclick="toggleDiv('ticketClosed','none');">{$translate->_('status.open')|capitalize}</label>
 								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('ticketClosed','block');" checked>{$translate->_('status.waiting')|capitalize}</label>
 								{if $active_worker->hasPriv('core.ticket.actions.close')}<label><input type="radio" name="closed" value="1" onclick="toggleDiv('ticketClosed','block');">{$translate->_('status.closed')|capitalize}</label>{/if}
 								<br>
 								<br>
 
-								<div id="ticketClosed" style="display:block;margin-left:10px;">
+								<div id="ticketClosed" style="display:block;margin-left:10px;margin-bottom:10px;">
 								<b>{$translate->_('display.reply.next.resume')}</b> {$translate->_('display.reply.next.resume_eg')}<br> 
 								<input type="text" name="ticket_reopen" size="55" value=""><br>
 								{$translate->_('display.reply.next.resume_blank')}<br>
-								<br>
 								</div>
-		
-								{if $active_worker->hasPriv('core.ticket.actions.assign')}
-									<b>{$translate->_('display.reply.next.handle_reply')}</b><br>
-									<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-view"></span></button>
-							      	<br>
-							      	<br>
-								{/if}
 		
 								{if $active_worker->hasPriv('core.ticket.actions.move')}
 								<b>{$translate->_('display.reply.next.move')}</b><br>  
@@ -196,10 +195,6 @@
 		
 		setInterval("$('#btnSaveDraft').click();", 30000);
 		
-		$('#frmCompose button.chooser_worker').each(function() {
-			ajax.chooser(this,'cerberusweb.contexts.worker','worker_id', { autocomplete:true });
-		});
-
 		{if $pref_keyboard_shortcuts}
 		
 		// Reply textbox

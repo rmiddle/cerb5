@@ -96,10 +96,6 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 	}
 	
 	private function _importLabels($labels) {
-		foreach($labels as $token => $label) {
-		 	$labels[$token] = ucfirst(strtolower(strtr($label,':',' ')));
-		}
-		
 		uasort($labels, create_function('$a, $b', "return strcasecmp(\$a,\$b);\n"));
 		return $labels;
 	}
@@ -889,10 +885,6 @@ class DevblocksEventHelper {
 		    'agent_id' => 0, //$active_worker->id,
 			//'dont_send' => (false==$send_to_requesters),
 		);
-		
-		// Don't reset owners to 'blank', but allow overrides from GUI log ticket form
-		//if(!empty($watcher_ids))
-	    	//$properties['context_watchers'] = $watcher_ids;
 		
 		CerberusMail::sendTicketMessage($properties);
 		

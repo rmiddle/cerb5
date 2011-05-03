@@ -26,16 +26,19 @@
 			$view.find('input:checkbox:checked').each(function(index) {
 				$label = $(this).attr('title');
 				$value = $(this).val();
-				
+
 				if($label.length > 0 && $value.length > 0) {
-					if(0==$buffer.find('input:hidden[value='+$value+']').length) {
+					if(0==$buffer.find('input:hidden[value="'+$value+'"]').length) {
 						$li = $('<li>'+$label+'<input type="hidden" name="to_context_id[]" title="'+$label+'" value="'+$value+'"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>');
 						$buffer.append($li);
 					}
 				}
-					
-				$(this).removeAttr('checked');
 			});
+
+			// Clear checkboxes
+			checkAll('view{$view->id}',false);
+			$rows=$('#viewForm{$view->id}').find('table.worklistBody').find('tbody > tr');
+			$rows.removeClass('selected');			
 		});
 		
 		$("form#chooser{$view->id} button.submit").click(function(event) {
