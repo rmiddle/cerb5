@@ -234,7 +234,7 @@ class DAO_KbArticle extends C4_ORMHelper {
 		$fields = SearchFields_KbArticle::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1) || !in_array($sortBy,$columns))
+		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy]) || !in_array($sortBy,$columns))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
@@ -540,7 +540,7 @@ class Context_KbArticle extends Extension_DevblocksContext {
 		);
 	}
 	
-	function getContext($item, &$token_labels, &$token_values, $prefix=null) {
+	function getContext($article, &$token_labels, &$token_values, $prefix=null) {
 		if(is_null($prefix))
 			$prefix = 'Article:';
 		

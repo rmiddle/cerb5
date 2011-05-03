@@ -44,23 +44,25 @@
 	<tr>
 		<td colspan="2">
 			<b>Next:</b> 
-			<label><input type="radio" name="closed" value="0" {if 0==$default_closed}checked="checked"{/if}>Open</label>
-			<label><input type="radio" name="closed" value="2" {if 2==$default_closed}checked="checked"{/if}>Waiting for reply</label>
-			{if $active_worker->hasPriv('core.ticket.actions.close')}<label><input type="radio" name="closed" value="1" {if 1==$default_closed}checked="checked"{/if}>Closed</label>{/if}
+			<label><input type="radio" name="closed" value="0" {if 0==$default_closed}checked="checked"{/if} onclick="toggleDiv('divComposeClosed','none');">Open</label>
+			<label><input type="radio" name="closed" value="2" {if 2==$default_closed}checked="checked"{/if} onclick="toggleDiv('divComposeClosed','block');">Waiting for reply</label>
+			{if $active_worker->hasPriv('core.ticket.actions.close')}<label><input type="radio" name="closed" value="1" {if 1==$default_closed}checked="checked"{/if} onclick="toggleDiv('divComposeClosed','block');">Closed</label>{/if}
 			<br>
 			<br>
+			
+			<div id="divComposeClosed" style="display:{if $default_closed}block{else}none{/if};margin-left:10px;margin-bottom:10px;">
+			<b>{$translate->_('display.reply.next.resume')}</b><br>
+			{$translate->_('display.reply.next.resume_eg')}<br> 
+			<input type="text" name="ticket_reopen" size="55" value=""><br>
+			{$translate->_('display.reply.next.resume_blank')}<br>
+			</div>
 
-			{if $active_worker->hasPriv('core.ticket.actions.assign')}
-				<b>Who should handle the follow-up?</b><br>
-				<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-view"></span></button>
-				<ul class="chooser-container bubbles" style="display:block;">
-				{if !empty($context_watchers)}
-					{foreach from=$context_watchers item=context_worker}
-					<li>{$context_worker->getName()}<input type="hidden" name="worker_id[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
-					{/foreach}
-				{/if}
-				</ul>
-			{/if}
+			<div>
+				<label>
+				<input type="checkbox" name="add_me_as_watcher" value="1"> 
+				{'common.watchers.add_me'|devblocks_translate}
+				</label>
+			</div>
 		</td>
 	</tr>
 </table>

@@ -367,7 +367,10 @@ class ChInternalController extends DevblocksControllerExtension {
 
 			case CerberusContexts::CONTEXT_SNIPPET:
 				list($results, $null) = DAO_Snippet::search(
-					array(),
+					array(
+						SearchFields_Snippet::TITLE,
+						SearchFields_Snippet::USAGE_HITS,
+					),
 					array(
 						new DevblocksSearchCriteria(SearchFields_Snippet::TITLE,DevblocksSearchCriteria::OPER_LIKE,'%'.$term.'%'),
 					),
@@ -487,7 +490,7 @@ class ChInternalController extends DevblocksControllerExtension {
 
 	function snippetTestAction() {
 		@$snippet_context = DevblocksPlatform::importGPC($_REQUEST['snippet_context'],'string','');
-		//@$snippet_context_id = DevblocksPlatform::importGPC($_REQUEST['snippet_context_id'],'integer',0);
+		@$snippet_context_id = DevblocksPlatform::importGPC($_REQUEST['snippet_context_id'],'integer',0);
 		@$snippet_field = DevblocksPlatform::importGPC($_REQUEST['snippet_field'],'string','');
 
 		$content = '';
@@ -495,38 +498,45 @@ class ChInternalController extends DevblocksControllerExtension {
 			$content = DevblocksPlatform::importGPC($_REQUEST[$snippet_field]);
 
 		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
-
 		$tpl = DevblocksPlatform::getTemplateService();
 
 		$token_labels = array();
 		$token_value = array();
 
-		switch($snippet_context) {
-			case '':
-				break;
-
-			case 'cerberusweb.contexts.ticket':
-				// [TODO] Randomize
-				list($result, $count) = DAO_Ticket::search(
-					array(),
-					array(
-					),
-					10,
-					0,
-					SearchFields_Ticket::TICKET_UPDATED_DATE,
-					false,
-					false
-				);
-
-				shuffle($result);
-
-				CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, array_shift($result), $token_labels, $token_values);
-				break;
-
-			case 'cerberusweb.contexts.worker':
-				$active_worker = CerberusApplication::getActiveWorker();
-				CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $active_worker, $token_labels, $token_values);
-				break;
+		if(!empty($snippet_context_id)) {
+			CerberusContexts::getContext($snippet_context, $snippet_context_id, $token_labels, $token_values);
+		}
+		
+		// [TODO] Randomize
+		if(empty($token_values)) {
+			switch($snippet_context) {
+				case '':
+					break;
+	
+				case 'cerberusweb.contexts.ticket':
+					list($result, $count) = DAO_Ticket::search(
+						array(
+							SearchFields_Ticket::TICKET_UPDATED_DATE,
+						),
+						array(
+						),
+						25,
+						0,
+						SearchFields_Ticket::TICKET_UPDATED_DATE,
+						false,
+						false
+					);
+	
+					shuffle($result);
+	
+					CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, array_shift($result), $token_labels, $token_values);
+					break;
+	
+				case 'cerberusweb.contexts.worker':
+					$active_worker = CerberusApplication::getActiveWorker();
+					CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $active_worker, $token_labels, $token_values);
+					break;
+			}
 		}
 
 		$success = false;
@@ -1366,7 +1376,7 @@ class ChInternalController extends DevblocksControllerExtension {
 		$tpl->display('devblocks:cerberusweb.core::internal/decisions/assistant/tab.tpl');
 	}
 
-	function createAssistantTriggerAction() {
+	function createAssistantTriggerJsonAction() {
 		@$event_point = DevblocksPlatform::importGPC($_REQUEST['event_point'],'string', '');
 		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
 		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
@@ -1375,19 +1385,31 @@ class ChInternalController extends DevblocksControllerExtension {
 
 		// [TODO] Filter event points (sanitize)
 		
-		if(null == ($ext = DevblocksPlatform::getExtension($event_point, false)))
-			return;
+		header("Context-Type: text/json;");
 		
-		$fields = array(
-			DAO_TriggerEvent::TITLE => $ext->name,
-			DAO_TriggerEvent::IS_DISABLED => 0,
-			DAO_TriggerEvent::EVENT_POINT => $event_point,
-			DAO_TriggerEvent::OWNER_CONTEXT => $context,
-			DAO_TriggerEvent::OWNER_CONTEXT_ID => $context_id,
-		);
-		$id = DAO_TriggerEvent::create($fields);
+		try {
+			if(null == ($ext = DevblocksPlatform::getExtension($event_point, false)))
+				throw new Exception("Can't load behavior.");
+				
+			$fields = array(
+				DAO_TriggerEvent::TITLE => $ext->name,
+				DAO_TriggerEvent::IS_DISABLED => 0,
+				DAO_TriggerEvent::EVENT_POINT => $event_point,
+				DAO_TriggerEvent::OWNER_CONTEXT => $context,
+				DAO_TriggerEvent::OWNER_CONTEXT_ID => $context_id,
+			);
+			$id = DAO_TriggerEvent::create($fields);
+			
+			if(empty($id))
+				throw new Exception("Can't save new behavior.");
+			
+			echo json_encode(array('status'=>'success', 'id' => $id));
+			
+		} catch(Exception $e) {
+			echo json_encode(array('status'=>'error', 'message'=>$e->getMessage()));
+		}
 		
-		return;
+		exit;
 	}	
 	
 	function showDecisionMovePopupAction() {

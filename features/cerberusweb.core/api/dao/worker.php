@@ -484,7 +484,7 @@ class DAO_Worker extends C4_ORMHelper {
 		$fields = SearchFields_Worker::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1) || !in_array($sortBy,$columns))
+		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy]) || !in_array($sortBy,$columns))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
@@ -1327,7 +1327,7 @@ class Context_Worker extends Extension_DevblocksContext {
 
 		CerberusContexts::merge(
 			'address_',
-			'Worker:',
+			'',
 			$merge_token_labels,
 			$merge_token_values,
 			$token_labels,
