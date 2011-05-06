@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE tmx SYSTEM "tmx14.dtd">
+<!DOCTYPE tmx>
 <tmx version="1.4">
 	<header datatype="winres" segtype="sentence" adminlang="en-us"
 		srclang="en-us" o-tmf="abc" />
@@ -22,6 +22,10 @@
 
 		<!-- Common Strings -->
 
+		<tu tuid='kb.common.knowledgebase_article'>
+			<tuv xml:lang="en_US"><seg>Knowledgebase Article</seg></tuv>
+		</tu>
+		
 		<tu tuid='activity.kb'>
 			<tuv xml:lang="en_US"><seg>%s is browsing the knowledgebase</seg></tuv>
 		</tu>
@@ -32,7 +36,7 @@
 		<tu tuid='display.reply.kb.search'>
 			<tuv xml:lang="en_US"><seg>Search Knowledgebase:</seg></tuv>
 		</tu>
-
+		
 		<!-- SC -->
 		
 		<tu tuid='portal.kb.public.no_content'>

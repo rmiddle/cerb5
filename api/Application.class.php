@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,15 +43,15 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2010102501);
-define("APP_VERSION", '5.1.2');
+define("APP_BUILD", 2011050601);
+define("APP_VERSION", '5.4.0-rc3');
+
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
-require_once(APP_PATH . "/api/DAO.class.php");
 require_once(APP_PATH . "/api/Model.class.php");
 require_once(APP_PATH . "/api/Extension.class.php");
 
@@ -86,8 +86,6 @@ class CerberusApplication extends DevblocksApplication {
 	const VIEW_SEARCH = 'search';
 	const VIEW_MAIL_WORKFLOW = 'mail_workflow';
 	const VIEW_MAIL_MESSAGES = 'mail_messages';
-	
-	const CACHE_HELPDESK_FROMS = 'ch_helpdesk_froms';
 	
 	/**
 	 * @return CerberusVisit
@@ -305,6 +303,7 @@ class CerberusApplication extends DevblocksApplication {
 		
 		// Clean up missing plugins
 		DAO_Platform::cleanupPluginTables();
+		DAO_Platform::maint();
 		
 		// Registry
 		$plugins = DevblocksPlatform::getPluginRegistry();
@@ -373,29 +372,6 @@ class CerberusApplication extends DevblocksApplication {
 		return $password;		
 	}
 	
-	// [JAS]: [TODO] Cleanup + move (platform, diff ext point, DAO?)
-	/**
-	 * @return DevblocksTourCallout[]
-	 */
-	static function getTourCallouts() {
-	    static $callouts = null;
-	    
-	    if(!is_null($callouts))
-	        return $callouts;
-	    
-	    $callouts = array();
-	        
-	    $listenerManifests = DevblocksPlatform::getExtensions('devblocks.listener.http');
-	    foreach($listenerManifests as $listenerManifest) { /* @var $listenerManifest DevblocksExtensionManifest */
-	         $inst = $listenerManifest->createInstance(); /* @var $inst IDevblocksTourListener */
-	         
-	         if($inst instanceof IDevblocksTourListener)
-	             $callouts += $inst->registerCallouts();
-	    }
-	    
-	    return $callouts;
-	}
-	    
 	/**
 	 * Enter description here...
 	 *
@@ -556,81 +532,6 @@ class CerberusApplication extends DevblocksApplication {
 	    }
 	    return $ticket_id;
 	}
-	
-	/**
-	 * Enter description here...
-	 * [TODO] Move this into a better API holding place
-	 *
-	 * @param integer $group_id
-	 * @param integer $ticket_id
-	 * @param integer $only_rule_id
-	 * @return Model_GroupInboxFilter[]|false
-	 */
-	static public function runGroupRouting($group_id, $ticket_id, $only_rule_id=0) {
-		static $moveMap = array();
-		$dont_move = false;
-		
-		if(false != ($matches = Model_GroupInboxFilter::getMatches($group_id, $ticket_id, $only_rule_id))) { /* @var $match Model_GroupInboxFilter */
-			if(is_array($matches))
-			foreach($matches as $idx => $match) {
-				/* =============== Prevent recursive assignments =============
-				* If we ever get into a situation where many rules are sending a ticket
-				* back and forth between them, ignore the last move action in the chain  
-				* which is trying to start over.
-				*/
-				if(isset($match->actions['move'])) { 
-					if(!isset($moveMap[$ticket_id])) {
-						$moveMap[$ticket_id] = array();
-					} else {
-						if(isset($moveMap[$ticket_id][$group_id])) {
-							$dont_move = true;
-						}
-					}
-					
-					$moveMap[$ticket_id][$group_id] = $match->id;
-				}
-	
-				// Stop any move actions if we're going to loop again
-				if($dont_move) {
-					unset($matches[$idx]->actions['move']);
-				}
-				
-				// Run filter actions
-				$match->run(array($ticket_id));
-			}
-		}
-		
-	    return $matches;
-	}
-	
-	// [TODO] This probably has a better home
-	public static function getHelpdeskSenders() {
-		$cache = DevblocksPlatform::getCacheService();
-
-		if(null === ($froms = $cache->load(self::CACHE_HELPDESK_FROMS))) {
-			$froms = array();
-			$settings = DevblocksPlatform::getPluginSettingsService();
-			$group_settings = DAO_GroupSettings::getSettings();
-			
-			// Global sender
-			$from = strtolower($settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM));
-			@$froms[$from] = $from;
-			
-			// Group senders
-			if(is_array($group_settings))
-			foreach($group_settings as $group_id => $gs) {
-				@$from = strtolower($gs[DAO_GroupSettings::SETTING_REPLY_FROM]);
-				if(!empty($from))
-					@$froms[$from] = $from;
-			}
-			
-			asort($froms);
-			
-			$cache->save($froms, self::CACHE_HELPDESK_FROMS);
-		}
-		
-		return $froms;
-	}
 };
 
 interface IContextToken {
@@ -638,16 +539,24 @@ interface IContextToken {
 };
 
 class CerberusContexts {
+	private static $_default_actor_context = null;
+	private static $_default_actor_context_id = null;
+	
 	const CONTEXT_ADDRESS = 'cerberusweb.contexts.address';
 	const CONTEXT_ATTACHMENT = 'cerberusweb.contexts.attachment';
 	const CONTEXT_BUCKET = 'cerberusweb.contexts.bucket';
+	const CONTEXT_CALL = 'cerberusweb.contexts.call';
+	const CONTEXT_COMMENT = 'cerberusweb.contexts.comment';
+	const CONTEXT_CONTACT_PERSON = 'cerberusweb.contexts.contact_person';
 	const CONTEXT_FEEDBACK = 'cerberusweb.contexts.feedback';
 	const CONTEXT_GROUP = 'cerberusweb.contexts.group';
 	const CONTEXT_KB_ARTICLE = 'cerberusweb.contexts.kb_article';
+	const CONTEXT_KB_CATEGORY = 'cerberusweb.contexts.kb_category';
 	const CONTEXT_MESSAGE = 'cerberusweb.contexts.message';
 	const CONTEXT_NOTIFICATION= 'cerberusweb.contexts.notification';
 	const CONTEXT_OPPORTUNITY = 'cerberusweb.contexts.opportunity';
 	const CONTEXT_ORG = 'cerberusweb.contexts.org';
+	const CONTEXT_PORTAL = 'cerberusweb.contexts.portal';
 	const CONTEXT_SNIPPET = 'cerberusweb.contexts.snippet';
 	const CONTEXT_TASK = 'cerberusweb.contexts.task';
 	const CONTEXT_TICKET = 'cerberusweb.contexts.ticket';
@@ -661,21 +570,6 @@ class CerberusContexts {
 				break;
 			case 'cerberusweb.contexts.bucket':
 				self::_getBucketContext($context_object, $labels, $values, $prefix);
-				break;
-			case 'cerberusweb.contexts.feedback':
-				self::_getFeedbackContext($context_object, $labels, $values, $prefix);
-				break;
-			case 'cerberusweb.contexts.group':
-				self::_getGroupContext($context_object, $labels, $values, $prefix);
-				break;
-			case 'cerberusweb.contexts.kb_article':
-				self::_getKbArticleContext($context_object, $labels, $values, $prefix);
-				break;
-			case 'cerberusweb.contexts.message':
-				self::_getMessageContext($context_object, $labels, $values, $prefix);
-				break;
-			case 'cerberusweb.contexts.notification':
-				self::_getNotificationContext($context_object, $labels, $values, $prefix);
 				break;
 			default:
 				// Migrated
@@ -743,9 +637,37 @@ class CerberusContexts {
 			}
 		}
 		
+		
+		// Rename labels
+		foreach($labels as $idx => $label) {
+			// [TODO] mb_*
+			$labels[$idx] = ucfirst(strtolower(strtr($label,':',' ')));
+		}
+		
+		// Alphabetize
 		asort($labels);
 		
 		return null;
+	}
+	
+	public static function scrubTokensWithRegexp(&$labels, &$values, $patterns=array()) {
+		foreach($patterns as $pattern) {
+			foreach(array_keys($labels) as $token) {
+				if(preg_match($pattern, $token)) {
+					unset($labels[$token]);
+				}
+			}
+			foreach(array_keys($values) as $token) {
+				if(false !== ($pos = strpos($token,'|')))
+					$token = substr($token,0,$pos);
+				
+				if(preg_match($pattern, $token)) {
+					unset($values[$token]);
+				}
+			}
+		}
+
+		return TRUE;
 	}
 	
 	/**
@@ -770,7 +692,7 @@ class CerberusContexts {
 		return true;
 	}
 	
-	static public function getWorkers($context, $context_id) {
+	static public function getWatchers($context, $context_id) {
 		list($results, $null) = DAO_Worker::search(
 			array(
 				SearchFields_Worker::ID,
@@ -798,31 +720,273 @@ class CerberusContexts {
 		return $workers;
 	}
 	
-	static public function setWorkers($context, $context_id, $worker_ids) {
-		$current_workers = self::getWorkers($context, $context_id);
-		
-		// Remove
-		if(is_array($current_workers))
-		foreach($current_workers as $current_worker_id => $current_worker) {
-			if(false === array_search($current_worker_id, $worker_ids))
-				DAO_ContextLink::deleteLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $current_worker_id);
-		}
-		
-		// Add
-		if(is_array($worker_ids))
-		foreach($worker_ids as $worker_id) {
-			DAO_ContextLink::setLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $worker_id);
-		}
-	}
+//	static public function setWatchers($context, $context_id, $worker_ids) {
+//		if(!is_array($worker_ids))
+//			$worker_ids = array($worker_ids);
+//		
+//		$current_workers = self::getWatchers($context, $context_id);
+//		
+//		// Remove
+//		if(is_array($current_workers))
+//		foreach($current_workers as $current_worker_id => $current_worker) {
+//			if(false === array_search($current_worker_id, $worker_ids))
+//				DAO_ContextLink::deleteLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $current_worker_id);
+//		}
+//		
+//		// Add
+//		if(is_array($worker_ids))
+//		foreach($worker_ids as $worker_id) {
+//			DAO_ContextLink::setLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $worker_id);
+//		}
+//	}
 
-	static public function addWorkers($context, $context_id, $worker_ids) {
+	static public function addWatchers($context, $context_id, $worker_ids) {
+		if(!is_array($worker_ids))
+			$worker_ids = array($worker_ids);
+		
 		foreach($worker_ids as $worker_id)
 			DAO_ContextLink::setLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $worker_id);
 	}
 	
-	static public function removeWorkers($context, $context_id, $worker_ids) {
+	static public function removeWatchers($context, $context_id, $worker_ids) {
+		if(!is_array($worker_ids))
+			$worker_ids = array($worker_ids);
+			
 		foreach($worker_ids as $worker_id)
 			DAO_ContextLink::deleteLink($context, $context_id, CerberusContexts::CONTEXT_WORKER, $worker_id);
+	}
+	
+	static public function formatActivityLogEntry($entry, $format=null, $scrub_tokens=array()) {
+		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+		$url_writer = DevblocksPlatform::getUrlService();
+		$translate = DevblocksPlatform::getTranslationService();
+		
+		// Load the translated version of the message
+
+		$entry['message'] = $translate->_($entry['message']);
+		
+		// Scrub desired tokens
+		
+		if(is_array($scrub_tokens) && !empty($scrub_tokens)) {
+			foreach($scrub_tokens as $token) {
+				// Scrub tokens and only preserve trailing whitespace
+				$entry['message'] = preg_replace('#\s*\{\{'.$token.'\}\}(\s*)#', '\1', $entry['message']);
+			}
+		}
+		
+		// Variables
+		
+		$vars = $entry['variables']; 
+		
+		switch($format) {
+			case 'html':
+				// HTML formatting and incorporating URLs
+				if(is_array($vars))
+				foreach($vars as $k => $v) {
+					$vars[$k] = htmlentities($v, ENT_QUOTES, LANG_CHARSET_CODE);
+				}
+				
+				if(isset($entry['urls']))
+				foreach($entry['urls'] as $token => $url) {
+					if(0 != strcasecmp('http',substr($url,0,4)))
+						$url = $url_writer->write($url, true);
+					
+					$vars[$token] = '<a href="'.$url.'" style="font-weight:bold;">'.$vars[$token].'</a>';
+				}
+				break;
+				
+			case 'markdown':
+				if(isset($entry['urls']))
+				foreach($entry['urls'] as $token => $url) {
+					if(0 != strcasecmp('http',substr($url,0,4)))
+						$url = $url_writer->write($url, true);
+					
+					$vars[$token] = '['.$vars[$token].']('.$url.')';
+				}
+				break;
+				
+			case 'email':
+				@$url = reset($entry['urls']);
+				
+				if(empty($url))
+					break;
+					
+				if(0 != strcasecmp('http',substr($url,0,4)))
+					$url = $url_writer->write($url, true);
+					
+				$entry['message'] .= ' <' . $url . '>'; 
+				break;
+				
+			default:
+				break;
+		}
+		
+		if(!is_array($vars))
+			$vars = array();
+		
+		return $tpl_builder->build($entry['message'], $vars);
+	}
+	
+	static public function setActivityDefaultActor($context, $context_id=null) {
+		if(empty($context) || empty($context_id)) {
+			self::$_default_actor_context = null;
+			self::$_default_actor_context_id = null;
+		} else {
+			self::$_default_actor_context = $context;
+			self::$_default_actor_context_id = $context_id;
+		}
+	}
+	
+	static public function logActivity($activity_point, $target_context, $target_context_id, $entry_array, $actor_context=null, $actor_context_id=null, $also_notify_worker_ids=array()) {
+		// Forced actor
+		if(!empty($actor_context) && !empty($actor_context_id)) {
+			if(null != ($ctx = DevblocksPlatform::getExtension($actor_context, true))
+				&& $ctx instanceof Extension_DevblocksContext) {
+				$meta = $ctx->getMeta($actor_context_id);
+				$actor_name = $meta['name'];
+				$actor_url = $meta['permalink'];
+			}
+		}
+		
+		// Auto-detect the actor
+		if(empty($actor_context)) {
+			$actor_name = null;
+			$actor_context = null;
+			$actor_context_id = 0;
+			$actor_url = null;
+			
+			// See if we're inside of an attendant's running decision tree
+			if(EventListener_Triggers::getDepth() > 0
+				&& null != ($trigger_id = end(EventListener_Triggers::getTriggerLog())) 
+				&& !empty($trigger_id) 
+				&& null != ($trigger = DAO_TriggerEvent::get($trigger_id)) 
+			) {
+				/* @var $trigger Model_TriggerEvent */
+				
+				switch($trigger->owner_context) {
+					case CerberusContexts::CONTEXT_GROUP:
+						$group = DAO_Group::get($trigger->owner_context_id);
+						$actor_name = $group->name . ' [' . $trigger->title . ']';
+						$actor_context = $trigger->owner_context;
+						$actor_context_id = $trigger->owner_context_id;
+						$actor_url = sprintf("c=profiles&type=group&who=%d", $actor_context_id);
+						break;
+						
+					case CerberusContexts::CONTEXT_WORKER:
+						$worker = DAO_Worker::get($trigger->owner_context_id);
+						$actor_name = $worker->getName() . ' [' . $trigger->title . ']';
+						$actor_context = $trigger->owner_context;
+						$actor_context_id = $trigger->owner_context_id;
+						$actor_url = sprintf("c=profiles&type=worker&who=%d", $actor_context_id);
+						break;
+				}
+				
+			// Otherwise see if we have an active session
+			} else {
+				// If we have a default, use it instead of the current session
+				if(empty($actor_context) && !empty(self::$_default_actor_context)) {
+					$actor_context = self::$_default_actor_context;
+					$actor_context_id = self::$_default_actor_context_id;
+					if(null != ($ctx = DevblocksPlatform::getExtension($actor_context, true))
+						&& $ctx instanceof Extension_DevblocksContext) {
+						$meta = $ctx->getMeta($actor_context_id);
+						$actor_name = $meta['name'];
+						$actor_url = $meta['permalink'];
+					}
+				}
+
+				// Try using current session 
+				if(empty($actor_context) && null != ($active_worker = CerberusApplication::getActiveWorker())) {
+					$actor_name = $active_worker->getName();
+					$actor_context = CerberusContexts::CONTEXT_WORKER;
+					$actor_context_id = $active_worker->id;
+					$actor_url = sprintf("c=profiles&type=worker&who=%d", $actor_context_id);
+				}				
+				
+			} 
+		}
+		
+		if(empty($actor_context)) {
+			$actor_name = 'The system';
+		}
+		
+		$entry_array['variables']['actor'] = $actor_name;
+		
+		if(!empty($actor_url))
+			$entry_array['urls']['actor'] = $actor_url;
+		
+		// Activity Log
+		DAO_ContextActivityLog::create(array(
+			DAO_ContextActivityLog::ACTIVITY_POINT => $activity_point,
+			DAO_ContextActivityLog::CREATED => time(),
+			DAO_ContextActivityLog::ACTOR_CONTEXT => $actor_context,
+			DAO_ContextActivityLog::ACTOR_CONTEXT_ID =>$actor_context_id,
+			DAO_ContextActivityLog::TARGET_CONTEXT => $target_context,
+			DAO_ContextActivityLog::TARGET_CONTEXT_ID => $target_context_id,
+			DAO_ContextActivityLog::ENTRY_JSON => json_encode($entry_array),
+		));
+		
+		// Tell target watchers about the activity
+		
+		$watchers = array();
+		
+		// Merge in watchers of the actor (if not a worker)
+		if(CerberusContexts::CONTEXT_WORKER != $actor_context) {
+			$watchers = array_merge(
+				$watchers,
+				array_keys(CerberusContexts::getWatchers($actor_context, $actor_context_id))
+			);
+		}
+		
+		// And watchers of the target (if not a worker)
+		if(CerberusContexts::CONTEXT_WORKER != $target_context) {
+			$watchers = array_merge(
+				$watchers,
+				array_keys(CerberusContexts::getWatchers($target_context, $target_context_id))
+			);
+		}
+		
+		// Include the 'also notify' list
+		$watchers = array_merge(
+			$watchers,
+			$also_notify_worker_ids
+		);
+		
+		// Remove dupe watchers
+		$watcher_ids = array_unique($watchers);
+		
+		$url_writer = DevblocksPlatform::getUrlService();
+		
+		// Fire off notifications
+		if(is_array($watcher_ids)) {
+			$message = CerberusContexts::formatActivityLogEntry($entry_array, 'plaintext');
+			@$url = reset($entry_array['urls']); 
+			
+			if(0 != strcasecmp('http',substr($url,0,4)))
+				$url = $url_writer->write($url, true);
+			
+			foreach($watcher_ids as $watcher_id) {
+				// Skip a watcher if they are the actor
+				if($actor_context == CerberusContexts::CONTEXT_WORKER
+					&& $actor_context_id == $watcher_id)
+						continue;
+				
+				// Does the worker want this kind of notification?
+				$dont_notify_on_activities = WorkerPrefs::getDontNotifyOnActivities($watcher_id);
+				if(in_array($activity_point, $dont_notify_on_activities))
+					continue;
+					
+				// If yes, send it						
+				DAO_Notification::create(array(
+					DAO_Notification::CREATED_DATE => time(),
+					DAO_Notification::IS_READ => 0,
+					DAO_Notification::WORKER_ID => $watcher_id,
+					DAO_Notification::MESSAGE => $message,
+					DAO_Notification::URL => $url,
+				));
+			}
+		}
+		
 	}
 	
 	private static function _getAttachmentContext($attachment, &$token_labels, &$token_values, $prefix=null) {
@@ -833,22 +997,8 @@ class CerberusContexts {
 		
 		// Polymorph
 		if(is_numeric($attachment)) {
-			list($results, $total) = DAO_Attachment::search(
-				array(
-					SearchFields_Attachment::ID => new DevblocksSearchCriteria(SearchFields_Attachment::ID,'=',$attachment),
-				),
-				1,
-				0,
-				null,
-				null,
-				false
-			);
-			
-			if(isset($results[$attachment]))
-				$attachment = $results[$attachment];
-			else
-				$attachment = null;
-		} elseif(is_array($attachment)) {
+			$attachment = DAO_Attachment::get($attachment);
+		} elseif($attachment instanceof Model_Attachment) {
 			// It's what we want already.
 		} else {
 			$attachment = null;
@@ -856,308 +1006,24 @@ class CerberusContexts {
 			
 		// Token labels
 		$token_labels = array(
-			'created|date' => $prefix.$translate->_('common.created'),
 			'id' => $prefix.$translate->_('common.id'),
 			'mime_type' => $prefix.$translate->_('attachment.mime_type'),
 			'name' => $prefix.$translate->_('attachment.display_name'),
 			'size' => $prefix.$translate->_('attachment.storage_size'),
+			'updated|date' => $prefix.$translate->_('common.updated'),
 		);
 		
 		// Token values
 		$token_values = array();
 		
 		if(null != $attachment) {
-			$token_values['created'] = $attachment[SearchFields_Attachment::MESSAGE_CREATED_DATE];
-			$token_values['id'] = $attachment[SearchFields_Attachment::ID];
-			$token_values['message_id'] = $attachment[SearchFields_Attachment::MESSAGE_ID];
-			$token_values['mime_type'] = $attachment[SearchFields_Attachment::MIME_TYPE];
-			$token_values['name'] = $attachment[SearchFields_Attachment::DISPLAY_NAME];
-			$token_values['size'] = $attachment[SearchFields_Attachment::STORAGE_SIZE];
-			$token_values['ticket_id'] = $attachment[SearchFields_Attachment::TICKET_ID];
+			$token_values['id'] = $attachment->id;
+			$token_values['mime_type'] = $attachment->mime_type;
+			$token_values['name'] = $attachment->display_name;
+			$token_values['size'] = $attachment->storage_size;
+			$token_values['updated'] = $attachment->updated;
 		}
 		
-		return true;
-	}
-	
-	/**
-	 * 
-	 * @param $article
-	 * @param $token_labels
-	 * @param $token_values
-	 * @param $prefix
-	 */
-	private static function _getKbArticleContext($article, &$token_labels, &$token_values, $prefix=null) {
-		if(is_null($prefix))
-			$prefix = 'Article:';
-		
-		$translate = DevblocksPlatform::getTranslationService();
-		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_KbArticle::ID);
-		
-		// Polymorph
-		if(is_numeric($article)) {
-			$article = DAO_KbArticle::get($article);
-		} elseif($article instanceof Model_KbArticle) {
-			// It's what we want already.
-		} else {
-			$article = null;
-		}
-		/* @var $article Model_KbArticle */
-			
-		// Token labels
-		$token_labels = array(
-			'content' => $prefix.$translate->_('kb_article.content'),
-			'id' => $prefix.$translate->_('common.id'),
-			'title' => $prefix.$translate->_('kb_article.title'),
-			'updated|date' => $prefix.$translate->_('kb_article.updated'),
-			'views' => $prefix.$translate->_('kb_article.views'),
-		);
-		
-		if(is_array($fields))
-		foreach($fields as $cf_id => $field) {
-			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
-		}
-
-		// Token values
-		$token_values = array();
-		
-		// Token values
-		if(null != $article) {
-			$token_values['content'] = $article->getContent();
-			$token_values['id'] = $article->id;
-			$token_values['title'] = $article->title;
-			$token_values['updated'] = $article->updated;
-			$token_values['views'] = $article->views;
-			
-			// Categories
-			if(null != ($categories = $article->getCategories()) && is_array($categories)) {
-				$token_values['categories'] = array();
-				
-				foreach($categories as $category_id => $trail) {
-					foreach($trail as $step_id => $step) {
-						if(!isset($token_values['categories'][$category_id]))
-							$token_values['categories'][$category_id] = array();
-						$token_values['categories'][$category_id][$step_id] = $step->name;
-					}
-				}
-			}
-			
-			$token_values['custom'] = array();
-			
-			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_KbArticle::ID, $article->id));
-			if(is_array($field_values) && !empty($field_values)) {
-				foreach($field_values as $cf_id => $cf_val) {
-					if(!isset($fields[$cf_id]))
-						continue;
-					
-					// The literal value
-					if(null != $article)
-						$token_values['custom'][$cf_id] = $cf_val;
-					
-					// Stringify
-					if(is_array($cf_val))
-						$cf_val = implode(', ', $cf_val);
-						
-					if(is_string($cf_val)) {
-						if(null != $article)
-							$token_values['custom_'.$cf_id] = $cf_val;
-					}
-				}
-			}
-		}
-		
-		return true;
-	}	
-	
-	/**
-	 * 
-	 * @param mixed $message
-	 * @param array $token_labels
-	 * @param array $token_values
-	 */
-	private static function _getMessageContext($message, &$token_labels, &$token_values, $prefix=null) {
-		if(is_null($prefix))
-			$prefix = 'Message:';
-		
-		$translate = DevblocksPlatform::getTranslationService();
-
-		// Polymorph
-		if(is_numeric($message)) {
-			$message = DAO_Message::get($message); 
-		} elseif($message instanceof Model_Message) {
-			// It's what we want already.
-		} else {
-			$message = null;
-		}
-		/* @var $message Model_Message */
-		
-		// Token labels
-		$token_labels = array(
-			'content' => $prefix.$translate->_('common.content'),
-			'created|date' => $prefix.$translate->_('common.created'),
-			'is_outgoing' => $prefix.$translate->_('message.is_outgoing'),
-			'storage_size' => $prefix.$translate->_('message.storage_size'),
-		);
-		
-		// Token values
-		$token_values = array();
-		
-		// Message token values
-		if($message) {
-			$token_values['content'] = $message->getContent();
-			$token_values['created'] = $message->created_date;
-			$token_values['id'] = $message->id;
-			$token_values['is_outgoing'] = $message->is_outgoing;
-			$token_values['storage_size'] = $message->storage_size;
-			$token_values['ticket_id'] = $message->ticket_id;
-			$token_values['worker_id'] = $message->worker_id;
-		}
-
-		// Sender
-		@$address_id = $message->address_id;
-		$merge_token_labels = array();
-		$merge_token_values = array();
-		self::getContext(self::CONTEXT_ADDRESS, $address_id, $merge_token_labels, $merge_token_values, '', true);
-
-		CerberusContexts::merge(
-			'sender_',
-			'Message:Sender:',
-			$merge_token_labels,
-			$merge_token_values,
-			$token_labels,
-			$token_values
-		);
-		
-		return true;
-	}	
-	
-	/**
-	 * 
-	 * @param mixed $notification
-	 * @param array $token_labels
-	 * @param array $token_values
-	 */
-	private static function _getNotificationContext($notification, &$token_labels, &$token_values, $prefix=null) {
-		if(is_null($prefix))
-			$prefix = 'Notification:';
-		
-		$translate = DevblocksPlatform::getTranslationService();
-
-		// Polymorph
-		if(is_numeric($notification)) {
-			$notification = DAO_WorkerEvent::get($notification); 
-		} elseif($notification instanceof Model_WorkerEvent) {
-			// It's what we want already.
-		} else {
-			$notification = null;
-		}
-		/* @var $notification Model_WorkerEvent */
-		
-		// Token labels
-		$token_labels = array(
-			'content' => $prefix.$translate->_('common.content'),
-			'created|date' => $prefix.$translate->_('worker_event.created'),
-			'title' => $prefix.$translate->_('worker_event.title'),
-			'url' => $prefix.$translate->_('worker_event.url'),
-			'is_read' => $prefix.$translate->_('worker_event.is_read'),
-		);
-		
-		// Token values
-		$token_values = array();
-		
-		// Notification token values
-		if($notification) {
-			$token_values['id'] = $notification->id;
-			$token_values['content'] = $notification->content;
-			$token_values['created'] = $notification->created_date;
-			$token_values['id'] = $notification->id;
-			$token_values['is_read'] = $notification->is_read;
-			$token_values['title'] = $notification->title;
-			$token_values['url'] = $notification->url;
-		}
-
-		// Worker
-		@$worker_id = $notification->worker_id;
-		$merge_token_labels = array();
-		$merge_token_values = array();
-		self::getContext(self::CONTEXT_WORKER, $worker_id, $merge_token_labels, $merge_token_values, '', true);
-
-		CerberusContexts::merge(
-			'assignee_',
-			'Assignee:',
-			$merge_token_labels,
-			$merge_token_values,
-			$token_labels,
-			$token_values
-		);
-		
-		return true;
-	}	
-	
-	/**
-	 * 
-	 * @param mixed $group
-	 * @param array $token_labels
-	 * @param array $token_values
-	 */
-	private static function _getGroupContext($group, &$token_labels, &$token_values, $prefix=null) {
-		if(is_null($prefix))
-			$prefix = 'Group:';
-		
-		$translate = DevblocksPlatform::getTranslationService();
-		//$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
-
-		// Polymorph
-		if(is_numeric($group)) {
-			$group = DAO_Group::getTeam($group); 
-		} elseif($group instanceof Model_Group) {
-			// It's what we want already.
-		} else {
-			$group = null;
-		}
-		/* @var $group Model_Group */
-		
-		// Token labels
-		$token_labels = array(
-			'id' => $prefix.$translate->_('common.id'),
-			'name' => $prefix.$translate->_('common.name'),
-		);
-		
-//		if(is_array($fields))
-//		foreach($fields as $cf_id => $field) {
-//			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
-//		}
-
-		// Token values
-		$token_values = array();
-		
-		// Group token values
-		if($group) {
-			$token_values['id'] = $group->id;
-			$token_values['name'] = $group->name;
-			//$token_values['custom'] = array();
-			
-//			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Org::ID, $org->id));
-//			if(is_array($field_values) && !empty($field_values)) {
-//				foreach($field_values as $cf_id => $cf_val) {
-//					if(!isset($fields[$cf_id]))
-//						continue;
-//					
-//					// The literal value
-//					if(null != $org)
-//						$token_values['custom'][$cf_id] = $cf_val;
-//					
-//					// Stringify
-//					if(is_array($cf_val))
-//						$cf_val = implode(', ', $cf_val);
-//						
-//					if(is_string($cf_val)) {
-//						if(null != $org)
-//							$token_values['custom_'.$cf_id] = $cf_val;
-//					}
-//				}
-//			}
-		}
-
 		return true;
 	}
 	
@@ -1172,7 +1038,7 @@ class CerberusContexts {
 			$prefix = 'Bucket:';
 		
 		$translate = DevblocksPlatform::getTranslationService();
-		//$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
+		//$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ORG);
 
 		// Polymorph
 		if(is_numeric($bucket)) {
@@ -1204,7 +1070,7 @@ class CerberusContexts {
 			$token_values['name'] = $bucket->name;
 			//$token_values['custom'] = array();
 			
-//			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Org::ID, $org->id));
+//			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ORG, $org->id));
 //			if(is_array($field_values) && !empty($field_values)) {
 //				foreach($field_values as $cf_id => $cf_val) {
 //					if(!isset($fields[$cf_id]))
@@ -1228,107 +1094,6 @@ class CerberusContexts {
 
 		return true;
 	}
-	
-	private static function _getFeedbackContext($feedback, &$token_labels, &$token_values, $prefix=null) {
-		if(is_null($prefix))
-			$prefix = 'Feedback:';
-		
-		$translate = DevblocksPlatform::getTranslationService();
-		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_FeedbackEntry::ID);
-
-		// Polymorph
-		if(is_numeric($feedback)) {
-			$feedback = DAO_FeedbackEntry::get($feedback);
-		} elseif($feedback instanceof Model_FeedbackEntry) {
-			// It's what we want already.
-		} else {
-			$feedback = null;
-		}
-		
-		// Token labels
-		$token_labels = array(
-			'created|date' => $prefix.$translate->_('feedback_entry.log_date'),
-			'id' => $prefix.$translate->_('feedback_entry.id'),
-			'quote_mood' => $prefix.$translate->_('feedback_entry.quote_mood'),
-			'quote_text' => $prefix.$translate->_('feedback_entry.quote_text'),
-			'url' => $prefix.$translate->_('feedback_entry.source_url'),
-		);
-		
-		if(is_array($fields))
-		foreach($fields as $cf_id => $field) {
-			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
-		}
-
-		// Token values
-		$token_values = array();
-		
-		if($feedback) {
-			$token_values['id'] = $feedback->id;
-			$token_values['created'] = $feedback->log_date;
-			$token_values['quote_text'] = $feedback->quote_text;
-			$token_values['url'] = $feedback->source_url;
-
-			$mood = $feedback->quote_mood;
-			$token_values['quote_mood_id'] = $mood;
-			$token_values['quote_mood'] = ($mood ? (2==$mood ? 'criticism' : 'praise' ) : 'neutral');
-			
-			$token_values['custom'] = array();
-			
-			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_FeedbackEntry::ID, $feedback->id));
-			if(is_array($field_values) && !empty($field_values)) {
-				foreach($field_values as $cf_id => $cf_val) {
-					if(!isset($fields[$cf_id]))
-						continue;
-					
-					// The literal value
-					if(null != $feedback)
-						$token_values['custom'][$cf_id] = $cf_val;
-					
-					// Stringify
-					if(is_array($cf_val))
-						$cf_val = implode(', ', $cf_val);
-						
-					if(is_string($cf_val)) {
-						if(null != $feedback)
-							$token_values['custom_'.$cf_id] = $cf_val;
-					}
-				}
-			}
-		}
-
-		// Author
-		@$address_id = $feedback->quote_address_id;
-		$merge_token_labels = array();
-		$merge_token_values = array();
-		self::getContext(self::CONTEXT_ADDRESS, $address_id, $merge_token_labels, $merge_token_values, '', true);
-
-		CerberusContexts::merge(
-			'author_',
-			'Author:',
-			$merge_token_labels,
-			$merge_token_values,
-			$token_labels,
-			$token_values
-		);			
-		
-		// Created by (Worker)
-		@$assignee_id = $feedback->worker_id;
-		$merge_token_labels = array();
-		$merge_token_values = array();
-		self::getContext(self::CONTEXT_WORKER, $assignee_id, $merge_token_labels, $merge_token_values, '', true);
-
-		CerberusContexts::merge(
-			'worker_',
-			'Worker:',
-			$merge_token_labels,
-			$merge_token_values,
-			$token_labels,
-			$token_values
-		);			
-		
-		return true;
-	}	
-	
 };
 
 class CerberusLicense {
@@ -1384,13 +1149,32 @@ class CerberusLicense {
 			)
 			: array();
 	}
+	
+	public static function getReleases() {
+		/**																																																																																																																														*/return array('5.0.0'=>1271894400,'5.1.0'=>1281830400,'5.2.0'=>1288569600,'5.3.0'=>1295049600,'5.4.0'=>1303862400);/*
+		 * Major releases by date in GMT
+		 */
+		return array(
+			'5.0.0' => gmmktime(0,0,0,4,22,2010),
+			'5.1.0' => gmmktime(0,0,0,8,15,2010),
+			'5.2.0' => gmmktime(0,0,0,11,1,2010),
+			'5.3.0' => gmmktime(0,0,0,1,15,2011),
+			'5.4.0' => gmmktime(0,0,0,4,27,2011),
+		);
+	}
+	
+	public static function getReleaseDate($version) {
+		$latest_licensed = 0;
+		$version = array_shift(explode("-",$version,2));
+		foreach(self::getReleases() as $release => $release_date) {
+			if(version_compare($release, $version) <= 0)
+				$latest_licensed = $release_date;
+		}
+		return $latest_licensed;
+	}
 };
 
 class CerberusSettings {
-	const DEFAULT_REPLY_FROM = 'default_reply_from'; 
-	const DEFAULT_REPLY_PERSONAL = 'default_reply_personal'; 
-	const DEFAULT_SIGNATURE = 'default_signature'; 
-	const DEFAULT_SIGNATURE_POS = 'default_signature_pos'; 
 	const HELPDESK_TITLE = 'helpdesk_title'; 
 	const HELPDESK_LOGO_URL = 'helpdesk_logo_url'; 
 	const SMTP_HOST = 'smtp_host'; 
@@ -1411,10 +1195,6 @@ class CerberusSettings {
 };
 
 class CerberusSettingsDefaults {
-	const DEFAULT_REPLY_FROM = 'do-not-reply@localhost'; //$_SERVER['SERVER_ADMIN'] 
-	const DEFAULT_REPLY_PERSONAL = ''; 
-	const DEFAULT_SIGNATURE = ''; 
-	const DEFAULT_SIGNATURE_POS = 0; 
 	const HELPDESK_TITLE = 'Cerberus Helpdesk :: Team-based E-mail Management'; 
 	const SMTP_HOST = 'localhost'; 
 	const SMTP_AUTH_ENABLED = 0; 
@@ -1428,7 +1208,7 @@ class CerberusSettingsDefaults {
 	const ATTACHMENTS_MAX_SIZE = 10; 
 	const PARSER_AUTO_REQ = 0; 
 	const PARSER_AUTO_REQ_EXCLUDE = ''; 
-	const AUTHORIZED_IPS = '';
+	const AUTHORIZED_IPS = "127.0.0.1\n::1\n";
 	const ACL_ENABLED = 0;
 };
 
@@ -1452,5 +1232,129 @@ class C4_DevblocksExtensionDelegate implements DevblocksExtensionDelegate {
 		}
 		
 		return self::$_worker->hasPriv('plugin.'.$extension_manifest->plugin_id);
+	}
+};
+
+class CerberusVisit extends DevblocksVisit {
+	private $worker_id;
+
+	const KEY_VIEW_LAST_ACTION = 'view_last_action';
+	const KEY_MY_WORKSPACE = 'view_my_workspace';
+	const KEY_WORKFLOW_FILTER = 'workflow_filter';
+
+	public function __construct() {
+		$this->worker_id = null;
+	}
+
+	/**
+	 * @return Model_Worker
+	 */
+	public function getWorker() {
+		if(empty($this->worker_id))
+			return null;
+			
+		return DAO_Worker::get($this->worker_id);
+	}
+	
+	public function setWorker(Model_Worker $worker=null) {
+		if(is_null($worker)) {
+			$this->worker_id = null;
+		} else {
+			$this->worker_id = $worker->id;
+		}
+	}
+};
+
+class C4_ORMHelper extends DevblocksORMHelper {
+	static public function qstr($str) {
+		$db = DevblocksPlatform::getDatabaseService();
+		return $db->qstr($str);	
+	}
+	
+	static protected function _appendSelectJoinSqlForCustomFieldTables($tables, $params, $key, $select_sql, $join_sql) {
+		$custom_fields = DAO_CustomField::getAll();
+		$field_ids = array();
+
+		$return_multiple_values = false; // can our CF return more than one hit? (GROUP BY)
+		
+		if(is_array($tables))
+		foreach($tables as $tbl_name => $null) {
+			// Filter and sanitize
+			if(substr($tbl_name,0,3) != "cf_" // not a custom field 
+				|| 0 == ($field_id = intval(substr($tbl_name,3)))) // not a field_id
+				continue;
+
+			// Make sure the field exists for this context
+			if(!isset($custom_fields[$field_id]))
+				continue; 
+
+			$field_table = sprintf("cf_%d", $field_id);
+			$value_table = '';
+			$field_key = $key;
+			
+			if(is_array($key)) {
+				if(isset($key[$custom_fields[$field_id]->context]))
+					$field_key = $key[$custom_fields[$field_id]->context];
+				else
+					continue;
+			}
+			
+			// Join value by field data type
+			switch($custom_fields[$field_id]->type) {
+				case Model_CustomField::TYPE_MULTI_LINE:
+					$value_table = 'custom_field_clobvalue';
+					break;
+				case Model_CustomField::TYPE_CHECKBOX:
+				case Model_CustomField::TYPE_DATE:
+				case Model_CustomField::TYPE_NUMBER:
+				case Model_CustomField::TYPE_WORKER:
+					$value_table = 'custom_field_numbervalue';
+					break;
+				default:
+				case Model_CustomField::TYPE_SINGLE_LINE:
+				case Model_CustomField::TYPE_DROPDOWN:
+				case Model_CustomField::TYPE_URL:
+					$value_table = 'custom_field_stringvalue';
+					break;
+			}
+
+			$has_multiple_values = false;
+			switch($custom_fields[$field_id]->type) {
+				case Model_CustomField::TYPE_MULTI_CHECKBOX:
+					$has_multiple_values = true;
+					break;
+			}
+			
+			// If we have multiple values but we don't need to WHERE the JOIN, be efficient and don't GROUP BY
+			if(!isset($params['cf_'.$field_id])) {
+				$select_sql .= sprintf(",(SELECT field_value FROM %s WHERE %s=context_id AND field_id=%d LIMIT 0,1) AS %s ",
+					$value_table,
+					$field_key,
+					$field_id,
+					$field_table
+				);
+				
+			} else {
+				$select_sql .= sprintf(", %s.field_value as %s ",
+					$field_table,
+					$field_table
+				);
+				
+				$join_sql .= sprintf("LEFT JOIN %s %s ON (%s=%s.context_id AND %s.field_id=%d) ",
+					$value_table,
+					$field_table,
+					$field_key,
+					$field_table,
+					$field_table,
+					$field_id
+				);
+				
+				// If we do need to WHERE this JOIN, make sure we GROUP BY
+				if($has_multiple_values)
+					$return_multiple_values = true;
+			}
+		}
+		
+		return array($select_sql, $join_sql, $return_multiple_values);
 	}
 };

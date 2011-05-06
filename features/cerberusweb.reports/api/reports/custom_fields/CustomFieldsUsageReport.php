@@ -1,18 +1,11 @@
 <?php
 class ChReportCustomFieldUsage extends Extension_Report {
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	function render() {
 		$db = DevblocksPlatform::getDatabaseService();
-		
 		$tpl = DevblocksPlatform::getTemplateService();
 		
-		// Custom Field sources (tickets, orgs, etc.)
-		$source_manifests = DevblocksPlatform::getExtensions('cerberusweb.fields.source', false);
-		uasort($source_manifests, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
-		$tpl->assign('source_manifests', $source_manifests);
+		// Custom Field contexts (tickets, orgs, etc.)
+		$tpl->assign('context_manifests', Extension_DevblocksContext::getAll());
 
 		// Custom Fields
 		$custom_fields = DAO_CustomField::getAll();
@@ -61,11 +54,11 @@ class ChReportCustomFieldUsage extends Extension_Report {
 			
 		$sql = sprintf("SELECT field_value, count(field_value) AS hits ".
 			"FROM %s ".
-			"WHERE source_extension = %s ".
+			"WHERE context = %s ".
 			"AND field_id = %d ".
 			"GROUP BY field_value ",
 			$table,
-			$db->qstr($field->source_extension),
+			$db->qstr($field->context),
 			$field->id
 		);
 		$rs = $db->Execute($sql);

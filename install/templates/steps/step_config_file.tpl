@@ -4,6 +4,7 @@
 <input type="hidden" name="step" value="{$smarty.const.STEP_SAVE_CONFIG_FILE}">
 <input type="hidden" name="overwrite" value="1">
 <input type="hidden" name="db_driver" value="{$db_driver}">
+<input type="hidden" name="db_engine" value="{$db_engine}">
 <input type="hidden" name="db_server" value="{$db_server}">
 <input type="hidden" name="db_name" value="{$db_name}">
 <input type="hidden" name="db_user" value="{$db_user}">
@@ -18,7 +19,7 @@ Since your environment did not support the writing of your <b>framework.config.p
 you'll need to overwrite the existing contents of the file with the following:<br>
 <br>
 <i>{$config_path}</i>:<br>
-<textarea cols="80" rows="10" name="result">{$result|escape}</textarea><br>
+<textarea cols="80" rows="10" name="result">{$result}</textarea><br>
 <br>
 <input type="submit" value="Test My Changes&gt;&gt;">
 </form>

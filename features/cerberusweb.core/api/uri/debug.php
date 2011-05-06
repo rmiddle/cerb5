@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,15 +43,11 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class ChDebugController extends DevblocksControllerExtension  {
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-		
 	/*
 	 * Request Overload
 	 */
@@ -202,22 +198,19 @@ class ChDebugController extends DevblocksControllerExtension  {
 					(extension_loaded("simplexml") ? 'YES' : 'NO'),
 					(extension_loaded("dom") ? 'YES' : 'NO'),
 					(extension_loaded("spl") ? 'YES' : 'NO'),
+					(extension_loaded("curl") ? 'YES' : 'NO'),
 					''
 				);
 				
 				if(!empty($settings)) {
 					$report_output .= sprintf(
 						"[Setting] HELPDESK_TITLE: %s\n".
-						"[Setting] DEFAULT_REPLY_FROM: %s\n".
-						"[Setting] DEFAULT_REPLY_PERSONAL: %s\n".
 						"[Setting] SMTP_HOST: %s\n".
 						"[Setting] SMTP_PORT: %s\n".
 						"[Setting] SMTP_ENCRYPTION_TYPE: %s\n".
 						"\n".
 						'%s',
 						$settings->get('cerberusweb.core',CerberusSettings::HELPDESK_TITLE,''),
-						str_replace(array('@','.'),array(' at ',' dot '),$settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,'')),
-						$settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL,''),
 						$settings->get('cerberusweb.core',CerberusSettings::SMTP_HOST,''),
 						$settings->get('cerberusweb.core',CerberusSettings::SMTP_PORT,''),
 						$settings->get('cerberusweb.core',CerberusSettings::SMTP_ENCRYPTION_TYPE,''),

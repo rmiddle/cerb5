@@ -12,20 +12,20 @@
 	<tr>
 		<td width="0%" nowrap="nowrap" align="right" valign="top"><b>From:</b> </td>
 		<td width="100%">
-			{$worker->getName()|escape} &lt;{$worker->email|escape}&gt;
+			{$worker->getName()} &lt;{$worker->email}&gt;
 		</td>
 	</tr>
 	{/if}
 	<tr>
 		<td width="0%" nowrap="nowrap" align="right" valign="top"><b>To:</b> </td>
 		<td width="100%">
-			{$draft->hint_to|escape}
+			{$draft->hint_to}
 		</td>
 	</tr>
 	<tr>
 		<td width="0%" nowrap="nowrap" align="right" valign="top"><b>Subject:</b> </td>
 		<td width="100%">
-			{$draft->subject|escape}
+			{$draft->subject}
 		</td>
 	</tr>
 	<tr>
@@ -37,16 +37,16 @@
 </table>
 
 <div id="draftPeekContent" style="width:400;height:250px;overflow:auto;border:1px solid rgb(180,180,180);padding:5px;background-color:rgb(255,255,255);" ondblclick="genericAjaxPopupClose('peek');">
-<pre class="emailbody">{$draft->body|trim|escape|devblocks_hyperlinks|devblocks_hideemailquotes}</pre>
+<pre class="emailbody">{$draft->body|trim|escape|devblocks_hyperlinks|devblocks_hideemailquotes nofilter}</pre>
 </div>
 
-{*include file="file:$core_tpl/tasks/display/tabs/notes.tpl" readonly=true*}
+{*include file="devblocks:cerberusweb.core::tasks/display/tabs/notes.tpl" readonly=true*}
 
 <br>
 
 {if $active_worker->id==$draft->worker_id || $active_worker->is_superuser}
-	{*<button type="button" onclick="genericAjaxPopupClose('peek');genericAjaxPost('formDraftPeek', 'view{$view_id}');"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>*}
-	{*{if !empty($task)}<button type="button" onclick="if(confirm('Are you sure you want to permanently delete this draft?')) { $('#formDraftPeek input[name=do_delete]').val('1'); genericAjaxPost('formDraftPeek', 'view{$view_id}'); genericAjaxPopupClose('peek'); } "><span class="cerb-sprite sprite-delete2"></span> {$translate->_('common.delete')|capitalize}</button>{/if}*}
+	{*<button type="button" onclick="genericAjaxPopupClose('peek');genericAjaxPost('formDraftPeek', 'view{$view_id}');"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')}</button>*}
+	{*{if !empty($task)}<button type="button" onclick="if(confirm('Are you sure you want to permanently delete this draft?')) { $('#formDraftPeek input[name=do_delete]').val('1'); genericAjaxPost('formDraftPeek', 'view{$view_id}'); genericAjaxPopupClose('peek'); } "><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('common.delete')|capitalize}</button>{/if}*}
 {else}
 	<div class="error">{'error.core.no_acl.edit'|devblocks_translate}</div>
 {/if}

@@ -1,98 +1,105 @@
-<h2>{$translate->_('preferences.account.settings')|capitalize}</h2>
-<br>
-
 <form action="{devblocks_url}{/devblocks_url}" onsubmit="pwsMatch=(this.change_pass.value==this.change_pass_verify.value);if(!pwsMatch)document.getElementById('preferences_error').innerHTML='The passwords entered do not match.  Try again.';return pwsMatch;" method="post">
 <input type="hidden" name="c" value="preferences">
 <input type="hidden" name="a" value="saveDefaults">
 
-<b>{$translate->_('preferences.account.password.change')|capitalize}</b><br>
-<div id="preferences_error" style="color: red; font-weight: bold;"></div>
-<table cellspacing="1" cellpadding="0" border="0">
-	<tr>
-		<td>{$translate->_('preferences.account.password.new')|capitalize}</td>
-		<td><input type="password" name="change_pass" value=""></td>
-	</tr>
-	<tr>
-		<td>{$translate->_('preferences.account.password.verify')|capitalize}</td>
-		<td><input type="password" name="change_pass_verify"=""></td>
-	</tr>
-</table>
-<br>
+<fieldset>
+	<legend>{$translate->_('preferences.account.settings')|capitalize}</legend>
 
-<b>{$translate->_('preferences.account.timezone')|capitalize}</b> {if !empty($server_timezone)}({$translate->_('preferences.account.current')} {$server_timezone}){/if}<br>
-<select name="timezone">
-	{foreach from=$timezones item=tz}
-		<option value="{$tz}" {if $tz==$server_timezone}selected{/if}>{$tz}</option>
-	{/foreach}
-</select><br>
-<br>
+	<b>{$translate->_('preferences.account.timezone')|capitalize}</b> {if !empty($server_timezone)}({$translate->_('preferences.account.current')} {$server_timezone}){/if}<br>
+	<select name="timezone">
+		{foreach from=$timezones item=tz}
+			<option value="{$tz}" {if $tz==$server_timezone}selected{/if}>{$tz}</option>
+		{/foreach}
+	</select><br>
+	<br>
 
-<b>{$translate->_('preferences.account.language')|capitalize}</b> {if !empty($selected_language) && isset($langs.$selected_language)}({$translate->_('preferences.account.current')} {$langs.$selected_language}){/if}<br>
-<select name="lang_code">
-	{foreach from=$langs key=lang_code item=lang_name}
-		<option value="{$lang_code}" {if $lang_code==$selected_language}selected{/if}>{$lang_name}</option>
-	{/foreach}
-</select><br>
-<br>
+	<b>{$translate->_('preferences.account.language')|capitalize}</b> {if !empty($selected_language) && isset($langs.$selected_language)}({$translate->_('preferences.account.current')} {$langs.$selected_language}){/if}<br>
+	<select name="lang_code">
+		{foreach from=$langs key=lang_code item=lang_name}
+			<option value="{$lang_code}" {if $lang_code==$selected_language}selected{/if}>{$lang_name}</option>
+		{/foreach}
+	</select><br>
+	<br>
 
-<h2>{$translate->_('preferences.account.email')|capitalize}</h2>
-{$translate->_('preferences.account.email.associated')}<br>
-<br>
-<table cellspacing="0" cellpadding="2" border="0">
-	<tr>
-		<td style="padding-right:10px;"><b>{$translate->_('preferences.account.email.address')|capitalize}</b></td>
-		<td style="padding-right:10px;"><b>{$translate->_('preferences.account.email.address.confirmed')|capitalize}</b></td>
-		<td><b>Delete</b></td>
-	</tr>
-	{foreach from=$addresses item=address}
-	<tr>
-		<td style="padding-right:10px;">{$address->address}</td>
-		<td style="padding-right:10px;">
-			{if $address->is_confirmed}
-				yes
-			{else}
-				no, <a href="javascript:;" onclick="document.resendConfirmationForm.email.value='{$address->address}';document.resendConfirmationForm.submit();">{$translate->_('preferences.account.email.address.resend.confirm')}</a>
-			{/if}
-		</td>
-		<td>
+	<b>{$translate->_('preferences.account.assist')|capitalize}</b><br>
+	<label><input type="checkbox" name="assist_mode" value="1" {if $assist_mode eq 1}checked{/if}> {$translate->_('common.enabled')|capitalize}</label><br>
+	<br>
+
+	<b>{$translate->_('preferences.account.keyboard.shortcuts')|capitalize}</b><br>
+	<label><input type="checkbox" name="keyboard_shortcuts" value="1" {if $keyboard_shortcuts eq 1}checked{/if}> {$translate->_('common.enabled')|capitalize}</label><br>
+	
+</fieldset>
+
+<fieldset>
+	<legend>{'common.mail'|devblocks_translate|capitalize}</legend>
+	
+	<b>{$translate->_('common.options')|capitalize}:</b>
+	<div style="margin:0px 0px 10px 10px;">
+		<label><input type="checkbox" name="mail_always_show_all" value="1" {if $mail_always_show_all}checked{/if}> {$translate->_('preferences.account.mail.readall')}</label><br>
+	</div>
+
+	<b>Signature:</b>
+	<div style="margin:0px 0px 10px 10px;">
+		<label><input type="radio" name="mail_signature_pos" value="0" {if empty($mail_signature_pos)}checked="checked"{/if}> Don't automatically insert signature.</label><br>
+		<label><input type="radio" name="mail_signature_pos" value="1" {if 1==$mail_signature_pos}checked="checked"{/if}> Insert above quoted message.</label><br>
+		<label><input type="radio" name="mail_signature_pos" value="2" {if 2==$mail_signature_pos}checked="checked"{/if}> Insert below quoted message.</label><br>
+	</div>
+</fieldset>
+
+<fieldset>
+	<legend>{$translate->_('preferences.account.email')|capitalize}</legend>
+
+	{$translate->_('preferences.account.email.associated')}<br>
+
+	<ul id="listWorkerEmailAddresses" style="padding:0px;margin:5px 0px 0px 10px;list-style:none;">
+		{foreach from=$addresses item=address}
+		<li style="padding-bottom:10px;">
+			<input type="hidden" name="worker_emails[]" value="{$address->address}">
+
 			{if $address->address==$active_worker->email}
-				(primary)
+			<button type="button"><span class="cerb-sprite2 sprite-tick-circle-frame-gray"></span></button>
 			{else}
-				<input type="checkbox" name="email_delete[]" value="{$address->address}">
+			<button type="button" onclick="if(confirm('Are you sure you want to delete this email address?')) { $(this).closest('li').remove(); }" class="delete"><span class="cerb-sprite2 sprite-minus-circle-frame"></span></button>
 			{/if}
-		</td>
-	</tr>
-	{/foreach}
-</table>
-<br>
-<b>{$translate->_('preferences.account.email.address.add')}</b> <input type="text" name="new_email" size="45" value=""><br>
-<br>
 
-<h2>{$translate->_('preferences.account.preferences')|capitalize}</h2>
-<br>
+			<b>{$address->address}</b>
 
-<b>{$translate->_('preferences.account.assist')|capitalize}</b><br>
-<label><input type="checkbox" name="assist_mode" value="1" {if $assist_mode eq 1}checked{/if}> {$translate->_('common.enabled')|capitalize}</label><br>
-<br>
+			{if $address->is_confirmed}
+				{if $address->address==$active_worker->email}
+				(Primary)
+				{/if}
+			{else}
+			<i>(Pending Verification:</i> <a href="javascript:;" style="font-style:italic;" onclick="document.resendConfirmationForm.email.value='{$address->address}';document.resendConfirmationForm.submit();">{$translate->_('preferences.account.email.address.resend.confirm')}</a>)
+			{/if}
+		</li>
+		{/foreach}
+		<li>
+			{$translate->_('preferences.account.email.address.add')}<br>
+			<div style="padding:5px;">
+				<input type="text" name="new_email" size="45" value="" class="input_email">
+			</div>
+		</li>
+	</ul>
+</fieldset>
 
-<b>{$translate->_('preferences.account.keyboard.shortcuts')|capitalize}</b><br>
-<label><input type="checkbox" name="keyboard_shortcuts" value="1" {if $keyboard_shortcuts eq 1}checked{/if}> {$translate->_('common.enabled')|capitalize}</label><br>
-<br>
+<fieldset>
+	<legend>{$translate->_('preferences.account.password.change')|capitalize}</legend>
 
-<b>{$translate->_('preferences.account.mail')|capitalize}</b><br>
-<label><input type="checkbox" name="mail_always_show_all" value="1" {if $mail_always_show_all}checked{/if}> {$translate->_('preferences.account.mail.readall')}</label><br>
-<br>
+	<table cellspacing="1" cellpadding="0" border="0">
+		<tr>
+			<td>{$translate->_('preferences.account.password.new')|capitalize}</td>
+			<td><input type="password" name="change_pass" value=""></td>
+		</tr>
+		<tr>
+			<td>{$translate->_('preferences.account.password.verify')|capitalize}</td>
+			<td><input type="password" name="change_pass_verify"=""></td>
+		</tr>
+	</table>
 
+	<div id="preferences_error" style="color:red;font-weight:bold;"></div>
+</fieldset>
 
-<!-- 
-<b>Timezone:</b><br>
-<select name="timezone">
-	<option value="">---</option>
-</select><br>
-<br>
- -->
-
-<button type="submit"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
+<button type="submit"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')}</button>
 </form>
 
 <form action="{devblocks_url}{/devblocks_url}" name="resendConfirmationForm" method="post">

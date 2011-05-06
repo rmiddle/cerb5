@@ -1,7 +1,6 @@
-<div id="headerSubMenu">
-	<div style="padding-bottom:5px;">
-	</div>
-</div>
+<ul class="submenu">
+</ul>
+<div style="clear:both;"></div>
 
 <h2>{$translate->_('reports.ui.ticket.waiting_tickets')}</h2>
 
@@ -25,7 +24,7 @@
 <script type="text/javascript">
 series1 = [
 {foreach from=$data item=plot key=null name=plots}
-[{$plot.hits},'{$plot.value|escape}']{if !$smarty.foreach.plots.last},{/if}
+[{$plot.hits},'{$plot.value}']{if !$smarty.foreach.plots.last},{/if}
 {/foreach}
 ];
 

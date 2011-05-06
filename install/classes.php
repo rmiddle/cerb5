@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,7 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
@@ -58,7 +58,7 @@ class CerberusInstaller {
 	 * @param ... [TODO]
 	 * @return string 'config', 'tmp' or FALSE
 	 */
-	public static function saveFrameworkConfig($db_driver, $encoding, $db_server, $db_name, $db_user, $db_pass) {
+	public static function saveFrameworkConfig($db_driver, $db_engine, $encoding, $db_server, $db_name, $db_user, $db_pass) {
 		$buffer = array();
 		@$fp_in = fopen(APP_PATH . "/framework.config.php","r");
 		
@@ -76,6 +76,9 @@ class CerberusInstaller {
 				switch(strtoupper($token)) {
 					case "APP_DB_DRIVER":
 						$value = $db_driver;
+						break;
+					case "APP_DB_ENGINE":
+						$value = $db_engine;
 						break;
 					case "APP_DB_HOST":
 						$value = $db_server;

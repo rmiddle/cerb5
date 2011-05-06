@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -272,6 +272,7 @@ switch($step) {
 	case STEP_DATABASE:
 		// Import scope (if post)
 		@$db_driver = DevblocksPlatform::importGPC($_POST['db_driver'],'string');
+		@$db_engine = DevblocksPlatform::importGPC($_POST['db_engine'],'string');
 		@$db_server = DevblocksPlatform::importGPC($_POST['db_server'],'string');
 		@$db_name = DevblocksPlatform::importGPC($_POST['db_name'],'string');
 		@$db_user = DevblocksPlatform::importGPC($_POST['db_user'],'string');
@@ -290,22 +291,114 @@ switch($step) {
 		
 		$drivers = array();
 		
-		if(extension_loaded('mysql')) {
-			$drivers['mysql'] = 'MySQL 3.23/4.x/5.x';
-		}
+		if(extension_loaded('mysqli'))
+			$drivers['mysqli'] = 'MySQLi (Recommended)';
+		if(extension_loaded('mysql'))
+			$drivers['mysql'] = 'MySQL';
 		
 		$tpl->assign('drivers', $drivers);
 		
-		if(!empty($db_driver) && !empty($db_server) && !empty($db_name) && !empty($db_user)) {
+		// [JAS]: Possible storage engines
+		
+		$engines = array(
+			'myisam' => 'MyISAM (Default)',
+			'innodb' => 'InnoDB (Recommended)',
+		);
+		
+		$tpl->assign('engines', $engines);
+		
+		if(!empty($db_driver) && !empty($db_engine) && !empty($db_server) && !empty($db_name) && !empty($db_user)) {
 			$db_passed = false;
+			$errors = array();
 			
-			if(false != ($_db = mysql_connect($db_server, $db_user, $db_pass))) {
+			if(false !== (@$_db = mysql_connect($db_server, $db_user, $db_pass))) {
 				if(false !== mysql_select_db($db_name, $_db)) {
 					$db_passed = true;
+				} else {
+					$db_passed = false;
+					$errors[] = mysql_error($_db);
 				}
+				
+				// Check if the engine we want exists, otherwise default
+				$rs = mysql_query("SHOW ENGINES", $_db);
+				$discovered_engines = array();
+				while($row = mysql_fetch_assoc($rs)) {
+					$discovered_engines[] = strtolower($row['Engine']);
+				}
+				mysql_free_result($rs);
+
+				// Check the preferred DB engine
+				if(!in_array($db_engine, $discovered_engines)) {
+					$db_passed = false;
+					$errors[] = sprintf("The '%s' storage engine is not enabled.", $db_engine);
+				}
+
+				// We need this for fulltext indexing
+				if(!in_array('myisam', $discovered_engines)) {
+					$db_passed = false;
+					$errors[] = "The 'MyISAM' storage engine is not enabled and is required for fulltext search.";
+				}
+
+				// Check user privileges
+				if($db_passed) {
+					// CREATE TABLE
+					if($db_passed && false === mysql_query("CREATE TABLE IF NOT EXISTS _installer_test_suite (id int)", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the CREATE privilege.");
+					}
+					// INSERT
+					if($db_passed && false === mysql_query("INSERT INTO _installer_test_suite (id) values(1)", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the INSERT privilege.");
+					}
+					// SELECT
+					if($db_passed && false === mysql_query("SELECT id FROM _installer_test_suite", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the SELECT privilege.");
+					}
+					// UPDATE
+					if($db_passed && false === mysql_query("UPDATE _installer_test_suite SET id = 2", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the UPDATE privilege.");
+					}
+					// DELETE
+					if($db_passed && false === mysql_query("DELETE FROM _installer_test_suite WHERE id > 0", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the DELETE privilege.");
+					}
+					// ALTER TABLE
+					if($db_passed && false === mysql_query("ALTER TABLE _installer_test_suite MODIFY COLUMN id int unsigned", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the ALTER privilege.");
+					}
+					// DROP TABLE
+					if($db_passed && false === mysql_query("DROP TABLE IF EXISTS _installer_test_suite", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the DROP privilege.");
+					}
+					// CREATE TEMPORARY TABLES
+					if($db_passed && false === mysql_query("CREATE TEMPORARY TABLE IF NOT EXISTS _installer_test_suite_tmp (id int)", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the CREATE TEMPORARY TABLES privilege.");
+					}
+					if($db_passed && false === mysql_query("DROP TABLE IF EXISTS _installer_test_suite_tmp", $_db)) {
+						$db_passed = false;
+					}
+					
+					// Privs summary
+					if(!$db_passed)
+						$errors[] = sprintf("The database user must have the following privileges: CREATE, ALTER, DROP, SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES");
+				}
+				
+				unset($discovered_engines);
+				
+			} else {
+				$db_passed = false;
+				$errors[] = "Database connection failed!  Please check your settings and try again.";
 			}
 			
 			$tpl->assign('db_driver', $db_driver);
+			$tpl->assign('db_engine', $db_engine);
 			$tpl->assign('db_server', $db_server);
 			$tpl->assign('db_name', $db_name);
 			$tpl->assign('db_user', $db_user);
@@ -317,7 +410,7 @@ switch($step) {
 				$encoding = (is_array($row) && 0==strcasecmp($row[1],'utf8')) ? 'utf8' : 'latin1';
 				
 				// Write database settings to framework.config.php
-				$result = CerberusInstaller::saveFrameworkConfig($db_driver, $encoding, $db_server, $db_name, $db_user, $db_pass);
+				$result = CerberusInstaller::saveFrameworkConfig($db_driver, $db_engine, $encoding, $db_server, $db_name, $db_user, $db_pass);
 				
 				// [JAS]: If we didn't save directly to the config file, user action required
 				if(0 != strcasecmp($result,'config')) {
@@ -333,6 +426,7 @@ switch($step) {
 				
 			} else { // If failed, re-enter
 				$tpl->assign('failed', true);
+				$tpl->assign('errors', $errors);
 				$tpl->assign('template', 'steps/step_database.tpl');
 			}
 			
@@ -345,6 +439,7 @@ switch($step) {
 	// [JAS]: If we didn't save directly to the config file, user action required		
 	case STEP_SAVE_CONFIG_FILE:
 		@$db_driver = DevblocksPlatform::importGPC($_POST['db_driver'],'string');
+		@$db_engine = DevblocksPlatform::importGPC($_POST['db_engine'],'string');
 		@$db_server = DevblocksPlatform::importGPC($_POST['db_server'],'string');
 		@$db_name = DevblocksPlatform::importGPC($_POST['db_name'],'string');
 		@$db_user = DevblocksPlatform::importGPC($_POST['db_user'],'string');
@@ -354,6 +449,7 @@ switch($step) {
 		// Check to make sure our constants match our input
 		if(
 			0 == strcasecmp($db_driver,APP_DB_DRIVER) &&
+			0 == strcasecmp($db_engine,APP_DB_ENGINE) &&
 			0 == strcasecmp($db_server,APP_DB_HOST) &&
 			0 == strcasecmp($db_name,APP_DB_DATABASE) &&
 			0 == strcasecmp($db_user,APP_DB_USER) &&
@@ -365,6 +461,7 @@ switch($step) {
 			
 		} else { // oops!
 			$tpl->assign('db_driver', $db_driver);
+			$tpl->assign('db_engine', $db_engine);
 			$tpl->assign('db_server', $db_server);
 			$tpl->assign('db_name', $db_name);
 			$tpl->assign('db_user', $db_user);
@@ -405,10 +502,10 @@ switch($step) {
 					case 'cerberusweb.feedback':
 					case 'cerberusweb.kb':
 					case 'cerberusweb.reports':
+					case 'cerberusweb.support_center':
 					case 'cerberusweb.simulator':
 					case 'cerberusweb.timetracking':
 					case 'cerberusweb.watchers':
-					case 'usermeet.core':
 						$plugin->setEnabled(true);
 						break;
 					
@@ -456,26 +553,42 @@ switch($step) {
 	case STEP_CONTACT:
 		$settings = DevblocksPlatform::getPluginSettingsService();
 		
-		@$default_reply_from = DevblocksPlatform::importGPC($_POST['default_reply_from'],'string',$settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM));
-		@$default_reply_personal = DevblocksPlatform::importGPC($_POST['default_reply_personal'],'string',$settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL,CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL));
+		@$default_reply_from = DevblocksPlatform::importGPC($_POST['default_reply_from'],'string','do-not-reply@localhost');
+		@$default_reply_personal = DevblocksPlatform::importGPC($_POST['default_reply_personal'],'string','');
 		@$helpdesk_title = DevblocksPlatform::importGPC($_POST['helpdesk_title'],'string',$settings->get('cerberusweb.core',CerberusSettings::HELPDESK_TITLE,CerberusSettingsDefaults::HELPDESK_TITLE));
 		@$form_submit = DevblocksPlatform::importGPC($_POST['form_submit'],'integer');
 		
 		if(!empty($form_submit) && !empty($default_reply_from)) {
 			
 			$validate = imap_rfc822_parse_adrlist(sprintf("<%s>", $default_reply_from),"localhost");
+
+			$fields = array(
+				DAO_AddressOutgoing::REPLY_SIGNATURE => '',
+			);
 			
 			if(!empty($default_reply_from) && is_array($validate) && 1==count($validate)) {
-				$settings->set('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM, $default_reply_from);
+				if(null != ($address = DAO_Address::lookupAddress($default_reply_from, true))) {
+					$address_id = $address->id;
+					$fields[DAO_AddressOutgoing::ADDRESS_ID] = $address->id; 
+				}
 			}
 			
 			if(!empty($default_reply_personal)) {
-				$settings->set('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL, $default_reply_personal);
+				$fields[DAO_AddressOutgoing::REPLY_PERSONAL] = $default_reply_personal; 
+			}
+
+			// Create or update
+			if(null == DAO_AddressOutgoing::get($address->id)) {
+				$address_id = DAO_AddressOutgoing::create($fields);
+			} else {
+				DAO_AddressOutgoing::update($address->id, $fields);
 			}
 			
-			if(!empty($helpdesk_title)) {
+			if(!empty($address_id))
+				DAO_AddressOutgoing::setDefault($address_id);
+			
+			if(!empty($helpdesk_title))
 				$settings->set('cerberusweb.core',CerberusSettings::HELPDESK_TITLE, $helpdesk_title);
-			}
 			
 			$tpl->assign('step', STEP_OUTGOING_MAIL);
 			$tpl->display('steps/redirect.tpl');
@@ -590,9 +703,7 @@ switch($step) {
 					
 					// Dispatch Spam Bucket
 					$dispatch_spam_bid = DAO_Bucket::create('Spam', $dispatch_gid);
-					DAO_GroupSettings::set($dispatch_gid,DAO_GroupSettings::SETTING_SPAM_ACTION,'2');
-					DAO_GroupSettings::set($dispatch_gid,DAO_GroupSettings::SETTING_SPAM_ACTION_PARAM,$dispatch_spam_bid);
-					DAO_GroupSettings::set($dispatch_gid,DAO_GroupSettings::SETTING_SPAM_THRESHOLD,'85');
+					// [TODO] Create spam quarantine behavior in Attendant
 					
 					// Support Group
 					$support_gid = DAO_Group::createTeam(array(
@@ -601,9 +712,7 @@ switch($step) {
 
 					// Support Spam Bucket
 					$support_spam_bid = DAO_Bucket::create('Spam', $support_gid);
-					DAO_GroupSettings::set($support_gid,DAO_GroupSettings::SETTING_SPAM_ACTION,'2');
-					DAO_GroupSettings::set($support_gid,DAO_GroupSettings::SETTING_SPAM_ACTION_PARAM,$support_spam_bid);
-					DAO_GroupSettings::set($support_gid,DAO_GroupSettings::SETTING_SPAM_THRESHOLD,'85');
+					// [TODO] Create spam quarantine behavior in Attendant
 					
 					// Sales Group
 					$sales_gid = DAO_Group::createTeam(array(
@@ -612,9 +721,7 @@ switch($step) {
 					
 					// Sales Spam Bucket
 					$sales_spam_bid = DAO_Bucket::create('Spam', $sales_gid);
-					DAO_GroupSettings::set($sales_gid,DAO_GroupSettings::SETTING_SPAM_ACTION,'2');
-					DAO_GroupSettings::set($sales_gid,DAO_GroupSettings::SETTING_SPAM_ACTION_PARAM,$sales_spam_bid);
-					DAO_GroupSettings::set($sales_gid,DAO_GroupSettings::SETTING_SPAM_THRESHOLD,'85');
+					// [TODO] Create spam quarantine behavior in Attendant
 					
 					// Default catchall
 					DAO_Group::updateTeam($dispatch_gid, array(
@@ -655,10 +762,12 @@ switch($step) {
 				}
 				
 				// Send a first ticket which allows people to reply for support
-				if(null !== ($default_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM))) {
+				$replyto_default = DAO_AddressOutgoing::getDefault();
+				
+				if(null != $replyto_default) {
 					$message = new CerberusParserMessage();
 						$message->headers['from'] = '"WebGroup Media, LLC." <support@webgroupmedia.com>';
-						$message->headers['to'] = $default_from;
+						$message->headers['to'] = $replyto_default->email;
 						$message->headers['subject'] = "Welcome to Cerberus Helpdesk 5.x!";
 						$message->headers['date'] = date('r');
 						$message->headers['message-id'] = CerberusApplication::generateMessageId();
@@ -718,9 +827,6 @@ EOF;
 			@$contact_company = stripslashes($_REQUEST['contact_company']);
 			
 			if(empty($skip) && !empty($contact_name)) {
-				$settings = DevblocksPlatform::getPluginSettingsService();
-				@$default_from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
-				
 				@$contact_phone = stripslashes($_REQUEST['contact_phone']);
 				@$contact_refer = stripslashes($_REQUEST['contact_refer']);
 				@$q1 = stripslashes($_REQUEST['q1']);
@@ -728,12 +834,6 @@ EOF;
 				@$q3 = stripslashes($_REQUEST['q3']);
 				@$q4 = stripslashes($_REQUEST['q4']);
 				@$q5 = stripslashes($_REQUEST['q5']);
-				//@$q5_support = stripslashes($_REQUEST['q5_support']);
-				//@$q5_opensource = stripslashes($_REQUEST['q5_opensource']);
-				//@$q5_price = stripslashes($_REQUEST['q5_price']);
-				//@$q5_updates = stripslashes($_REQUEST['q5_updates']);
-				//@$q5_developers = stripslashes($_REQUEST['q5_developers']);
-				//@$q5_community = stripslashes($_REQUEST['q5_community']);
 				@$comments = stripslashes($_REQUEST['comments']);
 				
 				if(isset($_REQUEST['form_submit'])) {
@@ -748,9 +848,6 @@ EOF;
 				    "#3: Are you considering both free and commercial solutions?\r\n%s\r\n\r\n".
 				    "#4: What will be your first important milestone?\r\n%s\r\n\r\n".
 				    "#5: How many workers do you expect to use the helpdesk simultaneously?\r\n%s\r\n\r\n".
-//				    "#5: How important are the following benefits in making your decision?\r\n".
-//				    "Near-Instant Support: %d\r\nAvailable Source Code: %d\r\nCompetitive Purchase Price: %d\r\n".
-//				    "Frequent Product Updates: %d\r\nAccess to Developers: %d\r\nLarge User Community: %d\r\n".
 				    "\r\n".
 				    "Additional Comments: \r\n%s\r\n\r\n"
 				    ,
@@ -763,12 +860,6 @@ EOF;
 				    $q3,
 				    $q4,
 				    $q5,
-				    //$q5_support,
-				    //$q5_opensource,
-				    //$q5_price,
-				    //$q5_updates,
-				    //$q5_developers,
-				    //$q5_community,
 				    $comments
 				  );
 

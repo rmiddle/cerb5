@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,7 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
@@ -152,6 +152,49 @@ class DAO_Message extends DevblocksORMHelper {
 		));
 	}
 
+	static function delete($ids) {
+    	$db = DevblocksPlatform::getDatabaseService();
+    	
+		if(!is_array($ids))
+			$ids = array($ids);
+		
+		if(empty($ids))
+			return array();
+			
+		$ids_list = implode(',', $ids);
+		
+    	$messages = DAO_Message::getWhere(sprintf("%s IN (%s)",
+    		DAO_Message::ID,
+    		$ids_list
+    	));
+		
+    	// Message Headers
+    	DAO_MessageHeader::deleteById($ids);
+    	
+    	// Message Content
+    	Storage_MessageContent::delete($ids);
+    	
+    	// Search indexes
+    	Search_MessageContent::delete($ids);
+    	
+    	// Attachments
+    	DAO_AttachmentLink::removeAllByContext(CerberusContexts::CONTEXT_MESSAGE, $ids);
+    	
+    	// Context links
+    	DAO_ContextLink::delete(CerberusContexts::CONTEXT_MESSAGE, $ids);
+
+    	// Messages
+    	$sql = sprintf("DELETE FROM message WHERE id IN (%s)",
+    		$ids_list
+    	);
+    	$db->Execute($sql);
+    	
+    	// Remap first/last on ticket
+    	foreach($messages as $message_id => $message) {
+    		DAO_Ticket::rebuild($message->ticket_id);
+    	}
+	}
+	
     static function maint() {
     	$db = DevblocksPlatform::getDatabaseService();
     	$logger = DevblocksPlatform::getConsoleLog();
@@ -185,47 +228,32 @@ class DAO_Message extends DevblocksORMHelper {
 		// Purge messages without linked tickets  
 		$sql = "DELETE QUICK message FROM message LEFT JOIN ticket ON message.ticket_id = ticket.id WHERE ticket.id IS NULL";
 		$db->Execute($sql);
-		
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' message records.');
 		
 		// Headers
 		$sql = "DELETE QUICK message_header FROM message_header LEFT JOIN message ON message_header.message_id = message.id WHERE message.id IS NULL";
 		$db->Execute($sql);
-
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' message_header records.');
+
+		// Attachments
+		$sql = "DELETE QUICK attachment_link FROM attachment_link LEFT JOIN message ON (attachment_link.context_id=message.id) WHERE attachment_link.context = 'cerberusweb.contexts.message' AND message.id IS NULL";
+		$db->Execute($sql);
+		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' message attachment_links.');
 		
 		// Search indexes
-
 		$sql = "DELETE QUICK fulltext_message_content FROM fulltext_message_content LEFT JOIN message ON fulltext_message_content.id = message.id WHERE message.id IS NULL";
 		$db->Execute($sql);
-		
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' fulltext_message_content records.');
-		
-		// Attachments
-		DAO_Attachment::maint();
     }
     
-    /**
-     * Enter description here...
-     *
-     * @param DevblocksSearchCriteria[] $params
-     * @param integer $limit
-     * @param integer $page
-     * @param string $sortBy
-     * @param boolean $sortAsc
-     * @param boolean $withCounts
-     * @return array
-     */
-    static function search($params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_Message::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
+		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy]))
 			$sortBy=null;
 
         list($tables,$wheres,$selects) = parent::_parseSearchParams($params, array(),$fields,$sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
 
 		$select_sql = sprintf("SELECT ".
 			"m.id as %s, ".
@@ -268,7 +296,42 @@ class DAO_Message extends DevblocksORMHelper {
 			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
+		
+		$result = array(
+			'primary_table' => 'm',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => false,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+    
+    /**
+     * Enter description here...
+     *
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
 
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents(array(),$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
@@ -276,7 +339,7 @@ class DAO_Message extends DevblocksORMHelper {
 			($has_multiple_values ? 'GROUP BY m.id ' : '').
 			$sort_sql;
 		
-		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
 		$results = array();
 		
@@ -291,7 +354,6 @@ class DAO_Message extends DevblocksORMHelper {
 		
 		// [JAS]: Count all
 		$total = -1;
-		$has_multiple_values = false;
 		if($withCounts) {
 			$count_sql = 
 				($has_multiple_values ? "SELECT COUNT(DISTINCT m.id) " : "SELECT COUNT(m.id) ").
@@ -358,14 +420,17 @@ class SearchFields_Message implements IDevblocksSearchFields {
 			SearchFields_Message::MESSAGE_HEADER_NAME => new DevblocksSearchField(SearchFields_Message::MESSAGE_HEADER_NAME, 'mh', 'header_name'),
 			SearchFields_Message::MESSAGE_HEADER_VALUE => new DevblocksSearchField(SearchFields_Message::MESSAGE_HEADER_VALUE, 'mh', 'header_value'),
 			
-			SearchFields_Message::MESSAGE_CONTENT => new DevblocksSearchField(SearchFields_Message::MESSAGE_CONTENT, 'ftmc', 'content'),
-			
 			SearchFields_Message::ADDRESS_EMAIL => new DevblocksSearchField(SearchFields_Message::ADDRESS_EMAIL, 'a', 'email', $translate->_('common.email')),
 			
 			SearchFields_Message::TICKET_GROUP_ID => new DevblocksSearchField(SearchFields_Message::TICKET_GROUP_ID, 't', 'team_id', $translate->_('common.group')),
 			SearchFields_Message::TICKET_MASK => new DevblocksSearchField(SearchFields_Message::TICKET_MASK, 't', 'mask', $translate->_('ticket.mask')),
 			SearchFields_Message::TICKET_SUBJECT => new DevblocksSearchField(SearchFields_Message::TICKET_SUBJECT, 't', 'subject', $translate->_('ticket.subject')),
 		);
+	
+		$tables = DevblocksPlatform::getDatabaseTables();
+		if(isset($tables['fulltext_message_content'])) {
+			$columns[SearchFields_Message::MESSAGE_CONTENT] = new DevblocksSearchField(SearchFields_Message::MESSAGE_CONTENT, 'ftmc', 'content', $translate->_('common.content')); 
+		}
 		
 		// Sort by label (translation-conscious)
 		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
@@ -416,8 +481,11 @@ class Model_Message {
 	 * @return Model_Attachment[]
 	 */
 	function getAttachments() {
-		$attachments = DAO_Attachment::getByMessageId($this->id);
-		return $attachments;
+		return DAO_Attachment::getByContextIds(CerberusContexts::CONTEXT_MESSAGE, $this->id);
+	}
+	
+	function getLinksAndAttachments() {
+		return DAO_AttachmentLink::getLinksAndAttachments(CerberusContexts::CONTEXT_MESSAGE, $this->id);
 	}
 };
 
@@ -463,14 +531,20 @@ class Search_MessageContent {
 		if(!empty($id))
 			DAO_DevblocksExtensionPropertyStore::put(self::ID, 'last_indexed_id', $id);
 	}
+	
+	public static function delete($ids) {
+		if(false == ($search = DevblocksPlatform::getSearchService())) {
+			$logger->error("[Search] The search engine is misconfigured.");
+			return;
+		}
+		
+		$ns = 'message_content';
+		return $search->delete($ns, $ids);
+	}
 };
 
 class Storage_MessageContent extends Extension_DevblocksStorageSchema {
 	const ID = 'cerberusweb.storage.schema.message_content';
-	
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
 	
 	public static function getActiveStorageProfile() {
 		return DAO_DevblocksExtensionPropertyStore::get(self::ID, 'active_storage_profile', 'devblocks.storage.engine.database');
@@ -478,24 +552,22 @@ class Storage_MessageContent extends Extension_DevblocksStorageSchema {
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(dirname(__FILE__))) . '/templates';
 		
 		$tpl->assign('active_storage_profile', $this->getParam('active_storage_profile'));
 		$tpl->assign('archive_storage_profile', $this->getParam('archive_storage_profile'));
 		$tpl->assign('archive_after_days', $this->getParam('archive_after_days'));
 		
-		$tpl->display("file:{$path}/configuration/tabs/storage/schemas/message_content/render.tpl");
+		$tpl->display("devblocks:cerberusweb.core::configuration/section/storage_profiles/schemas/message_content/render.tpl");
 	}	
 	
 	function renderConfig() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(dirname(__FILE__))) . '/templates';
 		
 		$tpl->assign('active_storage_profile', $this->getParam('active_storage_profile'));
 		$tpl->assign('archive_storage_profile', $this->getParam('archive_storage_profile'));
 		$tpl->assign('archive_after_days', $this->getParam('archive_after_days'));
 		
-		$tpl->display("file:{$path}/configuration/tabs/storage/schemas/message_content/config.tpl");
+		$tpl->display("devblocks:cerberusweb.core::configuration/section/storage_profiles/schemas/message_content/config.tpl");
 	}
 	
 	function saveConfig() {
@@ -839,6 +911,19 @@ class DAO_MessageHeader {
         return $headers;
     }
     
+    static function getOne($message_id, $header_name) {
+        $db = DevblocksPlatform::getDatabaseService();
+        
+        $sql = sprintf("SELECT header_value ".
+            "FROM message_header ".
+            "WHERE message_id = %d ".
+            "AND header_name = %s ",
+        	$message_id,
+        	$db->qstr($header_name)
+        );
+        return $db->GetOne($sql); 
+    }
+    
     static function getUnique() {
         $db = DevblocksPlatform::getDatabaseService();
         $headers = array();
@@ -856,9 +941,24 @@ class DAO_MessageHeader {
         
         return $headers;
     }
+    
+    static function deleteById($ids) {
+    	if(!is_array($ids))
+    		$ids = array($ids);
+    	
+    	if(empty($ids))
+    		return;
+    		
+        $db = DevblocksPlatform::getDatabaseService();
+    	
+        $sql = sprintf("DELETE FROM message_header WHERE message_id IN (%s)",
+        	implode(',', $ids)
+        );
+        $db->Execute($sql);
+    }
 };
 
-class View_Message extends C4_AbstractView {
+class View_Message extends C4_AbstractView implements IAbstractView_Subtotals {
 	const DEFAULT_ID = 'messages';
 
 	function __construct() {
@@ -904,6 +1004,82 @@ class View_Message extends C4_AbstractView {
 		);
 	}
 
+	function getSubtotalFields() {
+		$all_fields = $this->getParamsAvailable();
+		
+		$fields = array();
+
+		if(is_array($all_fields))
+		foreach($all_fields as $field_key => $field_model) {
+			$pass = false;
+			
+			switch($field_key) {
+				// Booleans
+				case SearchFields_Message::ADDRESS_EMAIL:
+				case SearchFields_Message::IS_OUTGOING:
+				case SearchFields_Message::TICKET_GROUP_ID:
+				case SearchFields_Message::WORKER_ID:
+					$pass = true;
+					break;
+					
+				// Valid custom fields
+				default:
+					if('cf_' == substr($field_key,0,3))
+						$pass = $this->_canSubtotalCustomField($field_key);
+					break;
+			}
+			
+			if($pass)
+				$fields[$field_key] = $field_model;
+		}
+		
+		return $fields;
+	}
+	
+	function getSubtotalCounts($column) {
+		$counts = array();
+		$fields = $this->getFields();
+
+		if(!isset($fields[$column]))
+			return array();
+		
+		switch($column) {
+			case SearchFields_Message::ADDRESS_EMAIL:
+				$counts = $this->_getSubtotalCountForStringColumn('DAO_Message', $column);
+				break;
+				
+			case SearchFields_Message::TICKET_GROUP_ID:
+				$groups = DAO_Group::getAll();
+				$label_map = array();
+				foreach($groups as $group_id => $group)
+					$label_map[$group_id] = $group->name;
+				$counts = $this->_getSubtotalCountForStringColumn('DAO_Message', $column, $label_map, 'in', 'group_id[]');
+				break;
+				
+			case SearchFields_Message::WORKER_ID:
+				$workers = DAO_Worker::getAll();
+				$label_map = array();
+				foreach($workers as $worker_id => $worker)
+					$label_map[$worker_id] = $worker->getName();
+				$counts = $this->_getSubtotalCountForStringColumn('DAO_Message', $column, $label_map, 'in', 'worker_id[]');
+				break;
+
+			case SearchFields_Message::IS_OUTGOING:
+				$counts = $this->_getSubtotalCountForBooleanColumn('DAO_Message', $column);
+				break;
+			
+			default:
+				// Custom fields
+				if('cf_' == substr($column,0,3)) {
+					$counts = $this->_getSubtotalCountForCustomColumn('DAO_Message', $column, 'm.id');
+				}
+				
+				break;
+		}
+		
+		return $counts;
+	}	
+	
 	function render() {
 		$this->_sanitize();
 		
@@ -911,15 +1087,16 @@ class View_Message extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-//		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Worker::ID);
+//		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_WORKER);
 //		$tpl->assign('custom_fields', $custom_fields);
 
 		switch($this->renderTemplate) {
 //			case 'contextlinks_chooser':
-//				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/workers/view_contextlinks_chooser.tpl');
+//				$tpl->display('devblocks:cerberusweb.core::workers/view_contextlinks_chooser.tpl');
 //				break;
 			default:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/messages/view.tpl');
+				$tpl->assign('view_template', 'devblocks:cerberusweb.core::messages/view.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/subtotals_and_view.tpl');
 				break;
 		}
 	}
@@ -950,28 +1127,33 @@ class View_Message extends C4_AbstractView {
 	function renderCriteria($field) {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id', $this->id);
+		$tpl->assign('view', $this);
 
 		switch($field) {
 			case SearchFields_Message::ADDRESS_EMAIL:
 			case SearchFields_Message::TICKET_MASK:
 			case SearchFields_Message::TICKET_SUBJECT:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 				
 			case SearchFields_Message::IS_OUTGOING:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
 				
 			case SearchFields_Message::CREATED_DATE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 				
 			case SearchFields_Message::TICKET_GROUP_ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_group.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_group.tpl');
 				break;
 				
 			case SearchFields_Message::WORKER_ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_worker.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_worker.tpl');
+				break;
+				
+			case SearchFields_Message::MESSAGE_CONTENT:
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__fulltext.tpl');
 				break;
 				
 			default:
@@ -1067,6 +1249,11 @@ class View_Message extends C4_AbstractView {
 				$criteria = new DevblocksSearchCriteria($field,DevblocksSearchCriteria::OPER_IN,$worker_ids);
 				break;
 				
+			case SearchFields_Message::MESSAGE_CONTENT:
+				@$scope = DevblocksPlatform::importGPC($_REQUEST['scope'],'string','expert');
+				$criteria = new DevblocksSearchCriteria($field,DevblocksSearchCriteria::OPER_FULLTEXT,array($value,$scope));
+				break;
+				
 			default:
 				// Custom Fields
 //				if(substr($field,0,3)=='cf_') {
@@ -1133,11 +1320,157 @@ class View_Message extends C4_AbstractView {
 			DAO_Message::update($batch_ids, $change_fields);
 			
 			// Custom Fields
-			//self::_doBulkSetCustomFields(ChCustomFieldSource_Worker::ID, $custom_fields, $batch_ids);
+			//self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_WORKER, $custom_fields, $batch_ids);
 			
 			unset($batch_ids);
 		}
 
 		unset($ids);
 	}
+};
+
+class Context_Message extends Extension_DevblocksContext {
+	function authorize($context_id, Model_Worker $worker) {
+		// Security
+		try {
+			if(empty($worker))
+				throw new Exception();
+			
+			if($worker->is_superuser)
+				return TRUE;
+				
+			if(null == ($message = DAO_Message::get($context_id)))
+				throw new Exception();
+			
+			if(null == ($ticket = DAO_Ticket::get($message->ticket_id)))
+				throw new Exception();
+			
+			return $worker->isTeamMember($ticket->team_id);
+				
+		} catch (Exception $e) {
+			// Fail
+		}
+		
+		return FALSE;
+	}
+	
+	function getMeta($context_id) {
+		$message = DAO_Message::get($context_id);
+		$url_writer = DevblocksPlatform::getUrlService();
+		
+		return array(
+			'id' => $message->id,
+			'name' => '', //$message->title,
+			'permalink' => '', // [TODO]
+		);
+	}
+	
+	function getContext($message, &$token_labels, &$token_values, $prefix=null) {
+		if(is_null($prefix))
+			$prefix = 'Message:';
+		
+		$translate = DevblocksPlatform::getTranslationService();
+
+		// Polymorph
+		if(is_numeric($message)) {
+			$message = DAO_Message::get($message); 
+		} elseif($message instanceof Model_Message) {
+			// It's what we want already.
+		} else {
+			$message = null;
+		}
+		/* @var $message Model_Message */
+		
+		// Token labels
+		$token_labels = array(
+			'content' => $prefix.$translate->_('common.content'),
+			'created|date' => $prefix.$translate->_('common.created'),
+			'is_outgoing' => $prefix.$translate->_('message.is_outgoing'),
+			'storage_size' => $prefix.$translate->_('message.storage_size').' (bytes)',
+		);
+		
+		// Token values
+		$token_values = array();
+		
+		// Message token values
+		if($message) {
+			$token_values['content'] = $message->getContent();
+			$token_values['created'] = $message->created_date;
+			$token_values['id'] = $message->id;
+			$token_values['is_outgoing'] = $message->is_outgoing;
+			$token_values['storage_size'] = $message->storage_size;
+			$token_values['ticket_id'] = $message->ticket_id;
+			$token_values['worker_id'] = $message->worker_id;
+		}
+
+		// Sender
+		@$address_id = $message->address_id;
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_ADDRESS, $address_id, $merge_token_labels, $merge_token_values, '', true);
+
+		CerberusContexts::merge(
+			'sender_',
+			'Message:Sender:',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);
+		
+		return true;
+	}
+
+	function getChooserView() {
+		$active_worker = CerberusApplication::getActiveWorker();
+		
+		// View
+		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = $view_id;
+		$defaults->is_ephemeral = true;
+		$defaults->class_name = $this->getViewClass();
+		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
+		$view->name = 'Messages';
+//		$view->view_columns = array(
+//			SearchFields_Message::UPDATED_DATE,
+//			SearchFields_Message::DUE_DATE,
+//		);
+		$view->addParams(array(
+//			SearchFields_Task::IS_COMPLETED => new DevblocksSearchCriteria(SearchFields_Task::IS_COMPLETED,'=',0),
+			//SearchFields_Task::VIRTUAL_WATCHERS => new DevblocksSearchCriteria(SearchFields_Task::VIRTUAL_WATCHERS,'in',array($active_worker->id)),
+		), true);
+		$view->renderSortBy = SearchFields_Message::CREATED_DATE;
+		$view->renderSortAsc = false;
+		$view->renderLimit = 10;
+		$view->renderTemplate = 'contextlinks_chooser';
+		C4_AbstractViewLoader::setView($view_id, $view);
+		return $view;		
+	}
+	
+	function getView($context=null, $context_id=null, $options=array()) {
+		$view_id = str_replace('.','_',$this->id);
+		
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = $view_id; 
+		$defaults->class_name = $this->getViewClass();
+		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
+		$view->name = 'Messages';
+		
+		$params_req = array();
+		
+		if(!empty($context) && !empty($context_id)) {
+			$params_req = array(
+				new DevblocksSearchCriteria(SearchFields_Message::CONTEXT_LINK,'=',$context),
+				new DevblocksSearchCriteria(SearchFields_Message::CONTEXT_LINK_ID,'=',$context_id),
+			);
+		}
+
+		$view->addParamsRequired($params_req, true);
+		
+		$view->renderTemplate = 'context';
+		C4_AbstractViewLoader::setView($view_id, $view);
+		return $view;
+	}
+	
 };
