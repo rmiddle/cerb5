@@ -16,6 +16,9 @@
 		{if !empty($task->due_date)}
 		<b>{'task.due_date'|devblocks_translate|capitalize}:</b> <abbr title="{$task->due_date|devblocks_date}">{$task->due_date|devblocks_prettytime}</abbr> &nbsp;
 		{/if}
+		{if isset($total_time_minutes)}
+			<b>Total Ticket Time Worked: </b> {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp; 
+		{/if}
 
 		{if isset($total_time_minutes)}
 			<b>Total Ticket Time Worked: </b> {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp; 

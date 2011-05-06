@@ -22,9 +22,9 @@
 							<label>{$translate->_('ticket.status')|capitalize}:</label>
 							{if $ticket->is_deleted}
 								{$translate->_('status.deleted')}
-							{elseif $ticket->is_closed}
-								{$translate->_('status.closed')}
-								{if !empty($ticket->due_date)}
+                            {elseif $ticket->is_closed}
+                                {$translate->_('status.closed')}
+                                {if !empty($ticket->due_date)}
 									(<abbr title="{$ticket->due_date|devblocks_date}">{$ticket->due_date|devblocks_prettytime}</abbr>)
 								{/if}
 							{elseif $ticket->is_waiting}
@@ -42,11 +42,12 @@
 							{$teams.$ticket_team_id->name}
 						</div>
 						
-					{if DevblocksPlatform::isPluginEnabled('cerberusweb.timetracking')}
-						<div>
-						<label>Total Ticket Time Worked:</label> {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp;
-						</div> 
-					{/if}
+                        {if DevblocksPlatform::isPluginEnabled('cerberusweb.timetracking')}
+                            <div>
+                            <label>Total Ticket Time Worked:</label> {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp;
+                            </div> 
+                        {/if}
+                        
 						<div>
 							<label>{$translate->_('common.bucket')|capitalize}:</label>
 							{if !empty($ticket_category_id)}{$ticket_category->name}{else}{$translate->_('common.inbox')|capitalize}{/if}
