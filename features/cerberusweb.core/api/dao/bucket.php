@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,7 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
@@ -54,6 +54,9 @@ class DAO_Bucket extends DevblocksORMHelper {
     const POS = 'pos';
     const NAME = 'name';
     const TEAM_ID = 'team_id';
+    const REPLY_ADDRESS_ID = 'reply_address_id';
+    const REPLY_PERSONAL = 'reply_personal';
+    const REPLY_SIGNATURE = 'reply_signature';
     const IS_ASSIGNABLE = 'is_assignable';
     
 	static function getTeams() {
@@ -100,6 +103,11 @@ class DAO_Bucket extends DevblocksORMHelper {
 	    return $buckets;
 	}
 	
+	/**
+	 * 
+	 * @param integer $id
+	 * @return Model_Bucket
+	 */
 	static function get($id) {
 		$buckets = self::getAll();
 	
@@ -123,11 +131,11 @@ class DAO_Bucket extends DevblocksORMHelper {
 	static function getList($ids=array()) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$sql = "SELECT tc.id, tc.pos, tc.name, tc.team_id, tc.is_assignable ".
-			"FROM category tc ".
-			"INNER JOIN team t ON (tc.team_id=t.id) ".
-			(!empty($ids) ? sprintf("WHERE tc.id IN (%s) ", implode(',', $ids)) : "").
-			"ORDER BY t.name ASC, tc.pos ASC "
+		$sql = "SELECT category.id, category.pos, category.name, category.team_id, category.is_assignable, category.reply_address_id, category.reply_personal, category.reply_signature ".
+			"FROM category ".
+			"INNER JOIN team ON (category.team_id=team.id) ".
+			(!empty($ids) ? sprintf("WHERE category.id IN (%s) ", implode(',', $ids)) : "").
+			"ORDER BY team.name ASC, category.pos ASC "
 		;
 		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
@@ -140,6 +148,9 @@ class DAO_Bucket extends DevblocksORMHelper {
 			$category->name = $row['name'];
 			$category->team_id = intval($row['team_id']);
 			$category->is_assignable = intval($row['is_assignable']);
+			$category->reply_address_id = $row['reply_address_id'];
+			$category->reply_personal = $row['reply_personal'];
+			$category->reply_signature = $row['reply_signature'];
 			$categories[$category->id] = $category;
 		}
 		
@@ -258,4 +269,145 @@ class Model_Bucket {
 	public $name = '';
 	public $team_id = 0;
 	public $is_assignable = 1;
+	public $reply_address_id;
+	public $reply_personal;
+	public $reply_signature;
+	
+	/**
+	 * 
+	 * @param integer $bucket_id
+	 * @return Model_AddressOutgoing
+	 */
+	public function getReplyTo() {
+		$from_id = 0;
+		$froms = DAO_AddressOutgoing::getAll();
+		
+		// Cascade to bucket
+		$from_id = $this->reply_address_id;
+		
+		// Cascade to group
+		if(empty($from_id)) {
+			$group = DAO_Group::get($this->team_id);
+			$from_id = $group->reply_address_id;
+		}
+		
+		// Cascade to global
+		if(empty($from_id) || !isset($froms[$from_id])) {
+			$from = DAO_AddressOutgoing::getDefault();
+			$from_id = $from->address_id;
+		}
+			
+		// Last check
+		if(!isset($froms[$from_id]))
+			return null;
+		
+		return $froms[$from_id];
+	}
+	
+	public function getReplyFrom() {
+		$from_id = 0;
+		$froms = DAO_AddressOutgoing::getAll();
+		
+		// Cascade to bucket
+		$from_id = $this->reply_address_id;
+		
+		// Cascade to group
+		if(empty($from_id)) {
+			$group = DAO_Group::get($this->team_id);
+			$from_id = $group->reply_address_id;
+		}
+		
+		// Cascade to global
+		if(empty($from_id) || !isset($froms[$from_id])) {
+			$from = DAO_AddressOutgoing::getDefault();
+			$from_id = $from->address_id;
+		}
+			
+		return $from_id;
+	}
+	
+	public function getReplyPersonal($worker_model=null) {
+		$froms = DAO_AddressOutgoing::getAll();
+		
+		// Cascade to bucket
+		$personal = $this->reply_personal;
+		
+		// Cascade to bucket address
+		if(empty($personal) && !empty($this->reply_address_id) && isset($froms[$this->reply_address_id])) {
+			$from = $froms[$this->reply_address_id];
+			$personal = $from->reply_personal;
+		}
+
+		// Cascade to group
+		if(empty($personal)) {
+			$group = DAO_Group::get($this->team_id);
+			$personal = $group->reply_personal;
+			
+			// Cascade to group address
+			if(empty($personal) && !empty($group->reply_address_id) && isset($froms[$group->reply_address_id])) {
+				$from = $froms[$group->reply_address_id];
+				$personal = $from->reply_personal;
+			}
+		}
+		
+		// Cascade to global
+		if(empty($personal)) {
+			$from = DAO_AddressOutgoing::getDefault();
+			$personal = $from->reply_personal;
+		}
+		
+		// If we have a worker model, convert template tokens
+		if(empty($worker_model))
+			$worker_model = new Model_Worker();
+		
+		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+		$token_labels = array();
+		$token_values = array();
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $worker_model, $token_labels, $token_values);
+		$personal = $tpl_builder->build($personal, $token_values);
+		
+		return $personal;
+	}
+	
+	public function getReplySignature($worker_model=null) {
+		$froms = DAO_AddressOutgoing::getAll();
+		
+		// Cascade to bucket
+		$signature = $this->reply_signature;
+		
+		// Cascade to bucket address
+		if(empty($signature) && !empty($this->reply_address_id) && isset($froms[$this->reply_address_id])) {
+			$from = $froms[$this->reply_address_id];
+			$signature = $from->reply_signature;
+		}
+
+		// Cascade to group
+		if(empty($signature)) {
+			$group = DAO_Group::get($this->team_id);
+			$signature = $group->reply_signature;
+			
+			// Cascade to group address
+			if(empty($signature) && !empty($group->reply_address_id) && isset($froms[$group->reply_address_id])) {
+				$from = $froms[$group->reply_address_id];
+				$signature = $from->reply_signature;
+			}
+		}
+		
+		// Cascade to global
+		if(empty($signature)) {
+			$from = DAO_AddressOutgoing::getDefault();
+			$signature = $from->reply_signature;
+		}
+		
+		// If we have a worker model, convert template tokens
+		if(!empty($worker_model)) {
+			$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+			$token_labels = array();
+			$token_values = array();
+			CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $worker_model, $token_labels, $token_values);
+			$signature = $tpl_builder->build($signature, $token_values);
+		}
+		
+		return $signature;
+	}	
 };

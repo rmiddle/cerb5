@@ -1,16 +1,21 @@
 <?php
-interface IDevblocksTourListener {
-    function registerCallouts();
-}
 class DevblocksTourCallout {
-    public $id = '';
+    public $selector = '';
     public $title = '';
     public $body = '';
+    public $tipCorner = '';
+    public $targetCorner = '';
+    public $xOffset = 0;
+    public $yOffset = 0;
     
-    function __construct($id,$title='Callout',$body='...') {
-        $this->id = $id;
+    function __construct($selector='',$title='Callout',$body='...',$tipCorner='topLeft',$targetCorner='topLeft',$xOffset=0,$yOffset=0) {
+        $this->selector = $selector;
         $this->title = $title;
         $this->body = $body;
+        $this->tipCorner = $tipCorner;
+        $this->targetCorner = $targetCorner;
+        $this->xOffset = $xOffset;
+        $this->yOffset = $yOffset;
     }
 };
 interface IDevblocksSearchFields {
@@ -31,6 +36,7 @@ class DevblocksSearchCriteria {
     const OPER_GTE = '>=';
     const OPER_LTE = '<=';
     const OPER_BETWEEN = 'between';
+    const OPER_TRUE = '1';
     
     const GROUP_OR = 'OR';
     const GROUP_AND = 'AND';
@@ -170,6 +176,10 @@ class DevblocksSearchCriteria {
 				);
 				break;
 			
+			case DevblocksSearchCriteria::OPER_TRUE:
+				$where = '1';
+				break;
+				
 			/*
 			 * [TODO] Someday we may want to call this OPER_DATE_BETWEEN so it doesn't interfere 
 			 * with the operator in other uses
@@ -324,6 +334,20 @@ class DevblocksPluginManifest {
 	}
 	
 	/**
+	 * 
+	 */
+	function getActivityPoints() {
+		$points = array();
+
+		if(isset($this->manifest_cache['activity_points']))
+		foreach($this->manifest_cache['activity_points'] as $point=> $data) {
+			$points[$point] = $data;
+		}
+		
+		return $points;
+	}
+	
+	/**
 	 * return DevblocksPatch[]
 	 */
 	function getPatches() {
@@ -346,13 +370,14 @@ class DevblocksPluginManifest {
             $prefix,
             $db->qstr($this->id)
         ));
-        $db->Execute(sprintf("DELETE FROM %sextension WHERE id = %s",
+        $db->Execute(sprintf("DELETE FROM %sextension WHERE plugin_id = %s",
             $prefix,
             $db->qstr($this->id)
         ));
-        $db->Execute(sprintf("DELETE FROM %sproperty_store WHERE id = %s",
-            $prefix,
-            $db->qstr($this->id)
+        $db->Execute(sprintf("DELETE %1\$sproperty_store FROM %1\$sproperty_store ".
+        	"LEFT JOIN %1\$sextension ON (%1\$sproperty_store.extension_id=%1\$sextension.id) ".
+        	"WHERE %1\$sextension.id IS NULL",
+        	$prefix
         ));
 	}
 };

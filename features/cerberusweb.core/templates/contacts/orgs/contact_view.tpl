@@ -6,11 +6,12 @@
 	<tr>
 		<td nowrap="nowrap"><span class="title">{$view->name}</span> {if $view->id == 'search'}<a href="#{$view->id}_actions">{$translate->_('views.jump_to_actions')}</a>{/if}</td>
 		<td nowrap="nowrap" align="right">
-			<a href="javascript:;" onclick="$('#btnExplore{$view->id}').click();">explore</a>
+			<a href="javascript:;" class="subtotals">subtotals</a>
 			 | <a href="javascript:;" onclick="genericAjaxGet('customize{$view->id}','c=internal&a=viewCustomize&id={$view->id}');toggleDiv('customize{$view->id}','block');">{$translate->_('common.customize')|lower}</a>
 			{if $active_worker->hasPriv('core.home.workspaces')} | <a href="javascript:;" onclick="genericAjaxGet('{$view->id}_tips','c=internal&a=viewShowCopy&view_id={$view->id}');toggleDiv('{$view->id}_tips','block');">{$translate->_('common.copy')|lower}</a>{/if}
 			{if $active_worker->hasPriv('core.addybook.org.view.actions.export')} | <a href="javascript:;" onclick="genericAjaxGet('{$view->id}_tips','c=internal&a=viewShowExport&id={$view->id}');toggleDiv('{$view->id}_tips','block');">{$translate->_('common.export')|lower}</a>{/if}
 			 | <a href="javascript:;" onclick="genericAjaxGet('view{$view->id}','c=internal&a=viewRefresh&id={$view->id}');"><span class="cerb-sprite sprite-refresh"></span></a>
+			 | <input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);this.blur();$rows=$('#viewForm{$view->id}').find('table.worklistBody').find('tbody > tr');if($(this).is(':checked')) { $rows.addClass('selected'); } else { $rows.removeClass('selected'); }">
 		</td>
 	</tr>
 </table>
@@ -18,8 +19,8 @@
 <div id="{$view->id}_tips" class="block" style="display:none;margin:10px;padding:5px;">Analyzing...</div>
 <form id="customize{$view->id}" name="customize{$view->id}" action="#" onsubmit="return false;" style="display:none;"></form>
 <form id="viewForm{$view->id}" name="viewForm{$view->id}" action="{devblocks_url}{/devblocks_url}" method="post">
-<button id="btnExplore{$view->id}" type="button" style="display:none;" onclick="this.form.explore_from.value=$(this).closest('form').find('tbody input:checkbox:checked:first').val();this.form.a.value='viewOrgsExplore';this.form.submit();"></button>
 <input type="hidden" name="view_id" value="{$view->id}">
+<input type="hidden" name="context_id" value="cerberusweb.contexts.org">
 <input type="hidden" name="id" value="{$view->id}">
 <input type="hidden" name="c" value="contacts">
 <input type="hidden" name="a" value="">
@@ -28,7 +29,9 @@
 
 	{* Column Headers *}
 	<tr>
-		<th style="text-align:center"><input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);"></th>
+		<th style="text-align:center;width:75px;">
+			<a href="javascript:;">{'common.watchers'|devblocks_translate|capitalize}</a>
+		</th>
 		{foreach from=$view->view_columns item=header name=headers}
 			{* start table header, insert column title and link *}
 			<th nowrap="nowrap">
@@ -49,6 +52,7 @@
 	</tr>
 
 	{* Column Data *}
+	{$object_watchers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_ORG, array_keys($data), CerberusContexts::CONTEXT_WORKER)}
 	{foreach from=$data item=result key=idx name=results}
 
 	{if $smarty.foreach.results.iteration % 2}
@@ -56,15 +60,21 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody style="cursor:pointer;">
 		<tr class="{$tableRowClass}">
-			<td align="center" rowspan="2"><input type="checkbox" name="row_id[]" value="{$result.c_id}"></td>
-			<td colspan="{math equation="x" x=$smarty.foreach.headers.total}"><a href="{devblocks_url}c=contacts&tab=orgs&page=display&id={$result.c_id}{/devblocks_url}" class="subject">{$result.c_name}</a> <a href="javascript:;" onclick="genericAjaxPopup('peek','c=contacts&a=showOrgPeek&id={$result.c_id}&view_id={$view->id}',null,false,'600');"><span class="ui-icon ui-icon-newwin" style="display:inline-block;vertical-align:middle;" title="{$translate->_('views.peek')}"></span></a></td>
+			<td align="center" rowspan="2">
+				{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" context=CerberusContexts::CONTEXT_ORG context_id=$result.c_id}
+			</td>
+			<td colspan="{$smarty.foreach.headers.total}">
+				<input type="checkbox" name="row_id[]" value="{$result.c_id}" style="display:none;">
+				<a href="{devblocks_url}c=contacts&tab=orgs&page=display&id={$result.c_id}-{$result.c_name|devblocks_permalink}{/devblocks_url}" class="subject">{$result.c_name}</a> 
+				<button type="button" class="peek" style="visibility:hidden;padding:1px;margin:0px 5px;" onclick="genericAjaxPopup('peek','c=contacts&a=showOrgPeek&id={$result.c_id}&view_id={$view->id}',null,false,'600');"><span class="cerb-sprite2 sprite-document-search-result" style="margin-left:2px" title="{$translate->_('views.peek')}"></span></button>
+			</td>
 		</tr>
 		<tr class="{$tableRowClass}">
 		{foreach from=$view->view_columns item=column name=columns}
 			{if substr($column,0,3)=="cf_"}
-				{include file="file:$core_tpl/internal/custom_fields/view/cell_renderer.tpl"}
+				{include file="devblocks:cerberusweb.core::internal/custom_fields/view/cell_renderer.tpl"}
 			{elseif $column=="c_id"}
 			<td>{$result.c_id}&nbsp;</td>
 			{elseif $column=="c_website"}
@@ -72,7 +82,7 @@
 			{elseif $column=="c_created"}
 			<td title="{$result.c_created|devblocks_date}">{$result.c_created|devblocks_prettytime}&nbsp;</td>
 			{else}
-			<td>{$result.$column|escape}</td>
+			<td>{$result.$column}</td>
 			{/if}
 		{/foreach}
 		</tr>
@@ -84,8 +94,8 @@
 	{if $total}
 	<tr>
 		<td colspan="2">
-			{if 'context'==$view->renderTemplate}<button type="button" onclick="removeSelectedContextLinks('{$view->id}');">Unlink</button>{/if}
-			{if $active_worker->hasPriv('core.addybook.org.actions.update')}<button type="button" onclick="genericAjaxPopup('peek','c=contacts&a=showOrgBulkPanel&view_id={$view->id}&ids=' + Devblocks.getFormEnabledCheckboxValues('viewForm{$view->id}','row_id[]'),null,false,'500');"><span class="cerb-sprite sprite-folder_gear"></span> {$translate->_('common.bulk_update')|lower}</button>{/if}
+			<button id="btnExplore{$view->id}" type="button" onclick="this.form.explore_from.value=$(this).closest('form').find('tbody input:checkbox:checked:first').val();this.form.a.value='viewOrgsExplore';this.form.submit();"><span class="cerb-sprite sprite-media_play_green"></span> {'common.explore'|devblocks_translate|lower}</button>
+			{if $active_worker->hasPriv('core.addybook.org.actions.update')}<button type="button" onclick="genericAjaxPopup('peek','c=contacts&a=showOrgBulkPanel&view_id={$view->id}&ids=' + Devblocks.getFormEnabledCheckboxValues('viewForm{$view->id}','row_id[]'),null,false,'500');"><span class="cerb-sprite2 sprite-folder-gear"></span> {$translate->_('common.bulk_update')|lower}</button>{/if}
 		</td>
 	</tr>
 	{/if}
@@ -114,4 +124,5 @@
 	</tr>
 </table>
 </form>
-<br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

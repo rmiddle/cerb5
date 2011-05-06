@@ -1,9 +1,5 @@
 <?php
 class ChRest_Messages extends Extension_RestController implements IExtensionRestController {
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	function getAction($stack) {
 		@$action = array_shift($stack);
 		
@@ -37,7 +33,18 @@ class ChRest_Messages extends Extension_RestController implements IExtensionRest
 	}
 	
 	function deleteAction($stack) {
-		$this->error(self::ERRNO_NOT_IMPLEMENTED);
+		$worker = $this->getActiveWorker();
+		if(!$worker->hasPriv('core.display.message.actions.delete'))
+			$this->error(self::ERRNO_ACL);
+
+		$id = array_shift($stack);
+
+		if(null == ($message = DAO_Message::get($id)))
+			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid message ID %d", $id));
+
+		DAO_Message::delete($id);
+		$result = array('id' => $id);
+		$this->success($result);		
 	}
 	
 	private function getId($id) {
@@ -59,8 +66,7 @@ class ChRest_Messages extends Extension_RestController implements IExtensionRest
 		
 		if('dao'==$type) {
 			$tokens = array(
-//				'is_banned' => DAO_Address::IS_BANNED,
-//				'is_registered' => DAO_Address::IS_REGISTERED,
+//				'example' => DAO_Example::PROPERTY,
 			);
 		} else {
 			$tokens = array(

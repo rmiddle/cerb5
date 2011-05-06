@@ -1,3 +1,4 @@
+{if empty($custom_fields)}{$custom_fields = DAO_CustomField::getAll()}{/if}
 {$col = explode('_',$column)}
 {$col_id = $col[1]}
 {$col = $custom_fields[$col_id]}
@@ -9,10 +10,8 @@
 {elseif $col->type=='N'}
 	<td>{$result.$column}</td>
 {elseif $col->type=='T'}
-	<td title="{$result.$column|escape}">{$result.$column|truncate:32}</td>
+	<td title="{$result.$column}">{$result.$column|truncate:32}</td>
 {elseif $col->type=='D'}
-	<td>{$result.$column}</td>
-{elseif $col->type=='M'}
 	<td>{$result.$column}</td>
 {elseif $col->type=='X'}
 	<td>{$result.$column}</td>
@@ -32,4 +31,6 @@
 		{$workers.$worker_id->getName()}
 	{/if}
 	</td>
+{else}
+	<td></td>
 {/if}

@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,7 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
@@ -82,7 +82,92 @@ class DAO_Task extends C4_ORMHelper {
 	}
 	
 	static function update($ids, $fields) {
-		parent::_update($ids, 'task', $fields);
+		if(!is_array($ids))
+			$ids = array($ids);
+		
+		/*
+		 * Make a diff for the requested objects in batches
+		 */
+        
+    	$chunks = array_chunk($ids, 25, true);
+    	while($batch_ids = array_shift($chunks)) {
+	    	$objects = DAO_Task::getWhere(sprintf("id IN (%s)", implode(',', $batch_ids)));
+	    	$object_changes = array();
+	    	
+	    	foreach($objects as $object_id => $object) {
+	    		$pre_fields = get_object_vars($object);
+	    		$changes = array();
+	    		
+	    		foreach($fields as $field_key => $field_val) {
+	    			// Make sure the value of the field actually changed
+	    			if($pre_fields[$field_key] != $field_val) {
+	    				$changes[$field_key] = array('from' => $pre_fields[$field_key], 'to' => $field_val);
+	    			}
+	    		}
+	    		
+	    		// If we had changes
+	    		if(!empty($changes)) {
+	    			$object_changes[$object_id] = array(
+	    				'model' => array_merge($pre_fields, $fields),
+	    				'changes' => $changes,
+	    			);
+	    		}
+	    	}
+	    	
+	    	parent::_update($ids, 'task', $fields);
+	    	
+	    	// Local events
+	    	self::_processUpdateEvents($object_changes);
+	    	
+	        /*
+	         * Trigger an event about the changes
+	         */
+	    	if(!empty($object_changes)) {
+			    $eventMgr = DevblocksPlatform::getEventService();
+			    $eventMgr->trigger(
+			        new Model_DevblocksEvent(
+			            'dao.task.update',
+		                array(
+		                    'objects' => $object_changes,
+		                )
+		            )
+			    );
+	    	}
+    	}
+	}
+	
+	static function _processUpdateEvents($objects) {
+    	if(is_array($objects))
+    	foreach($objects as $object_id => $object) {
+    		@$model = $object['model'];
+    		@$changes = $object['changes'];
+    		
+    		if(empty($model) || empty($changes))
+    			continue;
+    		
+    		/*
+    		 * Task completed
+    		 */
+    		@$is_completed = $changes[DAO_Task::IS_COMPLETED];
+    		
+    		if(!empty($is_completed) && !empty($model[DAO_Task::IS_COMPLETED])) {
+				/*
+				 * Log activity (task.status.*)
+				 */
+				$entry = array(
+					//{{actor}} completed task {{target}}
+					'message' => 'activities.task.status.completed',
+					'variables' => array(
+						'target' => sprintf("%s", $model[DAO_Task::TITLE]),
+						),
+					'urls' => array(
+						'target' => 'c=tasks&d=display&id='.$model[DAO_Task::ID],
+						)
+				);
+				CerberusContexts::logActivity('task.status.completed', CerberusContexts::CONTEXT_TASK, $object_id, $entry);
+    		}
+    		
+    	} // foreach		
 	}
 	
 	static function updateWhere($fields, $where) {
@@ -164,35 +249,22 @@ class DAO_Task extends C4_ORMHelper {
 		DAO_ContextLink::delete(CerberusContexts::CONTEXT_TASK, $ids);
 		
 		// Custom fields
-		DAO_CustomFieldValue::deleteBySourceIds(ChCustomFieldSource_Task::ID, $ids);
+		DAO_CustomFieldValue::deleteByContextIds(CerberusContexts::CONTEXT_TASK, $ids);
 		
 		// Notes
 		DAO_Comment::deleteByContext(CerberusContexts::CONTEXT_TASK, $ids);
 		
 		return true;
 	}
-
-    /**
-     * Enter description here...
-     *
-     * @param DevblocksSearchCriteria[] $params
-     * @param integer $limit
-     * @param integer $page
-     * @param string $sortBy
-     * @param boolean $sortAsc
-     * @param boolean $withCounts
-     * @return array
-     */
-    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_Task::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy]) || !in_array($sortBy,$columns))
 			$sortBy=null;
 		
         list($tables, $wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
 		
 		$select_sql = sprintf("SELECT ".
 			"t.id as %s, ".
@@ -232,22 +304,73 @@ class DAO_Task extends C4_ORMHelper {
 		$sort_sql =	(!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
 		
 		// Virtuals
-		foreach($params as $param_key => $param) {
+		foreach($params as $param) {
+			$param_key = $param->field;
 			settype($param_key, 'string');
 			switch($param_key) {
-				case SearchFields_Task::VIRTUAL_WORKERS:
+				case SearchFields_Task::VIRTUAL_WATCHERS:
 					$has_multiple_values = true;
-					if(empty($param->value)) { // empty
-						$join_sql .= "LEFT JOIN context_link AS context_owner ON (context_owner.from_context = 'cerberusweb.contexts.task' AND context_owner.from_context_id = t.id AND context_owner.to_context = 'cerberusweb.contexts.worker') ";
-						$where_sql .= "AND context_owner.to_context_id IS NULL ";
+					$from_context = CerberusContexts::CONTEXT_TASK;
+					$from_index = 't.id';
+					
+					// Join and return anything
+					if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
+						$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+					} elseif(empty($param->value)) { // empty
+						// Either any watchers (1 or more); or no watchers
+						if(DevblocksSearchCriteria::OPER_NIN == $param->operator || DevblocksSearchCriteria::OPER_NEQ == $param->operator) {
+							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+							$where_sql .= "AND context_watcher.to_context_id IS NOT NULL ";
+						} else {
+							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+							$where_sql .= "AND context_watcher.to_context_id IS NULL ";
+						}
+					// Specific watchers
 					} else {
-						$join_sql .= sprintf("INNER JOIN context_link AS context_owner ON (context_owner.from_context = 'cerberusweb.contexts.task' AND context_owner.from_context_id = t.id AND context_owner.to_context = 'cerberusweb.contexts.worker' AND context_owner.to_context_id IN (%s)) ",
+						$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id IN (%s)) ",
+							$from_context,
+							$from_index,
 							implode(',', $param->value)
 						);
 					}
 					break;
 			}
 		}
+		
+		$result = array(
+			'primary_table' => 't',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => $has_multiple_values,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+
+    /**
+     * Enter description here...
+     *
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents($columns,$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
 		
 		// Build it
 		$sql = 
@@ -257,7 +380,7 @@ class DAO_Task extends C4_ORMHelper {
 			($has_multiple_values ? 'GROUP BY t.id ' : '').
 			$sort_sql;
 		
-		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
 		$results = array();
 		
@@ -296,7 +419,7 @@ class SearchFields_Task implements IDevblocksSearchFields {
 	const COMPLETED_DATE = 't_completed_date';
 	const TITLE = 't_title';
 	
-	const VIRTUAL_WORKERS = '*_workers';
+	const VIRTUAL_WATCHERS = '*_workers';
 	
 	const CONTEXT_LINK = 'cl_context_from';
 	const CONTEXT_LINK_ID = 'cl_context_from_id';
@@ -308,21 +431,21 @@ class SearchFields_Task implements IDevblocksSearchFields {
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		$columns = array(
-			self::ID => new DevblocksSearchField(self::ID, 't', 'id', $translate->_('task.id')),
+			self::ID => new DevblocksSearchField(self::ID, 't', 'id', $translate->_('common.id')),
 			self::UPDATED_DATE => new DevblocksSearchField(self::UPDATED_DATE, 't', 'updated_date', $translate->_('task.updated_date')),
-			self::TITLE => new DevblocksSearchField(self::TITLE, 't', 'title', $translate->_('task.title')),
+			self::TITLE => new DevblocksSearchField(self::TITLE, 't', 'title', $translate->_('common.title')),
 			self::IS_COMPLETED => new DevblocksSearchField(self::IS_COMPLETED, 't', 'is_completed', $translate->_('task.is_completed')),
 			self::DUE_DATE => new DevblocksSearchField(self::DUE_DATE, 't', 'due_date', $translate->_('task.due_date')),
 			self::COMPLETED_DATE => new DevblocksSearchField(self::COMPLETED_DATE, 't', 'completed_date', $translate->_('task.completed_date')),
 			
-			self::VIRTUAL_WORKERS => new DevblocksSearchField(self::VIRTUAL_WORKERS, '*', 'workers', $translate->_('common.owners')),
+			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers')),
 			
 			self::CONTEXT_LINK => new DevblocksSearchField(self::CONTEXT_LINK, 'context_link', 'from_context', null),
 			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
 		);
 		
 		// Custom Fields
-		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Task::ID);
+		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TASK);
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
@@ -346,7 +469,7 @@ class Model_Task {
 	public $updated_date;
 };
 
-class View_Task extends C4_AbstractView {
+class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 	const DEFAULT_ID = 'tasks';
 	const DEFAULT_TITLE = 'Tasks';
 
@@ -361,21 +484,21 @@ class View_Task extends C4_AbstractView {
 			SearchFields_Task::UPDATED_DATE,
 			SearchFields_Task::DUE_DATE,
 		);
-		$this->columnsHidden = array(
+		$this->addColumnsHidden(array(
 			SearchFields_Task::ID,
 			SearchFields_Task::CONTEXT_LINK,
 			SearchFields_Task::CONTEXT_LINK_ID,
-			SearchFields_Task::VIRTUAL_WORKERS,
-		);
+			SearchFields_Task::VIRTUAL_WATCHERS,
+		));
 		
-		$this->paramsHidden = array(
+		$this->addParamsHidden(array(
 			SearchFields_Task::ID,
 			SearchFields_Task::CONTEXT_LINK,
 			SearchFields_Task::CONTEXT_LINK_ID,
-		);
-		$this->paramsDefault = array(
+		));
+		$this->addParamsDefault(array(
 			SearchFields_Task::IS_COMPLETED => new DevblocksSearchCriteria(SearchFields_Task::IS_COMPLETED,'=',0),
-		);
+		));
 		
 		$this->doResetCriteria();
 	}
@@ -391,7 +514,77 @@ class View_Task extends C4_AbstractView {
 			$this->renderTotal
 		);
 	}
+	
+	function getDataSample($size) {
+		return $this->_doGetDataSample('DAO_Task', $size);
+	}
 
+	function getSubtotalFields() {
+		$all_fields = $this->getParamsAvailable();
+		
+		$fields = array();
+
+		if(is_array($all_fields))
+		foreach($all_fields as $field_key => $field_model) {
+			$pass = false;
+			
+			switch($field_key) {
+				// Booleans
+				case SearchFields_Task::IS_COMPLETED:
+					$pass = true;
+					break;
+					
+				// Virtuals
+				case SearchFields_Task::VIRTUAL_WATCHERS:
+					$pass = true;
+					break;
+					
+				// Valid custom fields
+				default:
+					if('cf_' == substr($field_key,0,3))
+						$pass = $this->_canSubtotalCustomField($field_key);
+					break;
+			}
+			
+			if($pass)
+				$fields[$field_key] = $field_model;
+		}
+		
+		return $fields;
+	}
+	
+	function getSubtotalCounts($column) {
+		$counts = array();
+		$fields = $this->getFields();
+
+		if(!isset($fields[$column]))
+			return array();
+		
+		switch($column) {
+//			case SearchFields_Task::EXAMPLE:
+//				$counts = $this->_getSubtotalCountForStringColumn('DAO_Task', $column);
+//				break;
+
+			case SearchFields_Task::IS_COMPLETED:
+				$counts = $this->_getSubtotalCountForBooleanColumn('DAO_Task', $column);
+				break;
+				
+			case SearchFields_Task::VIRTUAL_WATCHERS:
+				$counts = $this->_getSubtotalCountForWatcherColumn('DAO_Task', $column);
+				break;
+			
+			default:
+				// Custom fields
+				if('cf_' == substr($column,0,3)) {
+					$counts = $this->_getSubtotalCountForCustomColumn('DAO_Task', $column, 't.id');
+				}
+				
+				break;
+		}
+		
+		return $counts;
+	}
+	
 	function render() {
 		$this->_sanitize();
 		
@@ -409,42 +602,46 @@ class View_Task extends C4_AbstractView {
 		$tpl->assign('results', $results);
 
 		// Custom fields
-		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Task::ID);
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TASK);
 		$tpl->assign('custom_fields', $custom_fields);
 		
 		switch($this->renderTemplate) {
 			case 'contextlinks_chooser':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/tasks/view_contextlinks_chooser.tpl');
+				$tpl->display('devblocks:cerberusweb.core::tasks/view_contextlinks_chooser.tpl');
 				break;
 			default:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/tasks/view.tpl');
+				$tpl->assign('view_template', 'devblocks:cerberusweb.core::tasks/view.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/subtotals_and_view.tpl');
 				break;
 		}
 		
+		$tpl->clearAssign('custom_fields');
+		$tpl->clearAssign('id');
+		$tpl->clearAssign('results');
 	}
 
 	function renderCriteria($field) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = APP_PATH . '/features/cerberusweb.core/templates/';
 		$tpl->assign('id', $this->id);
+		$tpl->assign('view', $this);
 		
 		switch($field) {
 			case SearchFields_Task::TITLE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 				
 			case SearchFields_Task::IS_COMPLETED:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
 				
 			case SearchFields_Task::UPDATED_DATE:
 			case SearchFields_Task::DUE_DATE:
 			case SearchFields_Task::COMPLETED_DATE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 				
-			case SearchFields_Task::VIRTUAL_WORKERS:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_worker.tpl');
+			case SearchFields_Task::VIRTUAL_WATCHERS:
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_worker.tpl');
 				break;
 				
 			default:
@@ -462,9 +659,9 @@ class View_Task extends C4_AbstractView {
 		$key = $param->field;
 		
 		switch($key) {
-			case SearchFields_Task::VIRTUAL_WORKERS:
+			case SearchFields_Task::VIRTUAL_WATCHERS:
 				if(empty($param->value)) {
-					echo "Owners <b>are not assigned</b>";
+					echo "There are no <b>watchers</b>";
 					
 				} elseif(is_array($param->value)) {
 					$workers = DAO_Worker::getAll();
@@ -475,7 +672,7 @@ class View_Task extends C4_AbstractView {
 							$strings[] = '<b>'.$workers[$worker_id]->getName().'</b>';
 					}
 					
-					echo sprintf("Owner is %s", implode(' or ', $strings));
+					echo sprintf("Watcher is %s", implode(' or ', $strings));
 				}
 				break;
 		}
@@ -505,7 +702,7 @@ class View_Task extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
@@ -527,7 +724,7 @@ class View_Task extends C4_AbstractView {
 				$criteria = new DevblocksSearchCriteria($field,$oper,$bool);
 				break;
 				
-			case SearchFields_Task::VIRTUAL_WORKERS:
+			case SearchFields_Task::VIRTUAL_WATCHERS:
 				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
 				$criteria = new DevblocksSearchCriteria($field,'in', $worker_ids);
 				break;
@@ -608,7 +805,18 @@ class View_Task extends C4_AbstractView {
 			DAO_Task::update($batch_ids, $change_fields);
 			
 			// Custom Fields
-			self::_doBulkSetCustomFields(ChCustomFieldSource_Task::ID, $custom_fields, $batch_ids);
+			self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_TASK, $custom_fields, $batch_ids);
+			
+			// Watchers
+			if(isset($do['watchers']) && is_array($do['watchers'])) {
+				$watcher_params = $do['watchers'];
+				foreach($batch_ids as $batch_id) {
+					if(isset($watcher_params['add']) && is_array($watcher_params['add']))
+						CerberusContexts::addWatchers(CerberusContexts::CONTEXT_TASK, $batch_id, $watcher_params['add']);
+					if(isset($watcher_params['remove']) && is_array($watcher_params['remove']))
+						CerberusContexts::removeWatchers(CerberusContexts::CONTEXT_TASK, $batch_id, $watcher_params['remove']);
+				}
+			}
 			
 			unset($batch_ids);
 		}
@@ -618,21 +826,23 @@ class View_Task extends C4_AbstractView {
 };
 
 class Context_Task extends Extension_DevblocksContext {
-    function __construct($manifest) {
-        parent::__construct($manifest);
-    }
-    
-    function getPermalink($context_id) {
-    	$url_writer = DevblocksPlatform::getUrlService();
-    	return $url_writer->write('c=tasks&action=display&id='.$context_id, true);
-    }
-
+	function getMeta($context_id) {
+		$task = DAO_Task::get($context_id);
+		$url_writer = DevblocksPlatform::getUrlService();
+		
+		return array(
+			'id' => $task->id,
+			'name' => $task->title,
+			'permalink' => $url_writer->write('c=tasks&action=display&id='.$task->id, true),
+		);
+	}
+	
 	function getContext($task, &$token_labels, &$token_values, $prefix=null) {
 		if(is_null($prefix))
 			$prefix = 'Task:';
 		
 		$translate = DevblocksPlatform::getTranslationService();
-		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Task::ID);
+		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TASK);
 
 		// Polymorph
 		if(is_numeric($task)) {
@@ -649,7 +859,7 @@ class Context_Task extends Extension_DevblocksContext {
 			'due|date' => $prefix.$translate->_('task.due_date'),
 			'id' => $prefix.$translate->_('common.id'),
 			'is_completed' => $prefix.$translate->_('task.is_completed'),
-			'title' => $prefix.$translate->_('task.title'),
+			'title' => $prefix.$translate->_('common.title'),
 			'updated|date' => $prefix.$translate->_('task.updated_date'),
 		);
 		
@@ -671,7 +881,7 @@ class Context_Task extends Extension_DevblocksContext {
 			
 			$token_values['custom'] = array();
 			
-			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Task::ID, $task->id));
+			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TASK, $task->id));
 			if(is_array($field_values) && !empty($field_values)) {
 				foreach($field_values as $cf_id => $cf_val) {
 					if(!isset($fields[$cf_id]))
@@ -719,7 +929,7 @@ class Context_Task extends Extension_DevblocksContext {
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id;
 		$defaults->is_ephemeral = true;
-		$defaults->class_name = 'View_Task';
+		$defaults->class_name = $this->getViewClass();
 		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
 		$view->name = 'Tasks';
 		$view->view_columns = array(
@@ -728,7 +938,7 @@ class Context_Task extends Extension_DevblocksContext {
 		);
 		$view->addParams(array(
 			SearchFields_Task::IS_COMPLETED => new DevblocksSearchCriteria(SearchFields_Task::IS_COMPLETED,'=',0),
-			//SearchFields_Task::VIRTUAL_WORKERS => new DevblocksSearchCriteria(SearchFields_Task::VIRTUAL_WORKERS,'in',array($active_worker->id)),
+			//SearchFields_Task::VIRTUAL_WATCHERS => new DevblocksSearchCriteria(SearchFields_Task::VIRTUAL_WATCHERS,'in',array($active_worker->id)),
 		), true);
 		$view->renderSortBy = SearchFields_Task::UPDATED_DATE;
 		$view->renderSortAsc = false;
@@ -738,24 +948,25 @@ class Context_Task extends Extension_DevblocksContext {
 		return $view;		
 	}
 	
-	function getView($context, $context_id, $options=array()) {
+	function getView($context=null, $context_id=null, $options=array()) {
 		$view_id = str_replace('.','_',$this->id);
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id; 
-		$defaults->class_name = 'View_Task';
+		$defaults->class_name = $this->getViewClass();
 		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
 		$view->name = 'Tasks';
 		
-		$params = array(
-			new DevblocksSearchCriteria(SearchFields_Task::CONTEXT_LINK,'=',$context),
-			new DevblocksSearchCriteria(SearchFields_Task::CONTEXT_LINK_ID,'=',$context_id),
-		);
+		$params_req = array();
 		
-		if(isset($options['filter_open']))
-			$params[] = new DevblocksSearchCriteria(SearchFields_Task::IS_COMPLETED,'=',0);
+		if(!empty($context) && !empty($context_id)) {
+			$params_req = array(
+				new DevblocksSearchCriteria(SearchFields_Task::CONTEXT_LINK,'=',$context),
+				new DevblocksSearchCriteria(SearchFields_Task::CONTEXT_LINK_ID,'=',$context_id),
+			);
+		}
 		
-		$view->addParams($params, true);
+		$view->addParamsRequired($params_req, true);
 		
 		$view->renderTemplate = 'context';
 		C4_AbstractViewLoader::setView($view_id, $view);

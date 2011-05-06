@@ -5,7 +5,7 @@
 <input type="hidden" name="delete_box" value="0">
 
 <b>Name:</b><br>
-<input type="text" name="name" value="{$topic->name|escape}" style="width:99%;border:solid 1px rgb(180,180,180);"><br>
+<input type="text" name="name" value="{$topic->name}" style="width:99%;border:solid 1px rgb(180,180,180);"><br>
 <br>
 
 <div id="deleteTopic" style="display:none;">
@@ -20,8 +20,8 @@
 	<br>
 </div>
 
-{if $active_worker->hasPriv('core.kb.topics.modify')}<button type="submit"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>{/if}
-{if $active_worker->hasPriv('core.kb.topics.modify') && !empty($topic)}<button type="button" onclick="toggleDiv('deleteTopic','block');"><span class="cerb-sprite sprite-delete2"></span> {$translate->_('common.remove')|capitalize}</button>{/if}
+{if $active_worker->hasPriv('core.kb.topics.modify')}<button type="submit"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')|capitalize}</button>{/if}
+{if $active_worker->hasPriv('core.kb.topics.modify') && !empty($topic)}<button type="button" onclick="toggleDiv('deleteTopic','block');"><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('common.remove')|capitalize}</button>{/if}
 </form>
 
 <script type="text/javascript">

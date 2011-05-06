@@ -20,14 +20,14 @@
 		<td>
 			<b>Notify workers</b>:<br>
 			<div style="margin-left:20px;margin-bottom:1em;">
-				<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-add"></span></button>
+				<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-view"></span></button>
 			</div>
 		</td>
 	</tr>
 	<tr>
 		<td nowrap="nowrap" valign="top">
-			<button type="button" onclick="genericAjaxPost('reply{$message->id}_form','{$message->id}notes','c=display&a=doAddNote');$('#reply{$message->id}').html('');"><span class="cerb-sprite sprite-check"></span> Add Note</button>
-			<button type="button" onclick="$('#reply{$message->id}').html('');"><span class="cerb-sprite sprite-delete"></span> Cancel</button>
+			<button type="button" onclick="genericAjaxPost('reply{$message->id}_form','{$message->id}notes','c=display&a=doAddNote');$('#reply{$message->id}').html('');"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> Add Note</button>
+			<button type="button" onclick="$('#reply{$message->id}').html('');"><span class="cerb-sprite2 sprite-cross-circle-frame"></span> Cancel</button>
 		</td>
 	</tr>
 </table>
@@ -36,6 +36,6 @@
 
 <script type="text/javascript">
 	$('#reply{$message->id}_form button.chooser_worker').each(function() {
-		ajax.chooser(this,'cerberusweb.contexts.worker','notify_worker_ids');
+		ajax.chooser(this,'cerberusweb.contexts.worker','notify_worker_ids', { autocomplete:true });
 	});
 </script>

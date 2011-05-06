@@ -1,9 +1,5 @@
 <?php
 class ChRest_Tickets extends Extension_RestController implements IExtensionRestController {
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	function getAction($stack) {
 		@$action = array_shift($stack);
 		
@@ -159,7 +155,7 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 		// Handle custom fields
 		$customfields = $this->_handleCustomFields($_POST);
 		if(is_array($customfields))
-			DAO_CustomFieldValue::formatAndSetFieldValues(ChCustomFieldSource_Ticket::ID, $id, $customfields, true, true, true);
+			DAO_CustomFieldValue::formatAndSetFieldValues(CerberusContexts::CONTEXT_TICKET, $id, $customfields, true, true, true);
 
 		// Update
 		DAO_Ticket::update($id, $fields);
@@ -224,7 +220,9 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 	function search($filters=array(), $sortToken='updated', $sortAsc=0, $page=1, $limit=10) {
 		$worker = $this->getActiveWorker();
 
+		$custom_field_params = $this->_handleSearchBuildParamsCustomFields($filters, CerberusContexts::CONTEXT_TICKET);
 		$params = $this->_handleSearchBuildParams($filters);
+		$params = array_merge($params, $custom_field_params);
 		
 		// (ACL) Add worker group privs
 		if(!$worker->is_superuser) {

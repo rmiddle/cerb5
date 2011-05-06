@@ -31,7 +31,7 @@
 	<tr>
 		<td width="0%" nowrap="nowrap" align="right">Subject: </td>
 		<td width="100%">
-			<input type="text" name="subject" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;" value="{$default_subject|escape}" autocomplete="off">
+			<input type="text" name="subject" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;" value="{$default_subject}" autocomplete="off">
 		</td>
 	</tr>
 	<tr>
@@ -44,29 +44,31 @@
 	<tr>
 		<td colspan="2">
 			<b>Next:</b> 
-			<label><input type="radio" name="closed" value="0" {if 0==$default_closed}checked="checked"{/if}>Open</label>
-			<label><input type="radio" name="closed" value="2" {if 2==$default_closed}checked="checked"{/if}>Waiting for reply</label>
-			{if $active_worker->hasPriv('core.ticket.actions.close')}<label><input type="radio" name="closed" value="1" {if 1==$default_closed}checked="checked"{/if}>Closed</label>{/if}
+			<label><input type="radio" name="closed" value="0" {if 0==$default_closed}checked="checked"{/if} onclick="toggleDiv('divComposeClosed','none');">Open</label>
+			<label><input type="radio" name="closed" value="2" {if 2==$default_closed}checked="checked"{/if} onclick="toggleDiv('divComposeClosed','block');">Waiting for reply</label>
+			{if $active_worker->hasPriv('core.ticket.actions.close')}<label><input type="radio" name="closed" value="1" {if 1==$default_closed}checked="checked"{/if} onclick="toggleDiv('divComposeClosed','block');">Closed</label>{/if}
 			<br>
 			<br>
+			
+			<div id="divComposeClosed" style="display:{if $default_closed}block{else}none{/if};margin-left:10px;margin-bottom:10px;">
+			<b>{$translate->_('display.reply.next.resume')}</b><br>
+			{$translate->_('display.reply.next.resume_eg')}<br> 
+			<input type="text" name="ticket_reopen" size="55" value=""><br>
+			{$translate->_('display.reply.next.resume_blank')}<br>
+			</div>
 
-			{if $active_worker->hasPriv('core.ticket.actions.assign')}
-				<b>Who should handle the follow-up?</b><br>
-				<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-add"></span></button>
-				{if !empty($context_workers)}
-				<ul class="chooser-container bubbles">
-					{foreach from=$context_workers item=context_worker}
-					<li>{$context_worker->getName()|escape}<input type="hidden" name="worker_id[]" value="{$context_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
-					{/foreach}
-				</ul>
-				{/if}
-			{/if}
+			<div>
+				<label>
+				<input type="checkbox" name="add_me_as_watcher" value="1"> 
+				{'common.watchers.add_me'|devblocks_translate}
+				</label>
+			</div>
 		</td>
 	</tr>
 </table>
 <br>			
 
-<button type="button" onclick="genericAjaxPopupClose('peek');genericAjaxPost('formComposePeek', 'view{$view_id}')"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
+<button type="button" onclick="genericAjaxPopupClose('peek');genericAjaxPost('formComposePeek', 'view{$view_id}')"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')}</button>
 <br>
 </form>
 
@@ -78,6 +80,6 @@
 		$('#formComposePeek :input:text:first').focus().select();
 	});
 	$('#formComposePeek button.chooser_worker').each(function() {
-		ajax.chooser(this,'cerberusweb.contexts.worker','worker_id');
+		ajax.chooser(this,'cerberusweb.contexts.worker','worker_id', { autocomplete:true });
 	});
 </script>

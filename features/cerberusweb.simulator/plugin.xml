@@ -1,11 +1,11 @@
-<!DOCTYPE plugin SYSTEM "../../libs/devblocks/plugin.dtd">
-<plugin>
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.devblocks.com/schema/plugin.xsd">
 	<id>cerberusweb.simulator</id>
 	<name>[Cerb5] Ticket Simulator</name>
 	<description>A tool that makes it easy to create batches of realistic sample tickets; useful for evaluations, plugin development, and testing.  This adds a Simulator tab in Configuration.</description>
 	<author>WebGroup Media, LLC.</author>
 	<revision>0</revision>
-	<link>http://wiki.cerb4.com/wiki/New_Changes#Simulator</link>
+	<link>http://wiki.cerb5.com/wiki/Features:Ticket_Simulator</link>
 	<image>plugin.png</image>
 	
 	<!-- Plugin Dependencies -->
@@ -31,20 +31,35 @@
 			</params>
 		</extension>
 	
-		<!-- Config Tabs -->
+		<!-- Setup Page Sections -->
 		
-		<extension point="cerberusweb.config.tab">
-			<id>simulator.config.tab</id>
-			<name>Simulator Tab</name>
+		<extension point="cerberusweb.ui.page.section">
+			<id>simulator.setup.section.simulator</id>
+			<name>Setup Page Simulator Section</name>
 			<class>
 				<file>classes.php</file>
-				<name>ChSimulatorConfigTab</name>
+				<name>PageSection_SetupSimulator</name>
 			</class>
 			<params>
+				<param key="page_id" value="core.page.configuration" />
 				<param key="uri" value="simulator" />
-				<param key="title" value="Simulator" />
 			</params>
 		</extension>
 		
+		<!-- Setup Page Menu Item -->
+		
+		<extension point="cerberusweb.ui.page.menu.item">
+			<id>simulator.setup.menu.mail.simulator</id>
+			<name>Setup Page Simulator Menu Item</name>
+			<class>
+				<file>classes.php</file>
+				<name>PageMenuItem_SetupSimulator</name>
+			</class>
+			<params>
+				<param key="page_id" value="core.page.configuration" />
+				<param key="menu_id" value="core.setup.menu.plugins" />
+			</params>
+		</extension>
+	
 	</extensions>
 </plugin>

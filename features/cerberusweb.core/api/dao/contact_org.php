@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,7 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
@@ -109,6 +109,54 @@ class DAO_ContactOrg extends C4_ORMHelper {
 		parent::_update($ids, 'contact_org', $fields);
 	}
 	
+	static function mergeIds($from_ids, $to_id) {
+		$db = DevblocksPlatform::getDatabaseService();
+		
+		if(empty($from_ids) || empty($to_id))
+			return false;
+			
+		if(!is_numeric($to_id) || !is_array($from_ids))
+			return false;
+		
+		// Log the ID changes
+		foreach($from_ids as $from_id)
+			DAO_ContextMergeHistory::logMerge(CerberusContexts::CONTEXT_ORG, $from_id, $to_id);
+			
+		// Merge comments
+		$db->Execute(sprintf("UPDATE comment SET context_id = %d WHERE context = %s AND context_id IN (%s)",
+			$to_id,
+			$db->qstr(CerberusContexts::CONTEXT_ORG),
+			implode(',', $from_ids)
+		));
+		 
+		// Merge people
+		$db->Execute(sprintf("UPDATE address SET contact_org_id = %d WHERE contact_org_id IN (%s)",
+			$to_id,
+			implode(',', $from_ids)
+		));
+		
+		// Merge context_link
+		$db->Execute(sprintf("UPDATE IGNORE context_link SET from_context_id = %d WHERE from_context = %s AND from_context_id IN (%s)",
+			$to_id,
+			$db->qstr(CerberusContexts::CONTEXT_ORG),
+			implode(',', $from_ids)
+		));
+		$db->Execute(sprintf("UPDATE IGNORE context_link SET to_context_id = %d WHERE to_context = %s AND to_context_id IN (%s)",
+			$to_id,
+			$db->qstr(CerberusContexts::CONTEXT_ORG),
+			implode(',', $from_ids)
+		));
+
+		// Merge context_activity_log
+		$db->Execute(sprintf("UPDATE IGNORE context_activity_log SET target_context_id = %d WHERE target_context = %s AND target_context_id IN (%s)",
+			$to_id,
+			$db->qstr(CerberusContexts::CONTEXT_ORG),
+			implode(',', $from_ids)
+		));
+		
+		return true;
+	}
+	
 	/**
 	 * @param array $ids
 	 */
@@ -137,7 +185,7 @@ class DAO_ContactOrg extends C4_ORMHelper {
 		DAO_ContextLink::delete(CerberusContexts::CONTEXT_ORG, $ids);
         
         // Custom fields
-        DAO_CustomFieldValue::deleteBySourceIds(ChCustomFieldSource_Org::ID, $ids);
+        DAO_CustomFieldValue::deleteByContextIds(CerberusContexts::CONTEXT_ORG, $ids);
 
         // Notes
         DAO_Comment::deleteByContext(CerberusContexts::CONTEXT_ORG, $ids);
@@ -145,18 +193,28 @@ class DAO_ContactOrg extends C4_ORMHelper {
 	
 	/**
 	 * @param string $where
+	 * @param string $sortBy
+	 * @param bool $sortAsc
+	 * @param integer $limit
 	 * @return Model_ContactOrg[]
 	 */
-	static function getWhere($where=null) {
+	static function getWhere($where=null, $sortBy=null, $sortAsc=true, $limit=null) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$sql = "SELECT id,name,street,city,province,postal,country,phone,website,created ".
+		list($where_sql, $sort_sql, $limit_sql) = self::_getWhereSQL($where, $sortBy, $sortAsc, $limit);
+		
+		// SQL
+		$sql = "SELECT id, name, street, city, province, postal, country, phone, website, created ".
 			"FROM contact_org ".
-			(!empty($where) ? sprintf("WHERE %s ", $where) : " ")
+			$where_sql.
+			$sort_sql.
+			$limit_sql
 		;
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$rs = $db->Execute($sql);
 
-		return self::_getObjectsFromResultSet($rs);
+		$objects = self::_getObjectsFromResultSet($rs);
+
+		return $objects;
 	}
 	
 	static private function _getObjectsFromResultSet($rs) {
@@ -227,28 +285,14 @@ class DAO_ContactOrg extends C4_ORMHelper {
 		return NULL;
 	}
 	
-    /**
-     * Enter description here...
-     *
-     * @param DevblocksSearchCriteria[] $params
-     * @param integer $limit
-     * @param integer $page
-     * @param string $sortBy
-     * @param boolean $sortAsc
-     * @param boolean $withCounts
-     * @return array
-     */
-    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_ContactOrg::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy]) || !in_array($sortBy,$columns))
 			$sortBy=null;
 		
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields,$sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
-		$total = -1;
 		
 		$select_sql = sprintf("SELECT ".
 			"c.id as %s, ".
@@ -294,7 +338,76 @@ class DAO_ContactOrg extends C4_ORMHelper {
 			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
-			
+		
+		// Virtuals
+		foreach($params as $param) {
+			$param_key = $param->field;
+			settype($param_key, 'string');
+			switch($param_key) {
+				case SearchFields_Task::VIRTUAL_WATCHERS:
+					$has_multiple_values = true;
+					$from_context = 'cerberusweb.contexts.org';
+					$from_index = 'c.id';
+					
+					// Join and return anything
+					if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
+						$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+					} elseif(empty($param->value)) { // empty
+						// Either any watchers (1 or more); or no watchers
+						if(DevblocksSearchCriteria::OPER_NIN == $param->operator || DevblocksSearchCriteria::OPER_NEQ == $param->operator) {
+							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+							$where_sql .= "AND context_watcher.to_context_id IS NOT NULL ";
+						} else {
+							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+							$where_sql .= "AND context_watcher.to_context_id IS NULL ";
+						}
+					// Specific watchers
+					} else {
+						$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id IN (%s)) ",
+							$from_context,
+							$from_index,
+							implode(',', $param->value)
+						);
+					}
+					break;
+			}
+		}
+		
+		$result = array(
+			'primary_table' => 'c',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => $has_multiple_values,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+	
+    /**
+     * Enter description here...
+     *
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents($columns,$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
@@ -302,15 +415,15 @@ class DAO_ContactOrg extends C4_ORMHelper {
 			($has_multiple_values ? 'GROUP BY c.id ' : '').
 			$sort_sql;
 			
-		// [TODO] Could push the select logic down a level too
 		if($limit > 0) {
-    		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+    		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		} else {
 		    $rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
             $total = mysql_num_rows($rs);
 		}
 		
 		$results = array();
+		$total = -1;
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			$result = array();
@@ -348,6 +461,8 @@ class SearchFields_ContactOrg {
 	const WEBSITE = 'c_website';
 	const CREATED = 'c_created';
 
+	const VIRTUAL_WATCHERS = '*_workers';
+	
 	const CONTEXT_LINK = 'cl_context_from';
 	const CONTEXT_LINK_ID = 'cl_context_from_id';
 	
@@ -368,13 +483,15 @@ class SearchFields_ContactOrg {
 			self::PHONE => new DevblocksSearchField(self::PHONE, 'c', 'phone', $translate->_('contact_org.phone')),
 			self::WEBSITE => new DevblocksSearchField(self::WEBSITE, 'c', 'website', $translate->_('contact_org.website')),
 			self::CREATED => new DevblocksSearchField(self::CREATED, 'c', 'created', $translate->_('contact_org.created')),
+
+			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers')),
 			
 			self::CONTEXT_LINK => new DevblocksSearchField(self::CONTEXT_LINK, 'context_link', 'from_context', null),
 			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
 		);
 		
 		// Custom Fields
-		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
+		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ORG);
 
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
@@ -403,7 +520,7 @@ class Model_ContactOrg {
 	public $sync_id = '';
 };
 
-class View_ContactOrg extends C4_AbstractView {
+class View_ContactOrg extends C4_AbstractView implements IAbstractView_Subtotals {
 	const DEFAULT_ID = 'contact_orgs';
 
 	function __construct() {
@@ -420,16 +537,17 @@ class View_ContactOrg extends C4_AbstractView {
 			SearchFields_ContactOrg::PHONE,
 			SearchFields_ContactOrg::WEBSITE,
 		);
-		$this->columnsHidden = array(
+		$this->addColumnsHidden(array(
 			SearchFields_ContactOrg::CONTEXT_LINK,
 			SearchFields_ContactOrg::CONTEXT_LINK_ID,
-		);
+			SearchFields_ContactOrg::VIRTUAL_WATCHERS,
+		));
 		
-		$this->paramsHidden = array(
+		$this->addParamsHidden(array(
 			SearchFields_ContactOrg::ID,
 			SearchFields_ContactOrg::CONTEXT_LINK,
 			SearchFields_ContactOrg::CONTEXT_LINK_ID,
-		);
+		));
 		
 		$this->doResetCriteria();
 	}
@@ -447,30 +565,107 @@ class View_ContactOrg extends C4_AbstractView {
 		return $objects;
 	}
 
+	function getDataSample($size) {
+		return $this->_doGetDataSample('DAO_ContactOrg', $size);
+	}
+	
+	function getSubtotalFields() {
+		$all_fields = $this->getParamsAvailable();
+		
+		$fields = array();
+
+		if(is_array($all_fields))
+		foreach($all_fields as $field_key => $field_model) {
+			$pass = false;
+			
+			switch($field_key) {
+				// DAO
+				case SearchFields_ContactOrg::COUNTRY:
+				case SearchFields_ContactOrg::PROVINCE:
+				case SearchFields_ContactOrg::POSTAL:
+					$pass = true;
+					break;
+					
+				// Virtuals
+				case SearchFields_ContactOrg::VIRTUAL_WATCHERS:
+					$pass = true;
+					break;
+					
+				// Valid custom fields
+				default:
+					if('cf_' == substr($field_key,0,3))
+						$pass = $this->_canSubtotalCustomField($field_key);
+					break;
+			}
+			
+			if($pass)
+				$fields[$field_key] = $field_model;
+		}
+		
+		return $fields;
+	}
+	
+	function getSubtotalCounts($column) {
+		$counts = array();
+		$fields = $this->getFields();
+
+		if(!isset($fields[$column]))
+			return array();
+		
+		switch($column) {
+			case SearchFields_ContactOrg::COUNTRY:
+			case SearchFields_ContactOrg::PROVINCE:
+			case SearchFields_ContactOrg::POSTAL:
+				$counts = $this->_getSubtotalCountForStringColumn('DAO_ContactOrg', $column);
+				break;
+				
+			case SearchFields_ContactOrg::VIRTUAL_WATCHERS:
+				$counts = $this->_getSubtotalCountForWatcherColumn('DAO_ContactOrg', $column);
+				break;
+			
+			default:
+				// Custom fields
+				if('cf_' == substr($column,0,3)) {
+					$counts = $this->_getSubtotalCountForCustomColumn('DAO_ContactOrg', $column, 'c.id');
+				}
+				
+				break;
+		}
+		
+		return $counts;
+	}	
+	
 	function render() {
 		$this->_sanitize();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('core_tpl', APP_PATH . '/features/cerberusweb.core/templates/');
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-		$org_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
+		$org_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ORG);
 		$tpl->assign('custom_fields', $org_fields);
+		
+		$workers = DAO_Worker::getAll();
+		$tpl->assign('workers', $workers);
 		
 		switch($this->renderTemplate) {
 			case 'contextlinks_chooser':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/contacts/orgs/view_contextlinks_chooser.tpl');
+				$tpl->display('devblocks:cerberusweb.core::contacts/orgs/view_contextlinks_chooser.tpl');
 				break;
 			default:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/contacts/orgs/contact_view.tpl');
+				$tpl->assign('view_template', 'devblocks:cerberusweb.core::contacts/orgs/contact_view.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/subtotals_and_view.tpl');
 				break;
 		}
+		
+		$tpl->clearAssign('custom_fields');
+		$tpl->clearAssign('id');
 	}
 
 	function renderCriteria($field) {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id', $this->id);
+		$tpl->assign('view', $this);
 
 		switch($field) {
 			case SearchFields_ContactOrg::NAME:
@@ -481,10 +676,13 @@ class View_ContactOrg extends C4_AbstractView {
 			case SearchFields_ContactOrg::COUNTRY:
 			case SearchFields_ContactOrg::PHONE:
 			case SearchFields_ContactOrg::WEBSITE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 			case SearchFields_ContactOrg::CREATED:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
+				break;
+			case SearchFields_ContactOrg::VIRTUAL_WATCHERS:
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_worker.tpl');
 				break;
 			default:
 				// Custom Fields
@@ -497,6 +695,29 @@ class View_ContactOrg extends C4_AbstractView {
 		}
 	}
 
+	function renderVirtualCriteria($param) {
+		$key = $param->field;
+		
+		switch($key) {
+			case SearchFields_ContactOrg::VIRTUAL_WATCHERS:
+				if(empty($param->value)) {
+					echo "There are no <b>watchers</b>";
+					
+				} elseif(is_array($param->value)) {
+					$workers = DAO_Worker::getAll();
+					$strings = array();
+					
+					foreach($param->value as $worker_id) {
+						if(isset($workers[$worker_id]))
+							$strings[] = '<b>'.$workers[$worker_id]->getName().'</b>';
+					}
+					
+					echo sprintf("Watcher is %s", implode(' or ', $strings));
+				}
+				break;
+		}
+	}	
+	
 	function renderCriteriaParam($param) {
 		$field = $param->field;
 		$values = !is_array($param->value) ? array($param->value) : $param->value;
@@ -527,10 +748,11 @@ class View_ContactOrg extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
+				
 			case SearchFields_ContactOrg::CREATED:
 				@$from = DevblocksPlatform::importGPC($_REQUEST['from'],'string','');
 				@$to = DevblocksPlatform::importGPC($_REQUEST['to'],'string','');
@@ -540,6 +762,12 @@ class View_ContactOrg extends C4_AbstractView {
 
 				$criteria = new DevblocksSearchCriteria($field,$oper,array($from,$to));
 				break;
+				
+			case SearchFields_ContactOrg::VIRTUAL_WATCHERS:
+				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
+				$criteria = new DevblocksSearchCriteria($field,'in', $worker_ids);
+				break;
+				
 			default:
 				// Custom Fields
 				if(substr($field,0,3)=='cf_') {
@@ -606,8 +834,19 @@ class View_ContactOrg extends C4_AbstractView {
 			$batch_ids = array_slice($ids,$x,100);
 			DAO_ContactOrg::update($batch_ids, $change_fields);
 
+			// Watchers
+			if(isset($do['watchers']) && is_array($do['watchers'])) {
+				$watcher_params = $do['watchers'];
+				foreach($batch_ids as $batch_id) {
+					if(isset($watcher_params['add']) && is_array($watcher_params['add']))
+						CerberusContexts::addWatchers(CerberusContexts::CONTEXT_ORG, $batch_id, $watcher_params['add']);
+					if(isset($watcher_params['remove']) && is_array($watcher_params['remove']))
+						CerberusContexts::removeWatchers(CerberusContexts::CONTEXT_ORG, $batch_id, $watcher_params['remove']);
+				}
+			}
+			
 			// Custom Fields
-			self::_doBulkSetCustomFields(ChCustomFieldSource_Org::ID, $custom_fields, $batch_ids);
+			self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_ORG, $custom_fields, $batch_ids);
 
 			unset($batch_ids);
 		}
@@ -617,21 +856,25 @@ class View_ContactOrg extends C4_AbstractView {
 };
 
 class Context_Org extends Extension_DevblocksContext {
-    function __construct($manifest) {
-        parent::__construct($manifest);
-    }
-
-    function getPermalink($context_id) {
-    	$url_writer = DevblocksPlatform::getUrlService();
-    	return $url_writer->write('c=contacts&tab=orgs&action=display&id='.$context_id, true);
-    }
-    
+	const ID = 'cerberusweb.contexts.org';
+	
+	function getMeta($context_id) {
+		$org = DAO_ContactOrg::get($context_id);
+		$url_writer = DevblocksPlatform::getUrlService();
+		
+		return array(
+			'id' => $context_id,
+			'name' => $org->name,
+			'permalink' => $url_writer->write('c=contacts&tab=orgs&action=display&id='.$context_id, true),
+		);
+	}
+	
 	function getContext($org, &$token_labels, &$token_values, $prefix=null) {
 		if(is_null($prefix))
 			$prefix = 'Org:';
 		
 		$translate = DevblocksPlatform::getTranslationService();
-		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Org::ID);
+		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ORG);
 
 		// Polymorph
 		if(is_numeric($org)) {
@@ -684,7 +927,7 @@ class Context_Org extends Extension_DevblocksContext {
 				$token_values['website'] = $org->website;
 			$token_values['custom'] = array();
 			
-			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Org::ID, $org->id));
+			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ORG, $org->id));
 			if(is_array($field_values) && !empty($field_values)) {
 				foreach($field_values as $cf_id => $cf_val) {
 					if(!isset($fields[$cf_id]))
@@ -715,7 +958,7 @@ class Context_Org extends Extension_DevblocksContext {
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id; 
 		$defaults->is_ephemeral = true;
-		$defaults->class_name = 'View_ContactOrg';
+		$defaults->class_name = $this->getViewClass();
 		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
 		$view->name = 'Organizations';
 
@@ -734,24 +977,25 @@ class Context_Org extends Extension_DevblocksContext {
 		return $view;		
 	}
 	
-	function getView($context, $context_id, $options=array()) {
+	function getView($context=null, $context_id=null, $options=array()) {
 		$view_id = str_replace('.','_',$this->id);
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id; 
-		$defaults->class_name = 'View_ContactOrg';
+		$defaults->class_name = $this->getViewClass();
 		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
 		$view->name = 'Organizations';
 		
-		$params = array(
-			new DevblocksSearchCriteria(SearchFields_ContactOrg::CONTEXT_LINK,'=',$context),
-			new DevblocksSearchCriteria(SearchFields_ContactOrg::CONTEXT_LINK_ID,'=',$context_id),
-		);
+		$params_req = array();
 		
-		if(isset($options['filter_open']))
-			true; // Do nothing
+		if(!empty($context) && !empty($context_id)) {
+			$params_req = array(
+				new DevblocksSearchCriteria(SearchFields_ContactOrg::CONTEXT_LINK,'=',$context),
+				new DevblocksSearchCriteria(SearchFields_ContactOrg::CONTEXT_LINK_ID,'=',$context_id),
+			);
+		}
 		
-		$view->addParams($params, true);
+		$view->addParamsRequired($params_req, true);
 		
 		$view->renderTemplate = 'context';
 		C4_AbstractViewLoader::setView($view_id, $view);

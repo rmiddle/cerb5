@@ -1,9 +1,5 @@
 <?php
 class ChRest_Attachments extends Extension_RestController implements IExtensionRestController {
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	function getAction($stack) {
 		@$action = array_shift($stack);
 		
@@ -39,6 +35,12 @@ class ChRest_Attachments extends Extension_RestController implements IExtensionR
 	}
 	
 	function deleteAction($stack) {
+		// not implemented for parity with web interface
+//		$id = array_shift($stack);
+//
+//		if(null == ($attachment = DAO_Attachment::get($id)))
+//			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid attachment ID %d", $id));
+//		DAO_Attachment::delete($id);
 		$this->error(self::ERRNO_NOT_IMPLEMENTED);
 	}
 	
@@ -103,16 +105,12 @@ class ChRest_Attachments extends Extension_RestController implements IExtensionR
 		
 		if('dao'==$type) {
 			$tokens = array(
-//				'is_banned' => DAO_Address::IS_BANNED,
-//				'is_registered' => DAO_Address::IS_REGISTERED,
+//				'example' => DAO_Example::PROPERTY,
 			);
 		} else {
 			$tokens = array(
-				'created' => SearchFields_Attachment::MESSAGE_CREATED_DATE,
 				'id' => SearchFields_Attachment::ID,
-				'message_id' => SearchFields_Attachment::MESSAGE_ID,
-				'ticket_group_id' => SearchFields_Attachment::TICKET_GROUP_ID,
-				'ticket_id' => SearchFields_Attachment::TICKET_ID,
+				//'updated' => SearchFields_Attachment::MESSAGE_CREATED_DATE,
 			);
 		}
 		
@@ -135,15 +133,17 @@ class ChRest_Attachments extends Extension_RestController implements IExtensionR
 
 		$params = $this->_handleSearchBuildParams($filters);
 		
+		// [TODO] Fix
+		
 		// (ACL) Add worker group privs
-		if(!$worker->is_superuser) {
-			$memberships = $worker->getMemberships();
-			$params['tmp_worker_memberships'] = new DevblocksSearchCriteria(
-				SearchFields_Attachment::TICKET_GROUP_ID,
-				'in',
-				(!empty($memberships) ? array_keys($memberships) : array(0))
-			);
-		}
+//		if(!$worker->is_superuser) {
+//			$memberships = $worker->getMemberships();
+//			$params['tmp_worker_memberships'] = new DevblocksSearchCriteria(
+//				SearchFields_Attachment::TICKET_GROUP_ID,
+//				'in',
+//				(!empty($memberships) ? array_keys($memberships) : array(0))
+//			);
+//		}
 		
 		// Sort
 		$sortBy = $this->translateToken($sortToken, 'search');

@@ -13,8 +13,8 @@
 	<tr>
 		{foreach from=$view->view_columns item=header name=headers}
 			{* start table header, insert column title and link *}
-			<th nowrap="nowrap" style="background-color:rgb(232,242,254);border-color:rgb(121,183,231);">
-			<a href="javascript:;" style="color:rgb(74,110,158);" onclick="genericAjaxGet('view{$view->id}','c=internal&a=viewSortBy&id={$view->id}&sortBy={$header}');">{$view_fields.$header->db_label|capitalize}</a>
+			<th nowrap="nowrap">
+			<a href="javascript:;" onclick="genericAjaxGet('view{$view->id}','c=internal&a=viewSortBy&id={$view->id}&sortBy={$header}');">{$view_fields.$header->db_label|capitalize}</a>
 			
 			{* add arrow if sorting by this column, finish table header tag *}
 			{if $header==$view->renderSortBy}
@@ -36,18 +36,18 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');">
+	<tbody style="cursor:pointer;">
 		<tr class="{$tableRowClass}">
 		{*<td align="center"><input type="checkbox" name="row_id[]" value="{$result.kb_id}"></td>*}
 		{foreach from=$view->view_columns item=column name=columns}
 			{if substr($column,0,3)=="cf_"}
-				{include file="file:$core_tpl/internal/custom_fields/view/cell_renderer.tpl"}
+				{include file="devblocks:cerberusweb.core::internal/custom_fields/view/cell_renderer.tpl"}
 			{elseif $column=="kb_id"}
 			<td>{$result.kb_id}&nbsp;</td>
 			{elseif $column=="kb_title"}
 			<td>
 				<span class="cerb-sprite sprite-document"></span>
-				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=kb.ajax&a=showArticlePeekPanel&id={$result.kb_id}&view_id={$view->id}',null,false,'700');" class="subject">{if !empty($result.kb_title)}{$result.kb_title|escape}{else}(no title){/if}</a>
+				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=kb.ajax&a=showArticlePeekPanel&id={$result.kb_id}&view_id={$view->id}',null,false,'700');" class="subject">{if !empty($result.kb_title)}{$result.kb_title}{else}(no title){/if}</a>
 			</td>
 			{elseif $column=="kb_updated"}
 			<td><abbr title="{$result.kb_updated|devblocks_date}">{$result.kb_updated|devblocks_prettytime}</abbr>&nbsp;</td>
@@ -73,7 +73,7 @@
 				&nbsp;
 			</td>
 			{else}
-			<td>{$result.$column}&nbsp;</td>
+			<td>{$result.$column}</td>
 			{/if}
 		{/foreach}		
 		</tr>

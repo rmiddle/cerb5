@@ -53,16 +53,16 @@ Sort biggest piles by:
 				{/foreach}
 			</optgroup>
 		</select>
-		{if $active_worker->hasPriv('core.ticket.actions.close')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$hash}.value='ac';"><span class="cerb-sprite sprite-folder_ok"></span></a>{/if}
+		{if $active_worker->hasPriv('core.ticket.actions.close')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$hash}.value='ac';"><span class="cerb-sprite2 sprite-folder-tick-circle"></span></a>{/if}
 		{if $active_worker->hasPriv('core.ticket.actions.spam')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$hash}.value='as';"><span class="cerb-sprite sprite-spam"></span></a>{/if}
-		{if $active_worker->hasPriv('core.ticket.actions.delete')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$hash}.value='ad';"><span class="cerb-sprite sprite-delete"></span></a>{/if}
+		{if $active_worker->hasPriv('core.ticket.actions.delete')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$hash}.value='ad';"><span class="cerb-sprite2 sprite-cross-circle-frame"></span></a>{/if}
 	</td>
 	<td width="98%" align="top">
 		<input type="hidden" name="piles_hash[]" value="{$hash}">
 		<input type="hidden" name="piles_type[]" value="{$stats[0]}">
 		<input type="hidden" name="piles_type_param[]" value="{$stats[4]}">
-		<input type="hidden" name="piles_value[]" value="{$stats[1]|escape}">
-		<label>{if !empty($stats[4])}{$stats[4]}{else}{$stats[0]}{/if} <span style="color:rgb(0,120,0);" title="{$stats[1]|escape}">{$stats[1]|truncate:76:'...':true|escape}</span> {if !empty($stats[2])}({$stats[2]} hits){/if}</label>
+		<input type="hidden" name="piles_value[]" value="{$stats[1]}">
+		<label>{if !empty($stats[4])}{$stats[4]}{else}{$stats[0]}{/if} <span style="color:rgb(0,120,0);" title="{$stats[1]}">{$stats[1]|truncate:76:'...':true}</span> {if !empty($stats[2])}({$stats[2]} hits){/if}</label>
 	</td>
 </tr>
 {if !empty($stats[3]) && is_array($stats[3])} {*$stats[0] == 'domain' && *}
@@ -97,16 +97,16 @@ Sort biggest piles by:
 					{/foreach}
 				</optgroup>
 			</select>
-			{if $active_worker->hasPriv('core.ticket.actions.close')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$sender_hash}.value='ac';"><span class="cerb-sprite sprite-folder_ok"></span></a>{/if}
+			{if $active_worker->hasPriv('core.ticket.actions.close')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$sender_hash}.value='ac';"><span class="cerb-sprite2 sprite-folder-tick-circle"></span></a>{/if}
 			{if $active_worker->hasPriv('core.ticket.actions.spam')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$sender_hash}.value='as';"><span class="cerb-sprite sprite-spam"></span></a>{/if}
-			{if $active_worker->hasPriv('core.ticket.actions.delete')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$sender_hash}.value='ad';"><span class="cerb-sprite sprite-delete"></span></a>{/if}
+			{if $active_worker->hasPriv('core.ticket.actions.delete')}<a href="javascript:;" onclick="document.getElementById('viewAssist{$view_id}').select{$sender_hash}.value='ad';"><span class="cerb-sprite2 sprite-cross-circle-frame"></span></a>{/if}
 		</td>
 		<td width="98%">
 			<blockquote style="margin-bottom:0px;">
 				<input type="hidden" name="piles_hash[]" value="{$sender_hash}">
 				<input type="hidden" name="piles_type[]" value="{$sender[0]}">
-				<input type="hidden" name="piles_value[]" value="{$sender[1]|escape}">
-				<label>{$sender[0]} <span style="color:rgb(0,120,0);" title="{$sender[1]|escape}">{$sender[1]|truncate:76:'...':true|escape}</span> {if !empty($sender[2])}({$sender[2]} hits){/if}</label><br>
+				<input type="hidden" name="piles_value[]" value="{$sender[1]}">
+				<label>{$sender[0]} <span style="color:rgb(0,120,0);" title="{$sender[1]}">{$sender[1]|truncate:76:'...':true}</span> {if !empty($sender[2])}({$sender[2]} hits){/if}</label><br>
 			</blockquote>
 		</td>
 	</tr>	

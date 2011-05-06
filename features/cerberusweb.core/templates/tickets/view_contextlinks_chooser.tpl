@@ -12,11 +12,11 @@
 
 	{* Column Headers *}
 	<tr>
-		<th style="text-align:center;background-color:rgb(232,242,254);border-color:rgb(121,183,231);"><input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);"></th>
+		<th style="text-align:center;"><input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);this.blur();$rows=$('#viewForm{$view->id}').find('table.worklistBody').find('tbody > tr');if($(this).is(':checked')) { $rows.addClass('selected'); } else { $rows.removeClass('selected'); }"></th>
 		{foreach from=$view->view_columns item=header name=headers}
 			{* start table header, insert column title and link *}
-			<th nowrap="nowrap" style="background-color:rgb(232,242,254);border-color:rgb(121,183,231);">
-			<a href="javascript:;" style="color:rgb(74,110,158);" onclick="genericAjaxGet('view{$view->id}','c=internal&a=viewSortBy&id={$view->id}&sortBy={$header}');">{$view_fields.$header->db_label|capitalize}</a>
+			<th nowrap="nowrap">
+			<a href="javascript:;" onclick="genericAjaxGet('view{$view->id}','c=internal&a=viewSortBy&id={$view->id}&sortBy={$header}');">{$view_fields.$header->db_label|capitalize}</a>
 			
 			{* add arrow if sorting by this column, finish table header tag *}
 			{if $header==$view->renderSortBy}
@@ -31,6 +31,7 @@
 	</tr>
 
 	{* Column Data *}
+	{$object_watchers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_TICKET, array_keys($data), CerberusContexts::CONTEXT_WORKER)}
 	{foreach from=$data item=result key=idx name=results}
 
 	{if $smarty.foreach.results.iteration % 2}
@@ -43,7 +44,7 @@
 	<tbody>
 	<tr class="{$tableRowClass}">
 		<td>&nbsp;</td>
-		<td rowspan="2" colspan="{math equation="x" x=$smarty.foreach.headers.total}" style="color:rgb(140,140,140);font-size:10px;text-align:left;vertical-align:middle;">[Access Denied: {$teams.$ticket_group_id->name} #{$result.t_mask}]</td>
+		<td rowspan="2" colspan="{$smarty.foreach.headers.total}" style="color:rgb(140,140,140);font-size:10px;text-align:left;vertical-align:middle;">[Access Denied: {$teams.$ticket_group_id->name} #{$result.t_mask}]</td>
 	</tr>
 	<tr class="{$tableRowClass}">
 		<td>&nbsp;</td>
@@ -51,16 +52,15 @@
 	</tbody>
 	
 	{else}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody style="cursor:pointer;">
 	<tr class="{$tableRowClass}">
-		<td align="center" rowspan="2"><input type="checkbox" name="ticket_id[]" title="[#{$result.t_mask|escape}] {$result.t_subject|escape}" value="{$result.t_id}"></td>
-		<td colspan="{math equation="x" x=$smarty.foreach.headers.total}">
-			<a href="{devblocks_url}c=display&id={$result.t_mask}{/devblocks_url}" class="subject" target="_blank">{if $result.t_is_deleted}<span class="cerb-sprite sprite-delete2_gray"></span> {elseif $result.t_is_closed}<span class="cerb-sprite sprite-check_gray" title="{$translate->_('status.closed')}"></span> {elseif $result.t_is_waiting}<span class="cerb-sprite sprite-clock"></span> {/if}{$result.t_subject|escape}</a>
+		<td align="center" rowspan="2" nowrap="nowrap"><input type="checkbox" name="ticket_id[]" title="[#{$result.t_mask}] {$result.t_subject}" value="{$result.t_id}"></td>
+		<td colspan="{$smarty.foreach.headers.total}">
+			<a href="{devblocks_url}c=display&id={$result.t_mask}{/devblocks_url}" class="subject" target="_blank">{if $result.t_is_deleted}<span class="cerb-sprite2 sprite-cross-circle-frame-gray"></span> {elseif $result.t_is_closed}<span class="cerb-sprite2 sprite-tick-circle-frame-gray" title="{$translate->_('status.closed')}"></span> {elseif $result.t_is_waiting}<span class="cerb-sprite sprite-clock"></span> {/if}{$result.t_subject}</a>
 			
-			{$object_workers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_TICKET, array_keys($data), CerberusContexts::CONTEXT_WORKER)}
-			{if isset($object_workers.{$result.t_id})}
+			{if isset($object_watchers.{$result.t_id})}
 			<div style="display:inline;padding-left:5px;">
-			{foreach from=$object_workers.{$result.t_id} key=worker_id item=worker name=workers}
+			{foreach from=$object_watchers.{$result.t_id} key=worker_id item=worker name=workers}
 				{if isset($workers.{$worker_id})}
 					<span style="color:rgb(150,150,150);">
 					{$workers.{$worker_id}->getName()}{if !$smarty.foreach.workers.last}, {/if}
@@ -74,15 +74,15 @@
 	<tr class="{$tableRowClass}">
 	{foreach from=$view->view_columns item=column name=columns}
 		{if substr($column,0,3)=="cf_"}
-			{include file="file:$core_tpl/internal/custom_fields/view/cell_renderer.tpl"}
+			{include file="devblocks:cerberusweb.core::internal/custom_fields/view/cell_renderer.tpl"}
 		{elseif $column=="t_subject"}
-		<td title="{$result.t_subject}">{$result.t_subject|truncate:35:'...'}</td>
+		<td title="{$result.t_subject}">{$result.t_subject}</td>
 		{elseif $column=="t_is_waiting"}
 		<td>{if $result.t_is_waiting}<span class="cerb-sprite sprite-clock"></span>{else}{/if}</td>
 		{elseif $column=="t_is_closed"}
-		<td>{if $result.t_is_closed}<span class="cerb-sprite sprite-check_gray" title="{$translate->_('status.closed')}"></span>{else}{/if}</td>
+		<td>{if $result.t_is_closed}<span class="cerb-sprite2 sprite-tick-circle-frame-gray" title="{$translate->_('status.closed')}"></span>{else}{/if}</td>
 		{elseif $column=="t_is_deleted"}
-		<td>{if $result.t_is_deleted}<span class="cerb-sprite sprite-delete2_gray"></span>{else}{/if}</td>
+		<td>{if $result.t_is_deleted}<span class="cerb-sprite2 sprite-cross-circle-frame-gray"></span>{else}{/if}</td>
 		{elseif $column=="t_last_wrote"}
 		<td>{$result.t_last_wrote|truncate:45:'...':true:true}</td>
 		{elseif $column=="t_first_wrote"}
@@ -144,7 +144,7 @@
 <table cellpadding="2" cellspacing="0" border="0" width="100%">
 	<tr>
 		<td align="left" valign="top" id="{$view->id}_actions">
-			<button type="button" class="devblocks-chooser-add-selected"><span class="cerb-sprite sprite-add"></span> Add Selected</button>
+			<button type="button" class="devblocks-chooser-add-selected"><span class="cerb-sprite2 sprite-plus-circle-frame"></span> Add Selected</button>
 		</td>
 		<td align="right" valign="top" nowrap="nowrap">
 			{math assign=fromRow equation="(x*y)+1" x=$view->renderPage y=$view->renderLimit}
@@ -170,4 +170,5 @@
 	</tr>
 </table>
 </form>
-<br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

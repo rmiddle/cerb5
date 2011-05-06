@@ -6,7 +6,7 @@ $tables = $db->metaTables();
 // Add a new 'mail_to_group_routing' for more complex routing rules
 
 if(!isset($tables['mail_to_group_rule'])) {
-	$sql = "
+	$sql = sprintf("
 		CREATE TABLE IF NOT EXISTS mail_to_group_rule (
 			id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
 			pos SMALLINT UNSIGNED DEFAULT 0 NOT NULL,
@@ -17,8 +17,8 @@ if(!isset($tables['mail_to_group_rule'])) {
 			is_sticky TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
 			sticky_order TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
 			PRIMARY KEY (id)
-		) ENGINE=MyISAM;
-	";
+		) ENGINE=%s;
+	", APP_DB_ENGINE);
 	$db->Execute($sql);	
 }
 
@@ -128,14 +128,6 @@ list($columns, $indexes) = $db->metaTable('group_inbox_filter');
 
 if(isset($columns['pos']) && 0 != strcasecmp('int',substr($columns['pos']['type'],0,3))) {
 	$db->Execute("ALTER TABLE group_inbox_filter CHANGE COLUMN pos pos int unsigned DEFAULT 0 NOT NULL");
-}
-
-// ===========================================================================
-// Enable the new KB plugin by default
-
-if(isset($tables['cerb_plugin'])) {
-	$sql = sprintf("UPDATE cerb_plugin SET enabled=1 WHERE id = %s",$db->qstr('cerberusweb.kb'));
-	$db->Execute($sql);
 }
 
 return TRUE;
