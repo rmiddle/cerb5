@@ -16,17 +16,18 @@
 <a href="javascript:;" onclick="toggleDiv('jobedit_{$jobdiv}');">{$job->manifest->name}</a>
 
 <div style="display:block;border:1px solid rgb(200,200,200);background-color:rgb(255,255,255);padding:5px;margin:5px;">
-	{assign var=duration value=$job->getParam('duration',5)}
-	{assign var=term value=$job->getParam('term','m')}
-	Runs every: {$duration}
-	{if $term=='d'}
-		days
-	{elseif $term=='m'}
-		minutes
-	{elseif $term=='h'}
-		hours
-	{/if}<br>
-	
+	{if $enabled}
+        {assign var=duration value=$job->getParam('duration',5)}
+        {assign var=term value=$job->getParam('term','m')}
+        Runs every: {$duration}
+        {if $term=='d'}
+            days
+        {elseif $term=='m'}
+            minutes
+        {elseif $term=='h'}
+            hours
+        {/if}<br>
+    {/if}
 	Last run: {if $lastrun}{$lastrun|devblocks_date}{else}Never{/if}
 	{if $enabled && !$locked}
 	 - <a href="{devblocks_url}c=cron&id={$job_id}{/devblocks_url}?ignore_wait=1&loglevel=6" target="_blank">run now</a>
