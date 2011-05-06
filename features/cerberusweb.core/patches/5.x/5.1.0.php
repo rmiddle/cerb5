@@ -7,7 +7,7 @@ $tables = $db->metaTables();
 // Context Links
 
 if(!isset($tables['context_link'])) {
-	$sql = "
+	$sql = sprintf("
 		CREATE TABLE IF NOT EXISTS context_link (
 			from_context VARCHAR(128) DEFAULT '',
 			from_context_id INT UNSIGNED NOT NULL DEFAULT 0,
@@ -18,8 +18,8 @@ if(!isset($tables['context_link'])) {
 			INDEX to_context (to_context),
 			INDEX to_context_id (to_context_id),
 			UNIQUE from_and_to (from_context, from_context_id, to_context, to_context_id)
-		) ENGINE=MyISAM;
-	";
+		) ENGINE=%s;
+	", APP_DB_ENGINE);
 	$db->Execute($sql);
 
 	$tables['context_link'] = 'context_link';
@@ -63,7 +63,7 @@ if(isset($columns['source_extension']) && isset($columns['source_id'])) {
 // Search filter presets
 
 if(!isset($tables['view_filters_preset'])) {
-	$sql = "
+	$sql = sprintf("
 		CREATE TABLE IF NOT EXISTS view_filters_preset (
 			id INT UNSIGNED NOT NULL DEFAULT 0,
 			name VARCHAR(128) DEFAULT '',
@@ -73,8 +73,8 @@ if(!isset($tables['view_filters_preset'])) {
 			PRIMARY KEY (id),
 			INDEX view_class (view_class),
 			INDEX worker_id (worker_id)
-		) ENGINE=MyISAM;
-	";
+		) ENGINE=%s;
+	", APP_DB_ENGINE);
 	$db->Execute($sql);
 
 	$tables['view_filters_preset'] = 'view_filters_preset';
@@ -97,15 +97,15 @@ if(!isset($indexes['last_name'])) {
 }
 
 if(!empty($changes))
-	$db->Execute("ALTER TABLE address " . implode('', $changes));
+	$db->Execute("ALTER TABLE address " . implode(', ', $changes));
 
 // ===========================================================================
 // Comment
 
 if(!isset($tables['comment'])) {
-	$sql = "
+	$sql = sprintf("
 		CREATE TABLE IF NOT EXISTS comment (
-			id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
+			id INT UNSIGNED NOT NULL AUTO_INCREMENT,
 			context VARCHAR(128) DEFAULT '',
 			context_id INT UNSIGNED NOT NULL DEFAULT 0,
 			created INT UNSIGNED NOT NULL DEFAULT 0,
@@ -116,8 +116,8 @@ if(!isset($tables['comment'])) {
 			INDEX context_id (context_id),
 			INDEX address_id (address_id),
 			INDEX created (created)
-		) ENGINE=MyISAM;
-	";
+		) ENGINE=%s;
+	", APP_DB_ENGINE);
 	$db->Execute($sql);
 
 	// ===========================================================================
@@ -129,8 +129,8 @@ if(!isset($tables['comment'])) {
 			"FROM ticket_comment ORDER BY id"
 		) or die($db->ErrorMsg());
 		
-		$db->Execute("DROP TABLE ticket_comment");
-		$db->Execute("DROP TABLE ticket_comment_seq");
+		$db->Execute("DROP TABLE IF EXISTS ticket_comment");
+		$db->Execute("DROP TABLE IF EXISTS ticket_comment_seq");
 		unset($tables['ticket_comment']);
 		unset($tables['ticket_comment_seq']);
 	}
@@ -174,8 +174,8 @@ if(!isset($tables['comment'])) {
 		) or die($db->ErrorMsg());
 	}
 	
-	$db->Execute("DROP TABLE note");
-	$db->Execute("DROP TABLE note_seq");
+	$db->Execute("DROP TABLE IF EXISTS note");
+	$db->Execute("DROP TABLE IF EXISTS note_seq");
 	unset($tables['note']);
 	unset($tables['note_seq']);
 	
@@ -192,8 +192,8 @@ if(!isset($tables['comment'])) {
 		) or die($db->ErrorMsg());
 	}
 	
-	$db->Execute("DROP TABLE message_note");
-	$db->Execute("DROP TABLE message_note_seq");
+	$db->Execute("DROP TABLE IF EXISTS message_note");
+	$db->Execute("DROP TABLE IF EXISTS message_note_seq");
 	unset($tables['message_note']);
 	unset($tables['message_note_seq']);
 
@@ -246,7 +246,7 @@ if(isset($columns['worker_id'])) {
 // Create a table for persisting worker view models
 
 if(!isset($tables['worker_view_model'])) {
-	$sql = "
+	$sql = sprintf("
 		CREATE TABLE IF NOT EXISTS worker_view_model (
 			worker_id INT UNSIGNED NOT NULL DEFAULT '0',
 			view_id VARCHAR(255) NOT NULL DEFAULT '',
@@ -268,8 +268,8 @@ if(!isset($tables['worker_view_model'])) {
 			INDEX worker_id (worker_id),
 			INDEX view_id (view_id),
 			UNIQUE worker_to_view_id (worker_id, view_id)
-		) ENGINE=MyISAM;
-	";
+		) ENGINE=%s;
+	", APP_DB_ENGINE);
 	$db->Execute($sql);
 
 	$tables['worker_view_model'] = 'worker_view_model';
@@ -312,6 +312,18 @@ if(!isset($tables['worker_view_model'])) {
 	mysql_free_result($rs);
 	
 	$db->Execute("DELETE FROM worker_pref WHERE setting LIKE 'view%'");
+}
+
+// Add render_subtotals
+list($columns, $indexes) = $db->metaTable('worker_view_model');
+
+if(!isset($columns['render_subtotals'])) {
+	$db->Execute("ALTER TABLE worker_view_model ADD COLUMN render_subtotals VARCHAR(255) NOT NULL DEFAULT ''");
+	$db->Execute("UPDATE worker_view_model SET render_subtotals = 'group' WHERE view_id = 'mail_workflow'");
+}
+
+if(!isset($columns['render_subtotals_clickable'])) {
+	$db->Execute("ALTER TABLE worker_view_model ADD COLUMN render_subtotals_clickable TINYINT(1) NOT NULL DEFAULT 0");
 }
 
 // ===========================================================================
@@ -409,6 +421,12 @@ if(!isset($tables['snippet']))
 $db->Execute("UPDATE snippet SET content=REPLACE(content,'{{worker_','{{') WHERE context='cerberusweb.snippets.worker'");
 
 // ===========================================================================
+// Fix orphaned ticket.last_message_id
+
+$db->Execute("UPDATE ticket SET last_message_id=(SELECT max(id) FROM message WHERE message.ticket_id=ticket.id) WHERE last_message_id=0 AND is_deleted=0");
+$db->Execute("UPDATE ticket SET is_closed=1, is_deleted=1 WHERE last_message_id=0 AND is_deleted=0");
+
+// ===========================================================================
 // Convert sequences to MySQL AUTO_INCREMENT, make UNSIGNED
 
 // Drop sequence tables
@@ -441,6 +459,7 @@ $tables_autoinc = array(
 	'bayes_words',
 	'category',
 	'comment',
+	'contact_org',
 	'custom_field',
 	'fnr_external_resource',
 	'fnr_topic',

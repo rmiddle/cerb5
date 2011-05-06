@@ -1,10 +1,6 @@
 <?php
 if (class_exists('Extension_Report',true)):
 class ChReportTimeSpentWorker extends Extension_Report {
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	function render() {
 		$db = DevblocksPlatform::getDatabaseService();
 		$tpl = DevblocksPlatform::getTemplateService();
@@ -113,7 +109,6 @@ class ChReportTimeSpentWorker extends Extension_Report {
 		
 		if(null != ($view = C4_AbstractViewLoader::getView($defaults->id, $defaults))) {
 			$view->is_ephemeral = true;
-			$view->paramsDefault = array();
 			$view->removeAllParams();
 
 			$view->addParam(new DevblocksSearchCriteria(SearchFields_TimeTrackingEntry::LOG_DATE,DevblocksSearchCriteria::OPER_BETWEEN, array($start_time, $end_time)));

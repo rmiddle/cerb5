@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,27 +43,16 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class ChActivityPage extends CerberusPageExtension {
-	private $_TPL_PATH = '';
-	
-	function __construct($manifest) {
-		$this->_TPL_PATH = dirname(dirname(dirname(__FILE__))) . '/templates/';
-		parent::__construct($manifest);
-	}
-		
 	function isVisible() {
-		// check login
-		$visit = CerberusApplication::getVisit();
-		
-		if(empty($visit)) {
+		// The current session must be a logged-in worker to use this page.
+		if(null == ($worker = CerberusApplication::getActiveWorker()))
 			return false;
-		} else {
-			return true;
-		}
+		return true;
 	}
 	
 	function getActivity() {
@@ -72,15 +61,13 @@ class ChActivityPage extends CerberusPageExtension {
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$response = DevblocksPlatform::getHttpResponse();
-		$tpl->assign('request_path', implode('/',$response->path));
 
 		// Remember the last tab/URL
 		$visit = CerberusApplication::getVisit();
 		if(null == ($selected_tab = @$response->path[1])) {
-			$selected_tab = $visit->get(CerberusVisit::KEY_ACTIVITY_TAB, '');
+			$selected_tab = $visit->get(Extension_ActivityTab::POINT, '');
 		}
 		$tpl->assign('selected_tab', $selected_tab);
 
@@ -88,21 +75,24 @@ class ChActivityPage extends CerberusPageExtension {
 		$stack = $response->path;
 		array_shift($stack); // activity
 		
-		$tab_manifests = DevblocksPlatform::getExtensions('cerberusweb.activity.tab', false);
+		$tab_manifests = DevblocksPlatform::getExtensions(Extension_ActivityTab::POINT, false);
 		uasort($tab_manifests, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
 		$tpl->assign('tab_manifests', $tab_manifests);
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'activity/index.tpl');
+		$tpl->display('devblocks:cerberusweb.core::activity/index.tpl');
 	}
 	
 	// Ajax
 	function showTabAction() {
 		@$ext_id = DevblocksPlatform::importGPC($_REQUEST['ext_id'],'string','');
 		
+		$visit = CerberusApplication::getVisit();
+		
 		if(null != ($tab_mft = DevblocksPlatform::getExtension($ext_id)) 
 			&& null != ($inst = $tab_mft->createInstance()) 
 			&& $inst instanceof Extension_ActivityTab) {
-			$inst->showTab();
+				$visit->set(Extension_ActivityTab::POINT, $inst->manifest->params['uri']);
+				$inst->showTab();
 		}
 	}
 	

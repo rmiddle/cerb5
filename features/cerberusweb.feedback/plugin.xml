@@ -1,11 +1,11 @@
-<!DOCTYPE plugin SYSTEM "../../libs/devblocks/plugin.dtd">
-<plugin>
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.devblocks.com/schema/plugin.xsd">
 	<id>cerberusweb.feedback</id>
 	<name>[Cerb5] Feedback Capture</name>
 	<description>Organically capture praise or criticism and share it with decision makers.  This adds a Feedback tab to the Activity page.  You can also capture feedback while reading e-mail by highlighting a quote and clicking 'more' in the toolbar.</description>
 	<author>WebGroup Media, LLC.</author>
 	<revision>0</revision>
-	<link>http://wiki.cerb4.com/wiki/</link>
+	<link>http://wiki.cerb5.com/wiki/Features:Feedback_Capture</link>
 	<image>images/plugin.png</image>
 	
 	<!-- Plugin Dependencies -->
@@ -26,8 +26,6 @@
 	<class_loader>
 		<file path="api/App.php">
 			<class name="C4_FeedbackEntryView" />
-			<class name="ChCustomFieldSource_FeedbackEntry" />
-			<class name="ChWorkspaceSource_FeedbackEntry" />
 			<class name="DAO_FeedbackEntry" />
 			<class name="Model_FeedbackEntry" />
 			<class name="SearchFields_FeedbackEntry" />
@@ -42,6 +40,27 @@
 	</acl>
 	
 	<extensions>
+	
+		<!-- Contexts -->
+		
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.feedback</id>
+			<name>Feedback</name>
+			<class>
+				<file>api/App.php</file>
+				<name>Context_Feedback</name>
+			</class>
+			<params>
+				<param key="view_class" value="View_FeedbackEntry" />
+				<param key="options">
+					<value>
+						<!--<data key="create" />-->
+						<!--<data key="find" />-->
+						<data key="workspace" />
+					</value>
+				</param>
+			</params>
+		</extension>
 	
 		<!-- Activity Tabs -->
 		
@@ -85,33 +104,6 @@
 			</params>
 		</extension>
 		
-		<!-- Custom Field Source -->
-		 
-		<extension point="cerberusweb.fields.source">
-			<id>feedback.fields.source.feedback_entry</id>
-			<name>Feedback</name>
-			<class>
-				<file>api/App.php</file>
-				<name>ChCustomFieldSource_FeedbackEntry</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-		 
-		<!-- Workspace Sources -->
-		
-		<extension point="cerberusweb.workspace.source">
-			<id>feedback.workspace.source.feedback_entry</id>
-			<name>Feedback</name>
-			<class>
-				<file>api/App.php</file>
-				<name>ChWorkspaceSource_FeedbackEntry</name>
-			</class>
-			<params>
-				<param key="view_class" value="C4_FeedbackEntryView" />
-			</params>
-		</extension>
-		 
 		<!-- REST Controllers -->
 		
 		<extension point="cerberusweb.rest.controller">

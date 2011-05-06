@@ -1,10 +1,7 @@
-<div id="headerSubMenu">
-	<div style="padding:5px;">
-		<a href="{devblocks_url}c=contacts{/devblocks_url}">{$translate->_('core.menu.address_book')|lower}</a>
-		 &raquo; 
-		<a href="{devblocks_url}c=contacts&a=import{/devblocks_url}">{$translate->_('addy_book.tab.import')|lower}</a>
-	</div>
-</div>
+<ul class="submenu">
+	<li><a href="{devblocks_url}c=contacts&a=import{/devblocks_url}">{$translate->_('addy_book.tab.import')|lower}</a></li>
+</ul>
+<div style="clear:both;"></div>
 
 <div class="block">
 {assign var=type value=$visit->get('import.last.type')}
@@ -39,7 +36,7 @@
 		{/foreach}
 		
 		{if !empty($custom_fields)}
-		<optgroup label="- {$translate->_('common.custom_fields')|capitalize} -">
+		<optgroup label="- {$translate->_('common.custom_fields')} -">
 		{foreach from=$custom_fields item=field}
 			<option value="cf_{$field->id}">{$field->name}</option>
 		{/foreach}
@@ -80,8 +77,8 @@
 <br>
 
 <br>
-<button type="submit"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.upload')|capitalize}</button>
-<button type="button" onclick="document.location='{devblocks_url}c=contacts&a=import{/devblocks_url}';"><span class="cerb-sprite sprite-delete"></span> {$translate->_('common.cancel')|capitalize}</button>
+<button type="submit"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.upload')|capitalize}</button>
+<button type="button" onclick="document.location='{devblocks_url}c=contacts&a=import{/devblocks_url}';"><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('common.cancel')|capitalize}</button>
 <br>
 </form>
 </div>

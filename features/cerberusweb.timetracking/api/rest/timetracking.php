@@ -1,9 +1,5 @@
 <?php
 class ChRest_TimeTracking extends Extension_RestController implements IExtensionRestController {
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	function getAction($stack) {
 		@$action = array_shift($stack);
 		
@@ -63,11 +59,11 @@ class ChRest_TimeTracking extends Extension_RestController implements IExtension
 		
 		if('dao'==$type) {
 			$tokens = array(
-//				'is_banned' => DAO_Address::IS_BANNED,
-//				'is_registered' => DAO_Address::IS_REGISTERED,
+//				'example' => DAO_Example::PROPERTY,
 			);
 		} else {
 			$tokens = array(
+				'activity_id' => SearchFields_TimeTrackingEntry::ACTIVITY_ID,
 				'created' => SearchFields_TimeTrackingEntry::LOG_DATE,
 				'id' => SearchFields_TimeTrackingEntry::ID,
 				'mins' => SearchFields_TimeTrackingEntry::TIME_ACTUAL_MINS,

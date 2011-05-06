@@ -1,18 +1,9 @@
-{include file="$path/timetracking/display/submenu.tpl"}
+{include file="devblocks:cerberusweb.timetracking::timetracking/display/submenu.tpl"}
 
 <table cellspacing="0" cellpadding="0" border="0" width="100%" style="padding-bottom:5px;">
 <tr>
 	<td valign="top" style="padding-right:5px;">
-		{$activities = DAO_TimeTrackingActivity::getWhere()}
-		{$worker = DAO_Worker::get({$time_entry->worker_id})}
-	
-		{if isset($activities.{$time_entry->activity_id}->name)}
-		{$title = 'timetracking.ui.tracked_desc'|devblocks_translate:$worker->getName():$time_entry->time_actual_mins:$activities.{$time_entry->activity_id}->name}
-		{else}
-		{$title = '%s tracked %s mins'|devblocks_translate:{$worker->getName()}:{$time_entry->time_actual_mins}}
-		{/if}
-	
-		<h1>{$title}</h1>
+		<h1>{$time_entry->getSummary()}</h1>
 		<b>{'timetracking_entry.log_date'|devblocks_translate}:</b>
 		{$time_entry->log_date|devblocks_prettytime}
 		 &nbsp; 
@@ -22,6 +13,11 @@
 		<form action="{devblocks_url}{/devblocks_url}" onsubmit="return false;">
 		
 		<!-- Toolbar -->
+		<span>
+		{$object_watchers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_TIMETRACKING, array($time_entry->id), CerberusContexts::CONTEXT_WORKER)}
+		{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" context=CerberusContexts::CONTEXT_TIMETRACKING context_id=$time_entry->id full=true}
+		</span>		
+		
 		<button type="button" id="btnDisplayTimeEdit"><span class="cerb-sprite sprite-document_edit"></span> Edit</button>
 		
 		</form>
@@ -31,14 +27,15 @@
 
 <div id="timeTabs">
 	<ul>
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context=cerberusweb.contexts.timetracking&id={$time_entry->id}{/devblocks_url}">{$translate->_('common.comments')|capitalize|escape:'quotes'}</a></li>		
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.timetracking&id={$time_entry->id}{/devblocks_url}">{$translate->_('common.links')|escape:'quotes'}</a></li>		
-
-		{$tabs = [comments,links]}
+		{$tabs = [activity,comments,links]}
+		
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabActivityLog&scope=target&point={$point}&context={CerberusContexts::CONTEXT_TIMETRACKING}&context_id={$time_entry->id}{/devblocks_url}">{'common.activity_log'|devblocks_translate|capitalize}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context=cerberusweb.contexts.timetracking&id={$time_entry->id}{/devblocks_url}">{$translate->_('common.comments')|capitalize}</a></li>		
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.timetracking&id={$time_entry->id}{/devblocks_url}">{$translate->_('common.links')}</a></li>		
 
 		{foreach from=$tab_manifests item=tab_manifest}
 			{$tabs[] = $tab_manifest->params.uri}
-			<li><a href="{devblocks_url}ajax.php?c=config&a=showTab&ext_id={$tab_manifest->id}{/devblocks_url}"><i>{$tab_manifest->params.title|devblocks_translate|escape:'quotes'}</i></a></li>
+			<li><a href="{devblocks_url}ajax.php?c=config&a=showTab&ext_id={$tab_manifest->id}{/devblocks_url}"><i>{$tab_manifest->params.title|devblocks_translate}</i></a></li>
 		{/foreach}
 	</ul>
 </div> 

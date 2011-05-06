@@ -1,84 +1,180 @@
-<div id="headerSubMenu">
-	<div style="padding-bottom:5px;"></div>
-</div> 
+<div class="cerb-menu" style="margin-top:-5px;">
+	<ul>
+		<li>
+			<div>
+				<a href="javascript:;" class="menu">Settings <span>&#x25be;</span></a>
+				<ul class="cerb-popupmenu cerb-float">
+					<li><a href="{devblocks_url}c=config&a=branding{/devblocks_url}">Logo &amp; Title</a></li>
+					{if !$smarty.const.ONDEMAND_MODE}<li><a href="{devblocks_url}c=config&a=security{/devblocks_url}">Security</a></li>{/if}
+					<li><a href="{devblocks_url}c=config&a=fields{/devblocks_url}">Custom Fields</a></li>
+					<li><a href="{devblocks_url}c=config&a=license{/devblocks_url}">License</a></li>
+					{if !$smarty.const.ONDEMAND_MODE}<li><a href="{devblocks_url}c=config&a=scheduler{/devblocks_url}">Scheduler</a></li>{/if}
+					
+					{$exts = Extension_PageMenuItem::getExtensions(true, 'core.page.configuration','core.setup.menu.settings')}
+					{if !empty($exts)}<li><hr></li>{/if}
+					{foreach from=$exts item=menu_item}
+						{if method_exists($menu_item,'render')}<li>{$menu_item->render()}</li>{/if}
+					{/foreach}
+				</ul>
+			</div>
+		</li>
+		<li>
+			<div>
+				<a href="javascript:;" class="menu">{'common.workers'|devblocks_translate|capitalize} &amp; {'common.groups'|devblocks_translate|capitalize} <span>&#x25be;</span></a>
+				<ul class="cerb-popupmenu cerb-float">
+					<li><a href="{devblocks_url}c=config&a=groups{/devblocks_url}">{'common.groups'|devblocks_translate|capitalize}</a></li>
+					<li><a href="{devblocks_url}c=config&a=acl{/devblocks_url}">Permissions</a></li>
+					<li><a href="{devblocks_url}c=config&a=workers{/devblocks_url}">{'common.workers'|devblocks_translate|capitalize}</a></li>
+					
+					{$exts = Extension_PageMenuItem::getExtensions(true, 'core.page.configuration','core.setup.menu.workers')}
+					{if !empty($exts)}<li><hr></li>{/if}
+					{foreach from=$exts item=menu_item}
+						{if method_exists($menu_item,'render')}<li>{$menu_item->render()}</li>{/if}
+					{/foreach}
+				</ul>
+			</div>
+		</li>
+		<li>
+			<div>
+				<a href="javascript:;" class="menu">Mail <span>&#x25be;</span></a>
+				<ul class="cerb-popupmenu cerb-float">
+					<li><b>Incoming Mail</b></li>
+					<li><a href="{devblocks_url}c=config&a=mail_incoming{/devblocks_url}">Settings</a></li>
+					<li><a href="{devblocks_url}c=config&a=mail_pop3{/devblocks_url}">POP3 Accounts</a></li>
+					<li><a href="{devblocks_url}c=config&a=mail_routing{/devblocks_url}">Routing</a></li>
+					<li><a href="{devblocks_url}c=config&a=mail_filtering{/devblocks_url}">Filtering</a></li>
+					<li><hr></li>
+					
+					<li><b>Outgoing Mail</b></li>
+					<li><a href="{devblocks_url}c=config&a=mail_smtp{/devblocks_url}">SMTP Server</a></li>
+					<li><a href="{devblocks_url}c=config&a=mail_from{/devblocks_url}">Reply-To Addresses</a></li>
+					<li><a href="{devblocks_url}c=config&a=mail_queue{/devblocks_url}">Queue</a></li>
+					
+					{$exts = Extension_PageMenuItem::getExtensions(true, 'core.page.configuration','core.setup.menu.mail')}
+					{if !empty($exts)}
+						<li><hr></li>
+						<li><b>Plugins</b></li>
+					{/if}
+					{foreach from=$exts item=menu_item}
+						{if method_exists($menu_item,'render')}<li>{$menu_item->render()}</li>{/if}
+					{/foreach}
+				</ul>
+			</div>
+		</li>
+		{if !$smarty.const.ONDEMAND_MODE}
+		<li>
+			<div>
+				<a href="javascript:;" class="menu">Storage <span>&#x25be;</span></a>
+				<ul class="cerb-popupmenu cerb-float">
+					<li><a href="{devblocks_url}c=config&a=storage_content{/devblocks_url}">Content</a></li>
+					<li><a href="{devblocks_url}c=config&a=storage_profiles{/devblocks_url}">Profiles</a></li>
+					<li><a href="{devblocks_url}c=config&a=storage_attachments{/devblocks_url}">Attachments</a></li>
+					
+					{$exts = Extension_PageMenuItem::getExtensions(true, 'core.page.configuration','core.setup.menu.storage')}
+					{if !empty($exts)}<li><hr></li>{/if}
+					{foreach from=$exts item=menu_item}
+						{if method_exists($menu_item,'render')}<li>{$menu_item->render()}</li>{/if}
+					{/foreach}
+				</ul>
+			</div>
+		</li>
+		{/if}
+		<li>
+			<div>
+				<a href="javascript:;" class="menu">Community Portals <span>&#x25be;</span></a>
+				<ul class="cerb-popupmenu cerb-float">
+					<li><a href="{devblocks_url}c=config&a=portals{/devblocks_url}">Configure</a></li>
+					
+					{$exts = Extension_PageMenuItem::getExtensions(true, 'core.page.configuration','core.setup.menu.portals')}
+					{if !empty($exts)}<li><hr></li>{/if}
+					{foreach from=$exts item=menu_item}
+						{if method_exists($menu_item,'render')}<li>{$menu_item->render()}</li>{/if}
+					{/foreach}
+				</ul>
+			</div>
+		</li>
+		<li>
+			<div>
+				<a href="javascript:;" class="menu">Plugins <span>&#x25be;</span></a>
+				<ul class="cerb-popupmenu cerb-float">
+					<li><a href="{devblocks_url}c=config&a=plugins{/devblocks_url}">Manage</a></li>
+					<li><a href="https://github.com/cerb5-plugins" target="_blank">Find More Plugins...</a></li>
+					
+					{$exts = Extension_PageMenuItem::getExtensions(true, 'core.page.configuration','core.setup.menu.plugins')}
+					{if !empty($exts)}<li><hr></li>{/if}
+					{foreach from=$exts item=menu_item}
+						{if method_exists($menu_item,'render')}<li>{$menu_item->render()}</li>{/if}
+					{/foreach}
+					{*
+					<li><a href="{devblocks_url}c=config&a=freshbooks{/devblocks_url}">Freshbooks</a></li>
+					*}
+				</ul>
+			</div>
+		</li>
+		
+		{$exts = Extension_PageMenu::getExtensions(true, 'core.page.configuration')}
+		{foreach from=$exts item=menu key=menu_id}
+		<li>
+			<div>
+				{if method_exists($menu,'render')}{$menu->render()}{/if}
+			</div>
+		</li>
+		{/foreach}
+	</ul>
+</div>
+<br clear="all" style="clear:both;">
 
-<h1>{$translate->_('header.config')|capitalize}</h1>
-
-{if $install_dir_warning}
+{if $install_dir_warning && !$smarty.const.DEVELOPMENT_MODE}
 <div class="ui-widget">
-	<div class="ui-state-error ui-corner-all" style="padding: 0 .7em; margin: 0.2em; "> 
-		<p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span> 
-		<strong>Warning:</strong> The 'install' directory still exists.  This is a potential security risk.  Please delete it.</p>
+	<div class="ui-state-error ui-corner-all" style="padding:0 0.5em;margin:0.5em;"> 
+		<p>
+			<span class="ui-icon ui-icon-alert" style="float:left;margin-right:0.3em"></span> 
+			<strong>Warning:</strong> The 'install' directory still exists.  This is a potential security risk.  Please delete it.
+		</p>
 	</div>
 </div>
 {/if}
 
-<div id="tourConfigMenu"></div>
+{if !empty($subpage) && $subpage instanceof Extension_PageSection}
+<div class="cerb-subpage" style="margin-top:10px;">
+	{$subpage->render()}
+</div>
+{/if}
 
-<div id="configTabs">
-	<ul>
-		{$tabs = []}
-		
-		{$tabs[] = 'settings'}
-		<li><a href="{devblocks_url}ajax.php?c=config&a=showTabSettings{/devblocks_url}">System</a></li>
-		
-		{$tabs[] = 'plugins'}
-		<li><a href="{devblocks_url}ajax.php?c=config&a=showTabPlugins{/devblocks_url}">Plugins &amp; Features</a></li>
-		
-		{if !$smarty.const.ONDEMAND_MODE}
-			{$tabs[] = 'storage'}
-			<li><a href="{devblocks_url}ajax.php?c=config&a=showTabStorage{/devblocks_url}">Storage</a></li>
-		{/if}
-		
-		{$tabs[] = 'mail'}
-		<li><a href="{devblocks_url}ajax.php?c=config&a=showTabMail{/devblocks_url}">Mail Setup</a></li>
-		
-		{$tabs[] = 'preparser'}
-		<li><a href="{devblocks_url}ajax.php?c=config&a=showTabPreParser{/devblocks_url}">Mail Filtering</a></li>
-		
-		{$tabs[] = 'parser'}
-		<li><a href="{devblocks_url}ajax.php?c=config&a=showTabParser{/devblocks_url}">Mail Routing</a></li>
-		
-		{$tabs[] = 'queue'}
-		<li><a href="{devblocks_url}ajax.php?c=config&a=showTabQueue{/devblocks_url}">Mail Queue</a></li>
-		
-		{$tabs[] = 'attachments'}
-		<li><a href="{devblocks_url}ajax.php?c=config&a=showTabAttachments{/devblocks_url}">Attachments</a></li>
-		
-		{if !$smarty.const.ONDEMAND_MODE}
-			{$tabs[] = 'scheduler'}
-			<li><a href="{devblocks_url}ajax.php?c=config&a=showTabScheduler{/devblocks_url}">Scheduler</a></li>
-		{/if}
-		
-		{$tabs[] = 'groups'}
-		<li><a href="{devblocks_url}ajax.php?c=config&a=showTabGroups{/devblocks_url}">Groups</a></li>
-		
-		{$tabs[] = 'workers'}
-		<li><a href="{devblocks_url}ajax.php?c=config&a=showTabWorkers{/devblocks_url}">Workers</a></li>
-		
-		{$tabs[] = 'acl'}
-		<li><a href="{devblocks_url}ajax.php?c=config&a=showTabPermissions{/devblocks_url}">Permissions</a></li>
-		
-		{$tabs[] = 'fields'}
-		<li><a href="{devblocks_url}ajax.php?c=config&a=showTabFields{/devblocks_url}">Custom Fields</a></li>
-
-		{foreach from=$tab_manifests item=tab_manifest}
-			{$tabs[] = $tab_manifest->params.uri}
-			<li><a href="{devblocks_url}ajax.php?c=config&a=showTab&ext_id={$tab_manifest->id}{/devblocks_url}"><i>{$tab_manifest->params.title|devblocks_translate|escape:'quotes'}</i></a></li>
+{*
+	{if $active_worker->hasPriv('core.home.workspaces')}
+		{$enabled_workspaces = DAO_Workspace::getByEndpoint($point, $active_worker->id)}
+		{foreach from=$enabled_workspaces item=enabled_workspace}
+			{$tabs[] = 'w_'|cat:$enabled_workspace->id}
+			<li><a href="{devblocks_url}ajax.php?c=internal&a=showWorkspaceTab&point={$point}&id={$enabled_workspace->id}&request={$response_uri|escape:'url'}{/devblocks_url}"><i>{$enabled_workspace->name}</i></a></li>
 		{/foreach}
-	</ul>
-</div> 
-<br>
-
-{$tab_selected_idx=0}
-{foreach from=$tabs item=tab_label name=tabs}
-	{if $tab_label==$tab_selected}{$tab_selected_idx = $smarty.foreach.tabs.index}{/if}
-{/foreach}
+		
+		{$tabs[] = "+"}
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showAddTab&point={$point}&request={$response_uri|escape:'url'}{/devblocks_url}"><i>+</i></a></li>
+	{/if}
+*}
 
 <script type="text/javascript">
-	$(function() {
-		var tabs = $("#configTabs").tabs( { selected:{$tab_selected_idx} } );
-	});
-</script>
+	$('DIV.cerb-menu DIV A.menu')
+		.closest('li')
+		.hover(
+			function(e) {
+				$(this).find('ul:first').show();
+			},
+			function(e) {
+				$(this).find('ul:first').hide();
+			}
+		)
+		.find('.cerb-popupmenu > li')
+			.click(function(e) {
+				e.stopPropagation();
+				if(!$(e.target).is('li'))
+					return;
 
-<br>
+				$link = $(this).find('a');
+
+				if($link.length > 0)
+					window.location.href = $link.attr('href');
+			})
+		;
+</script>

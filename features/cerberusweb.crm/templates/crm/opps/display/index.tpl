@@ -1,4 +1,4 @@
-{include file="$path/crm/submenu.tpl"}
+{include file="devblocks:cerberusweb.crm::crm/submenu.tpl"}
 
 <table cellspacing="0" cellpadding="0" border="0" width="100%" style="padding-bottom:5px;">
 <tr>
@@ -9,7 +9,7 @@
 		
 		<b>{'common.status'|devblocks_translate|capitalize}:</b> {if $opp->is_closed}{if $opp->is_won}{'crm.opp.status.closed.won'|devblocks_translate|capitalize}{else}{'crm.opp.status.closed.lost'|devblocks_translate|capitalize}{/if}{else}{'crm.opp.status.open'|devblocks_translate|capitalize}{/if} &nbsp;
 		<button id="btnOppAddyPeek" type="button" onclick="genericAjaxPopup('peek','c=contacts&a=showAddressPeek&email={$address->email|escape:'url'}&view_id=',null,false,'500');" style="visibility:false;display:none;"></button>
-		<b>{'common.email'|devblocks_translate|capitalize}:</b> {$address->first_name} {$address->last_name} &lt;<a href="javascript:;" onclick="document.getElementById('btnOppAddyPeek').click();">{$address->email}</a>&gt; &nbsp;
+		<b>{'common.email'|devblocks_translate|capitalize}:</b> {$address->first_name} {$address->last_name} &lt;<a href="javascript:;" onclick="$('#btnOppAddyPeek').click();">{$address->email}</a>&gt; &nbsp;
 		<b>{'crm.opportunity.created_date'|devblocks_translate|capitalize}:</b> <abbr title="{$opp->created_date|devblocks_date}">{$opp->created_date|devblocks_prettytime}</abbr> &nbsp;
 		{if !empty($opp_worker_id) && isset($workers.$opp_worker_id)}
 			<b>{'common.worker'|devblocks_translate|capitalize}:</b> {$workers.$opp_worker_id->getName()} &nbsp;
@@ -17,7 +17,17 @@
 		<br>
 		
 		<!-- Toolbar -->
+		<span>
+		{$object_watchers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_OPPORTUNITY, array($opp->id), CerberusContexts::CONTEXT_WORKER)}
+		{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" context=CerberusContexts::CONTEXT_OPPORTUNITY context_id=$opp->id full=true}
+		</span>		
+		
 		<button type="button" id="btnDisplayOppEdit"><span class="cerb-sprite sprite-document_edit"></span> Edit</button>
+		
+		{$toolbar_exts = DevblocksPlatform::getExtensions('cerberusweb.crm.opp.toolbaritem', true)}
+		{foreach from=$toolbar_exts item=ext}
+			{$ext->render($opp)}
+		{/foreach}
 		
 		</form>
 		<br>
@@ -26,29 +36,34 @@
 </table>
 
 <div id="oppTabs">
+	{$tabs = []}
+	{$point = Extension_CrmOpportunityTab::POINT}
+	
 	<ul>
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context=cerberusweb.contexts.opportunity&id={$opp->id}{/devblocks_url}">{$translate->_('common.comments')|capitalize|escape:'quotes'}</a></li>		
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.opportunity&id={$opp->id}{/devblocks_url}">{$translate->_('common.links')|escape:'quotes'}</a></li>		
-		<li><a href="{devblocks_url}ajax.php?c=crm&a=showOppMailTab&id={$opp->id}{/devblocks_url}">{'crm.opp.tab.mail_history'|devblocks_translate|escape}</a></li>
+		{$tabs = [activity,notes,links,mail]}
+		
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabActivityLog&scope=target&point={$point}&context={CerberusContexts::CONTEXT_OPPORTUNITY}&context_id={$opp->id}{/devblocks_url}">{'common.activity_log'|devblocks_translate|capitalize}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context={CerberusContexts::CONTEXT_OPPORTUNITY}&point={$point}&id={$opp->id}{/devblocks_url}">{$translate->_('common.comments')|capitalize}</a></li>		
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context={CerberusContexts::CONTEXT_OPPORTUNITY}&point={$point}&id={$opp->id}{/devblocks_url}">{$translate->_('common.links')}</a></li>		
+		<li><a href="{devblocks_url}ajax.php?c=crm&a=showOppMailTab&id={$opp->id}{/devblocks_url}">{'crm.opp.tab.mail_history'|devblocks_translate}</a></li>
 
-		{$tabs = [notes,links,mail]}
-
+		{$tab_manifests = DevblocksPlatform::getExtensions($point, false)}
 		{foreach from=$tab_manifests item=tab_manifest}
 			{$tabs[] = $tab_manifest->params.uri}
-			<li><a href="{devblocks_url}ajax.php?c=config&a=showTab&ext_id={$tab_manifest->id}{/devblocks_url}"><i>{$tab_manifest->params.title|devblocks_translate|escape:'quotes'}</i></a></li>
+			<li><a href="{devblocks_url}ajax.php?c=crm&a=showOppTab&ext_id={$tab_manifest->id}&point={$point}{/devblocks_url}"><i>{$tab_manifest->params.title|devblocks_translate}</i></a></li>
 		{/foreach}
 	</ul>
 </div> 
 <br>
 
-{$tab_selected_idx=0}
+{$selected_tab_idx=0}
 {foreach from=$tabs item=tab_label name=tabs}
-	{if $tab_label==$tab_selected}{$tab_selected_idx = $smarty.foreach.tabs.index}{/if}
+	{if $tab_label==$selected_tab}{$selected_tab_idx = $smarty.foreach.tabs.index}{/if}
 {/foreach}
 
 <script type="text/javascript">
 	$(function() {
-		var tabs = $("#oppTabs").tabs( { selected:{$tab_selected_idx} } );
+		var tabs = $("#oppTabs").tabs( { selected:{$selected_tab_idx} } );
 		
 		$('#btnDisplayOppEdit').bind('click', function() {
 			$popup = genericAjaxPopup('peek','c=crm&a=showOppPanel&id={$opp->id}',null,false,'550');
@@ -62,29 +77,22 @@
 
 <script type="text/javascript">
 {if $pref_keyboard_shortcuts}
-CreateKeyHandler(function doShortcuts(e) {
-
-	var mycode = getKeyboardKey(e, true);
+$(document).keypress(function(event) {
+	if(event.altKey || event.ctrlKey || event.shiftKey || event.metaKey)
+		return;
 	
-	switch(mycode) {
-		case 65:  // (A) E-mail Peek
+	if($(event.target).is(':input'))
+		return;
+
+	switch(event.which) {
+		case 97:  // (A) E-mail Peek
 			try {
-				document.getElementById('btnOppAddyPeek').click();
+				$('#btnOppAddyPeek').click();
 			} catch(e) { } 
 			break;
-		case 81:  // (Q) quick compose
+		case 113:  // (Q) quick compose
 			try {
-				document.getElementById('btnQuickCompose').click();
-			} catch(e) { } 
-			break;
-		case 219:  // [ - prev page
-			try {
-				document.getElementById('btnPagePrev').click();
-			} catch(e) { } 
-			break;
-		case 221:  // ] - next page
-			try {
-				document.getElementById('btnPageNext').click();
+				$('#btnQuickCompose').click();
 			} catch(e) { } 
 			break;
 		default:

@@ -2,10 +2,10 @@
 /***********************************************************************
  | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
  |-----------------------------------------------------------------------
- | All source code & content (c) Copyright 2010, WebGroup Media LLC
+ | All source code & content (c) Copyright 2011, WebGroup Media LLC
  |   unless specifically noted otherwise.
  |
- | This source code is released under the Cerberus Public License.
+ | This source code is released under the Devblocks Public License.
  | The latest version of this license can be found here:
  | http://www.cerberusweb.com/license.php
  |
@@ -43,46 +43,13 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevblocksTourListener {
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-
-	/**
-	 * @return DevblocksTourCallout[]
-	 */
-	function registerCallouts() {
-		return array(
-        'tourHeaderMenu' => new DevblocksTourCallout('tourHeaderMenu','Helpdesk Menu','This is where you can change between major helpdesk sections.'),
-        'tourHeaderMyTasks' => new DevblocksTourCallout('tourHeaderMyTasks','My Tasks','Here you can quickly jump to a summary of your current tasks.'),
-        'tourHeaderTeamLoads' => new DevblocksTourCallout('tourHeaderTeamLoads','My Team Loads','Here you can quickly display the workload of any of your teams.  You can display a team\'s dashboard by clicking them.'),
-        'tourHeaderGetTickets' => new DevblocksTourCallout('tourHeaderGetTickets','Get Tickets',"The 'Get Tickets' link will assign you available tickets from your desired teams."),
-        'tourHeaderQuickLookup' => new DevblocksTourCallout('tourHeaderQuickLookup','Quick Lookup','Here you can quickly search for tickets from anywhere in the helpdesk.  This is generally most useful when someone calls up and you need to promptly locate their ticket.'),
-        'tourOverviewSummaries' => new DevblocksTourCallout('tourOverviewSummaries','Groups &amp; Buckets','Tickets that need worker replies are organized into buckets and shared by groups.'),
-        'tourOverviewWaiting' => new DevblocksTourCallout('tourOverviewWaiting','Waiting For Reply','Tickets that are waiting for requester replies are kept out of the way. After a requester replies, the appropriate ticket is moved back to the list of available work.'),
-        'overview_all_actions' => new DevblocksTourCallout('overview_all_actions','List Actions','Each list of tickets provides a toolbar of possible actions. Actions may be applied to specific tickets or to the entire list. The "Move to:" shortcuts adapt to your most-used buckets and groups.  Bulk Update allows you to apply several actions at once to any tickets in a list that match your criteria.'),
-        'viewoverview_all' => new DevblocksTourCallout('viewoverview_all','Peek',"You can preview the content of any ticket in a list by clicking the \"(peek)\" link next to its subject. Peek is especially helpful when confirming tickets are spam if they have an ambiguous subject. This saves you a lot of time that would otherwise be wasted clicking into each ticket and losing your place in the list."),
-        'tourDashboardViews' => new DevblocksTourCallout('tourDashboardViews','Ticket Lists','This is where your customized lists of tickets are displayed.'),
-        'tourDisplayConversation' => new DevblocksTourCallout('tourDisplayConversation','Conversation','This is where all e-mail replies will be displayed for this ticket.  Your responses will be sent to all requesters.'),
-        'btnReplyFirst' => new DevblocksTourCallout('btnReplyFirst','Replying',"Clicking the Reply button while displaying a ticket will allow you to write a response, as you would in any e-mail client, without leaving the ticket's page. This allows you to reference the ticket's information and history as you write."),
-        'tourDisplayPaging' => new DevblocksTourCallout('tourDisplayPaging','Paging',"If you clicked on a ticket from a list, the detailed ticket page will show your progress from that list in the top right. You can also use the keyboard shortcuts to advance through the list with the bracket keys: ' [ ' and ' ] '."),
-        'displayOptions' => new DevblocksTourCallout('displayOptions','Pluggable Tabs',"With Cerberus Helpdesk's pluggable architecture, new capabilities can be added to your ticket management. For example, you could display all the CRM opportunities or billing invoices associated with the ticket's requesters."),
-        'tourConfigMaintPurge' => new DevblocksTourCallout('tourConfigMaintPurge','Purge Deleted','Here you may purge any deleted tickets from the database.'),
-        'tourDashboardSearchCriteria' => new DevblocksTourCallout('tourDashboardSearchCriteria','Search Criteria','Here you can change the criteria of the current search.'),
-        'tourConfigMenu' => new DevblocksTourCallout('tourConfigMenu','Menu','This is where you may choose to configure various components of the helpdesk.'),
-        'tourConfigMailRouting' => new DevblocksTourCallout('tourConfigMailRouting','Mail Routing','This is where you instruct the helpdesk how to deliver new messages.'),
-        '' => new DevblocksTourCallout('',''),
-		);
-	}
-
+class ChCoreTour extends DevblocksHttpResponseListenerExtension {
 	function run(DevblocksHttpResponse $response, Smarty $tpl) {
 		$path = $response->path;
-
-		$callouts = CerberusApplication::getTourCallouts();
 
 		switch(array_shift($path)) {
 			case 'welcome':
@@ -90,127 +57,377 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 	                'title' => 'Welcome!',
 	                'body' => "This assistant will help you become familiar with the helpdesk by following along and providing information about the current page.  You may follow the 'Points of Interest' links highlighted below to read tips about nearby functionality.",
 	                'callouts' => array(
-					$callouts['tourHeaderMenu'],
-					)
-				);
+							new DevblocksTourCallout(
+								'body > ul.navmenu',
+								'Navigation Menu',
+								'This global navigation menu divides the application by perspective.',
+								'topLeft',
+								'bottomLeft',
+								10,
+								20
+							),
+							new DevblocksTourCallout(
+								'body > table:first td:nth(1) a',
+								'Quick Links',
+								'Hovering over your name provides a menu with useful shortcuts. Clicking on it takes you to your profile.',
+								'topRight',
+								'bottomLeft',
+								0,
+								0
+							),
+							new DevblocksTourCallout(
+								'body fieldset:nth(1)',
+								'Social',
+								'This resources will help you get the most out of Cerb5.',
+								'bottomLeft',
+								'topLeft',
+								20,
+								0
+							),
+						),
+					);
 				break;
 
-			case "display":
+			case 'activity':
 				$tour = array(
-	                'title' => 'Display Ticket',
-	                'body' => "This screen displays the currently selected ticket.  Here you can modify the ticket or send a new reply to all requesters.<br><br>Clicking the Requester History tab will show all the past and present tickets from the ticket's requesters. This is an easy way to find and merge duplicate tickets from the same requester, or from several requesters from the same organization.<br><br>Often, a ticket may require action from several workers before it's complete. You can create tasks for each worker to track the progress of these actions. In Cerberus Helpdesk, workers don't \"own\" tickets. Each ticket has a \"next worker\" who is responsible for moving the ticket forward.<br><br>A detailed walkthrough of the display ticket page is available here: <a href=\"http://www.cerberusweb.com/tour/display\" target=\"_blank\">http://www.cerberusweb.com/tour/display</a>",
+	                'title' => 'Activity Workspaces',
+	                'body' =>
+<<< EOF
+This page provides a default workspace for each of the activity-driven record types: feedback, opportunities, tasks, time tracking, etc.
+EOF
+					,
 	                'callouts' => array(
-						$callouts['tourDisplayConversation'],
-						$callouts['btnReplyFirst'],
-						$callouts['tourDisplayPaging'],
-						$callouts['displayOptions'],
+						new DevblocksTourCallout(
+							'#activityTabs',
+							'Tabs',
+							'Each tab provides a workspace for a different type of record.',
+							'bottomLeft',
+							'topLeft',
+							20,
+							10
+						),
+					),
+				);
+				break;
+				
+			case 'display':
+				$tour = array(
+	                'title' => 'Conversation Profile Page',
+	                'body' => 
+<<< EOF
+This is a detailed profile page for an email conversation.
+EOF
+					,
+	                'callouts' => array(
+						new DevblocksTourCallout(
+							'#displayProperties DIV.cerb-properties:first > DIV:nth(3)',
+							'Mask',
+							'Each conversation is identified by a "mask" that may be used as a reference number in future conversations, or over the phone.',
+							'topRight',
+							'bottomLeft',
+							10,
+							0
+							),
+						new DevblocksTourCallout(
+							'#displayProperties DIV.cerb-properties:nth(1) SPAN#displayTicketRequesterBubbles',
+							'Recipients',
+							'Your replies to this conversation will automatically be sent to all these recipients.',
+							'topLeft',
+							'bottomLeft',
+							0,
+							0
+							),
+						new DevblocksTourCallout(
+							'#displayTabs',
+							'Conversation History',
+							'This is where all email replies will be displayed for this ticket. Your responses will be sent to all requesters.',
+							'bottomLeft',
+							'topLeft',
+							10,
+							10
+							),
+						new DevblocksTourCallout(
+							'#displayTabs DIV#ui-tabs-1 BUTTON#btnComment:first',
+							'Comments',
+							'Comments are a private way to leave messages for other workers regarding this conversation.  They are not visible to recipients.',
+							'bottomLeft',
+							'topMiddle',
+							0,
+							0
+							),
+						new DevblocksTourCallout(
+							'#displayTabs > UL > li:nth(1)',
+							'Activity Log',
+							'This tab displays everything that has happened to this conversation: worker replies, customer replies, status changes, merges, and more.',
+							'bottomLeft',
+							'topMiddle',
+							0,
+							0
+							),
+						new DevblocksTourCallout(
+							'#displayTabs > UL > li:nth(2)',
+							'Links',
+							'You can connect this conversation to any other record in the system: tasks, organizations, opportunities, time tracking, servers, domains, etc.',
+							'bottomLeft',
+							'topMiddle',
+							0,
+							0
+							),
 					)
 				);
 				break;
 
-			case "preferences":
+			case 'preferences':
 				$tour = array(
              	   'title' => 'Preferences',
             	    'body' => 'This screen allows you to change the personal preferences on your helpdesk account.',
 				);
 				break;
 
-			case "groups":
+			case 'groups':
 				$tour = array(
-             	   'title' => 'My Groups',
+             	   'title' => 'Group Setup',
               	  'body' => 'This screen allows you to administer and configure groups for which you are a manager.  This includes members, buckets, mail routing rules, and other group-specific preferences.',
 				);
 				break;
 
-			case "config":
+			case 'config':
 				switch(array_shift($path)) {
 					default:
-					case NULL:
-					case "general":
 						$tour = array(
-	                        'title' => 'General Settings',
-    	                    'body' => 'These settings control the overall behavior of the helpdesk.',
+	                        'title' => 'Setup',
+    	                    'body' => 'This page is where you configure and customize Cerb5.',
+							'callouts' => array(
+								new DevblocksTourCallout(
+									'DIV.cerb-menu',
+									'Menu',
+									'Use the menu to access different configuration sections.',
+									'bottomLeft',
+									'topLeft',
+									20,
+									10
+									),
+								new DevblocksTourCallout(
+									'DIV.cerb-menu > UL > LI:nth(5)',
+									'Plugins',
+									'Use this menu to install and configure optional plugins that enhance Cerb5 functionality. You can also download third-party plugins from the community.',
+									'bottomLeft',
+									'topLeft',
+									20,
+									10
+									),
+							),
+						);
+						break;
+						
+					case 'branding':
+						$tour = array(
+	                        'title' => 'Logo & Title',
+    	                    'body' => 'This setup page provides options for personalizing your copy of Cerb5 with your own logo and browser title.',
 						);
 						break;
 
-					case "workflow":
+					case 'security':
 						$tour = array(
-	                        'title' => 'Team Configuration',
-    	                    'body' => "Here you may create new helpdesk workers and organize them into teams.  Common teams often include departments (such as: Support, Sales, Development, Marketing, Billing, etc.) or various projects that warrant their own workloads.",
+	                        'title' => 'Security',
+    	                    'body' => 'Security is IP-based.  On this page you should enter the IPs that are allowed to access the /cron and /update URLs.',
 						);
 						break;
-
-					case "fnr":
+						
+					case 'fields':
 						$tour = array(
-	                        'title' => 'Fetch & Retrieve',
-	                        'body' => "The Fetch & Retrieve config allows you to define a wide variety of sources for pulling support data from (wikis, blogs, kbs, faqs, etc).  Any source that returns RSS-style XML results to a search can be used.",
+	                        'title' => 'Custom Fields',
+    	                    'body' => 'Custom fields allow you to track any kind of information that is important to your team for each record type.',
 						);
 						break;
-
-					case "mail":
+						
+					case 'license':
 						$tour = array(
-	                        'title' => 'Mail Configuration',
-	                        'body' => "This section controls the heart of your helpdesk: e-mail.  Here you may define the routing rules that determine what to do with new messages.  This is also where you set your preferences for sending mail out of the helpdesk.  To configure the POP3 downloader, click 'helpdesk config'->'scheduler'->'POP3 Mail Checker'",
-	                        'callouts' => array(
-							$callouts['tourConfigMailRouting']
-						)
+	                        'title' => 'License',
+    	                    'body' => "This setup page manages your Cerb5 license.  If you don't have a license, one can be <a href='http://www.cerberusweb.com/buy' target='_blank'>purchased from the project website</a>.",
 						);
 						break;
-
-					case "maintenance":
-						$tour = array(
-	                        'title' => 'Maintenance',
-	                        'body' => 'This section is dedicated to ensuring your helpdesk continues to operate lightly and quickly.',
-	                        'callouts' => array(
-							$callouts['tourConfigMaintPurge'],
-						)
-						);
-						break;
-
-					case "extensions":
-						$tour = array(
-	                        'title' => 'Extensions',
-	                        'body' => "This is where you may extend Cerberus Helpdesk by installing new functionality through plug-ins.",
-	                        'callouts' => array(
-							)
-						);
-						break;
-					case "jobs":
+						
+					case 'scheduler':
 						$tour = array(
 	                        'title' => 'Scheduler',
-	                        'body' => "The scheduler is where you can set up tasks that will periodically run behind-the-scenes.",
-	                        'callouts' => array(
-							)
+    	                    'body' => 'The scheduler is where you can set up tasks that will periodically run behind-the-scenes.',
 						);
 						break;
-				}
-				break;
 
-			case NULL:
-			case "tickets":
-				switch(array_shift($path)) {
-					default:
-					case NULL:
-					case 'overview':
+					case 'groups':
 						$tour = array(
-	                        'title' => 'Mail Overview',
-	                        'body' => "The Mail tab provides the ability to compose outgoing email as well as view lists of tickets, either here in the general overview, in specific search result lists, or in your personalized ticket lists in 'my workspaces'.  A detailed walkthrough of the mail page is available here: <a href=\"http://www.cerberusweb.com/tour/overview\" target=\"_blank\">http://www.cerberusweb.com/tour/overview</a>",
+	                        'title' => 'Groups',
+    	                    'body' => "Here you may organize workers into groups.  Common groups often include departments (such as: Support, Sales, Development, Marketing, Billing, etc.) or various projects that warrant their own workloads.",
+						);
+						break;
+						
+					case 'acl':
+						$tour = array(
+	                        'title' => 'Worker Permissions',
+    	                    'body' => "This setup page provides a way to restrict the access rights of workers by role.",
+						);
+						break;
+						
+					case 'workers':
+						$tour = array(
+	                        'title' => 'Worker',
+    	                    'body' => "Here you may create, manage, or remove worker accounts.",
+						);
+						break;
+						
+					case 'mail_incoming':
+						$tour = array(
+	                        'title' => 'Incoming Mail',
+    	                    'body' => "This page configures incoming mail preferences.",
+						);
+						break;
+						
+					case 'mail_pop3':
+						$tour = array(
+	                        'title' => 'POP3 Accounts',
+    	                    'body' => "Here is where you specify the mailboxes that should be checked for new mail to import into Cerb5.",
+						);
+						break;
+						
+					case 'mail_routing':
+						$tour = array(
+	                        'title' => 'Mail Routing',
+    	                    'body' => "Mail routing determines which group should receive a new message.",
+						);
+						break;
+
+					case 'mail_filtering':
+						$tour = array(
+	                        'title' => 'Mail Filtering',
+    	                    'body' => "Mail filtering provides a way to remove unwanted mail before it is processed or stored by the system.",
+						);
+						break;
+						
+					case 'mail_smtp':
+						$tour = array(
+	                        'title' => 'SMTP Server',
+    	                    'body' => "This is where you configure your outgoing mail server.",
+						);
+						break;
+
+					case 'mail_from':
+						$tour = array(
+	                        'title' => 'Reply-To Addresses',
+    	                    'body' => "Each group or bucket can specify a reply-to address.  This is where you configure all the available reply-to email addresses.  It is <b>very important</b> that these addresses deliver to one of the mailboxes that Cerb5 checks for new mail, otherwise you won't receive correspondence from your audience.",
+						);
+						break;
+
+					case 'mail_queue':
+						$tour = array(
+	                        'title' => 'Mail Queue',
+    	                    'body' => "This page displays the mail delivery queue.",
+						);
+						break;
+
+					case 'storage_content':
+						$tour = array(
+	                        'title' => 'Storage Content',
+    	                    'body' => "This page provides a summary of the content stored by the system.  You can also configure when and where each kind of content is archived for long-term storage.",
+						);
+						break;
+
+					case 'storage_profiles':
+						$tour = array(
+	                        'title' => 'Storage Profiles',
+    	                    'body' => "Storage profiles allow you to create new archival locations for storing content; for example, in Amazon's durable S3 storage service.",
+						);
+						break;
+
+					case 'storage_attachments':
+						$tour = array(
+	                        'title' => 'Attachments',
+    	                    'body' => "This page displays email attachments as a subset of stored content.  This can be used to purge inactive or unusually large content.",
+						);
+						break;
+						
+					case 'portals':
+						$tour = array(
+	                        'title' => 'Community Portals',
+    	                    'body' => "Here you can create public, community-facing interfaces -- knowledgebases, contact forms, and Support Centers.",
+						);
+						break;
+						
+					case 'plugins':
+						$tour = array(
+	                        'title' => 'Manage Plugins',
+	                        'body' => "This is where you can extend Cerb5 by installing new functionality through plugins.",
 	                        'callouts' => array(
-							$callouts['tourOverviewSummaries'],
-							$callouts['tourOverviewWaiting'],
-							$callouts['overview_all_actions'],
-							$callouts['viewoverview_all'],
 							)
 						);
 						break;
 						
-					case 'lists':
+				}
+				break;
+
+			case NULL:
+			case 'tickets':
+				switch(array_shift($path)) {
+					default:
 						$tour = array(
-	                        'title' => 'My Workspaces',
-	                        'body' => 'Here is where you set up personalized lists of tickets.  Any Overview or Search results list can be copied here by clicking the "copy" link in the list title bar.',
+	                        'title' => 'Mail Workspaces',
+	                        'body' => "This page is where you manage mail conversations.  You can compose new mail, search, watch conversations, manage your drafts, reply to requesters, and more.",
 	                        'callouts' => array(
-							$callouts['tourDashboardViews'],
-							)
+								new DevblocksTourCallout(
+									'#mailTabs',
+									'Tabs',
+									'You can switch between several workspaces using these tabs. Workflow lists conversations that need immediate attention.',
+									'bottomLeft',
+									'topLeft',
+									10,
+									10
+								),
+								new DevblocksTourCallout(
+									'#viewmail_workflow_sidebar',
+									'Subtotals',
+									'You can display subtotals for any worklist on a wide variety of properties, including your own custom fields.',
+									'bottomLeft',
+									'topLeft',
+									25,
+									0
+								),
+								new DevblocksTourCallout(
+									'#tourHeaderQuickLookup',
+									'Quick Search',
+									"You can use this search box to quickly find particular conversations.",
+									'topRight',
+									'bottomLeft',
+									10,
+									0
+								),
+								new DevblocksTourCallout(
+									'#viewmail_workflow TABLE.worklistBody TH:first',
+									'Watchers',
+									"Click the green plus button next to any object to add yourself as a watcher.  You will receive a notification any time there is activity.",
+									'bottomLeft',
+									'topMiddle',
+									0,
+									5
+								),
+								new DevblocksTourCallout(
+									'#viewmail_workflow TABLE.worklist:first',
+									'Peek',
+									"You can preview the content of any mail conversation in the worklist by hovering over the row and clicking the peek button that pops up to the right of the subject. Peek is especially helpful when confirming tickets are spam if they have an ambiguous subject. This saves you a lot of time that would otherwise be wasted clicking into each ticket and losing your place in the list.",
+									'bottomLeft',
+									'topMiddle',
+									0,
+									20
+								),
+								new DevblocksTourCallout(
+									'#mail_workflow_actions',
+									'List Actions',
+									'Each list of tickets provides a toolbar of possible actions. Actions may be applied to specific tickets or to the entire list. Bulk Update allows you to apply several actions at once to any tickets in a list that match your criteria.',
+									'topLeft',
+									'topLeft',
+									10,
+									15
+								),
+							),					
 						);
 						break;
 						
@@ -219,7 +436,7 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 	                        'title' => 'Searching Tickets',
 	                        'body' => '',
 	                        'callouts' => array(
-							$callouts['tourDashboardSearchCriteria']
+								//$callouts['tourDashboardSearchCriteria']
 							)
 						);
 						break;
@@ -244,30 +461,42 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 				switch(array_shift($path)) {
 					default:
 					case NULL:
-					case 'orgs':
 						$tour = array(
-	                        'title' => 'Organizations',
-	                        'body' => '',
-	                        'callouts' => array(
-							)
-						);
-						break;
-						
-					case 'addresses':
-						$tour = array(
-	                        'title' => 'Addresses',
-	                        'body' => '',
-	                        'callouts' => array(
-							)
-						);
-						break;
-						
-					case 'import':
-						$tour = array(
-	                        'title' => 'Importing Orgs and Addresses',
-	                        'body' => 'Use this screen to import Organizational and Address info.  The import allows comparison checking to do incremental imports and not duplicate data.',
-	                        'callouts' => array(
-							)
+			                'title' => 'Address Book',
+			                'body' =>
+<<< EOF
+The address book is a repository of information about your contacts and their organizations.
+EOF
+							,
+			                'callouts' => array(
+								new DevblocksTourCallout(
+									'#addyBookTabs > UL > LI:nth(0)',
+									'Organizations',
+									'This tab displays the default workspace for organizations.',
+									'bottomLeft',
+									'topMiddle',
+									0,
+									0
+								),
+								new DevblocksTourCallout(
+									'#addyBookTabs > UL > LI:nth(1)',
+									'Registered Contacts',
+									'This tab displays the default workspace for registered contacts -- addresses with logins who can use community portals and self-support functionality.',
+									'bottomLeft',
+									'topMiddle',
+									0,
+									0
+								),
+								new DevblocksTourCallout(
+									'#addyBookTabs > UL > LI:nth(2)',
+									'Addresses',
+									'This tab displays the default workspace for contact email addresses.',
+									'bottomLeft',
+									'topMiddle',
+									0,
+									0
+								),
+							),
 						);
 						break;
 				}
@@ -276,27 +505,55 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 			case 'kb':
 				$tour = array(
 	                'title' => 'Knowledgebase',
-	                'body' => "",
+	                'body' =>
+<<< EOF
+The knowledgebase is a collection of informative articles organized into categories.  Categories can be based on anything: product lines, languages, etc.
+EOF
+					,
 	                'callouts' => array(
-					)
+					),
 				);
 				break;
 				
-			case 'tasks':
-				$tour = array(
-	                'title' => 'Tasks',
-	                'body' => "Often, a ticket may require action from several workers before it's complete. You can create tasks for each worker to track the progress of these actions. In Cerberus Helpdesk, workers don't \"own\" tickets. Each ticket has a \"next worker\" who is responsible for moving the ticket forward.",
-	                'callouts' => array(
-					)
-				);
+			case 'profiles':
+				switch(array_shift($path)) {
+					default:
+						$tour = array(
+			                'title' => 'Profiles',
+			                'body' =>
+<<< EOF
+Profiles make it easy to view the activity and watchlists of other workers.
+EOF
+							,
+			                'callouts' => array(
+							),
+						);
+						break;
+					case 'worker':
+						$tour = array(
+			                'title' => 'My Profile',
+			                'body' =>
+<<< EOF
+Your profile is like your homepage within Cerb5.  It provides quick access to your notifications, activity history, virtual attendant, and watchlist.  You can also create your own custom workspaces.
+EOF
+							,
+			                'callouts' => array(
+							),
+						);
+						break;
+				}
 				break;
 				
-			case 'community':
+			case 'reports':
 				$tour = array(
-	                'title' => 'Communities',
-	                'body' => 'Here you can create Public Community interfaces to Cerberus, including Knowledgebases, Contact Forms, and Support Centers.',
+	                'title' => 'Reports',
+	                'body' =>
+<<< EOF
+This page helps you to run detailed reports about the metrics collected by Cerb5.
+EOF
+					,
 	                'callouts' => array(
-					)
+					),
 				);
 				break;
 				
@@ -307,25 +564,179 @@ class ChCoreTour extends DevblocksHttpResponseListenerExtension implements IDevb
 	}
 };
 
-class ChCoreEventListener extends DevblocksEventListenerExtension {
-	function __construct($manifest) {
-		parent::__construct($manifest);
+class EventListener_Triggers extends DevblocksEventListenerExtension {
+	static $_traversal_log = array();
+	static $_trigger_log = array();
+	static $_trigger_stack = array();
+	static $_depth = 0;
+	
+	static function increaseDepth($trigger_id) {
+		++self::$_depth;
+		
+		self::$_trigger_log[] = $trigger_id;
+		self::$_trigger_stack[] = $trigger_id;
+	}
+	
+	static function decreaseDepth() {
+		--self::$_depth;
+		array_pop(self::$_trigger_stack);
+	}
+	
+	/**
+	 * Are we currently nested inside this trigger at any depth?
+	 * @param integer $trigger_id
+	 */
+	static function inception($trigger_id) {
+		return in_array($trigger_id, self::$_trigger_stack);
+	}
+	
+	static function triggerHasSprung($trigger_id) {
+		return in_array($trigger_id, self::$_trigger_log);
+	}
+	
+	static function logNode($node_id) {
+		self::$_traversal_log[] = $node_id;
 	}
 
+	static function getDepth() {
+		return self::$_depth;
+	}
+	
+	static function getTriggerLog() {
+		return self::$_trigger_log;
+	}
+	
+	static function getNodeLog() {
+		return self::$_traversal_log;
+	}
+	
+	static function clear() {
+		self::$_traversal_log = array();
+		self::$_trigger_log = array();
+		self::$_trigger_stack = array();
+		self::$_depth = 0;
+	}
+	
+	/**
+	 * @param Model_DevblocksEvent $event
+	 */
+	function handleEvent(Model_DevblocksEvent $event) {
+		$logger = DevblocksPlatform::getConsoleLog("Assistant");
+		
+		$logger->info(sprintf("EVENT: %s",
+			$event->id
+		));
+		
+		$triggers = DAO_TriggerEvent::getByEvent($event->id, false);
+
+		if(empty($triggers))
+			return;
+
+		// We're restricting the scope of the event
+		if(isset($event->params['_whisper']) && is_array($event->params['_whisper'])) {
+			foreach($triggers as $trigger_id => $trigger) { /* @var $trigger Model_TriggerEvent */
+				if(
+					null != ($allowed_ids = @$event->params['_whisper'][$trigger->owner_context])
+					&& in_array($trigger->owner_context_id, !is_array($allowed_ids) ? array($allowed_ids) : $allowed_ids)
+					) {
+					// We're allowed to see this event
+				} else {
+					// We're not allowed to see this event
+					//$logger->info(sprintf("Removing trigger %d (%s) since it is not in this whisper",
+					//	$trigger_id,
+					//	$trigger->title
+					//));
+					unset($triggers[$trigger_id]);
+				}
+			}
+		}
+			
+		// [TODO] This could be cached in a runtime registry too
+		if(null == ($mft = DevblocksPlatform::getExtension($event->id, false))) 
+			return;
+		
+		if(null == ($event_ext = $mft->createInstance()) 
+			|| !$event_ext instanceof Extension_DevblocksEvent)  /* @var $event_ext Extension_DevblocksEvent */
+				return;
+			
+		// Load the intermediate data ONCE!
+		$event_ext->setEvent($event);
+		$values = $event_ext->getValues();
+		foreach($triggers as $trigger) { /* @var $trigger Model_TriggerEvent */
+			if(self::inception($trigger->id)) {
+				$logger->info(sprintf("Skipping trigger %d (%s) because we're currently inside of it.",
+					$trigger->id,
+					$trigger->title
+				));
+				continue;
+			}			
+			
+			/*
+			 * If a top level trigger already ran as a consequence of the 
+			 * event chain, don't run it again. 
+			 */
+			if(self::getDepth() == 0 && self::triggerHasSprung($trigger->id)) {
+				$logger->info(sprintf("Skipping trigger %d (%s) because it has already run this event chain.",
+					$trigger->id,
+					$trigger->title
+				));
+				continue;
+			}			
+			
+			self::increaseDepth($trigger->id);
+			
+			$logger->info(sprintf("Running decision tree on trigger %d (%s) for %s=%d",
+				$trigger->id,
+				$trigger->title,
+				$trigger->owner_context,
+				$trigger->owner_context_id
+			));
+			
+			$trigger->runDecisionTree($values);
+			
+			self::decreaseDepth();
+		}
+
+		/*
+		 * Clear our event chain when we finish all triggers and we're 
+		 * no longer nested.
+		 */
+		if(0 == self::getDepth()) {
+			//var_dump(self::getTriggerLog());
+			//var_dump(self::getNodeLog());
+			self::clear();
+		}
+		
+		return;
+		
+		// [TODO] ACTION: HTTP POST
+		/*
+		if(extension_loaded('curl')) {
+			$postfields = array(
+				'json' => json_encode($values)
+			);
+			
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL, "http://localhost/website/webhooks/notify.php");
+			curl_setopt($ch, CURLOPT_HEADER, 0);
+			curl_setopt($ch, CURLOPT_POST, 1);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $postfields);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+			$response = curl_exec($ch);
+			curl_close($ch);
+			echo($response);
+		}
+		*/	
+	}
+};
+
+class ChCoreEventListener extends DevblocksEventListenerExtension {
 	/**
 	 * @param Model_DevblocksEvent $event
 	 */
 	function handleEvent(Model_DevblocksEvent $event) {
 		// Cerberus Helpdesk Workflow
 		switch($event->id) {
-			case 'context_link.set':
-				$this->_handleContextLink($event);
-				break;
-				
-			case 'context_link.assigned':
-				$this->_handleContextLinkAssigned($event);
-				break;
-				
 			case 'cron.heartbeat':
 				$this->_handleCronHeartbeat($event);
 				break;
@@ -333,317 +744,23 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 			case 'cron.maint':
 				$this->_handleCronMaint($event);
 				break;
-				
-			case 'dao.ticket.update':
-				$this->_handleDaoTicketUpdate($event);
-				break;
-				
-			case 'ticket.action.closed':
-				$this->_handleTicketClosed($event);
-				break;
-				
-			case 'ticket.action.moved':
-				$this->_handleTicketMoved($event);
-				break;
-				
-            case 'ticket.reply.inbound':
-            case 'ticket.reply.outbound':
-				$this->_handleTicketReply($event);
-            	break;
 		}
 	}
 
-	// Handle context link assignment
-	private function _handleContextLink($event) {
-		$events = DevblocksPlatform::getEventService();
-		
-		// Assignment
-		if(CerberusContexts::CONTEXT_WORKER == $event->params['to_context']) {
-			// Trigger a context->worker assignment notification
-			$events->trigger(
-		        new Model_DevblocksEvent(
-		            'context_link.assigned',
-	                array(
-	                    'context' => $event->params['from_context'],
-	                    'context_id' => $event->params['from_context_id'],
-	                    'worker_id' => $event->params['to_context_id'],
-	                )
-	            )
-			);
-		}
-	}
-	
-	private function _handleContextLinkAssigned($event) {
-		$translate = DevblocksPlatform::getTranslationService();
-		$events = DevblocksPlatform::getEventService();
-
-		$worker_id = $event->params['worker_id'];
-		$context = $event->params['context'];
-		$context_id = $event->params['context_id'];
-		
-		$notifying_ourself = false;
-		
-		// Don't notify ourself
-		if(null != ($active_worker = CerberusApplication::getActiveWorker())) {
-			if($active_worker->id == $worker_id)
-				$notifying_ourself = true;
-		}
-		
-		// Abstract context assigned notifications
-		if(!$notifying_ourself && null != ($mft = DevblocksPlatform::getExtension($context, false, true))) {
-			@$string_assigned = $mft->params['events'][0]['context.assigned'];
-			
-			if(!empty($string_assigned) 
-				&& null != ($ext = $mft->createInstance())	
-				&& null != ($url = $ext->getPermalink($context_id))) {
-				/* @var $ext Extension_DevblocksContext */
-
-				if(null != $active_worker) {
-					$worker_name = $active_worker->getName();
-				} else {
-					$worker_name = 'The system'; 
-				}
-					
-				// Assignment Notification
-				$fields = array(
-					DAO_WorkerEvent::CREATED_DATE => time(),
-					DAO_WorkerEvent::WORKER_ID => $worker_id,
-					DAO_WorkerEvent::URL => $url,
-					DAO_WorkerEvent::MESSAGE => vsprintf($translate->_($string_assigned), $worker_name),
-				);
-				DAO_WorkerEvent::create($fields);
-			}
-		}
-		
-		// Per-context itemized notifications
-		switch($context) {
-			// Task
-			case CerberusContexts::CONTEXT_TASK:
-				$events->trigger(
-			        new Model_DevblocksEvent(
-			            'task.assigned',
-		                array(
-		                    'task_id' => $context_id,
-		                	'worker_id' => $worker_id,
-		                )
-		            )
-				);
-				break;
-		}
-	}
-	
-	private function _handleDaoTicketUpdate($event) {
-    	@$objects = $event->params['objects'];
-
-		$eventMgr = DevblocksPlatform::getEventService();
-		
-    	if(is_array($objects))
-    	foreach($objects as $object_id => $object) {
-    		@$model = $object['model'];
-    		@$changes = $object['changes'];
-    		
-    		if(empty($model) || empty($changes))
-    			continue;
-    		
-			/*
-			 * Ticket moved
-			 */
-			@$group_id = $changes[DAO_Ticket::TEAM_ID];
-			@$bucket_id = $changes[DAO_Ticket::CATEGORY_ID];
-			
-			if(!is_null($group_id) || !is_null($bucket_id)) {
-			    $eventMgr->trigger(
-			        new Model_DevblocksEvent(
-			            'ticket.action.moved',
-		                array(
-		                    'ticket_id' => $object_id,
-		                	'group_id' => $model[DAO_Ticket::TEAM_ID],
-		                	'bucket_id' => $model[DAO_Ticket::CATEGORY_ID],
-		                    'model' => $model,
-		                )
-		            )
-			    );
-			}
-			
-			/*
-			 * Ticket closed
-			 */
-			@$closed = $changes[DAO_Ticket::IS_CLOSED];
-			
-			if(!is_null($closed) && !empty($model[DAO_Ticket::IS_CLOSED])) {
-			    $eventMgr->trigger(
-			        new Model_DevblocksEvent(
-			            'ticket.action.closed',
-		                array(
-		                    'ticket_id' => $object_id,
-		                    'model' => $model,
-		                )
-		            )
-			    );
-			}	    	
-    	}
-	}
-	
-	private function _handleTicketReply($event) {
-		@$ticket_id = $event->params['ticket_id'];
-		
-		$context_owners = CerberusContexts::getWorkers(CerberusContexts::CONTEXT_TICKET, $ticket_id);
-		$url_writer = DevblocksPlatform::getUrlService();
-		
-		if(empty($context_owners))
-			return;
-		
-		switch($event->id) {
-			case 'ticket.reply.inbound':
-				// Don't trigger on move events
-				if(isset($event->params['is_move']))
-					return;
-				
-				$who = 'A contact';
-					
-				// If we can resolve the address into a real name (or e-mail address)...
-				if(null != ($address = @$event->params['address_model'])) {
-					$name = $address->getName();
-					$who = sprintf("%s%s",
-						(!empty($name) ? ($name . ' ') : ''), 
-						$address->email
-					);
-				}
-				
-				$message = sprintf("%s replied to a ticket assigned to you.",
-					$who
-				);
-				break;
-				
-			case 'ticket.reply.outbound':
-				$active_worker = CerberusApplication::getActiveWorker();
-				$workers = DAO_Worker::getAll();
-
-				// Make sure we know the sending worker
-				if(null == ($worker_id = @$event->params['worker_id']))
-					return;
-				
-				$who = 'A worker';
-					
-				if(isset($workers[$worker_id]))
-					$who = $workers[$worker_id]->getName();
-					
-				// Don't tell a worker about a reply they did
-				unset($context_owners[$worker_id]);
-				
-				$message = sprintf("%s sent a reply on a ticket assigned to you.",
-					$who
-				);
-				
-				break;
-		}
-
-		// We may have fewer workers than we started with
-		if(empty($context_owners))
-			return;
-		
-		$url = $url_writer->write(sprintf("c=display&id=%s", $ticket_id));
-			
-		// Send notifications to all owners of the ticket
-		foreach($context_owners as $owner_id => $owner) {
-			// Assignment Notification
-			$fields = array(
-				DAO_WorkerEvent::CREATED_DATE => time(),
-				DAO_WorkerEvent::WORKER_ID => $owner_id,
-				DAO_WorkerEvent::URL => $url,
-				DAO_WorkerEvent::MESSAGE => $message,
-			);
-			DAO_WorkerEvent::create($fields);
-		}
-	}
-	
-	private function _handleTicketMoved($event) {
-		@$ticket_id = $event->params['ticket_id'];
-		@$group_id = $event->params['group_id'];
-		@$bucket_id = $event->params['bucket_id'];
-		
-		// If we're landing in an inbox we need to check its filters
-		if(!empty($group_id) && empty($bucket_id)) { // moving to an inbox
-			// Run the new inbox filters
-			$matches = CerberusApplication::runGroupRouting($group_id, $ticket_id);
-			
-			// If we matched no rules, we're stuck in the destination inbox.
-			if(!empty($matches)) {
-				// If more inbox rules want to move this ticket don't consider this finished
-				if(is_array($matches))
-				foreach($matches as $match) {
-	                if(isset($match->actions['move'])) // any moves
-						return;
-				}
-			}
-		}
-
-		// Trigger an inbound event
-		// [TODO] This really should be a different event to run inbox filters	
-	    $eventMgr = DevblocksPlatform::getEventService();
-	    $eventMgr->trigger(
-	        new Model_DevblocksEvent(
-	            'ticket.reply.inbound',
-                array(
-                    'ticket_id' => $ticket_id,
-                    'is_move' => true,
-                )
-            )
-	    );
-	}
-	
-	private function _handleTicketClosed($event) {
-		@$ticket_id = $event->params['ticket_id'];
-		@$model = $event->params['model'];
-
-		// If we're closing *and* deleting, abort.
-		@$is_deleted = $model[DAO_Ticket::IS_DELETED];
-		if(!is_null($is_deleted) && $is_deleted)
-			return;
-			
-		$group_settings = DAO_GroupSettings::getSettings();
-		@$group_id = $model[DAO_Ticket::TEAM_ID];
-
-		// Make sure the current group has an auto-close reply
-		if(!isset($group_settings[$group_id][DAO_GroupSettings::SETTING_CLOSE_REPLY_ENABLED]))
-			return;
-
-		// If the template doesn't exist or is empty
-		if(!isset($group_settings[$group_id][DAO_GroupSettings::SETTING_CLOSE_REPLY])
-			|| empty($group_settings[$group_id][DAO_GroupSettings::SETTING_CLOSE_REPLY]))
-			return;
-			
-		try {
-			$token_labels = array();
-			$token_values = array();
-			CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, $ticket_id, $token_labels, $token_values);
-			
-			$tpl_builder = DevblocksPlatform::getTemplateBuilder();
-			if(false === ($closereply_content = $tpl_builder->build($group_settings[$group_id][DAO_GroupSettings::SETTING_CLOSE_REPLY], $token_values)))
-				throw new Exception('Failed parsing close auto-reply snippet.');
-			
-			$result = CerberusMail::sendTicketMessage(array(
-				'ticket_id' => $ticket_id,
-				'message_id' => $model[DAO_Ticket::FIRST_MESSAGE_ID],
-				'content' => $closereply_content,
-				'is_autoreply' => false,
-				'dont_keep_copy' => true
-			));
-			
-		} catch (Exception $e) {
-			// [TODO] Error report
-		}
-	}
-	
 	private function _handleCronMaint($event) {
 		DAO_Address::maint();
+		DAO_Comment::maint();
+		DAO_ConfirmationCode::maint();
 		DAO_ExplorerSet::maint();
 		DAO_Group::maint();
 		DAO_Ticket::maint();
 		DAO_Message::maint();
 		DAO_Worker::maint();
-		DAO_WorkerEvent::maint();
+		DAO_Notification::maint();
 		DAO_Snippet::maint();
+		DAO_ContactPerson::maint();
+		DAO_OpenIdToContactPerson::maint();
+		DAO_Attachment::maint();
 	}
 	
 	private function _handleCronHeartbeat($event) {
@@ -653,18 +770,17 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 			DAO_Ticket::IS_WAITING => 0,
 			DAO_Ticket::DUE_DATE => 0
 		);
-		$where = sprintf("(%s = %d OR %s = %d) AND %s > 0 AND %s < %d",
+		$where = sprintf("(%s = %d OR %s = %d) AND %s = %d AND %s > 0 AND %s < %d",
 			DAO_Ticket::IS_WAITING,
 			1,
 			DAO_Ticket::IS_CLOSED,
 			1,
+			DAO_Ticket::IS_DELETED,
+			0,
 			DAO_Ticket::DUE_DATE,
 			DAO_Ticket::DUE_DATE,
 			time()
 		);
 		DAO_Ticket::updateWhere($fields, $where);
-
-		// Close any 'waiting' tickets past their group max wait time 
-		// [TODO]
 	}
 };

@@ -9,7 +9,7 @@
 			{assign var=sender value=$message_senders.$sender_id}
 			{assign var=sender_org_id value=$sender->contact_org_id}
 			{assign var=sender_org value=$message_sender_orgs.$sender_org_id}
-			{assign var=is_outgoing value=$message->worker_id}
+			{assign var=is_outgoing value=$message->is_outgoing}
 
 			<div style="float:right;">      
 	  			<button id="btnMsgMax{$message->id}" style="display:none;visibility:hidden;" onclick="genericAjaxGet('{$message->id}t','c=display&a=getMessage&id={$message->id}');"></button>
@@ -58,33 +58,33 @@
 		{/if}
 	  
 	  <div id="{$message->id}sh" style="display:block;">      
-      {if isset($headers.from)}<b>{$translate->_('message.header.from')|capitalize}:</b> {$headers.from|escape|nl2br}<br>{/if}
-      {if isset($headers.to)}<b>{$translate->_('message.header.to')|capitalize}:</b> {$headers.to|escape|nl2br}<br>{/if}
-      {if isset($headers.cc)}<b>{$translate->_('message.header.cc')|capitalize}:</b> {$headers.cc|escape|nl2br}<br>{/if}
-      {if isset($headers.bcc)}<b>{$translate->_('message.header.bcc')|capitalize}:</b> {$headers.bcc|escape|nl2br}<br>{/if}      
-      {if isset($headers.subject)}<b>{$translate->_('message.header.subject')|capitalize}:</b> {$headers.subject|escape|nl2br}<br>{/if}
-      {if isset($headers.date)}<b>{$translate->_('message.header.date')|capitalize}:</b> {$headers.date|escape|nl2br}<br>{/if}
+      {if isset($headers.from)}<b>{$translate->_('message.header.from')|capitalize}:</b> {$headers.from|escape|nl2br nofilter}<br>{/if}
+      {if isset($headers.to)}<b>{$translate->_('message.header.to')|capitalize}:</b> {$headers.to|escape|nl2br nofilter}<br>{/if}
+      {if isset($headers.cc)}<b>{$translate->_('message.header.cc')|capitalize}:</b> {$headers.cc|escape|nl2br nofilter}<br>{/if}
+      {if isset($headers.bcc)}<b>{$translate->_('message.header.bcc')|capitalize}:</b> {$headers.bcc|escape|nl2br nofilter}<br>{/if}      
+      {if isset($headers.subject)}<b>{$translate->_('message.header.subject')|capitalize}:</b> {$headers.subject|escape|nl2br nofilter}<br>{/if}
+      {if isset($headers.date)}<b>{$translate->_('message.header.date')|capitalize}:</b> {$headers.date|escape|nl2br nofilter}<br>{/if}
       </div>
 
 	  <div id="{$message->id}h" style="display:none;">      
       	{if is_array($headers)}
       	{foreach from=$headers item=headerValue key=headerKey}
       		<b>{$headerKey|capitalize}:</b>
-   			{$headerValue|escape|nl2br}<br>
+   			{$headerValue|escape|nl2br nofilter}<br>
       	{/foreach}
       	{/if}
       </div>
       
       {if $expanded}
       <div style="margin:2px;margin-left:10px;">
-      	 <a href="javascript:;" class="brief" onclick="if($(this).hasClass('brief')) { $('#{$message->id}sh').hide();$('#{$message->id}h').show();$(this).html('{$translate->_('display.convo.brief_headers')|lower|escape}').removeClass('brief'); } else { $('#{$message->id}sh').show();$('#{$message->id}h').hide();$(this).html('{$translate->_('display.convo.full_headers')|lower|escape}').addClass('brief'); } ">{$translate->_('display.convo.full_headers')|lower|escape}</a>
+      	 <a href="javascript:;" class="brief" onclick="if($(this).hasClass('brief')) { $('#{$message->id}sh').hide();$('#{$message->id}h').show();$(this).html('{$translate->_('display.convo.brief_headers')|lower}').removeClass('brief'); } else { $('#{$message->id}sh').show();$('#{$message->id}h').hide();$(this).html('{$translate->_('display.convo.full_headers')|lower}').addClass('brief'); } ">{$translate->_('display.convo.full_headers')|lower}</a>
       	 | <a href="#{$message->id}act">{$translate->_('display.convo.skip_to_bottom')|lower}</a>
       </div>
       {/if}
       
   	{if $expanded}
       <div style="clear:both;display:block;padding-top:10px;">
-    	  	<pre class="emailbody">{$message->getContent()|trim|escape|devblocks_hyperlinks|devblocks_hideemailquotes}</pre>
+    	  	<pre class="emailbody">{$message->getContent()|trim|escape|devblocks_hyperlinks|devblocks_hideemailquotes nofilter}</pre>
     	  	<br>
 	      	<table width="100%" cellpadding="0" cellspacing="0" border="0">
 	      		<tr>
@@ -93,7 +93,7 @@
 						
 						{* If not requester *}
 						{if !$message->is_outgoing && !isset($requesters.{$sender_id})}
-						<button type="button" onclick="$(this).remove(); genericAjaxGet('','c=display&a=requesterAdd&ticket_id={$ticket->id}&email='+encodeURIComponent('{$sender->email}'),function(o) { genericAjaxGet('displayTicketRequesterBubbles','c=display&a=requestersRefresh&ticket_id={$ticket->id}'); } );"><span class="cerb-sprite sprite-add"></span> {$translate->_('display.ui.add_to_recipients')}</button>
+						<button type="button" onclick="$(this).remove(); genericAjaxGet('','c=display&a=requesterAdd&ticket_id={$ticket->id}&email='+encodeURIComponent('{$sender->email}'),function(o) { genericAjaxGet('displayTicketRequesterBubbles','c=display&a=requestersRefresh&ticket_id={$ticket->id}'); } );"><span class="cerb-sprite2 sprite-plus-circle-frame"></span> {$translate->_('display.ui.add_to_recipients')}</button>
 						{/if}
 						
 				      	{if $active_worker->hasPriv('core.display.actions.reply')}{if !empty($requesters)}{assign var=show_more value=1}<button type="button" class="reply" onclick="displayReply('{$message->id}',0);"><span class="cerb-sprite sprite-export"></span> {$translate->_('display.ui.reply')|capitalize}</button>{/if}{/if}
@@ -116,9 +116,13 @@
 	      		<button type="button" onclick="document.frmPrint.action='{devblocks_url}c=print&a=message&id={$message->id}{/devblocks_url}';document.frmPrint.submit();"><span class="cerb-sprite sprite-printer"></span> {$translate->_('common.print')|capitalize}</button>
 	      		
 	      		{if $ticket->first_message_id != $message->id && $active_worker->hasPriv('core.display.actions.split')} {* Don't allow splitting of a single message *}
-	      		<button type="button" onclick="this.form.a.value='doSplitMessage';this.form.submit();" title="Split message into new ticket"><span class="cerb-sprite sprite-documents"></span> {$translate->_('display.button.split_ticket')|capitalize}</button>
+	      		<button type="button" onclick="$frm=$(this).closest('form');$frm.find('input:hidden[name=a]').val('doSplitMessage');$frm.submit();" title="Split message into new ticket"><span class="cerb-sprite sprite-documents"></span> {$translate->_('display.button.split_ticket')|capitalize}</button>
 	      		{/if}
 	      		
+				{if $active_worker->hasPriv('core.display.message.actions.delete')}
+				<button type="button" onclick="if(!confirm('Are you sure you want to delete this message?'))return; $frm=$(this).closest('form');$frm.find('input:hidden[name=a]').val('doDeleteMessage');$frm.submit();" title="Delete this message"><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('common.delete')|capitalize}</button>
+				{/if}
+				
 				{* Plugin Toolbar *}
 				{if !empty($message_toolbaritems)}
 					{foreach from=$message_toolbaritems item=renderer}
@@ -128,23 +132,7 @@
 	      	</form>
 	      	
 	      	{if $active_worker->hasPriv('core.display.actions.attachments.download')}
-	      	{assign var=attachments value=$message->getAttachments()}
-	      	{if !empty($attachments)}
-	      	<br>
-	      	<b>{$translate->_('display.convo.attachments_label')|capitalize}</b><br>
-	      	<ul style="margin-top:0px;margin-bottom:5px;">
-	      		{foreach from=$attachments item=attachment name=attachments}
-					<li>
-						<a href="{devblocks_url}c=files&p={$attachment->id}&name={$attachment->display_name|escape:'url'}{/devblocks_url}" target="_blank" style="font-weight:bold;color:rgb(50,120,50);">{$attachment->display_name}</a>
-						(  
-						{$attachment->storage_size|devblocks_prettybytes} 
-						- 
-						{if !empty($attachment->mime_type)}{$attachment->mime_type}{else}{$translate->_('display.convo.unknown_format')|capitalize}{/if}
-						 )
-					</li>
-				{/foreach}<br>
-			</ul>
-			{/if}
+			{include file="devblocks:cerberusweb.core::internal/attachments/list.tpl" context="{CerberusContexts::CONTEXT_MESSAGE}" context_id=$message->id}
 			{/if}
 		</div> <!-- end visible -->
       	{/if}
@@ -155,7 +143,7 @@
 </div>
 <div id="{$message->id}b"></div>
 <div id="{$message->id}notes" style="background-color:rgb(255,255,255);">
-	{include file="$core_tpl/display/modules/conversation/notes.tpl"}
+	{include file="devblocks:cerberusweb.core::display/modules/conversation/notes.tpl"}
 </div>
 <div id="reply{$message->id}"></div>
 <br>

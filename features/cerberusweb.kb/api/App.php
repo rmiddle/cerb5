@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,41 +43,24 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
-class ChCustomFieldSource_KbArticle extends Extension_CustomFieldSource {
-	const ID = 'cerberusweb.fields.source.kb_article';
-};
-
 abstract class Extension_KnowledgebaseTab extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
+	const POINT = 'cerberusweb.knowledgebase.tab';
 	
 	function showTab() {}
 	function saveTab() {}
 };
 
 class ChKbPage extends CerberusPageExtension {
-	private $_TPL_PATH = '';
-	
-	function __construct($manifest) {
-		$this->_TPL_PATH = dirname(dirname(__FILE__)) . '/templates/';
-		parent::__construct($manifest);
-	}
-		
 	function isVisible() {
-		// check login
-		$visit = CerberusApplication::getVisit();
-		
-		if(empty($visit)) {
+		// The current session must be a logged-in worker to use this page.
+		if(null == ($worker = CerberusApplication::getActiveWorker()))
 			return false;
-		} else {
-			return true;
-		}
+		return true;
 	}
 	
 //	function getActivity() {
@@ -86,13 +69,11 @@ class ChKbPage extends CerberusPageExtension {
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$visit = CerberusApplication::getVisit();
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		$response = DevblocksPlatform::getHttpResponse();
-		$tpl->assign('request_path', implode('/',$response->path));
 
 		$stack = $response->path;
 		array_shift($stack); // kb
@@ -101,7 +82,7 @@ class ChKbPage extends CerberusPageExtension {
 		
 		switch($action) {
 			case 'article':
-				@$article_id = array_shift($stack);
+				@$article_id = intval(array_shift($stack));
 				
 				$categories = DAO_KbCategory::getAll();
 				$tpl->assign('categories', $categories);
@@ -111,21 +92,27 @@ class ChKbPage extends CerberusPageExtension {
 					
 					$breadcrumbs = $article->getCategories();
 					$tpl->assign('breadcrumbs', $breadcrumbs);
+					$tpl->display('devblocks:cerberusweb.kb::kb/display/index.tpl');
+					
+				} else {
+					DevblocksPlatform::redirect(new DevblocksHttpResponse(array('kb','browse')));
+					exit;
 				}
-				
-				$tpl->display('file:' . $this->_TPL_PATH . 'kb/display/index.tpl');
 				break;
 				
 			case 'category':
 			default:
-				$tab_manifests = DevblocksPlatform::getExtensions('cerberusweb.knowledgebase.tab', false);
+				$tab_manifests = DevblocksPlatform::getExtensions(Extension_KnowledgebaseTab::POINT, false);
 				uasort($tab_manifests, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
 				$tpl->assign('tab_manifests', $tab_manifests);
 				
-				if(empty($tab_selected)) $tab_selected = '';
-				$tpl->assign('tab_selected', $action);
+				// Remember the last tab/URL
+				if(null == ($selected_tab = @$response->path[1])) {
+					$selected_tab = $visit->get(Extension_KnowledgebaseTab::POINT, '');
+				}
+				$tpl->assign('selected_tab', $selected_tab);
 				
-				$tpl->display('file:' . $this->_TPL_PATH . 'kb/index.tpl');
+				$tpl->display('devblocks:cerberusweb.kb::kb/index.tpl');
 				break;
 		}
 	}
@@ -134,10 +121,13 @@ class ChKbPage extends CerberusPageExtension {
 	function showTabAction() {
 		@$ext_id = DevblocksPlatform::importGPC($_REQUEST['ext_id'],'string','');
 		
+		$visit = CerberusApplication::getVisit();
+		
 		if(null != ($tab_mft = DevblocksPlatform::getExtension($ext_id)) 
 			&& null != ($inst = $tab_mft->createInstance()) 
 			&& $inst instanceof Extension_KnowledgebaseTab) {
-			$inst->showTab();
+				$visit->set(Extension_KnowledgebaseTab::POINT, $inst->manifest->params['uri']);
+				$inst->showTab();
 		}
 	}
 
@@ -163,7 +153,7 @@ class ChKbPage extends CerberusPageExtension {
 		}
 		
 		$view->renderPage = 0;
-		$view->renderLimit = 25;
+		$view->renderLimit = 250;
 		$pos = 0;
 		
 		do {
@@ -218,23 +208,15 @@ if (class_exists('Extension_KnowledgebaseTab')):
 class ChKbBrowseTab extends Extension_KnowledgebaseTab {
 	const VIEW_ID = 'kb_browse';
 	
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	function showTab() {
 		$visit = CerberusApplication::getVisit();
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $tpl_path);
 
 		@$request_path = DevblocksPlatform::importGPC($_REQUEST['request'],'string','');
-		$tpl->assign('request_path', $request_path);
-
-		@$stack =  explode('/', $request_path);
 		
+		@$stack =  explode('/', $request_path);
 		@array_shift($stack); // kb
 		
 		@$action = array_shift($stack);
@@ -273,13 +255,13 @@ class ChKbBrowseTab extends Extension_KnowledgebaseTab {
 				
 				// Articles
 				if(empty($root_id)) {
-					$view->addParams(array(
+					$view->addParamsRequired(array(
 						new DevblocksSearchCriteria(SearchFields_KbArticle::CATEGORY_ID,DevblocksSearchCriteria::OPER_IS_NULL,true),
 					), true);
 					$view->name = $translate->_('kb.view.uncategorized');
 					
 				} else {
-					$view->addParams(array(
+					$view->addParamsRequired(array(
 						new DevblocksSearchCriteria(SearchFields_KbArticle::CATEGORY_ID,'=',$root_id),
 					), true);
 					$view->name = vsprintf($translate->_('kb.view.articles'), $categories[$root_id]->name);
@@ -291,7 +273,7 @@ class ChKbBrowseTab extends Extension_KnowledgebaseTab {
 				
 				$tpl->assign('view', $view);
 				
-				$tpl->display($tpl_path . 'kb/tabs/articles/index.tpl');	
+				$tpl->display('devblocks:cerberusweb.kb::kb/tabs/articles/index.tpl');	
 				break;
 		}
 	}
@@ -302,17 +284,11 @@ if (class_exists('Extension_KnowledgebaseTab')):
 class ChKbSearchTab extends Extension_KnowledgebaseTab {
 	const VIEW_ID = 'kb_search';
 	
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	function showTab() {
 		$visit = CerberusApplication::getVisit();
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $tpl_path);
 
 		// [TODO] Convert to $defaults
 		
@@ -325,7 +301,7 @@ class ChKbSearchTab extends Extension_KnowledgebaseTab {
 		
 		$tpl->assign('view', $view);
 		
-		$tpl->display($tpl_path . 'kb/tabs/search/index.tpl');
+		$tpl->display('devblocks:cerberusweb.kb::kb/tabs/search/index.tpl');
 	}
 }
 endif;
@@ -334,12 +310,10 @@ if (class_exists('Extension_ReplyToolbarItem',true)):
 	class ChKbReplyToolbarButton extends Extension_ReplyToolbarItem {
 		function render(Model_Message $message) { 
 			$tpl = DevblocksPlatform::getTemplateService();
-			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
-			$tpl->assign('path', $tpl_path);
 			
 			$tpl->assign('div', 'replyToolbarOptions'.$message->id);
 			
-			$tpl->display('file:' . $tpl_path . 'renderers/toolbar_kb_button.tpl');
+			$tpl->display('devblocks:cerberusweb.kb::renderers/toolbar_kb_button.tpl');
 		}
 	};
 endif;
@@ -348,12 +322,10 @@ if (class_exists('Extension_LogMailToolbarItem',true)):
 	class ChKbLogTicketToolbarButton extends Extension_LogMailToolbarItem {
 		function render() { 
 			$tpl = DevblocksPlatform::getTemplateService();
-			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
-			$tpl->assign('path', $tpl_path);
 
 			$tpl->assign('div', 'logTicketToolbarOptions');
 			
-			$tpl->display('file:' . $tpl_path . 'renderers/toolbar_kb_button.tpl');
+			$tpl->display('devblocks:cerberusweb.kb::renderers/toolbar_kb_button.tpl');
 		}
 	};
 endif;
@@ -362,36 +334,21 @@ if (class_exists('Extension_SendMailToolbarItem',true)):
 	class ChKbSendMailToolbarButton extends Extension_SendMailToolbarItem {
 		function render() { 
 			$tpl = DevblocksPlatform::getTemplateService();
-			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
-			$tpl->assign('path', $tpl_path);
 
 			$tpl->assign('div', 'sendMailToolbarOptions');
 			
-			$tpl->display('file:' . $tpl_path . 'renderers/toolbar_kb_button.tpl');
+			$tpl->display('devblocks:cerberusweb.kb::renderers/toolbar_kb_button.tpl');
 		}
 	};
 endif;
 
+// [TODO] This should just be merged into KbPage
 class ChKbAjaxController extends DevblocksControllerExtension {
-	private $_CORE_TPL_PATH = '';
-	private $_TPL_PATH = '';
-
-	function __construct($manifest) {
-		$this->_CORE_TPL_PATH = APP_PATH . '/features/cerberusweb.core/templates/';
-		$this->_TPL_PATH = dirname(dirname(__FILE__)) . '/templates/';
-		parent::__construct($manifest);
-	}
-	
 	function isVisible() {
-		// check login
-		$session = DevblocksPlatform::getSessionService();
-		$visit = $session->getVisit();
-		
-		if(empty($visit)) {
+		// The current session must be a logged-in worker to use this page.
+		if(null == ($worker = CerberusApplication::getActiveWorker()))
 			return false;
-		} else {
-			return true;
-		}
+		return true;
 	}
 	
 	/*
@@ -424,7 +381,6 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer');
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
 		if(!empty($view_id))
@@ -439,7 +395,7 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 			$tpl->assign('article', $article);
 		}
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'kb/ajax/article_peek_panel.tpl');
+		$tpl->display('devblocks:cerberusweb.kb::kb/ajax/article_peek_panel.tpl');
 	}
 
 	function showTopicEditPanelAction() {
@@ -450,14 +406,13 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 
 		if(!empty($id)) {
 			$topic = DAO_KbCategory::get($id);
 			$tpl->assign('topic', $topic);
 		}
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'kb/ajax/topic_edit_panel.tpl');
+		$tpl->display('devblocks:cerberusweb.kb::kb/ajax/topic_edit_panel.tpl');
 	}
 
 	function saveTopicEditPanelAction() {
@@ -482,7 +437,7 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 			);
 			$id = DAO_KbCategory::create($fields);
 			
-			$return = "kb/";
+			$return = "kb";
 			
 		} else { // update
 			$fields = array(
@@ -494,10 +449,11 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 			$return = "kb/category/" . $id;
 		}
 		
-		if(!empty($return)) {
-			$return_path = explode('/', $return);
-			DevblocksPlatform::redirect(new DevblocksHttpResponse($return_path));
-		}
+		if(empty($return))
+			$return = 'kb';
+		
+		$return_path = explode('/', $return);
+		DevblocksPlatform::redirect(new DevblocksHttpResponse($return_path));
 	}	
 
 	function showArticleEditPanelAction() {
@@ -509,7 +465,6 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 		@$root_id = DevblocksPlatform::importGPC($_REQUEST['root_id']);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 
 		$tpl->assign('root_id', $root_id);
 		
@@ -528,21 +483,22 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 			$article_categories = DAO_KbArticle::getCategoriesByArticleId($id);
 			$tpl->assign('article_categories', $article_categories);
 			
-			$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_KbArticle::ID);
+			$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_KB_ARTICLE);
 			$tpl->assign('custom_fields', $custom_fields);
 			
-			$custom_field_values = DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_KbArticle::ID, $id);
+			$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_KB_ARTICLE, $id);
 			if(isset($custom_field_values[$id]))
 				$tpl->assign('custom_field_values', $custom_field_values[$id]);
 		}
 		
+		// Categories
 		$categories = DAO_KbCategory::getAll();
 		$tpl->assign('categories', $categories);
 		
 		$levels = DAO_KbCategory::getTree(0); //$root_id
 		$tpl->assign('levels',$levels);
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'kb/ajax/article_edit_panel.tpl');
+		$tpl->display('devblocks:cerberusweb.kb::kb/ajax/article_edit_panel.tpl');
 	}
 
 	function saveArticleEditPanelAction() {
@@ -590,11 +546,21 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 				
 			}
 			
+			// Search index
+			$search = DevblocksPlatform::getSearchService();
+			$search->index('kb_article', $id, $title . ' ' . strip_tags($content));
+			
+			// Categories
 			DAO_KbArticle::setCategories($id, $category_ids, true);
 			
 			// Custom fields
 			@$field_ids = DevblocksPlatform::importGPC($_REQUEST['field_ids'], 'array', array());
-			DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_KbArticle::ID, $id, $field_ids);
+			DAO_CustomFieldValue::handleFormPost(CerberusContexts::CONTEXT_KB_ARTICLE, $id, $field_ids);
+			
+			// Files
+			@$file_ids = DevblocksPlatform::importGPC($_REQUEST['file_ids'], 'array', array());
+			if(is_array($file_ids))
+				DAO_AttachmentLink::setLinks(CerberusContexts::CONTEXT_KB_ARTICLE, $id, $file_ids);
 		}
 		
 		// JSON
@@ -642,13 +608,10 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 		
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
 		@$root_id = DevblocksPlatform::importGPC($_REQUEST['root_id']);
-		@$return = DevblocksPlatform::importGPC($_REQUEST['return']);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 		
 		$tpl->assign('root_id', $root_id);
-		$tpl->assign('return', $return);
 		
 		if(!empty($id)) {
 			$category = DAO_KbCategory::get($id);
@@ -666,7 +629,7 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 		$levels = DAO_KbCategory::getTree(0); //$root_id
 		$tpl->assign('levels',$levels);
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'kb/ajax/subcategory_edit_panel.tpl');
+		$tpl->display('devblocks:cerberusweb.kb::kb/ajax/subcategory_edit_panel.tpl');
 	}
 	
 	function saveKbCategoryEditPanelAction() {
@@ -679,7 +642,7 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 		@$parent_id = DevblocksPlatform::importGPC($_REQUEST['parent_id'],'integer',0);
 		@$delete = DevblocksPlatform::importGPC($_REQUEST['delete_box'],'integer',0);
 
-		@$return = DevblocksPlatform::importGPC($_REQUEST['return']);
+		@$return = '';
 		
 		if(!empty($id) && !empty($delete)) {
 			$ids = DAO_KbCategory::getDescendents($id);
@@ -693,7 +656,7 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 				DAO_KbCategory::NAME => $name,
 				DAO_KbCategory::PARENT_ID => $parent_id,
 			);
-			DAO_KbCategory::create($fields);
+			$id = DAO_KbCategory::create($fields);
 			
 		} else { // update
 			$fields = array(
@@ -704,16 +667,16 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 			
 		}
 		
-		if(!empty($return)) {
-			$return_path = explode('/', $return);
-			DevblocksPlatform::redirect(new DevblocksHttpResponse($return_path));
-		}
+		if(empty($return))
+			$return = 'kb/category/' . $id;
+		
+		$return_path = explode('/', $return);
+		DevblocksPlatform::redirect(new DevblocksHttpResponse($return_path));
 	}
 	
 	// For Display->Reply toolbar button
 	function showKbSearchAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 
 		@$div = DevblocksPlatform::importGPC($_REQUEST['div'],'string','');
 		$tpl->assign('div', $div);
@@ -723,13 +686,12 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 		
 		$tpl->assign('view_id', 'display_kb_search');
 		
-		$tpl->display('file:' . $this->_TPL_PATH . 'kb/ajax/kb_search.tpl');
+		$tpl->display('devblocks:cerberusweb.kb::kb/ajax/kb_search.tpl');
 	}
 	
 	// For Display->Reply toolbar button
 	function doKbSearchAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
 
 		@$q = DevblocksPlatform::importGPC($_REQUEST['q'],'string','');
 		$tpl->assign('q', $q);
@@ -774,9 +736,8 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 			$view->renderSortBy = SearchFields_KbArticle::VIEWS;
 			$view->renderSortAsc = false;
 			$view->renderTemplate = 'chooser';
-			$view->addParams($params);
+			$view->addParams($params, true);
 			C4_AbstractViewLoader::setView($view->id, $view);
-			
 			$view->render();
 		}
 	}
@@ -786,8 +747,6 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(__FILE__)) . '/templates/';
-		$tpl->assign('path', $path);
 		$tpl->assign('view_id', $view_id);
 
 	    if(!empty($id_csv)) {
@@ -803,10 +762,10 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 		$tpl->assign('levels',$levels);
 		
 		// Custom Fields
-//		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_FeedbackEntry::ID);
+//		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_FEEDBACK);
 //		$tpl->assign('custom_fields', $custom_fields);
 		
-		$tpl->display('file:' . $path . 'kb/ajax/articles_bulk_panel.tpl');
+		$tpl->display('devblocks:cerberusweb.kb::kb/ajax/articles_bulk_panel.tpl');
 	}
 	
 	function doArticlesBulkUpdateAction() {
@@ -849,6 +808,11 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 			    @$ids_str = DevblocksPlatform::importGPC($_REQUEST['ids'],'string');
 				$ids = DevblocksPlatform::parseCsvString($ids_str);
 				break;
+			case 'sample':
+				@$sample_size = min(DevblocksPlatform::importGPC($_REQUEST['filter_sample_size'],'integer',0),9999);
+				$filter = 'checks';
+				$ids = $view->getDataSample($sample_size);
+				break;
 			default:
 				break;
 		}
@@ -874,334 +838,7 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 	}
 };
 
-class DAO_KbArticle extends C4_ORMHelper {
-	const ID = 'id';
-	const TITLE = 'title';
-	const UPDATED = 'updated';
-	const VIEWS = 'views';
-	const FORMAT = 'format';
-	const CONTENT = 'content';
-	
-	static function create($fields) {
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$sql = sprintf("INSERT INTO kb_article (updated) ".
-			"VALUES (%d)",
-			time()
-		);
-		$db->Execute($sql);
-		$id = $db->LastInsertId();
-		
-		self::update($id, $fields);
-		
-		return $id;
-	}
-	
-	static function get($id) {
-		$objects = self::getWhere(sprintf("%s = %d",
-			self::ID,
-			$id
-		));
-		
-		if(isset($objects[$id]))
-			return $objects[$id];
-
-		return null;
-	}
-
-	static function getWhere($where=null, $sortBy='updated', $sortAsc=false, $limit=null) {
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		list($where_sql, $sort_sql, $limit_sql) = self::_getWhereSQL($where, $sortBy, $sortAsc, $limit);
-		
-		$sql = "SELECT id, title, views, updated, format, content ".
-			"FROM kb_article ".
-			$where_sql.
-			$sort_sql.
-			$limit_sql
-			;
-		$rs = $db->Execute($sql);
-		
-		return self::_createObjectsFromResultSet($rs);
-	}
-	
-	/**
-	 * Enter description here...
-	 *
-	 * @param resource $rs
-	 */
-	static private function _createObjectsFromResultSet($rs=null) {
-		$objects = array();
-		
-		while($row = mysql_fetch_assoc($rs)) {
-			$object = new Model_KbArticle();
-			$object->id = intval($row['id']);
-			$object->title = $row['title'];
-			$object->updated = $row['updated'];
-			$object->views = $row['views'];
-			$object->format = $row['format'];
-			$object->content = $row['content'];
-			$objects[$object->id] = $object;
-		}
-		
-		mysql_free_result($rs);
-		
-		return $objects;
-	}
-
-	static function update($ids, $fields) {
-		if(!is_array($ids)) $ids = array($ids);
-		parent::_update($ids, 'kb_article', $fields);
-	}
-	
-	static function delete($ids) {
-		if(!is_array($ids)) $ids = array($ids);
-		
-		if(empty($ids))
-			return;
-		
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$id_string = implode(',', $ids);
-		
-		// Articles
-		$db->Execute(sprintf("DELETE QUICK FROM kb_article WHERE id IN (%s)", $id_string));
-		
-		// Categories
-		$db->Execute(sprintf("DELETE QUICK FROM kb_article_to_category WHERE kb_article_id IN (%s)", $id_string));
-		
-		// Search indexes
-		$db->Execute(sprintf("DELETE QUICK FROM fulltext_kb_article WHERE id IN (%s)", $id_string));
-	}
-
-	static function getCategoriesByArticleId($article_id) {
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		if(empty($article_id))
-			return array();
-		
-		$categories = array();
-		
-		$rs = $db->Execute(sprintf("SELECT kb_category_id ". 
-			"FROM kb_article_to_category ".
-			"WHERE kb_article_id = %d",
-			$article_id
-		));
-		
-		while($row = mysql_fetch_assoc($rs)) {
-			$cat_id = intval($row['kb_category_id']);
-			$categories[$cat_id] = $cat_id;
-		}
-		
-		mysql_free_result($rs);
-		
-		return $categories;
-	}
-	
-	static function setCategories($article_ids,$category_ids,$replace=true) {
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		if(!is_array($article_ids))
-			$article_ids = array($article_ids);
-
-		if(!is_array($category_ids))
-			$category_ids = array($category_ids);
-		
-		if($replace) {
-			$db->Execute(sprintf("DELETE QUICK FROM kb_article_to_category WHERE kb_article_id IN (%s)",
-				implode(',', $article_ids)
-			));
-		}
-		
-		$categories = DAO_KbCategory::getAll();
-		
-		if(is_array($category_ids) && !empty($category_ids)) {
-			foreach($category_ids as $category_id) {
-				$is_add = '-'==substr($category_id, 0, 1) ? false : true;
-				$category_id = ltrim($category_id,'+-');
-				
-				// Add
-				if($is_add) {
-					$pid = $category_id;
-					while($pid) {
-						$top_category_id = $pid;
-						$pid = $categories[$pid]->parent_id;
-					}
-					
-					if(is_array($article_ids))
-					foreach($article_ids as $article_id) {
-						$db->Execute(sprintf("REPLACE INTO kb_article_to_category (kb_article_id, kb_category_id, kb_top_category_id) ".
-							"VALUES (%d, %d, %d)",
-							$article_id,
-							$category_id,
-							$top_category_id
-						));
-					}
-					
-				// Delete
-				} else {
-					if(is_array($article_ids))
-					foreach($article_ids as $article_id) {
-						$db->Execute(
-							sprintf("DELETE FROM kb_article_to_category WHERE kb_article_id = %d AND kb_category_id = %d",
-								$article_id,
-								$category_id
-							)
-						);
-					}
-				}
-			}
-		}
-		
-		return TRUE;
-	}
-	
-    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
-		$fields = SearchFields_KbArticle::getFields();
-		
-		// Sanitize
-		if(!isset($fields[$sortBy]))
-			$sortBy=null;
-
-        list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
-		
-		$select_sql = sprintf("SELECT ".
-			"kb.id as %s, ".
-			"kb.title as %s, ".
-			"kb.updated as %s, ".
-			"kb.views as %s, ".
-			"kb.format as %s, ".
-			"kb.content as %s ",
-			    SearchFields_KbArticle::ID,
-			    SearchFields_KbArticle::TITLE,
-			    SearchFields_KbArticle::UPDATED,
-			    SearchFields_KbArticle::VIEWS,
-			    SearchFields_KbArticle::FORMAT,
-			    SearchFields_KbArticle::CONTENT
-			);
-			
-		$join_sql = "FROM kb_article kb ";
-
-		// [JAS]: Dynamic table joins
-		if(isset($tables['katc'])) {
-			$select_sql .= sprintf(", katc.kb_top_category_id AS %s ",
-				SearchFields_KbArticle::TOP_CATEGORY_ID
-			);
-			$join_sql .= "LEFT JOIN kb_article_to_category katc ON (kb.id=katc.kb_article_id) ";
-		}
-		
-		if(isset($tables['ftkb'])) {
-			$join_sql .= 'LEFT JOIN fulltext_kb_article ftkb ON (ftkb.id=kb.id) ';
-		}
-		
-		// Custom field joins
-		list($select_sql, $join_sql, $has_multiple_values) = self::_appendSelectJoinSqlForCustomFieldTables(
-			$tables,
-			$params,
-			'kb.id',
-			$select_sql,
-			$join_sql
-		);
-		
-		$where_sql = "".
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
-			
-		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
-
-		$has_multiple_values = true;
-		
-		$sql = 
-			$select_sql.
-			$join_sql.
-			$where_sql.
-			($has_multiple_values ? 'GROUP BY kb.id ' : '').
-			$sort_sql;
-		
-		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
-		
-		$results = array();
-		
-		while($row = mysql_fetch_assoc($rs)) {
-			$result = array();
-			foreach($row as $f => $v) {
-				$result[$f] = $v;
-			}
-			$id = intval($row[SearchFields_KbArticle::ID]);
-			$results[$id] = $result;
-		}
-
-		// [JAS]: Count all
-		$total = -1;
-		if($withCounts) {
-			$count_sql = 
-				($has_multiple_values ? "SELECT COUNT(DISTINCT kb.id) " : "SELECT COUNT(kb.id) ").
-				$join_sql.
-				$where_sql;
-			$total = $db->GetOne($count_sql);
-		}
-		
-		mysql_free_result($rs);
-		
-		return array($results,$total);
-    }
-};
-
-class SearchFields_KbArticle implements IDevblocksSearchFields {
-	// Table
-	const ID = 'kb_id';
-	const TITLE = 'kb_title';
-	const UPDATED = 'kb_updated';
-	const VIEWS = 'kb_views';
-	const FORMAT = 'kb_format';
-	const CONTENT = 'kb_content';
-	
-	const CATEGORY_ID = 'katc_category_id';
-	const TOP_CATEGORY_ID = 'katc_top_category_id';
-	
-	const FULLTEXT_ARTICLE_CONTENT = 'ftkb_content';
-	
-	/**
-	 * @return DevblocksSearchField[]
-	 */
-	static function getFields() {
-		$translate = DevblocksPlatform::getTranslationService();
-		
-		$columns = array(
-			self::ID => new DevblocksSearchField(self::ID, 'kb', 'id', $translate->_('kb_article.id')),
-			self::TITLE => new DevblocksSearchField(self::TITLE, 'kb', 'title', $translate->_('kb_article.title')),
-			self::UPDATED => new DevblocksSearchField(self::UPDATED, 'kb', 'updated', $translate->_('kb_article.updated')),
-			self::VIEWS => new DevblocksSearchField(self::VIEWS, 'kb', 'views', $translate->_('kb_article.views')),
-			self::FORMAT => new DevblocksSearchField(self::FORMAT, 'kb', 'format', $translate->_('kb_article.format')),
-			self::CONTENT => new DevblocksSearchField(self::CONTENT, 'kb', 'content', $translate->_('kb_article.content')),
-			
-			self::CATEGORY_ID => new DevblocksSearchField(self::CATEGORY_ID, 'katc', 'kb_category_id'),
-			self::TOP_CATEGORY_ID => new DevblocksSearchField(self::TOP_CATEGORY_ID, 'katc', 'kb_top_category_id', $translate->_('kb_article.topic')),
-		);
-
-		// Fulltext
-		$tables = DevblocksPlatform::getDatabaseTables();
-		if(isset($tables['fulltext_kb_article'])) {
-			$columns[self::FULLTEXT_ARTICLE_CONTENT] = new DevblocksSearchField(self::FULLTEXT_ARTICLE_CONTENT, 'ftkb', 'content', $translate->_('kb_article.content'));
-		}
-		
-		// Custom Fields
-		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_KbArticle::ID);
-		if(is_array($fields))
-		foreach($fields as $field_id => $field) {
-			$key = 'cf_'.$field_id;
-			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
-		}
-		
-		// Sort by label (translation-conscious)
-		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
-
-		return $columns;		
-	}
-};	
-
-class DAO_KbCategory extends DevblocksORMHelper {
+class DAO_KbCategory extends C4_ORMHelper {
 	const CACHE_ALL = 'ch_cache_kbcategories_all';
 	
 	const ID = 'id';
@@ -1380,400 +1017,275 @@ class DAO_KbCategory extends DevblocksORMHelper {
 		return true;
 	}
 	
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
+		$fields = SearchFields_KbCategory::getFields();
+		
+		// Sanitize
+		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy]) || !in_array($sortBy,$columns))
+			$sortBy=null;
+
+        list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
+		
+		$select_sql = sprintf("SELECT ".
+			"kbc.id as %s, ".
+			"kbc.name as %s, ".
+			"kbc.parent_id as %s ",
+			    SearchFields_KbCategory::ID,
+			    SearchFields_KbCategory::NAME,
+			    SearchFields_KbCategory::PARENT_ID
+			);
+			
+		$join_sql = "FROM kb_category kbc ";
+
+		// [JAS]: Dynamic table joins
+//		if(isset($tables['context_link'])) 
+//			$join_sql .= "INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.kb_article' AND context_link.to_context_id = kb.id) ";
+		
+		// Custom field joins
+		list($select_sql, $join_sql, $has_multiple_values) = self::_appendSelectJoinSqlForCustomFieldTables(
+			$tables,
+			$params,
+			'kbc.id',
+			$select_sql,
+			$join_sql
+		);
+		
+		$where_sql = "".
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
+			
+		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
+		
+		$result = array(
+			'primary_table' => 'kbc',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => true,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+	
+    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents($columns,$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
+		$sql = 
+			$select_sql.
+			$join_sql.
+			$where_sql.
+			($has_multiple_values ? 'GROUP BY kbc.id ' : '').
+			$sort_sql;
+		
+		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		
+		$results = array();
+		
+		while($row = mysql_fetch_assoc($rs)) {
+			$result = array();
+			foreach($row as $f => $v) {
+				$result[$f] = $v;
+			}
+			$id = intval($row[SearchFields_KbCategory::ID]);
+			$results[$id] = $result;
+		}
+
+		// [JAS]: Count all
+		$total = -1;
+		if($withCounts) {
+			$count_sql = 
+				($has_multiple_values ? "SELECT COUNT(DISTINCT kbc.id) " : "SELECT COUNT(kbc.id) ").
+				$join_sql.
+				$where_sql;
+			$total = $db->GetOne($count_sql);
+		}
+		
+		mysql_free_result($rs);
+		
+		return array($results,$total);
+    }	
+	
 	static public function clearCache() {
 		$cache = DevblocksPlatform::getCacheService();
 		$cache->remove(self::CACHE_ALL);
 	}
 };
 
-class Search_KbArticle {
-	const ID = 'cerberusweb.search.schema.kb_article';
+class SearchFields_KbCategory implements IDevblocksSearchFields {
+	// Table
+	const ID = 'kbc_id';
+	const PARENT_ID = 'kbc_parent_id';
+	const NAME = 'kbc_name';
 	
-	public static function index($stop_time=null) {
-		$logger = DevblocksPlatform::getConsoleLog();
+	/**
+	 * @return DevblocksSearchField[]
+	 */
+	static function getFields() {
+		$translate = DevblocksPlatform::getTranslationService();
 		
-		if(false == ($search = DevblocksPlatform::getSearchService())) {
-			$logger->error("[Search] The search engine is misconfigured.");
-			return;
+		$columns = array(
+			self::ID => new DevblocksSearchField(self::ID, 'kbc', 'id', $translate->_('kb_category.id')),
+			self::PARENT_ID => new DevblocksSearchField(self::PARENT_ID, 'kbc', 'parent_id', $translate->_('kb_category.parent_id')),
+			self::NAME => new DevblocksSearchField(self::NAME, 'kbc', 'name', $translate->_('kb_category.name')),
+
+		);
+		
+		// Custom Fields
+		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_KB_CATEGORY);
+		if(is_array($fields))
+		foreach($fields as $field_id => $field) {
+			$key = 'cf_'.$field_id;
+			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
 		}
 		
-		$ns = 'kb_article';
-		$id = DAO_DevblocksExtensionPropertyStore::get(self::ID, 'last_indexed_id', 0);
-		$ptr_time = DAO_DevblocksExtensionPropertyStore::get(self::ID, 'last_indexed_time', 0);
-		$ptr_id = $id;
-		$done = false;
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
 
-		while(!$done && time() < $stop_time) {
-			$where = sprintf("%s >= %d AND %s > %d", 
-				DAO_KbArticle::UPDATED,
-				$ptr_time,
-				DAO_KbArticle::ID,
-				$id
-			);
-			$articles = DAO_KbArticle::getWhere($where, array(DAO_KbArticle::UPDATED, DAO_KbArticle::ID), array(true, true), 100);
-
-			if(empty($articles)) {
-				$done = true;
-				continue;
-			}
-			
-			$last_time = $ptr_time;
-			
-			foreach($articles as $article) { /* @var $article Model_KbArticle */
-				$id = $article->id;
-				$ptr_time = $article->updated;
-
-				// If we're not inside a block of the same timestamp, reset the seek pointer
-				$ptr_id = ($last_time == $ptr_time) ? $id : 0;
-
-				$logger->info(sprintf("[Search] Indexing %s %d...", 
-					$ns,
-					$id
-				));
-				
-				$search->index($ns, $id, $article->title . ' ' . strip_tags($article->content));
-				
-				flush();
-			}
-		}
-		
-		// If we ran out of articles, always reset the ID and use the current time
-		if($done) {
-			$ptr_id = 0;
-			$ptr_time = time();
-		}
-		
-		DAO_DevblocksExtensionPropertyStore::put(self::ID, 'last_indexed_id', $ptr_id);
-		DAO_DevblocksExtensionPropertyStore::put(self::ID, 'last_indexed_time', $ptr_time);
+		return $columns;		
 	}
-};
+};	
 
-class View_KbArticle extends C4_AbstractView {
-	const DEFAULT_ID = 'kb_overview';
+class Context_KbCategory extends Extension_DevblocksContext {
+	function authorize($context_id, Model_Worker $worker) {
+		return TRUE;
+	}	
 	
-	private $_CORE_TPL_PATH = '';
-	private $_TPL_PATH = '';
-
-	function __construct() {
-		$this->_CORE_TPL_PATH = APP_PATH . '/features/cerberusweb.core/templates/';
-		$this->_TPL_PATH = dirname(dirname(__FILE__)) . '/templates/';
+	function getMeta($context_id) {
+		$category = DAO_KbCategory::get($context_id);
+		$url_writer = DevblocksPlatform::getUrlService();
 		
-		$this->id = self::DEFAULT_ID;
-		$this->name = 'Articles';
-		$this->renderSortBy = 'kb_updated';
-		$this->renderSortAsc = false;
-
-		$this->view_columns = array(
-			SearchFields_KbArticle::TITLE,
-			SearchFields_KbArticle::UPDATED,
-			SearchFields_KbArticle::VIEWS,
+		return array(
+			'id' => $category->id,
+			'name' => $category->name,
+			'permalink' => $url_writer->write(sprintf("c=kb&br=browse&id=%d-%s", $category->id, DevblocksPlatform::strToPermalink($category->name), true)),
 		);
-		$this->columnsHidden = array(
-			SearchFields_KbArticle::CONTENT,
-			SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT,
-		);
-		
-		$this->paramsHidden = array(
-			SearchFields_KbArticle::CONTENT,
-			SearchFields_KbArticle::FORMAT,
-			SearchFields_KbArticle::ID,
-		);
-		
-		$this->doResetCriteria();
 	}
-
-	function getData() {
-		$objects = DAO_KbArticle::search(
-			$this->view_columns,
-			$this->getParams(),
-			$this->renderLimit,
-			$this->renderPage,
-			$this->renderSortBy,
-			$this->renderSortAsc,
-			$this->renderTotal
-		);
-		return $objects;
-	}
-
-	function render() {
-		$this->_sanitize();
+	
+	function getContext($category, &$token_labels, &$token_values, $prefix=null) {
+		if(is_null($prefix))
+			$prefix = 'Category:';
 		
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('id', $this->id);
-		$tpl->assign('view', $this);
-
-		$categories = DAO_KbCategory::getAll();
-		$tpl->assign('categories', $categories);
-
-		switch($this->renderTemplate) {
-			case 'chooser':
-				$tpl->display('file:' . $this->_TPL_PATH . 'view/chooser.tpl');
-				break;
-			default:
-				$tpl->display('file:' . $this->_TPL_PATH . 'view/view.tpl');
-				break;
+		$translate = DevblocksPlatform::getTranslationService();
+		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_KB_CATEGORY);
+		
+		// Polymorph
+		if(is_numeric($category)) {
+			$category = DAO_KbCategory::get($category);
+		} elseif($category instanceof Model_KbCategory) {
+			// It's what we want already.
+		} else {
+			$category = null;
 		}
-	}
-
-	function renderCriteria($field) {
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('id', $this->id);
-
-		switch($field) {
-			case SearchFields_KbArticle::TITLE:
-				$tpl->display('file:' . $this->_CORE_TPL_PATH . 'internal/views/criteria/__string.tpl');
-				break;
-			case SearchFields_KbArticle::UPDATED:
-				$tpl->display('file:' . $this->_CORE_TPL_PATH . 'internal/views/criteria/__date.tpl');
-				break;
-			case SearchFields_KbArticle::VIEWS:
-				$tpl->display('file:' . $this->_CORE_TPL_PATH . 'internal/views/criteria/__number.tpl');
-				break;
-			case SearchFields_KbArticle::TOP_CATEGORY_ID:
-				$topics = DAO_KbCategory::getWhere(sprintf("%s = %d",
-					DAO_KbCategory::PARENT_ID,
-					0
-				));
-				$tpl->assign('topics', $topics);
-
-				$tpl->display('file:' . $this->_TPL_PATH . 'search/criteria/kb_topic.tpl');
-				break;
-			case SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT:
-				$tpl->display('file:' . $this->_CORE_TPL_PATH . 'internal/views/criteria/__fulltext.tpl');
-				break;
-			default:
-				echo '';
-				break;
+		/* @var $category Model_KbCategory */
+			
+		// Token labels
+		$token_labels = array(
+			'id' => $prefix.$translate->_('common.id'),
+			'name' => $prefix.$translate->_('kb_category.name'),
+			'parent_id' => $prefix.$translate->_('kb_category.parent_id'),
+		);
+		
+		if(is_array($fields))
+		foreach($fields as $cf_id => $field) {
+			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
 		}
-	}
 
-	function renderCriteriaParam($param) {
-		$field = $param->field;
-		$values = !is_array($param->value) ? array($param->value) : $param->value;
-
-		switch($field) {
-			case SearchFields_KbArticle::TOP_CATEGORY_ID:
-				$topics = DAO_KbCategory::getWhere(sprintf("%s = %d",
-					DAO_KbCategory::PARENT_ID,
-					0
-				));
-				$strings = array();
-
-				foreach($values as $val) {
-					if(0==$val) {
-						$strings[] = "None";
-					} else {
-						if(!isset($topics[$val]))
+		// Token values
+		$token_values = array();
+		
+		// Token values
+		if(null != $category) {
+			$token_values['id'] = $category->id;
+			$token_values['name'] = $category->name;
+			$token_values['parent_id'] = $category->parent_id;
+			
+			$token_values['custom'] = array();
+			
+			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_KB_CATEGORY, $category->id));
+			if(is_array($field_values) && !empty($field_values)) {
+				foreach($field_values as $cf_id => $cf_val) {
+					if(!isset($fields[$cf_id]))
 						continue;
-						$strings[] = $topics[$val]->name;
-					}
-				}
-				echo implode(", ", $strings);
-				break;
-
-			default:
-				parent::renderCriteriaParam($param);
-				break;
-		}
-	}
-
-	function getFields() {
-		return SearchFields_KbArticle::getFields();
-	}
-
-	function doSetCriteria($field, $oper, $value) {
-		$criteria = null;
-
-		switch($field) {
-			case SearchFields_KbArticle::TITLE:
-				// force wildcards if none used on a LIKE
-				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
-				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
-				}
-				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
-				break;
-				
-			case SearchFields_KbArticle::UPDATED:
-				@$from = DevblocksPlatform::importGPC($_REQUEST['from'],'string','');
-				@$to = DevblocksPlatform::importGPC($_REQUEST['to'],'string','');
-
-				if(empty($from)) $from = 0;
-				if(empty($to)) $to = 'today';
-
-				$criteria = new DevblocksSearchCriteria($field,$oper,array($from,$to));
-				break;
-				
-			case SearchFields_KbArticle::VIEWS:
-				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
-				break;
-				
-			case SearchFields_KbArticle::TOP_CATEGORY_ID:
-				@$topic_ids = DevblocksPlatform::importGPC($_REQUEST['topic_id'], 'array', array());
-				$criteria = new DevblocksSearchCriteria($field, $oper, $topic_ids);
-				break;
-				
-			case SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT:
-				@$scope = DevblocksPlatform::importGPC($_REQUEST['scope'],'string','expert');
-				$criteria = new DevblocksSearchCriteria($field, $oper, array($value,$scope));
-				break;
-		}
-
-		if(!empty($criteria)) {
-			$this->addParam($criteria);
-			$this->renderPage = 0;
-		}
-	}
-	
-	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(600); // [TODO] Temp!
-	  
-		$change_fields = array();
-		$custom_fields = array();
-
-		// Make sure we have actions
-		if(empty($do))
-			return;
-
-		// Make sure we have checked items if we want a checked list
-		if(0 == strcasecmp($filter,"checks") && empty($ids))
-			return;
-			
-		if(is_array($do))
-		foreach($do as $k => $v) {
-			switch($k) {
-//				case 'x':
-//					break;
-				default:
-					// Custom fields
-//					if(substr($k,0,3)=="cf_") {
-//						$custom_fields[substr($k,3)] = $v;
-//					}
-					break;
-			}
-		}
-		
-		$pg = 0;
-
-		if(empty($ids))
-		do {
-			list($objects,$null) = DAO_KbArticle::search(
-				array(
-					SearchFields_KbArticle::ID
-				),
-				$this->getParams(),
-				100,
-				$pg++,
-				SearchFields_KbArticle::ID,
-				true,
-				false
-			);
-			 
-			$ids = array_merge($ids, array_keys($objects));
-			 
-		} while(!empty($objects));
-
-		$batch_total = count($ids);
-		for($x=0;$x<=$batch_total;$x+=100) {
-			$batch_ids = array_slice($ids,$x,100);
-			
-			if(!empty($change_fields))
-				DAO_KbArticle::update($batch_ids, $change_fields);
-			
-			// Category deltas
-			if(isset($do['category_delta'])) {
-				DAO_KbArticle::setCategories($batch_ids, $do['category_delta'], false);
-			}
-			
-			// Custom Fields
-			//self::_doBulkSetCustomFields(ChCustomFieldSource_Address::ID, $custom_fields, $batch_ids);
-			
-			unset($batch_ids);
-		}
-
-		unset($ids);
-	}
-		
-};
-
-class Model_KbArticle {
-	const FORMAT_PLAINTEXT = 0;
-	const FORMAT_HTML = 1;
-	const FORMAT_MARKDOWN = 2;
-	
-	public $id = 0;
-	public $title = '';
-	public $views = 0;
-	public $updated = 0;
-	public $format = 0;
-	public $content = '';
-	
-	function getContent() {
-		$html = '';
-		
-		switch($this->format) {
-			case self::FORMAT_HTML:
-				$html = $this->content;
-				break;
-			case self::FORMAT_PLAINTEXT:
-				$html = nl2br(htmlentities($this->content, ENT_QUOTES, LANG_CHARSET_CODE));
-				break;
-			case self::FORMAT_MARKDOWN:
-				$html = DevblocksPlatform::parseMarkdown($this->content);
-				break;
-		}
-		
-		return $html;
-	}
-	
-	// [TODO] Reuse this!
-	function getCategories() {
-		$categories = DAO_KbCategory::getAll();
-		$cats = DAO_KbArticle::getCategoriesByArticleId($this->id);
-
-		$trails = array();
-		
-		foreach($cats as $cat_id) {
-			$pid = $cat_id;
-			$trail = array();
-			while($pid) {
-				array_unshift($trail,$pid);
-				$pid = $categories[$pid]->parent_id;
-			}
-			
-			$trails[] = $trail;
-		}
-		
-		// Remove redundant trails
-		if(is_array($trails))
-		foreach($trails as $idx => $trail) {
-			foreach($trails as $c_idx => $compare_trail) {
-				if($idx != $c_idx && count($compare_trail) >= count($trail)) {
-					if(array_slice($compare_trail,0,count($trail))==$trail) {
-						unset($trails[$idx]);
-					}
-				}
-			}
-		}
-		
-		$breadcrumbs = array();
-		
-		if(is_array($trails))
-		foreach($trails as $idx => $trail) {
-			$last_step = end($trail);
-			reset($trail);
-			
-			foreach($trail as $step) {
-				if(!isset($breadcrumbs[$last_step]))
-					$breadcrumbs[$last_step] = array();
 					
-				$breadcrumbs[$last_step][$step] = $categories[$step];
+					// The literal value
+					if(null != $category)
+						$token_values['custom'][$cf_id] = $cf_val;
+					
+					// Stringify
+					if(is_array($cf_val))
+						$cf_val = implode(', ', $cf_val);
+						
+					if(is_string($cf_val)) {
+						if(null != $category)
+							$token_values['custom_'.$cf_id] = $cf_val;
+					}
+				}
 			}
 		}
 		
-		unset($trails);
+		return TRUE;
+	}
+
+	function getChooserView() {
+		$active_worker = CerberusApplication::getActiveWorker();
 		
-		return $breadcrumbs;
+		// View
+		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = $view_id;
+		$defaults->is_ephemeral = true;
+		$defaults->class_name = $this->getViewClass();
+		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
+//		$view->name = 'Headlines';
+//		$view->view_columns = array(
+//			SearchFields_CallEntry::IS_OUTGOING,
+//			SearchFields_CallEntry::PHONE,
+//			SearchFields_CallEntry::UPDATED_DATE,
+//		);
+		$view->addParams(array(
+			//SearchFields_KbArticle::IS_CLOSED => new DevblocksSearchCriteria(SearchFields_KbArticle::IS_CLOSED,'=',0),
+		), true);
+		$view->renderSortBy = SearchFields_KbCategory::NAME;
+		$view->renderSortAsc = false;
+		$view->renderLimit = 10;
+		$view->renderTemplate = 'contextlinks_chooser';
+		
+		C4_AbstractViewLoader::setView($view_id, $view);
+		return $view;
+	}
+	
+	function getView($context=null, $context_id=null, $options=array()) {
+		$view_id = str_replace('.','_',$this->id);
+		
+		$defaults = new C4_AbstractViewModel();
+		$defaults->id = $view_id; 
+		$defaults->class_name = $this->getViewClass();
+		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
+		//$view->name = 'Calls';
+		
+		$params_req = array();
+		
+		if(!empty($context) && !empty($context_id)) {
+			$params_req = array(
+				//new DevblocksSearchCriteria(SearchFields_KbCategory::CONTEXT_LINK,'=',$context),
+				//new DevblocksSearchCriteria(SearchFields_KbCategory::CONTEXT_LINK_ID,'=',$context_id),
+			);
+		}
+		
+		$view->addParamsRequired($params_req, true);
+		
+		$view->renderTemplate = 'context';
+		C4_AbstractViewLoader::setView($view_id, $view);
+		return $view;
 	}
 };
 
@@ -1782,3 +1294,4 @@ class Model_KbCategory {
 	public $parent_id;
 	public $name;
 };
+

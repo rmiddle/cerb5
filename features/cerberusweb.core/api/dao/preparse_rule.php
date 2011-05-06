@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,7 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
@@ -200,15 +200,15 @@ class Model_PreParseRule {
 	 * @param CerberusParserMessage $message
 	 * @return Model_PreParserRule[]
 	 */
-	static function getMatches(CerberusParserMessage $message) {
+	static function getMatches(CerberusParserMessage $message, CerberusParserModel $model) {
 		$filters = DAO_PreParseRule::getAll();
 		$headers = $message->headers;
 
 		// New or reply?
-		$is_new = (isset($message->headers['in-reply-to']) || isset($message->headers['references'])) ? false : true;
+		$is_new = $model->getIsNew();
 
 		// From address
-		$fromInst = CerberusParser::getAddressFromHeaders($headers);
+		$fromInst = $model->getSenderAddressModel();
 		
 		// Stackable
 		$matches = array();
@@ -399,15 +399,15 @@ class Model_PreParseRule {
 
 							// Lazy values loader
 							$field_values = array();
-							switch($field->source_extension) {
-								case ChCustomFieldSource_Address::ID:
+							switch($field->context) {
+								case CerberusContexts::CONTEXT_ADDRESS:
 									if(null == $address_field_values)
-										$address_field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Address::ID, $fromInst->id));
+										$address_field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ADDRESS, $fromInst->id));
 									$field_values =& $address_field_values;
 									break;
-								case ChCustomFieldSource_Org::ID:
+								case CerberusContexts::CONTEXT_ORG:
 									if(null == $org_field_values)
-										$org_field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Org::ID, $fromInst->contact_org_id));
+										$org_field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ORG, $fromInst->contact_org_id));
 									$field_values =& $org_field_values;
 									break;
 							}
@@ -458,7 +458,6 @@ class Model_PreParseRule {
 										$passed++;
 									break;
 								case 'D': // dropdown
-								case 'M': // multi-picklist
 								case 'X': // multi-checkbox
 								case 'W': // worker
 									$field_val = isset($field_values[$field_id]) ? $field_values[$field_id] : array();

@@ -6,9 +6,11 @@
 	<tr>
 		<td nowrap="nowrap"><span class="title">{$view->name}</span></td>
 		<td nowrap="nowrap" align="right">
-			 {*<a href="javascript:;" onclick="$('#btnExplore{$view->id}').click();">explore</a>*}
-			 <a href="javascript:;" onclick="genericAjaxGet('customize{$view->id}','c=internal&a=viewCustomize&id={$view->id}');toggleDiv('customize{$view->id}','block');">{$translate->_('common.customize')|lower}</a>
-			 | <a href="javascript:;" onclick="genericAjaxGet('view{$view->id}','c=internal&a=viewRefresh&id={$view->id}');">{$translate->_('common.refresh')|lower}</a>
+			<a href="javascript:;" class="subtotals">subtotals</a>
+			 | <a href="javascript:;" onclick="genericAjaxGet('customize{$view->id}','c=internal&a=viewCustomize&id={$view->id}');toggleDiv('customize{$view->id}','block');">{$translate->_('common.customize')|lower}</a>
+			{if $active_worker->hasPriv('core.home.workspaces')} | <a href="javascript:;" onclick="genericAjaxGet('{$view->id}_tips','c=internal&a=viewShowCopy&view_id={$view->id}');toggleDiv('{$view->id}_tips','block');">{$translate->_('common.copy')|lower}</a>{/if}			 
+			 | <a href="javascript:;" onclick="genericAjaxGet('view{$view->id}','c=internal&a=viewRefresh&id={$view->id}');"><span class="cerb-sprite sprite-refresh"></span></a>
+			 | <input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);this.blur();$rows=$('#viewForm{$view->id}').find('table.worklistBody').find('tbody > tr');if($(this).is(':checked')) { $rows.addClass('selected'); } else { $rows.removeClass('selected'); }">
 		</td>
 	</tr>
 </table>
@@ -19,11 +21,11 @@
 <input type="hidden" name="view_id" value="{$view->id}">
 <input type="hidden" name="c" value="tickets">
 <input type="hidden" name="a" value="">
-<table cellpadding="1" cellspacing="0" border="0" width="100%" class="worklistBody">
+<table cellpadding="5" cellspacing="0" border="0" width="100%" class="worklistBody">
 
 	{* Column Headers *}
 	<tr>
-		<th style="text-align:center"><input type="checkbox" onclick="checkAll('view{$view->id}',this.checked);"></th>
+		<th style="text-align:center"></th>
 		{foreach from=$view->view_columns item=header name=headers}
 			{* start table header, insert column title and link *}
 			<th nowrap="nowrap">
@@ -49,12 +51,12 @@
 	{else}
 		{assign var=tableRowClass value="odd"}
 	{/if}
-	<tbody onmouseover="$(this).find('tr').addClass('hover');" onmouseout="$(this).find('tr').removeClass('hover');" onclick="if(getEventTarget(event)=='TD') { var $chk=$(this).find('input:checkbox:first');if(!$chk) return;$chk.attr('checked', !$chk.is(':checked')); } ">
+	<tbody style="cursor:pointer;">
 		<tr class="{$tableRowClass}">
-		<td align="center"><input type="checkbox" name="row_id[]" value="{$result.s_id}"></td>
+		<td align="center"><input type="checkbox" name="row_id[]" value="{$result.s_id}" style="display:none;"></td>
 		{foreach from=$view->view_columns item=column name=columns}
 			{if substr($column,0,3)=="cf_"}
-				{include file="file:$core_tpl/internal/custom_fields/view/cell_renderer.tpl"}
+				{include file="devblocks:cerberusweb.core::internal/custom_fields/view/cell_renderer.tpl"}
 			{elseif $column=="s_title"}
 			<td>
 				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=tickets&a=showSnippetsPeek&view_id={$view->id}&id={$result.s_id}', null, false, '550');" class="subject">{if empty($result.$column)}(no title){else}{$result.$column}{/if}</a>
@@ -73,8 +75,18 @@
 					{$workers.{$worker_id}->getName()}
 				{/if}
 			</td>
+			{elseif $column=="s_context"}
+			<td>
+				{if '' == $result.$column}
+					Plaintext
+				{elseif isset($contexts.{$result.$column})}
+					{$contexts.{$result.$column}->name}
+				{else}
+					{$result.$column}
+				{/if}
+			</td>
 			{else}
-			<td>{$result.$column}&nbsp;</td>
+			<td>{$result.$column}</td>
 			{/if}
 		{/foreach}
 		</tr>
@@ -88,7 +100,7 @@
 	<tr>
 		<td>
 			{if $active_worker && $active_worker->is_superuser}
-				<button type="button" onclick="genericAjaxPopup('peek','c=tickets&a=showSnippetBulkPanel&view_id={$view->id}&ids=' + Devblocks.getFormEnabledCheckboxValues('viewForm{$view->id}','row_id[]'),null,false,'500');"><span class="cerb-sprite sprite-folder_gear"></span> bulk update</button>
+				<button type="button" onclick="genericAjaxPopup('peek','c=tickets&a=showSnippetBulkPanel&view_id={$view->id}&ids=' + Devblocks.getFormEnabledCheckboxValues('viewForm{$view->id}','row_id[]'),null,false,'500');"><span class="cerb-sprite2 sprite-folder-gear"></span> bulk update</button>
 			{/if}
 		</td>
 	</tr>
@@ -119,4 +131,5 @@
 	</tr>
 </table>
 </form>
-<br>
+
+{include file="devblocks:cerberusweb.core::internal/views/view_common_jquery_ui.tpl"}

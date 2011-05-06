@@ -13,31 +13,13 @@ var DevblocksClass = function() {
 	}
 	
 	this.getFormEnabledCheckboxValues = function(form_id,element_name) {
-		// Make sure the view form exists
-		var viewForm = document.getElementById(form_id);
-		if(null == viewForm) return;
-
-		// Make sure the element is present in the form
-
-		var elements = viewForm.elements[element_name];
-		if(null == elements) return;
-
-		var len = elements.length;
-		var ids = new Array();
-
-		if(null == len && null != elements.value) { // single element
-			if(elements.checked)
-				ids[0] = elements.value;
-
-		} else { // array
-			for(var x=len-1;x>=0;x--) {
-				if(elements[x].checked) {
-					ids[ids.length] = elements[x].value;
-				}
-			}
-		}
-
-		return ids.join(',');
+		return $("#" + form_id + " INPUT[name='" + element_name + "']:checked")
+		.map(function() {
+			return $(this).val();
+		})
+		.get()
+		.join(',')
+		;
 	}
 
 	this.resetSelectElements = function(form_id,element_name) {
@@ -62,6 +44,30 @@ var DevblocksClass = function() {
 			}
 		}
 	}
+	
+	this.showError = function(target, message, animate) {
+		$html = $('<div class="ui-widget"><div class="ui-state-error ui-corner-all" style="padding:0 0.5em;margin:0.5em;display:inline-block;"><p><span class="ui-icon ui-icon-alert" style="margin-right:.3em;float:left;"></span>'+message+'</p></div></div>');
+		$status = $(target).html($html).show();
+		
+		animate = (null == animate || false != animate) ? true: false;
+		if(animate)
+			$status.effect('slide',{ direction:'up', mode:'show' },250);
+		
+		return $status;
+	}
+	
+	this.showSuccess = function(target, message, autohide, animate) {
+		$html = $('<div class="ui-widget"><div class="ui-state-highlight ui-corner-all" style="padding:0 0.5em;margin:0.5em;display:inline-block;"><p><span class="ui-icon ui-icon-info" style="margin-right:.3em;float:left;"></span>'+message+'</p></div></div>');
+		$status = $(target).html($html).show();
+		
+		animate = (null == animate || false != animate) ? true: false; 
+		if(animate)
+			$status.effect('slide',{ direction:'up', mode:'show' },250);
+		if(animate && (autohide || null == autohide))
+			$status.delay(5000).effect('slide',{ direction:'up', mode:'hide' }, 250);
+			
+		return $status;
+	}
 };
 var Devblocks = new DevblocksClass();
 
@@ -77,16 +83,6 @@ function interceptInputCRLF(e,cb) {
 	}
 	
 	return code != 13;
-}
-
-function getEventTarget(e) {
-	if(!e) e = event;
-	
-	if(e.target) {
-		return e.target.nodeName;
-	} else if (e.srcElement) {
-		return e.srcElement.nodeName;
-	}
 }
 
 /* From:
@@ -137,6 +133,8 @@ function checkAll(divName, state) {
 		if(null != boxes[x].name) {
 			if(state == null) state = !boxes[x].checked;
 			boxes[x].checked = (state) ? true : false;
+			// This may not be needed when we convert to jQuery
+			$(boxes[x]).trigger('change');
 		}
 	}
 }
@@ -195,7 +193,7 @@ function showLoadingPanel() {
 		draggable : false,
 		resizable : false,
 		modal : true,
-		width : "300",
+		width : '300px',
 		title : 'Running...'
 	};
 
@@ -285,13 +283,13 @@ function genericAjaxPopup($layer,request,target,modal,width,cb) {
 		draggable : true,
 		modal : false,
 		stack: true,
-		width : "300",
+		width : '300px',
 		close: function(event, ui) { 
 			$(this).unbind();
 		}
 	};
 	
-	if(null != width) options.width = width;
+	if(null != width) options.width = width + 'px'; // [TODO] Fixed the forced 'px' later
 	if(null != modal) options.modal = modal;
 	
 	// Load the popup content
@@ -307,9 +305,6 @@ function genericAjaxPopup($layer,request,target,modal,width,cb) {
 			// Persist
 			genericAjaxPopupRegister($layer, $popup);
 			
-			// Set the content
-			$popup.html(html);
-			
 			// Target
 			if(null != target) {
 				var offset = $(target).offset();
@@ -324,6 +319,10 @@ function genericAjaxPopup($layer,request,target,modal,width,cb) {
 			// Render
 			$popup.dialog(options);
 			$popup.dialog('open');
+			
+			// Set the content
+			$popup.html(html);
+			
 			$popup.trigger('popup_open');
 			
 			// Callback
@@ -364,17 +363,25 @@ function genericAjaxPopupPostCloseReloadView($layer, frm, view_id, has_output, $
 	);
 }
 
-function genericAjaxGet(divName,args,cb,options) {
-	if(null == divName || 0 == divName.length)
-		divName = 'null';
+function genericAjaxGet(divRef,args,cb,options) {
+	var div = null;
 
+	// Polymorph div
+	if(typeof divRef=="object")
+		div = divRef;
+	else if(typeof divRef=="string" && divRef.length > 0)
+		div = $('#'+divRef);
+	
 	if(null == cb) {
-		$('#'+divName).fadeTo("normal", 0.2);
+		if(null != div)
+			div.fadeTo("normal", 0.2);
 		
 		var cb = function(html) {
-			$('#'+divName).html(html);
-			$('#'+divName).fadeTo("normal", 1.0);
-			$('#'+divName).trigger('view_refresh');
+			if(null != div) {
+				div.html(html);
+				div.fadeTo("normal", 1.0);
+				div.trigger('view_refresh');
+			}
 		}
 	}
 	
@@ -390,17 +397,35 @@ function genericAjaxGet(divName,args,cb,options) {
 	$.ajax(options);
 }
 
-function genericAjaxPost(formName,divName,args,cb,options) {
-	if(null == divName || 0 == divName.length)
-		divName = 'null';
+function genericAjaxPost(formRef,divRef,args,cb,options) {
+	var frm = null;
+	var div = null;
+	
+	// Polymorph form
+	if(typeof formRef=="object")
+		frm = formRef;
+	else if(typeof formRef=="string" && formRef.length > 0)
+		frm = $('#'+formRef);
+	
+	// Polymorph div
+	if(typeof divRef=="object")
+		div = divRef;
+	else if(typeof divRef=="string" && divRef.length > 0)
+		div = $('#'+divRef);
+	
+	if(null == frm)
+		return;
 	
 	if(null == cb) {
-		$('#'+divName).fadeTo("normal", 0.2);
+		if(null != div)
+			$(div).fadeTo("normal", 0.2);
 		
 		var cb = function(html) {
-			$('#'+divName).html(html);
-			$('#'+divName).fadeTo("normal", 1.0);
-			$('#'+divName).trigger('view_refresh');
+			if(null != div) {
+				$(div).html(html);
+				$(div).fadeTo("normal", 1.0);
+				$(div).trigger('view_refresh');
+			}
 		};
 	}
 
@@ -409,7 +434,7 @@ function genericAjaxPost(formName,divName,args,cb,options) {
 		options = { };
 	
 	options.type = 'POST';
-	options.data = $('#'+formName).serialize();
+	options.data = $(frm).serialize();
 	options.url = DevblocksAppPath+'ajax.php'+(null!=args?('?'+args):''),
 	options.cache = false;
 	options.success = cb;
