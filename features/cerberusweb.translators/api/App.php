@@ -92,13 +92,13 @@ class C4_TranslationView extends C4_AbstractView {
 			SearchFields_Translation::STRING_OVERRIDE,
 			SearchFields_Translation::STRING_ID,
 		);
-		$this->columnsHidden = array(
+		$this->addColumnsHidden(array(
 			SearchFields_Translation::ID,
-		);
+		));
 		
-		$this->paramsHidden = array(
+		$this->addParamsHidden(array(
 			SearchFields_Translation::ID,
-		);
+		));
 		
 		$this->doResetCriteria();
 	}
@@ -195,7 +195,7 @@ class C4_TranslationView extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;

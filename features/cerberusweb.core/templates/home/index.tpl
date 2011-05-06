@@ -19,7 +19,7 @@
 
 <div id="homeTabs">
 	<ul>
-		{$tabs = [events]}
+		{$tabs = [events,links]}
 
 		<li><a href="{devblocks_url}ajax.php?c=home&a=showMyEvents{/devblocks_url}">{'home.tab.my_notifications'|devblocks_translate|escape:'quotes'}</a></li>
 		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.worker&id={$active_worker->id}&filter_open=1{/devblocks_url}">{'My Work'|devblocks_translate|escape}</a></li>
@@ -44,13 +44,18 @@
 </div> 
 <br>
 
-{$tab_selected_idx=0}
+{$selected_tab_idx=null}
+{if isset($selected_tab)}
 {foreach from=$tabs item=tab_label name=tabs}
-	{if $tab_label==$selected_tab}{$tab_selected_idx = $smarty.foreach.tabs.index}{/if}
+	{if $tab_label==$selected_tab}{$selected_tab_idx = $smarty.foreach.tabs.index}{/if}
 {/foreach}
+{/if}
 
 <script type="text/javascript">
 	$(function() {
-		var tabs = $("#homeTabs").tabs( { selected:{$tab_selected_idx} } );
+		var tabs = $("#homeTabs").tabs({ 
+			cookie:{ name:'homeTabs', path:'/' }
+			{if !is_null($selected_tab_idx)},selected:{$selected_tab_idx}{/if}
+		});
 	});
 </script>

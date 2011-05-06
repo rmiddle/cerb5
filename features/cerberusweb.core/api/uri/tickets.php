@@ -206,33 +206,65 @@ class ChTicketsPage extends CerberusPageExtension {
 				$quick_search_type = $visit->get('quick_search_type');
 				$tpl->assign('quick_search_type', $quick_search_type);
 
+				$tab_manifests = DevblocksPlatform::getExtensions('cerberusweb.mail.tab', false);
+				$tpl->assign('tab_manifests', $tab_manifests);
+				
 				$tpl->display('file:' . $this->_TPL_PATH . 'tickets/index.tpl');
 				break;
 		}
 		
 	}
 	
+	// Ajax
+	function showTabAction() {
+		@$ext_id = DevblocksPlatform::importGPC($_REQUEST['ext_id'],'string','');
+		
+		if(null != ($tab_mft = DevblocksPlatform::getExtension($ext_id)) 
+			&& null != ($inst = $tab_mft->createInstance()) 
+			&& $inst instanceof Extension_MailTab) {
+			$inst->showTab();
+		}
+	}
+	
+	// Post
+	function saveTabAction() {
+		@$ext_id = DevblocksPlatform::importGPC($_REQUEST['ext_id'],'string','');
+		
+		if(null != ($tab_mft = DevblocksPlatform::getExtension($ext_id)) 
+			&& null != ($inst = $tab_mft->createInstance()) 
+			&& $inst instanceof Extension_MailTab) {
+			$inst->saveTab();
+		}
+	}
+	
+	/*
+	 * [TODO] Proxy any func requests to be handled by the tab directly, 
+	 * instead of forcing tabs to implement controllers.  This should check 
+	 * for the *Action() functions just as a handleRequest would
+	 */
+	function handleTabActionAction() {
+		@$tab = DevblocksPlatform::importGPC($_REQUEST['tab'],'string','');
+		@$action = DevblocksPlatform::importGPC($_REQUEST['action'],'string','');
+
+		if(null != ($tab_mft = DevblocksPlatform::getExtension($tab)) 
+			&& null != ($inst = $tab_mft->createInstance()) 
+			&& $inst instanceof Extension_MailTab) {
+				if(method_exists($inst,$action.'Action')) {
+					call_user_func(array(&$inst, $action.'Action'));
+				}
+		}
+	}	
+	
 	function showWorkflowTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 		
-		$db = DevblocksPlatform::getDatabaseService();
 		$visit = CerberusApplication::getVisit();
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		// Remember the tab
 		$visit->set(CerberusVisit::KEY_MAIL_MODE, 'workflow');
 		
-		// Request path
-		@$request = DevblocksPlatform::importGPC($_REQUEST['request'],'string','');
-		$response_path = explode('/', $request);
-		@array_shift($response_path); // tickets
-		@$controller = array_shift($response_path); // workflow
-		
-		// Make sure the global URL was for us
-		if(0!=strcasecmp('workflow',$controller))
-			$response_path = null;
-
 		$active_worker = CerberusApplication::getActiveWorker();
 		
 		$groups = DAO_Group::getAll();
@@ -245,12 +277,9 @@ class ChTicketsPage extends CerberusPageExtension {
 		$tpl->assign('workers', $workers);
 		
 		// View
-		$title = $translate->_('mail.overview.all_groups');
-
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'View_Ticket';
 		$defaults->id = CerberusApplication::VIEW_MAIL_WORKFLOW;
-		$defaults->name = $title;
 		$defaults->view_columns = array(
 			SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
 			SearchFields_Ticket::TICKET_UPDATED_DATE,
@@ -260,72 +289,29 @@ class ChTicketsPage extends CerberusPageExtension {
 		$defaults->renderLimit = 10;
 		$defaults->renderSortBy = SearchFields_Ticket::TICKET_UPDATED_DATE;
 		$defaults->renderSortAsc = 0;
+		$defaults->renderSubtotals = 'group';
 		
 		$workflowView = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_MAIL_WORKFLOW, $defaults);
 		
-		$workflowView->paramsRequired = array(
-			SearchFields_Ticket::TICKET_CLOSED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',CerberusTicketStatus::OPEN),
-			SearchFields_Ticket::TICKET_WAITING => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',0),
+		$workflowView->addParamsHidden(array(
+			SearchFields_Ticket::VIRTUAL_ASSIGNABLE,
+			SearchFields_Ticket::VIRTUAL_STATUS,
+			SearchFields_Ticket::VIRTUAL_WORKERS,
+		));
+		$workflowView->addParamsRequired(array(
+			SearchFields_Ticket::VIRTUAL_STATUS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_STATUS,'',array('open')),
 			SearchFields_Ticket::VIRTUAL_ASSIGNABLE => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_ASSIGNABLE,null,true),
 			SearchFields_Ticket::VIRTUAL_WORKERS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_WORKERS,null,array()),
-		);
-		$workflowView->paramsHidden = array(
-			SearchFields_Ticket::TICKET_CLOSED,
-			SearchFields_Ticket::TICKET_WAITING,
-			SearchFields_Ticket::VIRTUAL_ASSIGNABLE,
-			SearchFields_Ticket::VIRTUAL_WORKERS,
-		);
+			'req_team_id' => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'in',array_keys($active_worker->getMemberships())),
+		));
 		
 		$workflowView->renderPage = 0;
+		$workflowView->renderSubtotalsClickable = 1;
 		
-		// Filter persistence
-		if(empty($response_path)) {
-			@$response_path = explode('/',$visit->get(CerberusVisit::KEY_WORKFLOW_FILTER, 'all'));
-		} else {
-			// View Filter
-			$visit->set(CerberusVisit::KEY_WORKFLOW_FILTER, implode('/',$response_path));
-		}
-		
-		@$filter = array_shift($response_path);
-		
-		switch($filter) {
-			case 'group':
-				@$filter_group_id = array_shift($response_path);
-				
-				if(!is_null($filter_group_id) && isset($groups[$filter_group_id])) {
-					$tpl->assign('filter_group_id', $filter_group_id);
-					$title = $groups[$filter_group_id]->name;
-					$workflowView->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'=',$filter_group_id));
-					
-					@$filter_bucket_id = array_shift($response_path);
-					if(!is_null($filter_bucket_id)) {
-						$tpl->assign('filter_bucket_id', $filter_bucket_id);
-						@$title .= ': '.
-							(($filter_bucket_id == 0) ? $translate->_('common.inbox') : $group_buckets[$filter_group_id][$filter_bucket_id]->name);
-						$workflowView->addParam(new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CATEGORY_ID,'=',$filter_bucket_id));
-					}
-				}
-
-				break;
-				
-			case 'all':
-			default:
-				$workflowView->removeParam(SearchFields_Ticket::TICKET_TEAM_ID);
-				$workflowView->removeParam(SearchFields_Ticket::TICKET_CATEGORY_ID);
-				break;
-		}
-		
-		$workflowView->name = $title;
+		$workflowView->name = $translate->_('mail.workflow');
 		C4_AbstractViewLoader::setView($workflowView->id, $workflowView);
 		
 		$tpl->assign('view', $workflowView);
-		
-		// Totals (only drill down as deep as a group)
-		$original_params = $workflowView->getEditableParams();
-		$workflowView->removeParam(SearchFields_Ticket::TICKET_CATEGORY_ID);
-		$counts = $workflowView->getCounts('group');
-		$workflowView->addParams($original_params, true);
-		$tpl->assign('counts', $counts);
 		
 		// Log activity
 		DAO_Worker::logActivity(
@@ -376,7 +362,7 @@ class ChTicketsPage extends CerberusPageExtension {
 			new DevblocksSearchCriteria(SearchFields_Message::CREATED_DATE,DevblocksSearchCriteria::OPER_BETWEEN,array('-30 days', 'now')),
 		);
 		$defaults->paramsRequired = array(
-			new DevblocksSearchCriteria(SearchFields_Message::TICKET_GROUP_ID,'in',array_keys($active_worker->getMemberships())),
+			SearchFields_Message::TICKET_GROUP_ID => new DevblocksSearchCriteria(SearchFields_Message::TICKET_GROUP_ID,'in',array_keys($active_worker->getMemberships())),
 		);
 		$defaults->paramsEditable = $defaults->paramsDefault;
 		$defaults->renderSortBy = SearchFields_Message::CREATED_DATE;
@@ -397,6 +383,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		$visit = CerberusApplication::getVisit();
 		$active_worker = CerberusApplication::getActiveWorker();
+		$memberships = $active_worker->getMemberships();
 		
 		// Log activity
 		DAO_Worker::logActivity(
@@ -408,37 +395,24 @@ class ChTicketsPage extends CerberusPageExtension {
 		// Remember the tab
 		$visit->set(CerberusVisit::KEY_MAIL_MODE, 'search');		
 		
-		$view = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_SEARCH);
-		
 		// [TODO] Convert to defaults
 		
-		if(null == $view) {
+		if(null == ($view = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_SEARCH))) {
 			$view = View_Ticket::createSearchView();
-			C4_AbstractViewLoader::setView($view->id,$view);
 		}
+		
+		$view->addParamsDefault(array(
+			SearchFields_Ticket::VIRTUAL_STATUS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_STATUS,'',array('open','waiting')),
+			SearchFields_Ticket::TICKET_TEAM_ID => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'in',array_keys($memberships)), // censor
+		));
+		
+		$view->renderSubtotalsClickable = 1;
+		
+		C4_AbstractViewLoader::setView($view->id,$view);
 		
 		$tpl->assign('view', $view);
 		
 		$tpl->display('file:' . $this->_TPL_PATH . 'tickets/search/index.tpl');
-	}
-	
-	function viewSidebarAction() {
-		@$view_id = DevblocksPlatform::importGPC($_REQUEST['id'],'string','');
-		@$field = DevblocksPlatform::importGPC($_REQUEST['field'],'string');
-
-		if(empty($field))
-			$field = 'group';
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('view_id', $view_id);
-		$tpl->assign('field', $field);
-		
-		if(null != ($view = C4_AbstractViewLoader::getView($view_id))) {
-			$counts = $view->getCounts($field);
-			$tpl->assign('counts', $counts);
-		}
-		
-		$tpl->display('devblocks:cerberusweb.core::tickets/view_sidebar.tpl');
 	}
 	
 	function showDraftsTabAction() {
@@ -458,25 +432,25 @@ class ChTicketsPage extends CerberusPageExtension {
 		$view = C4_AbstractViewLoader::getView($defaults->id, $defaults);
 		$view->name = 'Drafts';
 		
-		$view->columnsHidden = array(
+		$view->addColumnsHidden(array(
 			SearchFields_MailQueue::ID,
 			SearchFields_MailQueue::IS_QUEUED,
 			SearchFields_MailQueue::QUEUE_FAILS,
 			SearchFields_MailQueue::QUEUE_PRIORITY,
 			SearchFields_MailQueue::TICKET_ID,
-		);
+		));
 		
-		$view->paramsRequired = array(
+		$view->addParamsRequired(array(
 			SearchFields_MailQueue::WORKER_ID => new DevblocksSearchCriteria(SearchFields_MailQueue::WORKER_ID, DevblocksSearchCriteria::OPER_EQ, $active_worker->id),
 			SearchFields_MailQueue::IS_QUEUED => new DevblocksSearchCriteria(SearchFields_MailQueue::IS_QUEUED, DevblocksSearchCriteria::OPER_EQ, 0),
-		);
-		$view->paramsHidden = array(
+		));
+		$view->addParamsHidden(array(
 			SearchFields_MailQueue::ID,
 			SearchFields_MailQueue::IS_QUEUED,
 			SearchFields_MailQueue::QUEUE_FAILS,
 			SearchFields_MailQueue::QUEUE_PRIORITY,
 			SearchFields_MailQueue::TICKET_ID,
-		);
+		));
 		
 		C4_AbstractViewLoader::setView($view->id,$view);
 		$tpl->assign('view', $view);
@@ -696,14 +670,9 @@ class ChTicketsPage extends CerberusPageExtension {
 			$view->name = 'Mail Snippets';
 		}
 		
-		$view->columnsHidden[] = SearchFields_Snippet::ID;
-		$view->columnsHidden[] = SearchFields_Snippet::IS_PRIVATE;
-		
-		$view->paramsRequired = array(
+		$view->addParamsRequired(array(
 			SearchFields_Snippet::CONTEXT => new DevblocksSearchCriteria(SearchFields_Snippet::CONTEXT, DevblocksSearchCriteria::OPER_IN, array('cerberusweb.contexts.plaintext','cerberusweb.contexts.ticket','cerberusweb.contexts.worker')),
-		);
-		$view->paramsHidden[] = SearchFields_Snippet::ID;
-		$view->paramsHidden[] = SearchFields_Snippet::IS_PRIVATE;
+		));
 		
 		C4_AbstractViewLoader::setView($view->id,$view);
 		$tpl->assign('view', $view);
@@ -937,32 +906,6 @@ class ChTicketsPage extends CerberusPageExtension {
 	}
 	
 	// Ajax
-	// [TODO] Merge w/ the other sidebar method
-	function refreshSidebarAction() {
-		$db = DevblocksPlatform::getDatabaseService();
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('path', $this->_TPL_PATH);
-
-		$visit = CerberusApplication::getVisit();
-		$active_worker = CerberusApplication::getActiveWorker();
-
-		$section = $visit->get(CerberusVisit::KEY_MAIL_MODE, '');
-		
-		switch($section) {
-			case 'workflow':
-				// Since we don't re-save the view, we can remove filters that we don't want to restrict the count
-				$view = C4_AbstractViewLoader::getView(CerberusApplication::VIEW_MAIL_WORKFLOW);
-				$view->removeParam(SearchFields_Ticket::TICKET_CATEGORY_ID);
-				$counts = $view->getCounts('group');
-				$tpl->assign('counts', $counts);
-				
-				$tpl->display('file:' . $this->_TPL_PATH . 'tickets/workflow/sidebar.tpl');
-				break;
-		}
-	}
-	
-	// Ajax
 	function reportSpamAction() {
 	    @$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer');
 	    @$view_id = DevblocksPlatform::importGPC($_REQUEST['viewId'],'string');
@@ -1040,32 +983,32 @@ class ChTicketsPage extends CerberusPageExtension {
             		$params[SearchFields_Ticket::TICKET_ID] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_ID,DevblocksSearchCriteria::OPER_EQ,intval($query));
             	} else {
 			        if($query && false===strpos($query,'*'))
-			            $query = '*' . $query . '*';
+			            $query .= '*';
             		$params[SearchFields_Ticket::TICKET_MASK] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_MASK,DevblocksSearchCriteria::OPER_LIKE,strtoupper($query));
             	}
                 break;
                 
             case "sender":
 		        if($query && false===strpos($query,'*'))
-		            $query = '*' . $query . '*';
+		            $query .= '*';
                 $params[SearchFields_Ticket::TICKET_FIRST_WROTE] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_FIRST_WROTE,DevblocksSearchCriteria::OPER_LIKE,strtolower($query));               
                 break;
                 
             case "requester":
 		        if($query && false===strpos($query,'*'))
-		            $query = '*' . $query . '*';
+		            $query .= '*';
                 $params[SearchFields_Ticket::REQUESTER_ADDRESS] = new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ADDRESS,DevblocksSearchCriteria::OPER_LIKE,strtolower($query));               
                 break;
                 
             case "subject":
 		        if($query && false===strpos($query,'*'))
-		            $query = '*' . $query . '*';
+		            $query .= '*';
             	$params[SearchFields_Ticket::TICKET_SUBJECT] = new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_SUBJECT,DevblocksSearchCriteria::OPER_LIKE,$query);               
                 break;
                 
             case "org":
 		        if($query && false===strpos($query,'*'))
-		            $query = '*' . $query . '*';
+		            $query .= '*';
             	$params[SearchFields_Ticket::ORG_NAME] = new DevblocksSearchCriteria(SearchFields_Ticket::ORG_NAME,DevblocksSearchCriteria::OPER_LIKE,$query);               
                 break;
                 
@@ -2204,7 +2147,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		}
 		
 		// Owners
-		$owner_options = array();
+		$owner_params = array();
 		
 		@$owner_add_ids = DevblocksPlatform::importGPC($_REQUEST['do_owner_add_ids'],'array',array());
 		if(!empty($owner_add_ids))

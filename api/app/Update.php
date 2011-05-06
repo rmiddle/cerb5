@@ -74,7 +74,7 @@ class ChUpdateController extends DevblocksControllerExtension {
 	    		
 	    	case 'locked':
 	    		if(!DevblocksPlatform::versionConsistencyCheck()) {
-	    			echo "<h1>Cerberus Helpdesk 5.x</h1>";
+	    			echo sprintf("<h1>Cerberus Helpdesk %s</h1>", APP_VERSION);
 	    			echo "The helpdesk is currently waiting for an administrator to finish upgrading. ".
 	    				"Please wait a few minutes and then ". 
 		    			sprintf("<a href='%s'>try again</a>.<br><br>",
@@ -118,9 +118,10 @@ class ChUpdateController extends DevblocksControllerExtension {
 			    // Release dates
 			    $r = array(
 			    	'5.0' => gmmktime(0,0,0,4,22,2010),
+			    	'5.1' => gmmktime(0,0,0,8,15,2010),
 			    );
 			    
-			    /*																																																																																																																																																																																																																			*/$r = array('5.0'=>1271894400,);/*
+			    /*																																																																																																																																																																																																																			*/$r = array('5.0'=>1271894400,'5.1'=>1281873600,);/*
 			     * This well-designed software is the result of over 8 years of R&D.
 			     * We're sharing every resulting byte of that hard work with you.
 			     * You're free to make changes for your own use, but we ask that you 
@@ -160,7 +161,7 @@ class ChUpdateController extends DevblocksControllerExtension {
 				    </style>
 				    ";
 			    	
-				    echo "<h1>Cerberus Helpdesk 5.x</h1>";
+				    echo sprintf("<h1>Cerberus Helpdesk %s</h1>", APP_VERSION);
 				    
 			    	echo $translate->_('update.correct_errors');
 			    	echo "<ul>";
@@ -187,9 +188,6 @@ class ChUpdateController extends DevblocksControllerExtension {
 						// Clean up
 						@unlink($file);
 
-						$cache = DevblocksPlatform::getCacheService();
-						$cache->save(APP_BUILD, "devblocks_app_build");
-
 						// Clear all caches
 						$cache->clean();
 						DevblocksPlatform::getClassLoaderService()->destroy();
@@ -202,6 +200,10 @@ class ChUpdateController extends DevblocksControllerExtension {
 						// Reload plugin translations
 						DAO_Translation::reloadPluginStrings();
 
+						// Set the build
+						$cache = DevblocksPlatform::getCacheService();
+						$cache->save(APP_BUILD, "devblocks_app_build");
+						
 						// Redirect
 				    	DevblocksPlatform::redirect(new DevblocksHttpResponse(array('login')));
 	

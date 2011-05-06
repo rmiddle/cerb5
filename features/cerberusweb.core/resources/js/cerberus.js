@@ -58,71 +58,6 @@ var markitupHTMLSettings = {
 	]
 } 
 
-// ***********
-function CreateKeyHandler(cb) {
-//	if(is_ie) {
-//		func = window.eval("blank=function(e) {return window.cb(e);}");
-//	} else {
-//		func =  function(e) {return window.cb(e);}
-//	}
-
-	if(window.Event) {
-		document.captureEvents(Event.KEYDOWN);
-	}
-	
-	document.onkeydown = cb;
-}
-
-function getKeyboardKey(evt,as_code) {
-	var browser=navigator.userAgent.toLowerCase();
-	var is_ie=(browser.indexOf("msie")!=-1 && document.all);
-	
-	  if(window.Event) {
-	  	if(evt.altKey || evt.metaKey || evt.ctrlKey) {
-	  		return;
-	  	}
-	    mykey = evt.which;
-	  }
-	  else if(event) {
-	  	evt = event;
-	  	if((evt.modifiers & event.ALT_MASK) || (evt.modifiers & event.CTRL_MASK)) {
-			return;
-		}
-	  	if(evt.altKey || evt.metaKey || evt.ctrlKey) { // new style
-	  		return;
-	  	}
-   		mykey = evt.keyCode
-	  }
-	  
-	  mychar = String.fromCharCode(mykey);
-	  
-	var src=null;
-	
-	try {
-		if(evt.srcElement) src=evt.srcElement;
-		else if(evt.target) src=evt.target;
-	}
-	catch(e) {}
-
-	if(null == src) {
-		return;
-	}
-  
-	for(var element=src;element!=null;element=element.parentNode) {
-		var nodename=element.nodeName;
-		if(nodename=="TEXTAREA"	
-			|| (nodename=="SELECT")
-			|| (nodename=="INPUT") //  && element.type != "checkbox"
-			|| (nodename=="BUTTON")
-			)
-			{ return; }
-	}
-	
-	return (null==as_code||!as_code) ? mychar : mykey;
-}
-
-// ***********
-
 function appendFileInput(divName,fieldName) {
 	var frm = document.getElementById(divName);
 	if(null == frm) return;
@@ -209,7 +144,6 @@ var cAjaxCalls = function() {
 			genericAjaxPopupClose('peek');
 			
 			document.location = '#top';
-			genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 			
 			hideLoadingPanel();
 		});
@@ -298,7 +232,6 @@ var cAjaxCalls = function() {
 
 		genericAjaxPost(formName, divName, 'c=tickets&a=viewMoveTickets&view_id='+view_id, function(html) {
 			$('#'+divName).html(html);
-			genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 		});
 	}
 
@@ -312,42 +245,36 @@ var cAjaxCalls = function() {
 			case 'merge':
 				genericAjaxPost(formName, '', 'c=tickets&a=viewMergeTickets&view_id='+view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 			case 'not_spam':
 				genericAjaxPost(formName, '', 'c=tickets&a=viewNotSpamTickets&view_id='+view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 			case 'take':
 				genericAjaxPost(formName, '', 'c=tickets&a=viewTakeTickets&view_id='+view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 			case 'surrender':
 				genericAjaxPost(formName, '', 'c=tickets&a=viewSurrenderTickets&view_id='+view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 			case 'waiting':
 				genericAjaxPost(formName, '', 'c=tickets&a=viewWaitingTickets&view_id='+view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 			case 'not_waiting':
 				genericAjaxPost(formName, '', 'c=tickets&a=viewNotWaitingTickets&view_id='+view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
@@ -367,25 +294,52 @@ var cAjaxCalls = function() {
 			case 1: // spam
 				genericAjaxPost(formName, '', 'c=tickets&a=viewSpamTickets&view_id=' + view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 			case 2: // delete
 				genericAjaxPost(formName, '', 'c=tickets&a=viewDeleteTickets&view_id=' + view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 			default: // close
 				genericAjaxPost(formName, '', 'c=tickets&a=viewCloseTickets&view_id=' + view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 		}
+	}
+	
+	this.viewAddFilter = function(view_id, field, oper, values) {
+		$view = $('#view'+view_id);
+		
+		post_str = 'c=internal' +
+			'&a=viewAddFilter' + 
+			'&id=' + view_id +
+			'&field=' + encodeURIComponent(field) +
+			'&oper=' + encodeURIComponent(oper) +
+			'&' + $.param(values, true)  
+			;
+		
+		cb = function(o) {
+			$view_filters = $('#viewCustomFilters'+view_id);
+			
+			if(0 != $view_filters.length) {
+				$view_filters.html(o);
+				$view_filters.trigger('view_refresh')
+			}
+		}
+		
+		options = {};
+		options.type = 'POST';
+		options.data = post_str; //$('#'+formName).serialize();
+		options.url = DevblocksAppPath+'ajax.php';//+(null!=args?('?'+args):''),
+		options.cache = false;
+		options.success = cb;
+		
+		$.ajax(options);
 	}
 	
 	this.postAndReloadView = function(frm,view_id) {
@@ -395,8 +349,6 @@ var cAjaxCalls = function() {
 		genericAjaxPost(frm,view_id,'',
 			function(html) {
 				$('#'+view_id).html(html);
-				genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');					
-	
 				$('#'+view_id).fadeTo("slow", 1.0);
 	
 				genericAjaxPopupClose('peek');
@@ -408,7 +360,6 @@ var cAjaxCalls = function() {
 		genericAjaxGet('','c=tickets&a=viewUndo&view_id=' + view_id,
 			function(html) {
 				$('#view'+view_id).html(html);
-				genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 			}
 		);		
 	}

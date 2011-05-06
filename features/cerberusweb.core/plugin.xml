@@ -31,7 +31,9 @@
 		<patch version="5.0.0-beta" revision="856" file="patches/5.x/5.0.0_beta.php" />
 		<patch version="5.0.0-rc1" revision="861" file="patches/5.x/5.0.0_rc1.php" />
 		<patch version="5.0.1" revision="864" file="patches/5.x/5.0.1.php" />
-		<patch version="5.1.0" revision="893" file="patches/5.x/5.1.0.php" />
+		<patch version="5.1.0" revision="896" file="patches/5.x/5.1.0.php" />
+		<patch version="5.1.1" revision="898" file="patches/5.x/5.1.1.php" />
+		<patch version="5.1.2" revision="900" file="patches/5.x/5.1.2.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -345,6 +347,12 @@
 				<name>Context_Address</name>
 			</class>
 			<params>
+				<param key="link_options">
+					<value>
+						<data key="create" />
+						<data key="find" />
+					</value>
+				</param>
 				<param key="events">
 					<value>
 						<data key="context.assigned" value="context.address.assigned" />
@@ -362,6 +370,12 @@
 				<name>Context_Group</name>
 			</class>
 			<params>
+				<!--
+				<param key="link_options">
+					<value>
+					</value>
+				</param>
+				-->
 				<param key="events">
 					<!--
 					<value>
@@ -381,10 +395,41 @@
 				<name>Context_Org</name>
 			</class>
 			<params>
+				<param key="link_options">
+					<value>
+						<data key="create" />
+						<data key="find" />
+					</value>
+				</param>
 				<param key="events">
 					<value>
 						<data key="context.assigned" value="context.org.assigned" />
 						<data key="context.commented" value="context.org.commented" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.snippet</id>
+			<name>Snippet</name>
+			<class>
+				<file>api/dao/snippet.php</file>
+				<name>Context_Snippet</name>
+			</class>
+			<params>
+				<param key="link_options">
+					<!--
+					<value>
+						<data key="create" />
+						<data key="find" />
+					</value>
+					-->
+				</param>
+				<param key="events">
+					<value>
+						<!--<data key="context.assigned" value="context.task.assigned" />-->
+						<!--<data key="context.commented" value="context.task.commented" />-->
 					</value>
 				</param>
 			</params>
@@ -398,6 +443,12 @@
 				<name>Context_Task</name>
 			</class>
 			<params>
+				<param key="link_options">
+					<value>
+						<data key="create" />
+						<data key="find" />
+					</value>
+				</param>
 				<param key="events">
 					<value>
 						<data key="context.assigned" value="context.task.assigned" />
@@ -415,6 +466,11 @@
 				<name>Context_Ticket</name>
 			</class>
 			<params>
+				<param key="link_options">
+					<value>
+						<data key="find" />
+					</value>
+				</param>
 				<param key="events">
 					<value>
 						<data key="context.assigned" value="context.ticket.assigned" />
@@ -432,6 +488,11 @@
 				<name>Context_Worker</name>
 			</class>
 			<params>
+				<param key="link_options">
+					<value>
+						<data key="find" />
+					</value>
+				</param>
 				<param key="events">
 					<value>
 						<data key="context.assigned" value="context.worker.assigned" />
@@ -804,17 +865,6 @@
 			</params>
 		</extension>
 
-		<extension point="cerberusweb.login">
-			<id>login.ldap</id>
-			<name>LDAP Login Module</name>
-			<class>
-				<file>api/login.classes.php</file>
-				<name>LDAPLoginModule</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-		 
 		<!-- Cron Extensions -->
 		
 		<extension point="cerberusweb.cron">

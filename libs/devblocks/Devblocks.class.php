@@ -117,6 +117,37 @@ class DevblocksPlatform extends DevblocksEngine {
 		return $pattern;
 	}
 	
+	/**
+	 * Returns a formatted string as a number of bytes (e.g. 200M = 209715200)
+	 * 
+	 * @param string $string
+	 * @return integer|FALSE
+	 */
+	static function parseBytesString($string) {
+	    if(is_numeric($string)) { 
+	        return intval($string);
+	        
+	    } else { 
+	        $value = intval($string); 
+	        $unit = strtolower(substr($string, -1)); 
+	         
+	        switch($unit) { 
+	            default: 
+	            case 'm': 
+	                return $value * 1048576; // 1024^2
+	                break; 
+	            case 'g': 
+	                return $value * 1073741824; // 1024^3 
+	                break;
+	            case 'k': 
+	                return $value * 1024; // 1024^1
+	                break; 
+	        }
+	    }
+	    
+	    return FALSE;
+	}
+	
 	static function parseCrlfString($string) {
 		$parts = preg_split("/[\r\n]/", $string);
 		
@@ -1728,13 +1759,17 @@ abstract class DevblocksEngine {
 		        if(!is_file($resource) || 'php' == $ext) die(""); // extension security
 
                 // Caching
-	            if($ext == 'css' || $ext == 'js' || $ext == 'png' || $ext == 'gif' || $ext == 'jpg') {
-	                header('Cache-control: max-age=604800', true); // 1 wk // , must-revalidate
-	                header('Expires: ' . gmdate('D, d M Y H:i:s',time()+604800) . ' GMT'); // 1 wk
-	                header('Content-length: '. filesize($resource));
-	            }
-
-	            // [TODO] Get a better mime list together?
+                switch($ext) {
+                	case 'css':
+                	case 'gif':
+                	case 'jpg':
+                	case 'js':
+                	case 'png':
+		                header('Cache-control: max-age=604800', true); // 1 wk // , must-revalidate
+		                header('Expires: ' . gmdate('D, d M Y H:i:s',time()+604800) . ' GMT'); // 1 wk
+                		break;
+                }
+                
 	            switch($ext) {
 	            	case 'css':
 	            		header('Content-type: text/css;');
@@ -1757,7 +1792,14 @@ abstract class DevblocksEngine {
 	            		break;
 	            }
 	            
-		        echo file_get_contents($resource,false);
+		        $out = file_get_contents($resource, false);
+		        
+                // Pass through
+                if($out) {
+                	header('Content-Length: '. strlen($out));
+                	echo $out;
+                }
+		        
 				exit;
     	        break;
 		        
@@ -1969,7 +2011,7 @@ class _DevblocksSessionManager {
 			);
 			
 			session_name(APP_SESSION_NAME);
-			session_set_cookie_params(0, NULL, NULL, $url_writer->isSSL(), true);
+			session_set_cookie_params(0, '/', NULL, $url_writer->isSSL(), true);
 			session_start();
 			
 			$instance = new _DevblocksSessionManager();
@@ -1979,19 +2021,16 @@ class _DevblocksSessionManager {
 		return $instance;
 	}
 	
-	// See: http://php.net/manual/en/function.session-decode.php
 	function decodeSession($data) {
-	    $vars=preg_split('/([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff^|]*)\|/',
-	              $data,-1,PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
-	    
-	    $scope = array();
-	    
-	    while(!empty($vars)) {
-	    	@$key = array_shift($vars);
-	    	@$value = unserialize(array_shift($vars));
-	    	$scope[$key] = $value;
-	    }
-	    
+		$original_session = $_SESSION;
+		try {
+			session_decode($data);
+			$scope = $_SESSION;
+		} catch(Exception $e) {
+			$scope = array();
+		}
+		
+		$_SESSION = $original_session;
 	    return $scope;		
 	}
 	

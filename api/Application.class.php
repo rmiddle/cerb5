@@ -47,8 +47,8 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2010080201);
-define("APP_VERSION", '5.1.0-dev');
+define("APP_BUILD", 2010102501);
+define("APP_VERSION", '5.1.2');
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
 require_once(APP_PATH . "/api/DAO.class.php");
@@ -189,7 +189,10 @@ class CerberusApplication extends DevblocksApplication {
 		// PHP Version
 		if(version_compare(PHP_VERSION,"5.2") >=0) {
 		} else {
-			$errors[] = 'Cerberus Helpdesk 5.x requires PHP 5.2 or later. Your server PHP version is '.PHP_VERSION;
+			$errors[] = sprintf("Cerberus Helpdesk %s requires PHP 5.2 or later. Your server PHP version is %s",
+				APP_VERSION,
+				PHP_VERSION 
+			);
 		}
 		
 		// File Uploads
@@ -211,9 +214,8 @@ class CerberusApplication extends DevblocksApplication {
 		$memory_limit = ini_get("memory_limit");
 		if ($memory_limit == '') { // empty string means failure or not defined, assume no compiled memory limits
 		} else {
-			$ini_memory_limit = intval($memory_limit);
-			if($ini_memory_limit >= 16) {
-			} else {
+			$ini_memory_limit = DevblocksPlatform::parseBytesString($memory_limit);
+			if($ini_memory_limit < 16777216) {
 				$errors[] = 'memory_limit must be 16M or larger (32M recommended) in your php.ini file.  Please increase it.';
 			}
 		}
@@ -646,6 +648,7 @@ class CerberusContexts {
 	const CONTEXT_NOTIFICATION= 'cerberusweb.contexts.notification';
 	const CONTEXT_OPPORTUNITY = 'cerberusweb.contexts.opportunity';
 	const CONTEXT_ORG = 'cerberusweb.contexts.org';
+	const CONTEXT_SNIPPET = 'cerberusweb.contexts.snippet';
 	const CONTEXT_TASK = 'cerberusweb.contexts.task';
 	const CONTEXT_TICKET = 'cerberusweb.contexts.ticket';
 	const CONTEXT_TIMETRACKING = 'cerberusweb.contexts.timetracking';
@@ -675,7 +678,7 @@ class CerberusContexts {
 				self::_getNotificationContext($context_object, $labels, $values, $prefix);
 				break;
 			default:
-				// [TODO] Migrated
+				// Migrated
 				if(null != ($ctx = DevblocksPlatform::getExtension($context, true)) 
 					&& $ctx instanceof Extension_DevblocksContext) {
 						$ctx->getContext($context_object, $labels, $values, $prefix);

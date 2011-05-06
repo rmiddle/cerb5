@@ -5,7 +5,7 @@
 	<description>Community-focused websites; the customer-facing interfaces of Cerberus Helpdesk.</description>
 	<author>WebGroup Media, LLC.</author>
 	<revision>0</revision>
-	<link>http://wiki.cerb4.com/wiki/New_Changes#Community_Tools</link>
+	<link>http://wiki.cerb5.com/wiki/Features:Community_Portals</link>
 	<image>plugin.png</image>
 	
 	<!-- Plugin Dependencies -->
@@ -23,7 +23,7 @@
 		<patch version="4.3.0" revision="15" file="patches/4.3.0.php" />
 		<patch version="4.3.1" revision="16" file="patches/4.3.1.php" />
 		<patch version="5.0.0-beta" revision="19" file="patches/5.0.0_beta.php" />
-		<patch version="5.1.0-dev" revision="20" file="patches/5.1.0.php" />
+		<patch version="5.1.0-dev" revision="21" file="patches/5.1.0.php" />
 	</patches>
 	
 	<!-- Exported Classes -->

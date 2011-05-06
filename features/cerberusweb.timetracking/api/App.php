@@ -218,12 +218,18 @@ if (class_exists('Extension_AppPreBodyRenderer',true)):
 	class ChTimeTrackingPreBodyRenderer extends Extension_AppPreBodyRenderer {
 		function render() {
 			$tpl = DevblocksPlatform::getTemplateService();
-			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
-			$tpl->assign('path', $tpl_path);
-			
 			$tpl->assign('current_timestamp', time());
-			
-			$tpl->display('file:' . $tpl_path . 'timetracking/renderers/prebody.tpl');
+			$tpl->display('devblocks:cerberusweb.timetracking::timetracking/renderers/prebody.tpl');
+		}
+	};
+endif;
+
+if (class_exists('Extension_CrmOpportunityToolbarItem',true)):
+	class ChCrmOppToolbarTimer extends Extension_CrmOpportunityToolbarItem {
+		function render(Model_CrmOpportunity $opp) {
+			$tpl = DevblocksPlatform::getTemplateService();
+			$tpl->assign('opp', $opp); /* @var $opp Model_CrmOpportunity */
+			$tpl->display('devblocks:cerberusweb.timetracking::timetracking/renderers/opps/opp_toolbar_timer.tpl');
 		}
 	};
 endif;
@@ -232,12 +238,8 @@ if (class_exists('Extension_TaskToolbarItem',true)):
 	class ChTimeTrackingTaskToolbarTimer extends Extension_TaskToolbarItem {
 		function render(Model_Task $task) {
 			$tpl = DevblocksPlatform::getTemplateService();
-			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
-			$tpl->assign('path', $tpl_path);
-			
 			$tpl->assign('task', $task); /* @var $task Model_Task */
-			
-			$tpl->display('file:' . $tpl_path . 'timetracking/renderers/tasks/task_toolbar_timer.tpl');
+			$tpl->display('devblocks:cerberusweb.timetracking::timetracking/renderers/tasks/task_toolbar_timer.tpl');
 		}
 	};
 endif;
@@ -246,17 +248,8 @@ if (class_exists('Extension_TicketToolbarItem',true)):
 	class ChTimeTrackingTicketToolbarTimer extends Extension_TicketToolbarItem {
 		function render(Model_Ticket $ticket) {
 			$tpl = DevblocksPlatform::getTemplateService();
-			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
-			$tpl->assign('path', $tpl_path);
-			
 			$tpl->assign('ticket', $ticket); /* @var $ticket Model_Ticket */
-			
-//			if(null != ($first_wrote_address_id = $ticket->first_wrote_address_id)
-//				&& null != ($first_wrote_address = DAO_Address::get($first_wrote_address_id))) {
-//				$tpl->assign('tt_first_wrote', $first_wrote_address);
-//			}
-			
-			$tpl->display('file:' . $tpl_path . 'timetracking/renderers/tickets/ticket_toolbar_timer.tpl');
+			$tpl->display('devblocks:cerberusweb.timetracking::timetracking/renderers/tickets/ticket_toolbar_timer.tpl');
 		}
 	};
 endif;
@@ -265,8 +258,6 @@ if (class_exists('Extension_ReplyToolbarItem',true)):
 	class ChTimeTrackingReplyToolbarTimer extends Extension_ReplyToolbarItem {
 		function render(Model_Message $message) { 
 			$tpl = DevblocksPlatform::getTemplateService();
-			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
-			$tpl->assign('path', $tpl_path);
 			
 			$tpl->assign('message', $message); /* @var $message Model_Message */
 			
@@ -275,7 +266,7 @@ if (class_exists('Extension_ReplyToolbarItem',true)):
 //				$tpl->assign('tt_first_wrote', $first_wrote_address);
 //			}
 			
-			$tpl->display('file:' . $tpl_path . 'timetracking/renderers/tickets/reply_toolbar_timer.tpl');
+			$tpl->display('devblocks:cerberusweb.timetracking::timetracking/renderers/tickets/reply_toolbar_timer.tpl');
 		}
 	};
 endif;
@@ -284,10 +275,7 @@ if (class_exists('Extension_LogMailToolbarItem',true)):
 	class ChTimeTrackingLogMailToolbarTimer extends Extension_LogMailToolbarItem {
 		function render() { 
 			$tpl = DevblocksPlatform::getTemplateService();
-			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
-			$tpl->assign('path', $tpl_path);
-			
-			$tpl->display('file:' . $tpl_path . 'timetracking/renderers/tickets/logmail_toolbar_timer.tpl');
+			$tpl->display('devblocks:cerberusweb.timetracking::timetracking/renderers/tickets/logmail_toolbar_timer.tpl');
 		}
 	};
 endif;
@@ -296,10 +284,7 @@ if (class_exists('Extension_SendMailToolbarItem',true)):
 	class ChTimeTrackingSendMailToolbarTimer extends Extension_SendMailToolbarItem {
 		function render() { 
 			$tpl = DevblocksPlatform::getTemplateService();
-			$tpl_path = dirname(dirname(__FILE__)).'/templates/';
-			$tpl->assign('path', $tpl_path);
-			
-			$tpl->display('file:' . $tpl_path . 'timetracking/renderers/tickets/sendmail_toolbar_timer.tpl');
+			$tpl->display('devblocks:cerberusweb.timetracking::timetracking/renderers/tickets/sendmail_toolbar_timer.tpl');
 		}
 	};
 endif;
@@ -427,7 +412,7 @@ class DAO_TimeTrackingEntry extends C4_ORMHelper {
 		$fields = SearchFields_TimeTrackingEntry::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields,$sortBy);
@@ -470,7 +455,8 @@ class DAO_TimeTrackingEntry extends C4_ORMHelper {
 		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
 		
 		// Virtuals
-		foreach($params as $param_key => $param) {
+		foreach($params as $param) {
+			$param_key = $param->field;
 			settype($param_key, 'string');
 			switch($param_key) {
 				case SearchFields_TimeTrackingEntry::VIRTUAL_OWNERS:
@@ -596,21 +582,21 @@ class View_TimeTracking extends C4_AbstractView {
 		$this->view_columns = array(
 			SearchFields_TimeTrackingEntry::LOG_DATE,
 		);
-		$this->columnsHidden = array(
+		$this->addColumnsHidden(array(
 			SearchFields_TimeTrackingEntry::ID,
 			SearchFields_TimeTrackingEntry::CONTEXT_LINK,
 			SearchFields_TimeTrackingEntry::CONTEXT_LINK_ID,
 			SearchFields_TimeTrackingEntry::VIRTUAL_OWNERS,
-		);
+		));
 		
-		$this->paramsHidden = array(
+		$this->addParamsHidden(array(
 			SearchFields_TimeTrackingEntry::ID,
 			SearchFields_TimeTrackingEntry::CONTEXT_LINK,
 			SearchFields_TimeTrackingEntry::CONTEXT_LINK_ID,
-		);
-		$this->paramsDefault = array(
+		));
+		$this->addParamsDefault(array(
 			SearchFields_TimeTrackingEntry::IS_CLOSED => new DevblocksSearchCriteria(SearchFields_TimeTrackingEntry::IS_CLOSED,DevblocksSearchCriteria::OPER_EQ,0),
-		);
+		));
 		
 		$this->doResetCriteria();
 	}
@@ -777,7 +763,7 @@ class View_TimeTracking extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
@@ -881,6 +867,17 @@ class View_TimeTracking extends C4_AbstractView {
 			$batch_ids = array_slice($ids,$x,100);
 			DAO_TimeTrackingEntry::update($batch_ids, $change_fields);
 
+			// Owners
+			if(isset($do['owner']) && is_array($do['owner'])) {
+				$owner_params = $do['owner'];
+				foreach($batch_ids as $batch_id) {
+					if(isset($owner_params['add']) && is_array($owner_params['add']))
+						CerberusContexts::addWorkers(CerberusContexts::CONTEXT_TIMETRACKING, $batch_id, $owner_params['add']);
+					if(isset($owner_params['remove']) && is_array($owner_params['remove']))
+						CerberusContexts::removeWorkers(CerberusContexts::CONTEXT_TIMETRACKING, $batch_id, $owner_params['remove']);
+				}
+			}
+			
 			// Custom Fields
 			self::_doBulkSetCustomFields(ChCustomFieldSource_TimeEntry::ID, $custom_fields, $batch_ids);
 			
@@ -1002,6 +999,7 @@ class ChTimeTrackingEventListener extends DevblocksEventListenerExtension {
             	$new_ticket_id = $event->params['new_ticket_id'];
             	$old_ticket_ids = $event->params['old_ticket_ids'];
 
+            	// [TODO] Change over to context links (and handle globally)
 //            	$fields = array(
 //            		DAO_TimeTrackingEntry::SOURCE_ID => $new_ticket_id,
 //            	);
@@ -1254,52 +1252,50 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 		if(empty($id)) { // create
 			$id = DAO_TimeTrackingEntry::create($fields);
 			
-//			$translate = DevblocksPlatform::getTranslationService();
-//			switch($source_extension_id) {
-//				// If ticket, add a comment about the timeslip to the ticket
-//				case 'timetracking.source.ticket':
-//					$ticket_id = intval($source_id);
-//					
-//					if(null != ($worker_address = DAO_Address::lookupAddress($active_worker->email, false))) {
-//						if(!empty($activity_id)) {
-//							$activity = DAO_TimeTrackingActivity::get($activity_id);
-//						}
-//						
-//						if(!empty($org_id))
-//							$org = DAO_ContactOrg::get($org_id);
-//						
-//						$comment = sprintf(
-//							"== %s ==\n".
-//							"%s %s\n".
-//							"%s %d\n".
-//							"%s %s (%s)\n".
-//							"%s %s\n".
-//							"%s %s\n",
-//							$translate->_('timetracking.ui.timetracking'),
-//							$translate->_('timetracking.ui.worker'),
-//							$active_worker->getName(),
-//							$translate->_('timetracking.ui.comment.time_spent'),
-//							$time_actual_mins,
-//							$translate->_('timetracking.ui.comment.activity'),
-//							(!empty($activity) ? $activity->name : ''),
-//							((!empty($activity) && $activity->rate > 0.00) ? $translate->_('timetracking.ui.billable') : $translate->_('timetracking.ui.non_billable')),
-//							$translate->_('timetracking.ui.comment.organization'),
-//							(!empty($org) ? $org->name : $translate->_('timetracking.ui.comment.not_set')),
-//							$translate->_('timetracking.ui.comment.notes'),
-//							$notes
-//						);
-//						//timetracking.ui.billable timetracking.ui.non_billable
-//						$fields = array(
-//							DAO_Comment::ADDRESS_ID => intval($worker_address->id),
-//							DAO_Comment::COMMENT => $comment,
-//							DAO_Comment::CREATED => time(),
-//							DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_TICKET,
-//							DAO_Comment::CONTEXT_ID => intval($ticket_id),
-//						);
-//						DAO_Comment::create($fields);
-//					}
-//					break;
-//			}
+			$translate = DevblocksPlatform::getTranslationService();
+			$url_writer = DevblocksPlatform::getUrlService();
+			
+			// Procedurally create a comment
+			// [TODO] Move this to a better event
+			switch($context) {
+				// If ticket, add a comment about the timeslip to the ticket
+				case CerberusContexts::CONTEXT_OPPORTUNITY:
+				case CerberusContexts::CONTEXT_TICKET:
+				case CerberusContexts::CONTEXT_TASK:
+					if(null != ($worker_address = DAO_Address::lookupAddress($active_worker->email, false))) {
+						if(!empty($activity_id)) {
+							$activity = DAO_TimeTrackingActivity::get($activity_id);
+						}
+						
+						$comment = sprintf(
+							"== %s ==\n".
+							"%s %s\n".
+							"%s %d\n".
+							"%s %s (%s)\n".
+							(!empty($notes) ? sprintf("%s %s\n", $translate->_('timetracking.ui.comment.notes'), $notes) : '').
+							"\n".
+							"%s\n",
+							$translate->_('timetracking.ui.timetracking'),
+							$translate->_('timetracking.ui.worker'),
+							$active_worker->getName(),
+							$translate->_('timetracking.ui.comment.time_spent'),
+							$time_actual_mins,
+							$translate->_('timetracking.ui.comment.activity'),
+							(!empty($activity) ? $activity->name : ''),
+							((!empty($activity) && $activity->rate > 0.00) ? $translate->_('timetracking.ui.billable') : $translate->_('timetracking.ui.non_billable')),
+							$url_writer->write(sprintf("c=timetracking&a=display&id=%d", $id), true)
+						);
+						$fields = array(
+							DAO_Comment::ADDRESS_ID => intval($worker_address->id),
+							DAO_Comment::COMMENT => $comment,
+							DAO_Comment::CREATED => time(),
+							DAO_Comment::CONTEXT => $context,
+							DAO_Comment::CONTEXT_ID => intval($context_id),
+						);
+						DAO_Comment::create($fields);
+					}
+					break;
+			}
 			
 		} else { // modify
 			DAO_TimeTrackingEntry::update($id, $fields);
@@ -1307,7 +1303,40 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 
 		// Establishing a context link?
 		if(!empty($context) && !empty($context_id)) {
+			// Primary context
 			DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, $context, $context_id);
+			
+			// Associated contexts
+			switch($context) {
+				case CerberusContexts::CONTEXT_OPPORTUNITY:
+					if(!class_exists('DAO_CrmOpportunity', true))
+						break;
+						
+					$labels = null;
+					$values = null;
+					CerberusContexts::getContext($context, $context_id, $labels, $values);
+					
+					if(is_array($values)) {
+						// Is there an org associated with this context?
+						if(isset($values['email_org_id']) && !empty($values['email_org_id'])) {
+							DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, CerberusContexts::CONTEXT_ORG, $values['email_org_id']);
+						}
+					}
+					break;
+					
+				case CerberusContexts::CONTEXT_TICKET:
+					$labels = null;
+					$values = null;
+					CerberusContexts::getContext($context, $context_id, $labels, $values);
+					
+					if(is_array($values)) {
+						// Is there an org associated with this context?
+						if(isset($values['initial_message_sender_org_id']) && !empty($values['initial_message_sender_org_id'])) {
+							DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, CerberusContexts::CONTEXT_ORG, $values['initial_message_sender_org_id']);
+						}
+					}
+					break;
+			}
 		}
 		
 		// Owners
@@ -1444,7 +1473,21 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 		// Do: ...
 //		if(0 != strlen($list_id))
 //			$do['list_id'] = $list_id;
+
+		// Owners
+		$owner_options = array();
+		
+		@$owner_add_ids = DevblocksPlatform::importGPC($_REQUEST['do_owner_add_ids'],'array',array());
+		if(!empty($owner_add_ids))
+			$owner_params['add'] = $owner_add_ids;
 			
+		@$owner_remove_ids = DevblocksPlatform::importGPC($_REQUEST['do_owner_remove_ids'],'array',array());
+		if(!empty($owner_remove_ids))
+			$owner_params['remove'] = $owner_remove_ids;
+		
+		if(!empty($owner_params))
+			$do['owner'] = $owner_params;
+		
 		// Do: Custom fields
 		$do = DAO_CustomFieldValue::handleBulkPost($do);
 
