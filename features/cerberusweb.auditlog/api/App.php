@@ -281,7 +281,7 @@ class DAO_TicketAuditLog extends DevblocksORMHelper {
 		$fields = SearchFields_TicketAuditLog::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, array(), $fields,$sortBy);
@@ -416,9 +416,9 @@ class C4_TicketAuditLogView extends C4_AbstractView {
 			SearchFields_TicketAuditLog::CHANGE_VALUE,
 		);
 		
-		$this->paramsHidden = array(
+		$this->addParamsHidden(array(
 			SearchFields_TicketAuditLog::ID,
-		);
+		));
 		
 		$this->doResetCriteria();
 	}
@@ -489,7 +489,7 @@ class C4_TicketAuditLogView extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE) 
 					&& false === (strpos($value,'*'))) {
-						$value = '*'.$value.'*';
+						$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;

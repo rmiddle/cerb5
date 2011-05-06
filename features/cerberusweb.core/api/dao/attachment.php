@@ -206,7 +206,7 @@ class DAO_Attachment extends DevblocksORMHelper {
 		$fields = SearchFields_Attachment::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, array(),$fields,$sortBy);
@@ -487,14 +487,14 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 		$db = DevblocksPlatform::getDatabaseService();
 		
 		$sql = sprintf("SELECT storage_extension, storage_key, storage_profile_id FROM attachment WHERE id IN (%s)", implode(',',$ids));
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
 		
 		// Delete the physical files
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			$profile = !empty($row['storage_profile_id']) ? $row['storage_profile_id'] : $row['storage_extension'];
-			$storage = DevblocksPlatform::getStorageService($profile);
-			return $storage->delete('attachments', $row['storage_key']);
+			if(null != ($storage = DevblocksPlatform::getStorageService($profile)))
+				$storage->delete('attachments', $row['storage_key']);
 		}
 		
 		mysql_free_result($rs);
@@ -704,15 +704,15 @@ class View_Attachment extends C4_AbstractView {
 			SearchFields_Attachment::ADDRESS_EMAIL,
 			SearchFields_Attachment::TICKET_MASK,
 		);
-		$this->columnsHidden = array(
+		$this->addColumnsHidden(array(
 			SearchFields_Attachment::ID,
 			SearchFields_Attachment::MESSAGE_ID,
-		);
+		));
 		
-		$this->paramsHidden = array(
+		$this->addParamsHidden(array(
 			SearchFields_Attachment::ID,
 			SearchFields_Attachment::MESSAGE_ID,
-		);
+		));
 		
 		$this->doResetCriteria();
 	}
@@ -801,7 +801,7 @@ class View_Attachment extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;

@@ -48,6 +48,10 @@
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
+abstract class Extension_CrmOpportunityToolbarItem extends DevblocksExtension {
+	function render(Model_CrmOpportunity $opp) { }
+};
+
 class CrmCustomFieldSource_Opportunity extends Extension_CustomFieldSource {
 	const ID = 'crm.fields.source.opportunity';
 };
@@ -213,6 +217,12 @@ class CrmPage extends CerberusPageExtension {
 		$tpl->assign('view_id', $view_id);
 		$tpl->assign('email', $email);
 		
+		// Handle context links ([TODO] as an optional array)
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer','');
+		$tpl->assign('context', $context);
+		$tpl->assign('context_id', $context_id);
+		
 		if(!empty($opp_id) && null != ($opp = DAO_CrmOpportunity::get($opp_id))) {
 			$tpl->assign('opp', $opp);
 			
@@ -304,6 +314,13 @@ class CrmPage extends CerberusPageExtension {
 				DAO_CrmOpportunity::IS_WON => $is_won,
 			);
 			$opp_id = DAO_CrmOpportunity::create($fields);
+			
+			// Context Link (if given)
+			@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+			@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer','');
+			if(!empty($opp_id) && !empty($context) && !empty($context_id)) {
+				DAO_ContextLink::setLink(CerberusContexts::CONTEXT_OPPORTUNITY, $opp_id, $context, $context_id);
+			}
 			
 			// Custom fields
 			@$field_ids = DevblocksPlatform::importGPC($_REQUEST['field_ids'], 'array', array());
@@ -524,6 +541,20 @@ class CrmPage extends CerberusPageExtension {
 		// Do: Worker
 		if(0 != strlen($worker_id))
 			$do['worker_id'] = $worker_id;
+			
+		// Owners
+		$owner_options = array();
+		
+		@$owner_add_ids = DevblocksPlatform::importGPC($_REQUEST['do_owner_add_ids'],'array',array());
+		if(!empty($owner_add_ids))
+			$owner_params['add'] = $owner_add_ids;
+			
+		@$owner_remove_ids = DevblocksPlatform::importGPC($_REQUEST['do_owner_remove_ids'],'array',array());
+		if(!empty($owner_remove_ids))
+			$owner_params['remove'] = $owner_remove_ids;
+		
+		if(!empty($owner_params))
+			$do['owner'] = $owner_params;
 			
 		// Broadcast: Mass Reply
 		if($active_worker->hasPriv('crm.opp.view.actions.broadcast')) {
@@ -1165,7 +1196,7 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 		$fields = SearchFields_CrmOpportunity::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
 			$sortBy=null;
 		
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields,$sortBy);
@@ -1230,7 +1261,8 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
 		
 		// Virtuals
-		foreach($params as $param_key => $param) {
+		foreach($params as $param) {
+			$param_key = $param->field;
 			settype($param_key, 'string');
 			switch($param_key) {
 				case SearchFields_CrmOpportunity::VIRTUAL_WORKERS:
@@ -1386,25 +1418,25 @@ class View_CrmOpportunity extends C4_AbstractView {
 			SearchFields_CrmOpportunity::UPDATED_DATE,
 			SearchFields_CrmOpportunity::EMAIL_NUM_NONSPAM,
 		);
-		$this->columnsHidden = array(
+		$this->addColumnsHidden(array(
 			SearchFields_CrmOpportunity::ID,
 			SearchFields_CrmOpportunity::PRIMARY_EMAIL_ID,
 			SearchFields_CrmOpportunity::ORG_ID,
 			SearchFields_CrmOpportunity::CONTEXT_LINK,
 			SearchFields_CrmOpportunity::CONTEXT_LINK_ID,
 			SearchFields_CrmOpportunity::VIRTUAL_WORKERS
-		);
+		));
 		
-		$this->paramsDefault = array(
+		$this->addParamsDefault(array(
 			SearchFields_CrmOpportunity::IS_CLOSED => new DevblocksSearchCriteria(SearchFields_CrmOpportunity::IS_CLOSED,'=',0),
-		);
-		$this->paramsHidden = array(
+		));
+		$this->addParamsHidden(array(
 			SearchFields_CrmOpportunity::ID,
 			SearchFields_CrmOpportunity::PRIMARY_EMAIL_ID,
 			SearchFields_CrmOpportunity::ORG_ID,
 			SearchFields_CrmOpportunity::CONTEXT_LINK,
 			SearchFields_CrmOpportunity::CONTEXT_LINK_ID,
-		);
+		));
 		
 		$this->doResetCriteria();
 	}
@@ -1542,7 +1574,7 @@ class View_CrmOpportunity extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
@@ -1718,6 +1750,17 @@ class View_CrmOpportunity extends C4_AbstractView {
 			
 			// Custom Fields
 			self::_doBulkSetCustomFields(CrmCustomFieldSource_Opportunity::ID, $custom_fields, $batch_ids);
+			
+			// Owners
+			if(isset($do['owner']) && is_array($do['owner'])) {
+				$owner_params = $do['owner'];
+				foreach($batch_ids as $batch_id) {
+					if(isset($owner_params['add']) && is_array($owner_params['add']))
+						CerberusContexts::addWorkers(CerberusContexts::CONTEXT_OPPORTUNITY, $batch_id, $owner_params['add']);
+					if(isset($owner_params['remove']) && is_array($owner_params['remove']))
+						CerberusContexts::removeWorkers(CerberusContexts::CONTEXT_OPPORTUNITY, $batch_id, $owner_params['remove']);
+				}
+			}
 			
 			unset($batch_ids);
 		}
