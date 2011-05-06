@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE tmx SYSTEM "tmx14.dtd">
+<!DOCTYPE tmx>
 <tmx version="1.4">
 	<header datatype="winres" segtype="sentence" adminlang="en-us" srclang="en-us" o-tmf="abc" />
 	<body>
@@ -12,12 +12,6 @@
 		<tu tuid='core.menu.address_book'>
 			<tuv xml:lang="en_US"><seg>address book</seg></tuv>
 		</tu>
-		<tu tuid='core.menu.home'>
-			<tuv xml:lang="en_US"><seg>home</seg></tuv>
-		</tu>
-		<tu tuid='core.menu.mail'>
-			<tuv xml:lang="en_US"><seg>mail</seg></tuv>
-		</tu>
 		
 		<tu tuid='display.tab.comments'>
 			<tuv xml:lang="en_US"><seg>Comments (%s)</seg></tuv>
@@ -27,9 +21,6 @@
 		</tu>
 		<tu tuid='display.tab.history'>
 			<tuv xml:lang="en_US"><seg>Recipient History</seg></tuv>
-		</tu>
-		<tu tuid='display.tab.properties'>
-			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
 		</tu>
 		<tu tuid='display.tab.tasks'>
 			<tuv xml:lang="en_US"><seg>Tasks</seg></tuv>
@@ -45,11 +36,56 @@
 		<tu tuid='activity.tab.tasks'>
 			<tuv xml:lang="en_US"><seg>Tasks</seg></tuv>
 		</tu>
+		
+		<!-- Activity points -->
+		
+		<tu tuid='activities.comment.create'>
+			<tuv xml:lang="en_US"><seg>{{actor}} commented on {{object}} {{target}}: {{content}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.connection.link'>
+			<tuv xml:lang="en_US"><seg>{{actor}} connected {{target_object}} {{target}} to {{link_object}} {{link}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.connection.unlink'>
+			<tuv xml:lang="en_US"><seg>{{actor}} disconnected {{target_object}} {{target}} from {{link_object}} {{link}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.org.merge'>
+			<tuv xml:lang="en_US"><seg>{{actor}} merged organization {{source}} with organization {{target}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.task.status.completed'>
+			<tuv xml:lang="en_US"><seg>{{actor}} completed task {{target}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.ticket.merge'>
+			<tuv xml:lang="en_US"><seg>{{actor}} merged ticket {{source}} with ticket {{target}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.ticket.message.inbound'>
+			<tuv xml:lang="en_US"><seg>{{actor}} replied to ticket {{target}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.ticket.message.outbound'>
+			<tuv xml:lang="en_US"><seg>{{actor}} responded to ticket {{target}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.ticket.status'>
+			<tuv xml:lang="en_US"><seg>{{actor}} changed ticket {{target}} to status {{status}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.watcher.assigned'>
+			<tuv xml:lang="en_US"><seg>{{actor}} added {{watcher}} as a watcher to {{target_object}} {{target}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.watcher.follow'>
+			<tuv xml:lang="en_US"><seg>{{actor}} started watching {{target_object}} {{target}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.watcher.unassigned'>
+			<tuv xml:lang="en_US"><seg>{{actor}} removed {{watcher}} as a watcher from {{target_object}} {{target}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.watcher.unfollow'>
+			<tuv xml:lang="en_US"><seg>{{actor}} stopped watching {{target_object}} {{target}}</seg></tuv>
+		</tu>
 
 		<!-- Common Strings -->
 
 		<tu tuid='common.access_denied'>
 			<tuv xml:lang="en_US"><seg>Access denied.</seg></tuv>
+		</tu>
+		<tu tuid='common.activity_log'>
+			<tuv xml:lang="en_US"><seg>Activity Log</seg></tuv>
 		</tu>
 		<tu tuid='common.add'>
 			<tuv xml:lang="en_US"><seg>add</seg></tuv>
@@ -69,11 +105,17 @@
 		<tu tuid='common.assigned'>
 			<tuv xml:lang="en_US"><seg>Assigned</seg></tuv>
 		</tu>
+		<tu tuid='common.attachments'>
+			<tuv xml:lang="en_US"><seg>Attachments</seg></tuv>
+		</tu>
 		<tu tuid='common.available'>
 			<tuv xml:lang="en_US"><seg>Available</seg></tuv>
 		</tu>
 		<tu tuid='common.bucket'>
 			<tuv xml:lang="en_US"><seg>Bucket</seg></tuv>
+		</tu>
+		<tu tuid='common.buckets'>
+			<tuv xml:lang="en_US"><seg>Buckets</seg></tuv>
 		</tu>
 		<tu tuid='common.bulk_update'>
 			<tuv xml:lang="en_US"><seg>Bulk Update</seg></tuv>
@@ -86,6 +128,9 @@
 		</tu>
 		<tu tuid='common.bulk_update.filter.checked'>
 			<tuv xml:lang="en_US"><seg>Only checked</seg></tuv>
+		</tu>
+		<tu tuid='common.bulk_update.filter.random'>
+			<tuv xml:lang="en_US"><seg>Random</seg></tuv>
 		</tu>
 		<tu tuid='common.bulk_update.with'>
 			<tuv xml:lang="en_US"><seg>With</seg></tuv>
@@ -114,6 +159,15 @@
 		<tu tuid='common.content'>
 			<tuv xml:lang="en_US"><seg>Content</seg></tuv>
 		</tu>
+		<tu tuid='common.context'>
+			<tuv xml:lang="en_US"><seg>Context</seg></tuv>
+		</tu>
+		<tu tuid='common.context_id'>
+			<tuv xml:lang="en_US"><seg>Context ID</seg></tuv>
+		</tu>
+		<tu tuid='common.continue'>
+			<tuv xml:lang="en_US"><seg>continue</seg></tuv>
+		</tu>
 		<tu tuid='common.copy'>
 			<tuv xml:lang="en_US"><seg>copy</seg></tuv>
 		</tu>
@@ -121,7 +175,7 @@
 			<tuv xml:lang="en_US"><seg>created</seg></tuv>
 		</tu>
 		<tu tuid='common.custom_fields'>
-			<tuv xml:lang="en_US"><seg>custom fields</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Custom Fields</seg></tuv>
 		</tu>
 		<tu tuid='common.customize'>
 			<tuv xml:lang="en_US"><seg>customize</seg></tuv>
@@ -131,6 +185,9 @@
 		</tu>
 		<tu tuid='common.days'>
 			<tuv xml:lang="en_US"><seg>days</seg></tuv>
+		</tu>
+		<tu tuid='common.default'>
+			<tuv xml:lang="en_US"><seg>Default</seg></tuv>
 		</tu>
 		<tu tuid='common.delete'>
 			<tuv xml:lang="en_US"><seg>delete</seg></tuv>
@@ -149,6 +206,12 @@
 		</tu>
 		<tu tuid='common.edit'>
 			<tuv xml:lang="en_US"><seg>edit</seg></tuv>
+		</tu>
+		<tu tuid='common.event'>
+			<tuv xml:lang="en_US"><seg>event</seg></tuv>
+		</tu>
+		<tu tuid='common.explore'>
+			<tuv xml:lang="en_US"><seg>explore</seg></tuv>
 		</tu>
 		<tu tuid='common.export'>
 			<tuv xml:lang="en_US"><seg>export</seg></tuv>
@@ -174,6 +237,9 @@
 		<tu tuid='common.groups'>
 			<tuv xml:lang="en_US"><seg>Groups</seg></tuv>
 		</tu>
+		<tu tuid='common.guid'>
+			<tuv xml:lang="en_US"><seg>GUID</seg></tuv>
+		</tu>
 		<tu tuid='common.hours'>
 			<tuv xml:lang="en_US"><seg>hours</seg></tuv>
 		</tu>
@@ -195,11 +261,26 @@
 		<tu tuid='common.knowledgebase'>
 			<tuv xml:lang="en_US"><seg>Knowledgebase</seg></tuv>
 		</tu>
+		<tu tuid='common.mail'>
+			<tuv xml:lang="en_US"><seg>Mail</seg></tuv>
+		</tu>
+		<tu tuid='common.manager'>
+			<tuv xml:lang="en_US"><seg>Manager</seg></tuv>
+		</tu>
+		<tu tuid='common.managers'>
+			<tuv xml:lang="en_US"><seg>Managers</seg></tuv>
+		</tu>
 		<tu tuid='common.maximize'>
 			<tuv xml:lang="en_US"><seg>maximize</seg></tuv>
 		</tu>
 		<tu tuid='common.me'>
 			<tuv xml:lang="en_US"><seg>me</seg></tuv>
+		</tu>
+		<tu tuid='common.member'>
+			<tuv xml:lang="en_US"><seg>Member</seg></tuv>
+		</tu>
+		<tu tuid='common.members'>
+			<tuv xml:lang="en_US"><seg>Members</seg></tuv>
 		</tu>
 		<tu tuid='common.messages'>
 			<tuv xml:lang="en_US"><seg>Messages</seg></tuv>
@@ -225,6 +306,9 @@
 		<tu tuid='common.name'>
 			<tuv xml:lang="en_US"><seg>Name</seg></tuv>
 		</tu>
+		<tu tuid='common.never'>
+			<tuv xml:lang="en_US"><seg>Never</seg></tuv>
+		</tu>
 		<tu tuid='common.no'>
 			<tuv xml:lang="en_US"><seg>no</seg></tuv>
 		</tu>
@@ -233,6 +317,9 @@
 		</tu>
 		<tu tuid='common.nobody'>
 			<tuv xml:lang="en_US"><seg>nobody</seg></tuv>
+		</tu>
+		<tu tuid='common.none'>
+			<tuv xml:lang="en_US"><seg>none</seg></tuv>
 		</tu>
 		<tu tuid='common.notspam'>
 			<tuv xml:lang="en_US"><seg>Not Spam</seg></tuv>
@@ -249,12 +336,6 @@
 		<tu tuid='common.order'>
 			<tuv xml:lang="en_US"><seg>order</seg></tuv>
 		</tu>		
-		<tu tuid='common.owner'>
-			<tuv xml:lang="en_US"><seg>Owner</seg></tuv>
-		</tu>		
-		<tu tuid='common.owners'>
-			<tuv xml:lang="en_US"><seg>Owners</seg></tuv>
-		</tu>		
 		<tu tuid='common.languages'>
 			<tuv xml:lang="en_US"><seg>Languages</seg></tuv>
 		</tu>
@@ -267,6 +348,9 @@
 		<tu tuid='common.next'>
 			<tuv xml:lang="en_US"><seg>next</seg></tuv>
 		</tu>
+		<tu tuid='common.notify_watchers_and'>
+			<tuv xml:lang="en_US"><seg>Notify watchers and</seg></tuv>
+		</tu>
 		<tu tuid='common.notify_workers'>
 			<tuv xml:lang="en_US"><seg>Notify workers</seg></tuv>
 		</tu>
@@ -276,6 +360,9 @@
 		<tu tuid='common.password'>
 			<tuv xml:lang="en_US"><seg>password</seg></tuv>
 		</tu>
+		<tu tuid='common.permalink'>
+			<tuv xml:lang="en_US"><seg>permalink</seg></tuv>
+		</tu>
 		<tu tuid='common.previous_short'>
 			<tuv xml:lang="en_US"><seg>prev</seg></tuv>
 		</tu>
@@ -284,6 +371,12 @@
 		</tu>
 		<tu tuid='common.print'>
 			<tuv xml:lang="en_US"><seg>Print</seg></tuv>
+		</tu>
+		<tu tuid='common.profiles'>
+			<tuv xml:lang="en_US"><seg>Profiles</seg></tuv>
+		</tu>
+		<tu tuid='common.properties'>
+			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
 		</tu>
 		<tu tuid='common.quick_compose'>
 			<tuv xml:lang="en_US"><seg>Quick Compose</seg></tuv>
@@ -333,6 +426,9 @@
 		<tu tuid='common.status'>
 			<tuv xml:lang="en_US"><seg>Status</seg></tuv>
 		</tu>
+		<tu tuid='common.subtotals'>
+			<tuv xml:lang="en_US"><seg>Subtotals</seg></tuv>
+		</tu>
 		<tu tuid='common.summary'>
 			<tuv xml:lang="en_US"><seg>Summary</seg></tuv>
 		</tu>
@@ -344,6 +440,9 @@
 		</tu>
 		<tu tuid='common.tasks'>
 			<tuv xml:lang="en_US"><seg>Tasks</seg></tuv>
+		</tu>
+		<tu tuid='common.test'>
+			<tuv xml:lang="en_US"><seg>Test</seg></tuv>
 		</tu>
 		<tu tuid='common.text'>
 			<tuv xml:lang="en_US"><seg>Text</seg></tuv>
@@ -357,8 +456,8 @@
 		<tu tuid='common.time.secs.num'>
 			<tuv xml:lang="en_US"><seg>%s sec</seg></tuv>
 		</tu>
-		<tu tuid='common.tips.multi_select'>
-			<tuv xml:lang="en_US"><seg>(hold CTRL or COMMAND to select multiple options)</seg></tuv>
+		<tu tuid='common.title'>
+			<tuv xml:lang="en_US"><seg>Title</seg></tuv>
 		</tu>
 		<tu tuid='common.today'>
 			<tuv xml:lang="en_US"><seg>today</seg></tuv>
@@ -381,6 +480,15 @@
 		<tu tuid='common.url'>
 			<tuv xml:lang="en_US"><seg>URL</seg></tuv>
 		</tu>
+		<tu tuid='common.watcher'>
+			<tuv xml:lang="en_US"><seg>watcher</seg></tuv>
+		</tu>
+		<tu tuid='common.watchers'>
+			<tuv xml:lang="en_US"><seg>watchers</seg></tuv>
+		</tu>
+		<tu tuid='common.watchers.add_me'>
+			<tuv xml:lang="en_US"><seg>Notify me about new activity</seg></tuv>
+		</tu>
 		<tu tuid='common.week'>
 			<tuv xml:lang="en_US"><seg>week</seg></tuv>
 		</tu>
@@ -393,6 +501,12 @@
 		<tu tuid='common.worklist'>
 			<tuv xml:lang="en_US"><seg>worklist</seg></tuv>
 		</tu>
+		<tu tuid='common.workspace'>
+			<tuv xml:lang="en_US"><seg>Workspace</seg></tuv>
+		</tu>
+		<tu tuid='common.workspaces'>
+			<tuv xml:lang="en_US"><seg>Workspaces</seg></tuv>
+		</tu>
 		<tu tuid='common.year'>
 			<tuv xml:lang="en_US"><seg>year</seg></tuv>
 		</tu>
@@ -402,11 +516,23 @@
 
 		<!-- DAO -->
 		
-			<!-- Snippets -->
-
-		<tu tuid='dao.snippet.context'>
-			<tuv xml:lang="en_US"><seg>Context</seg></tuv>
+		<!-- DecisionNode -->
+		
+		<tu tuid='dao.decision_node.node_type'>
+			<tuv xml:lang="en_US"><seg>Node Type</seg></tuv>
 		</tu>
+		<tu tuid='dao.decision_node.params'>
+			<tuv xml:lang="en_US"><seg>Params</seg></tuv>
+		</tu>
+		<tu tuid='dao.decision_node.parent_id'>
+			<tuv xml:lang="en_US"><seg>Parent Id</seg></tuv>
+		</tu>
+		<tu tuid='dao.decision_node.trigger_id'>
+			<tuv xml:lang="en_US"><seg>Trigger Id</seg></tuv>
+		</tu>
+		
+		<!-- Snippets -->
+
 		<tu tuid='dao.snippet.created_by'>
 			<tuv xml:lang="en_US"><seg>Created By</seg></tuv>
 		</tu>
@@ -419,12 +545,21 @@
 		<tu tuid='dao.snippet.last_updated_by'>
 			<tuv xml:lang="en_US"><seg>Updated By</seg></tuv>
 		</tu>
-		<tu tuid='dao.snippet.title'>
-			<tuv xml:lang="en_US"><seg>Title</seg></tuv>
-		</tu>
 		
 		<tu tuid='dao.snippet_usage.hits'>
 			<tuv xml:lang="en_US"><seg>Hits</seg></tuv>
+		</tu>
+
+		<!-- Trigger -->
+		
+		<tu tuid='dao.trigger_event.is_disabled'>
+			<tuv xml:lang="en_US"><seg>Is Disabled</seg></tuv>
+		</tu>
+		<tu tuid='dao.trigger_event.owner_context'>
+			<tuv xml:lang="en_US"><seg>Owner Context</seg></tuv>
+		</tu>
+		<tu tuid='dao.trigger_event.owner_context_id'>
+			<tuv xml:lang="en_US"><seg>Owner Context Id</seg></tuv>
 		</tu>
 
 		<!-- Errors -->
@@ -451,6 +586,9 @@
 		<tu tuid='acl.core.addybook.addy.view.actions.export'>
 			<tuv xml:lang="en_US"><seg>[Address Book] Can export email address lists to CSV/XML</seg></tuv>
 		</tu>
+		<tu tuid='acl.core.addybook.org.actions.merge'>
+			<tuv xml:lang="en_US"><seg>[Address Book] Can merge organizations</seg></tuv>
+		</tu>
 		<tu tuid='acl.core.addybook.org.actions.update'>
 			<tuv xml:lang="en_US"><seg>[Address Book] Can modify organizations</seg></tuv>
 		</tu>
@@ -459,6 +597,9 @@
 		</tu>
 		<tu tuid='acl.core.addybook.org.view.actions.export'>
 			<tuv xml:lang="en_US"><seg>[Address Book] Can export organization lists to CSV/XML</seg></tuv>
+		</tu>
+		<tu tuid='acl.core.addybook.person.actions.delete'>
+			<tuv xml:lang="en_US"><seg>[Address Book] Can delete registered contacts</seg></tuv>
 		</tu>
 
 			<!-- Display Ticket -->
@@ -480,11 +621,12 @@
 		<tu tuid='acl.core.display.actions.split'>
 			<tuv xml:lang="en_US"><seg>[Display Ticket] Can split tickets</seg></tuv>
 		</tu>
+		
+		<tu tuid='acl.core.display.message.actions.delete'>
+			<tuv xml:lang="en_US"><seg>[Display Ticket] Can permanently delete messages on tickets</seg></tuv>
+		</tu>
 
 			<!-- Home -->
-		<tu tuid='acl.core.home.auto_refresh'>
-			<tuv xml:lang="en_US"><seg>[Home] Can auto-refresh on the Home page</seg></tuv>
-		</tu>
 		<tu tuid='acl.core.home.workspaces'>
 			<tuv xml:lang="en_US"><seg>[Home] Can build private workspaces and worklists</seg></tuv>
 		</tu>
@@ -554,14 +696,11 @@
 			<tuv xml:lang="en_US"><seg>[Tickets] Can use the pile sorter on lists</seg></tuv>
 		</tu>
 
-		<!-- Activity -->
-		
-		<tu tuid='activity.tasks.tab.properties'>
-			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
-		</tu>
-		
 		<!-- Addresses -->
 		
+		<tu tuid='address.address'>
+			<tuv xml:lang="en_US"><seg>Address</seg></tuv>
+		</tu>
 		<tu tuid='address.id'>
 			<tuv xml:lang="en_US"><seg>ID</seg></tuv>
 		</tu>
@@ -571,6 +710,9 @@
 		<tu tuid='address.first_name'>
 			<tuv xml:lang="en_US"><seg>First Name</seg></tuv>
 		</tu>
+		<tu tuid='address.full_name'>
+			<tuv xml:lang="en_US"><seg>Full Name</seg></tuv>
+		</tu>
 		<tu tuid='address.num_spam'>
 			<tuv xml:lang="en_US"><seg># Spam</seg></tuv>
 		</tu>
@@ -579,9 +721,6 @@
 		</tu>
 		<tu tuid='address.is_banned'>
 			<tuv xml:lang="en_US"><seg>Is Banned</seg></tuv>
-		</tu>
-		<tu tuid='address.is_registered'>
-			<tuv xml:lang="en_US"><seg>Is Registered</seg></tuv>
 		</tu>
 		<tu tuid='address.last_name'>
 			<tuv xml:lang="en_US"><seg>Last Name</seg></tuv>
@@ -640,9 +779,6 @@
 		<tu tuid='addy_book.org.tabs.people'>
 			<tuv xml:lang="en_US"><seg>People (%s)</seg></tuv>
 		</tu>
-		<tu tuid='addy_book.org.tabs.properties'>
-			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
-		</tu>
 		<tu tuid='addy_book.peek.compose'>
 			<tuv xml:lang="en_US"><seg>compose</seg></tuv>
 		</tu>
@@ -664,8 +800,14 @@
 		<tu tuid='addy_book.tab.import'>
 			<tuv xml:lang="en_US"><seg>Import</seg></tuv>
 		</tu>
+		<tu tuid='addy_book.tab.lists'>
+			<tuv xml:lang="en_US"><seg>Contact Lists</seg></tuv>
+		</tu>
 		<tu tuid='addy_book.tab.organizations'>
 			<tuv xml:lang="en_US"><seg>Organizations</seg></tuv>
+		</tu>
+		<tu tuid='addy_book.tab.people'>
+			<tuv xml:lang="en_US"><seg>Registered Contacts</seg></tuv>
 		</tu>
 
 		<!-- Attachment -->
@@ -675,9 +817,6 @@
 		</tu>
 		<tu tuid='attachment.display_name'>
 			<tuv xml:lang="en_US"><seg>File Name</seg></tuv>
-		</tu>
-		<tu tuid='attachment.message_id'>
-			<tuv xml:lang="en_US"><seg>Message ID</seg></tuv>
 		</tu>
 		<tu tuid='attachment.mime_type'>
 			<tuv xml:lang="en_US"><seg>MIME Type</seg></tuv>
@@ -695,6 +834,40 @@
 			<tuv xml:lang="en_US"><seg>Size (bytes)</seg></tuv>
 		</tu>
 
+		<!-- Community Portal -->
+
+		<tu tuid='community_portal.code'>
+			<tuv xml:lang="en_US"><seg>Profile ID</seg></tuv>
+		</tu>
+		<tu tuid='community_portal.extension_id'>
+			<tuv xml:lang="en_US"><seg>Extension</seg></tuv>
+		</tu>
+		<tu tuid='community_portal.name'>
+			<tuv xml:lang="en_US"><seg>Name</seg></tuv>
+		</tu>
+		
+		<!-- Community -->
+		
+		<tu tuid='portal.cfg.add_tool'>
+			<tuv xml:lang="en_US"><seg>Add a New Community Portal:</seg></tuv>
+		</tu>
+		<tu tuid='portal.cfg.confirm_delete'>
+			<tuv xml:lang="en_US"><seg>Are you sure you want to permanently delete this community portal?</seg></tuv>
+		</tu>
+		<tu tuid='portal.cfg.htaccess_hint'>
+			<tuv xml:lang="en_US"><seg>(optional, friendly URLs for Apache Web Server users)</seg></tuv>
+		</tu>
+		<tu tuid='portal.cfg.installation'>
+			<tuv xml:lang="en_US"><seg>Installation</seg></tuv>
+		</tu>
+		<tu tuid='portal.cfg.installation_instructions'>
+			<tuv xml:lang="en_US"><seg>Place the index.php file in a new directory on the appropriate public website.  This directory can be named anything but will usually describe the portal.
+For example: http://www.cerberusweb.com/support/</seg></tuv>
+		</tu>
+		<tu tuid='portal.cfg.profile_id'>
+			<tuv xml:lang="en_US"><seg>Profile ID:</seg></tuv>
+		</tu>
+
 		<!-- Configuration -->
 		
 		<tu tuid='config.mail.pop3.error_hostname'>
@@ -707,7 +880,16 @@
 			<tuv xml:lang="en_US"><seg>SMTP Connection Failed:</seg></tuv>
 		</tu>
 		
-
+		<!-- ConfirmationCode -->
+		
+		<tu tuid='dao.confirmation_code.namespace_key'>
+			<tuv xml:lang="en_US"><seg>Namespace</seg></tuv>
+		</tu>
+		<tu tuid='dao.confirmation_code.confirmation_code'>
+			<tuv xml:lang="en_US"><seg>Confirmation Code</seg></tuv>
+		</tu>
+		
+		
 		<!-- Contact orgs -->
 		<tu tuid='contact_org.city'>
 			<tuv xml:lang="en_US"><seg>City</seg></tuv>
@@ -741,73 +923,38 @@
 		</tu>
 
 		<!-- Contact People -->
-		<tu tuid='contact_person.contact_org_id'>
-			<tuv xml:lang="en_US"><seg>Organization</seg></tuv>
+		
+		<tu tuid='dao.contact_person.auth_salt'>
+			<tuv xml:lang="en_US"><seg>Password Salt</seg></tuv>
 		</tu>
-		<tu tuid='contact_person.created'>
-			<tuv xml:lang="en_US"><seg>Created</seg></tuv>
+		<tu tuid='dao.contact_person.auth_password'>
+			<tuv xml:lang="en_US"><seg>Password</seg></tuv>
 		</tu>
-		<tu tuid='contact_person.email'>
-			<tuv xml:lang="en_US"><seg>Primary Email</seg></tuv>
-		</tu>
-		<tu tuid='contact_person.first_name'>
-			<tuv xml:lang="en_US"><seg>First Name</seg></tuv>
-		</tu>
-		<tu tuid='contact_person.id'>
-			<tuv xml:lang="en_US"><seg>ID</seg></tuv>
-		</tu>
-		<tu tuid='contact_person.last_name'>
-			<tuv xml:lang="en_US"><seg>Last Name</seg></tuv>
-		</tu>
-		<tu tuid='contact_person.title'>
-			<tuv xml:lang="en_US"><seg>Title</seg></tuv>
+		<tu tuid='dao.contact_person.last_login'>
+			<tuv xml:lang="en_US"><seg>Last Login</seg></tuv>
 		</tu>
 
 		<!-- Contexts -->
 		
-		<tu tuid='context.default.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned something to you.</seg></tuv>
+		<!-- ContextActivityLog -->
+		
+		<tu tuid='dao.context_activity_log.activity_point'>
+			<tuv xml:lang="en_US"><seg>Activity</seg></tuv>
 		</tu>
-		<tu tuid='context.default.commented'>
-			<tuv xml:lang="en_US"><seg>%s left a comment for you.</seg></tuv>
+		<tu tuid='dao.context_activity_log.actor_context'>
+			<tuv xml:lang="en_US"><seg>Actor Context</seg></tuv>
 		</tu>
-		<tu tuid='context.address.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned a contact to you.</seg></tuv>
+		<tu tuid='dao.context_activity_log.actor_context_id'>
+			<tuv xml:lang="en_US"><seg>Actor Context ID</seg></tuv>
 		</tu>
-		<tu tuid='context.address.commented'>
-			<tuv xml:lang="en_US"><seg>%s commented on a contact.</seg></tuv>
+		<tu tuid='dao.context_activity_log.entry'>
+			<tuv xml:lang="en_US"><seg>Entry</seg></tuv>
 		</tu>
-		<!--
-		<tu tuid='context.group.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned a group to you.</seg></tuv>
+		<tu tuid='dao.context_activity_log.target_context'>
+			<tuv xml:lang="en_US"><seg>Target Context</seg></tuv>
 		</tu>
-		<tu tuid='context.group.commented'>
-			<tuv xml:lang="en_US"><seg>%s commented on a group.</seg></tuv>
-		</tu>
-		-->
-		<tu tuid='context.org.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned an organization to you.</seg></tuv>
-		</tu>
-		<tu tuid='context.org.commented'>
-			<tuv xml:lang="en_US"><seg>%s commented on an organization.</seg></tuv>
-		</tu>
-		<tu tuid='context.task.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned a task to you.</seg></tuv>
-		</tu>
-		<tu tuid='context.task.commented'>
-			<tuv xml:lang="en_US"><seg>%s commented on a task.</seg></tuv>
-		</tu>
-		<tu tuid='context.ticket.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned a ticket to you.</seg></tuv>
-		</tu>
-		<tu tuid='context.ticket.commented'>
-			<tuv xml:lang="en_US"><seg>%s commented on a ticket.</seg></tuv>
-		</tu>
-		<tu tuid='context.worker.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned a worker to you.</seg></tuv>
-		</tu>
-		<tu tuid='context.worker.commented'>
-			<tuv xml:lang="en_US"><seg>%s commented on another worker.</seg></tuv>
+		<tu tuid='dao.context_activity_log.target_context_id'>
+			<tuv xml:lang="en_US"><seg>Target Context ID</seg></tuv>
 		</tu>
 
 		<!-- Cron -->
@@ -836,9 +983,6 @@
 		<tu tuid='activity.display_ticket'>
 			<tuv xml:lang="en_US"><seg>%s is displaying ticket %s</seg></tuv>
 		</tu>
-		<tu tuid='activity.home'>
-			<tuv xml:lang="en_US"><seg>%s is browsing their assigned work</seg></tuv>
-		</tu>
 		<tu tuid='activity.mail.search'>
 			<tuv xml:lang="en_US"><seg>%s is searching tickets</seg></tuv>
 		</tu>
@@ -864,16 +1008,16 @@
 		<!-- Header -->
 
 		<tu tuid='header.config'>
-			<tuv xml:lang="en_US"><seg>helpdesk setup</seg></tuv>
+			<tuv xml:lang="en_US"><seg>setup</seg></tuv>
 		</tu>
 		<tu tuid='header.history'>
 			<tuv xml:lang="en_US"><seg>history</seg></tuv>
 		</tu>
-		<tu tuid='header.group_setup'>
-			<tuv xml:lang="en_US"><seg>group setup</seg></tuv>
-		</tu>
 		<tu tuid='header.last_viewed'>
 			<tuv xml:lang="en_US"><seg>last viewed</seg></tuv>
+		</tu>
+		<tu tuid='header.my_profile'>
+			<tuv xml:lang="en_US"><seg>my profile</seg></tuv>
 		</tu>
 		<tu tuid='header.no_page'>
 			<tuv xml:lang="en_US"><seg>No page selected.</seg></tuv>
@@ -885,7 +1029,7 @@
 			<tuv xml:lang="en_US"><seg>%s unread notification(s)</seg></tuv>
 		</tu>
 		<tu tuid='header.preferences'>
-			<tuv xml:lang="en_US"><seg>my account</seg></tuv>
+			<tuv xml:lang="en_US"><seg>my settings</seg></tuv>
 		</tu>
 		<tu tuid='header.signed_in'>
 			<tuv xml:lang="en_US"><seg>Signed on as %s</seg></tuv>
@@ -974,12 +1118,6 @@
 		<tu tuid='home.my_tickets.view.title'>
 			<tuv xml:lang="en_US"><seg>Mail for %s</seg></tuv>
 		</tu>
-		<tu tuid='home.workspaces.rename'>
-			<tuv xml:lang="en_US"><seg>Rename Workspace</seg></tuv>
-		</tu>
-		<tu tuid='home.workspaces.worklist.add.existing'>
-			<tuv xml:lang="en_US"><seg>Existing</seg></tuv>
-		</tu>
 		<tu tuid='home.workspaces.worklist.add.new'>
 			<tuv xml:lang="en_US"><seg>New</seg></tuv>
 		</tu>
@@ -1001,9 +1139,6 @@
 		
 		<!-- Display: Conversation -->
 		
-		<tu tuid='display.convo.attachments_label'>
-			<tuv xml:lang="en_US"><seg>Attachments:</seg></tuv>
-		</tu>
 		<tu tuid='display.convo.brief_headers'>
 			<tuv xml:lang="en_US"><seg>brief headers</seg></tuv>
 		</tu>
@@ -1060,9 +1195,6 @@
 		<tu tuid='display.reply.next_label'>
 			<tuv xml:lang="en_US"><seg>Next:</seg></tuv>
 		</tu>
-		<tu tuid='display.reply.next.handle_reply'>
-			<tuv xml:lang="en_US"><seg>Who should handle the next reply?</seg></tuv>
-		</tu>
 		<tu tuid='display.reply.next.move'>
 			<tuv xml:lang="en_US"><seg>Would you like to move this conversation?</seg></tuv>
 		</tu>
@@ -1085,9 +1217,6 @@
 		<tu tuid='display.reply.reply_banner'>
 			<tuv xml:lang="en_US"><seg>On %s, %s wrote:</seg></tuv>
 		</tu>
-		<tu tuid='display.reply.warn_assigned'>
-			<tuv xml:lang="en_US"><seg>Warning: You are replying to a ticket assigned to %s</seg></tuv>
-		</tu>
 		
 		<tu tuid='display.shortcut.close'>
 			<tuv xml:lang="en_US"><seg>Close this ticket (C)</seg></tuv>
@@ -1107,11 +1236,11 @@
 		<tu tuid='display.shortcut.spam'>
 			<tuv xml:lang="en_US"><seg>Report this ticket as spam (S)</seg></tuv>
 		</tu>
-		<tu tuid='display.shortcut.surrender'>
-			<tuv xml:lang="en_US"><seg>Unassign this ticket from yourself (U)</seg></tuv>
+		<tu tuid='display.shortcut.follow'>
+			<tuv xml:lang="en_US"><seg>Follow this ticket (F)</seg></tuv>
 		</tu>
-		<tu tuid='display.shortcut.take'>
-			<tuv xml:lang="en_US"><seg>Assign this ticket to yourself (T)</seg></tuv>
+		<tu tuid='display.shortcut.unfollow'>
+			<tuv xml:lang="en_US"><seg>Stop following this ticket (U)</seg></tuv>
 		</tu>
 
 		<tu tuid='display.ui.add_to_recipients'>
@@ -1141,7 +1270,6 @@
 		<tu tuid='mail.drafts'>
 			<tuv xml:lang="en_US"><seg>Drafts</seg></tuv>
 		</tu>
-		
 		<tu tuid='mail.inbox_filter'>
 			<tuv xml:lang="en_US"><seg>Inbox Filter</seg></tuv>
 		</tu>
@@ -1203,13 +1331,6 @@
 			<tuv xml:lang="en_US"><seg>Search Tickets</seg></tuv>
 		</tu>
 		
-		<tu tuid='mail.surrender'>
-			<tuv xml:lang="en_US"><seg>Surrender</seg></tuv>
-		</tu>
-		<tu tuid='mail.take'>
-			<tuv xml:lang="en_US"><seg>Take</seg></tuv>
-		</tu>
-		
 		<tu tuid='mail.view.add_filter'>
 			<tuv xml:lang="en_US"><seg>-add filter-</seg></tuv>
 		</tu>
@@ -1235,9 +1356,6 @@
 		</tu>
 		<tu tuid='mail.workspaces.none'>
 			<tuv xml:lang="en_US"><seg>You haven't created any custom worklists.</seg></tuv>
-		</tu>
-		<tu tuid='mail.workspaces.workspace'>
-			<tuv xml:lang="en_US"><seg>Workspace</seg></tuv>
 		</tu>
 		
 		<!-- Mail Queue -->
@@ -1448,14 +1566,6 @@ For example: *receipt*</seg></tuv>
 			<tuv xml:lang="en_US"><seg>Ticket Tasks</seg></tuv>
 		</tu>
 		
-		<!-- Groups -->
-		<tu tuid='group.manager'>
-			<tuv xml:lang="en_US"><seg>manager</seg></tuv>
-		</tu>
-		<tu tuid='group.member'>
-			<tuv xml:lang="en_US"><seg>member</seg></tuv>
-		</tu>
-		
 		<!-- Task -->
 
 		<tu tuid='task.completed_date'>
@@ -1464,20 +1574,8 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='task.due_date'>
 			<tuv xml:lang="en_US"><seg>Due Date</seg></tuv>
 		</tu>
-		<tu tuid='task.id'>
-			<tuv xml:lang="en_US"><seg>Id</seg></tuv>
-		</tu>
 		<tu tuid='task.is_completed'>
 			<tuv xml:lang="en_US"><seg>Completed</seg></tuv>
-		</tu>
-		<tu tuid='task.source_extension'>
-			<tuv xml:lang="en_US"><seg>Source</seg></tuv>
-		</tu>
-		<tu tuid='task.source_id'>
-			<tuv xml:lang="en_US"><seg>Source ID</seg></tuv>
-		</tu>
-		<tu tuid='task.title'>
-			<tuv xml:lang="en_US"><seg>Title</seg></tuv>
 		</tu>
 		<tu tuid='task.updated_date'>
 			<tuv xml:lang="en_US"><seg>Last Updated</seg></tuv>
@@ -1531,9 +1629,20 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='ticket.interesting_words'>
 			<tuv xml:lang="en_US"><seg>Interesting Words</seg></tuv>
 		</tu>
+		
 		<tu tuid='ticket.last_action'>
 			<tuv xml:lang="en_US"><seg>Last Action</seg></tuv>
 		</tu>
+		<tu tuid='ticket.last_action.opened'>
+			<tuv xml:lang="en_US"><seg>Ticket opened</seg></tuv>
+		</tu>
+		<tu tuid='ticket.last_action.recipient_reply'>
+			<tuv xml:lang="en_US"><seg>Recipient replied</seg></tuv>
+		</tu>
+		<tu tuid='ticket.last_action.worker_reply'>
+			<tuv xml:lang="en_US"><seg>Worker replied</seg></tuv>
+		</tu>
+		
 		<tu tuid='ticket.last_wrote'>
 			<tuv xml:lang="en_US"><seg>Last Wrote</seg></tuv>
 		</tu>
@@ -1612,6 +1721,9 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='worker.first_name'>
 			<tuv xml:lang="en_US"><seg>First Name</seg></tuv>
 		</tu>
+		<tu tuid='worker.full_name'>
+			<tuv xml:lang="en_US"><seg>Full Name</seg></tuv>
+		</tu>
 		<tu tuid='worker.is_superuser'>
 			<tuv xml:lang="en_US"><seg>Administrator</seg></tuv>
 		</tu>
@@ -1630,37 +1742,22 @@ For example: *receipt*</seg></tuv>
 
 		<!-- Worker Event -->
 
-		<tu tuid='worker_event.id'>
+		<tu tuid='notification.id'>
 			<tuv xml:lang="en_US"><seg>ID</seg></tuv>
 		</tu>
-		<tu tuid='worker_event.created_date'>
+		<tu tuid='notification.created_date'>
 			<tuv xml:lang="en_US"><seg>Created</seg></tuv>
 		</tu>
-		<tu tuid='worker_event.is_read'>
+		<tu tuid='notification.is_read'>
 			<tuv xml:lang="en_US"><seg>Is Read</seg></tuv>
 		</tu>
-		<tu tuid='worker_event.message'>
+		<tu tuid='notification.message'>
 			<tuv xml:lang="en_US"><seg>Message</seg></tuv>
 		</tu>
-		<tu tuid='worker_event.worker_id'>
+		<tu tuid='notification.worker_id'>
 			<tuv xml:lang="en_US"><seg>Worker</seg></tuv>
 		</tu>
 		
-		<!-- Workflow -->
-
-		<tu tuid='workflow.assigned'>
-			<tuv xml:lang="en_US"><seg>Assigned</seg></tuv>
-		</tu>
-		<tu tuid='workflow.release'>
-			<tuv xml:lang="en_US"><seg>Release</seg></tuv>
-		</tu>
-		<tu tuid='workflow.suggested'>
-			<tuv xml:lang="en_US"><seg>Suggested</seg></tuv>
-		</tu>
-		<tu tuid='workflow.take'>
-			<tuv xml:lang="en_US"><seg>Take</seg></tuv>
-		</tu>
-
 	    <!-- My Account Preferences -->
 		
 	    <tu tuid='preferences.account.settings'>

@@ -1,9 +1,5 @@
 <?php
 class ChRest_Orgs extends Extension_RestController implements IExtensionRestController {
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	function getAction($stack) {
 		@$action = array_shift($stack);
 		
@@ -62,7 +58,19 @@ class ChRest_Orgs extends Extension_RestController implements IExtensionRestCont
 	}
 	
 	function deleteAction($stack) {
-		$this->error(self::ERRNO_NOT_IMPLEMENTED);
+		$worker = $this->getActiveWorker();
+		if(!$worker->hasPriv('core.addybook.org.actions.delete'))
+			$this->error(self::ERRNO_ACL);
+
+		$id = array_shift($stack);
+
+		if(null == ($task = DAO_ContactOrg::get($id)))
+			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid organization ID %d", $id));
+
+		DAO_ContactOrg::delete($id);
+
+		$result = array('id' => $id);
+		$this->success($result);		
 	}
 	
 	function getId($id) {
@@ -102,6 +110,14 @@ class ChRest_Orgs extends Extension_RestController implements IExtensionRestCont
 			$tokens = array(
 				'id' => SearchFields_ContactOrg::ID,
 				'name' => SearchFields_ContactOrg::NAME,
+				'street' => SearchFields_ContactOrg::STREET,
+				'city' => SearchFields_ContactOrg::CITY,
+				'province' => SearchFields_ContactOrg::PROVINCE,
+				'postal' => SearchFields_ContactOrg::POSTAL,
+				'country' => SearchFields_ContactOrg::COUNTRY,
+				'phone' => SearchFields_ContactOrg::PHONE,
+				'website' => SearchFields_ContactOrg::WEBSITE,
+				'created' => SearchFields_ContactOrg::CREATED,			
 			);
 		}
 		
@@ -219,7 +235,7 @@ class ChRest_Orgs extends Extension_RestController implements IExtensionRestCont
 		// Handle custom fields
 		$customfields = $this->_handleCustomFields($_POST);
 		if(is_array($customfields))
-			DAO_CustomFieldValue::formatAndSetFieldValues(ChCustomFieldSource_Org::ID, $id, $customfields, true, true, true);
+			DAO_CustomFieldValue::formatAndSetFieldValues(CerberusContexts::CONTEXT_ORG, $id, $customfields, true, true, true);
 		
 		// Check required fields
 //		$reqfields = array(DAO_Address::EMAIL);
@@ -287,7 +303,7 @@ class ChRest_Orgs extends Extension_RestController implements IExtensionRestCont
 			// Handle custom fields
 			$customfields = $this->_handleCustomFields($_POST);
 			if(is_array($customfields))
-				DAO_CustomFieldValue::formatAndSetFieldValues(ChCustomFieldSource_Org::ID, $id, $customfields, true, true, true);
+				DAO_CustomFieldValue::formatAndSetFieldValues(CerberusContexts::CONTEXT_ORG, $id, $customfields, true, true, true);
 			
 			$this->getId($id);
 		}

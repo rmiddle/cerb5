@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,25 +43,16 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class ChExplorerController extends DevblocksControllerExtension {
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	function isVisible() {
-		// check login
-		$session = DevblocksPlatform::getSessionService();
-		$visit = $session->getVisit();
-		
-		if(empty($visit)) {
+		// The current session must be a logged-in worker to use this page.
+		if(null == ($worker = CerberusApplication::getActiveWorker()))
 			return false;
-		} else {
-			return true;
-		}
+		return true;
 	}
 	
 	/*
@@ -69,7 +60,17 @@ class ChExplorerController extends DevblocksControllerExtension {
 	 */
 	function handleRequest(DevblocksHttpRequest $request) {
 		$worker = CerberusApplication::getActiveWorker();
-		if(empty($worker)) return;
+		
+		if(empty($worker)) {
+			$query = array();
+			// Must be a valid page controller
+			if(!empty($request->path)) {
+				if(is_array($request->path) && !empty($request->path))
+					$query = array('url'=> urlencode(implode('/',$request->path)));
+			}
+			DevblocksPlatform::redirect(new DevblocksHttpRequest(array('login'),$query));
+			exit;
+		}
 		
 		$stack = $request->path;
 		array_shift($stack); // explorer
@@ -92,8 +93,13 @@ class ChExplorerController extends DevblocksControllerExtension {
 	
 	function writeResponse(DevblocksHttpResponse $response) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(dirname(__FILE__))) . '/templates/';
 
+		$worker = CerberusApplication::getActiveWorker();
+		if(empty($worker)) {
+			DevblocksPlatform::redirect(new DevblocksHttpResponse(array('login')));
+			exit;
+		}
+		
 		$stack = $response->path;
 		array_shift($stack); // explorer
 		$hashset = array_shift($stack); // set
@@ -141,6 +147,9 @@ class ChExplorerController extends DevblocksControllerExtension {
 			$tpl->assign('p', $p);
 			$tpl->assign('url', $item->params['url']);
 			
+			if(isset($item->params['content']))
+				$tpl->assign('content', $item->params['content']);
+			
 			// Next
 			if($total > $p)
 				$tpl->assign('next', $p+1);
@@ -154,7 +163,7 @@ class ChExplorerController extends DevblocksControllerExtension {
 		$translate = DevblocksPlatform::getTranslationService();
 		$tpl->assign('translate', $translate);
 			
-		$tpl->display('file:'.$path.'explorer/index.tpl');
+		$tpl->display('devblocks:cerberusweb.core::explorer/index.tpl');
 	}
 };
 

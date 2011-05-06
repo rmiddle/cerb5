@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,32 +43,20 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
 abstract class Extension_AppPreBodyRenderer extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function render() { }
 };
 
 abstract class Extension_AppPostBodyRenderer extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function render() { }
 };
 
 abstract class CerberusPageExtension extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function isVisible() { return true; }
 	function render() { }
 	
@@ -80,194 +68,204 @@ abstract class CerberusPageExtension extends DevblocksExtension {
 	}
 };
 
-abstract class Extension_ConfigTab extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
+abstract class Extension_PageSection extends DevblocksExtension {
+	const POINT = 'cerberusweb.ui.page.section';
+	
+	/**
+	 * @return DevblocksExtensionManifest[]|Extension_PageSection[]
+	 */
+	static function getExtensions($as_instances=true, $page_id=null) {
+		if(empty($page_id))
+			return DevblocksPlatform::getExtensions(self::POINT, $as_instances);
+
+		$results = array();
+		
+		$exts = DevblocksPlatform::getExtensions(self::POINT, false);
+		foreach($exts as $ext_id => $ext) {
+			if(0 == strcasecmp($page_id, $ext->params['page_id']))
+				$results[$ext_id] = $as_instances ? $ext->createInstance() : $ext;
+		}
+		
+		return $results;
 	}
 	
-	function showTab() {}
-	function saveTab() {}
+	/**
+	 * 
+	 * @param string $uri
+	 * @return DevblocksExtensionManifest|Extension_PageSection
+	 */
+	static function getExtensionByPageUri($page_id, $uri, $as_instance=true) {
+		$manifests = self::getExtensions(false, $page_id);
+		
+		foreach($manifests as $mft) { /* @var $mft DevblocksExtensionManifest */
+			if(0==strcasecmp($uri, $mft->params['uri']))
+				return $as_instance ? $mft->createInstance() : $mft;
+		}
+		
+		return null;
+	}
+	
+	abstract function render();
+};
+
+abstract class Extension_PageMenu extends DevblocksExtension {
+	const POINT = 'cerberusweb.ui.page.menu';
+	
+	/**
+	 * @return DevblocksExtensionManifest[]|Extension_PageMenu[]
+	 */
+	static function getExtensions($as_instances=true, $page_id=null) {
+		if(empty($page_id))
+			return DevblocksPlatform::getExtensions(self::POINT, $as_instances);
+
+		$results = array();
+		
+		$exts = DevblocksPlatform::getExtensions(self::POINT, false);
+		foreach($exts as $ext_id => $ext) {
+			if(0 == strcasecmp($page_id, $ext->params['page_id']))
+				$results[$ext_id] = $as_instances ? $ext->createInstance() : $ext;
+		}
+		
+		// Sorting
+		if($as_instances)
+			uasort($results, create_function('$a, $b', "return strcasecmp(\$a->manifest->name,\$b->manifest->name);\n"));
+		else
+			uasort($results, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
+		
+		return $results;
+	}
+	
+	abstract function render();
+};
+
+abstract class Extension_PageMenuItem extends DevblocksExtension {
+	const POINT = 'cerberusweb.ui.page.menu.item';
+	
+	/**
+	 * @return DevblocksExtensionManifest[]|Extension_PageMenuItem[]
+	 */
+	static function getExtensions($as_instances=true, $page_id=null, $menu_id=null) {
+		if(empty($page_id) && empty($menu_id))
+			return DevblocksPlatform::getExtensions(self::POINT, $as_instances);
+
+		$results = array();
+		
+		$exts = DevblocksPlatform::getExtensions(self::POINT, false);
+		foreach($exts as $ext_id => $ext) {
+			if(empty($page_id) || 0 == strcasecmp($page_id, $ext->params['page_id']))
+				if(empty($menu_id) || 0 == strcasecmp($menu_id, $ext->params['menu_id']))
+					$results[$ext_id] = $as_instances ? $ext->createInstance() : $ext;
+		}
+		
+		// Sorting
+		if($as_instances)
+			uasort($results, create_function('$a, $b', "return strcasecmp(\$a->manifest->name,\$b->manifest->name);\n"));
+		else
+			uasort($results, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
+		
+		return $results;
+	}
+	
+	abstract function render();
 };
 
 abstract class Extension_PreferenceTab extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
+	const POINT = 'cerberusweb.preferences.tab';
 	
 	function showTab() {}
 	function saveTab() {}
 };
 
 abstract class Extension_ActivityTab extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
+	const POINT = 'cerberusweb.activity.tab'; 
 	
 	function showTab() {}
 	function saveTab() {}
 };
 
-abstract class Extension_HomeTab extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
+abstract class Extension_AddressBookTab extends DevblocksExtension {
+	const POINT = 'cerberusweb.contacts.tab'; 
 	
 	function showTab() {}
 	function saveTab() {}
 };
 
 abstract class Extension_MailTab extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
+	const POINT = 'cerberusweb.mail.tab';
 	
 	function showTab() {}
 	function saveTab() {}
 };
 
 abstract class Extension_TicketTab extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
+	const POINT = 'cerberusweb.ticket.tab';
 	
 	function showTab() {}
 	function saveTab() {}
 };
 
 abstract class Extension_LogMailToolbarItem extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function render() { }
 };
 
 abstract class Extension_SendMailToolbarItem extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function render() { }
 };
 
 abstract class Extension_TicketToolbarItem extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function render(Model_Ticket $ticket) { }
 };
 
 abstract class Extension_MessageToolbarItem extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function render(Model_Message $message) { }
 };
 
 abstract class Extension_ReplyToolbarItem extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function render(Model_Message $message) { }
 };
 
 abstract class Extension_TaskToolbarItem extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function render(Model_Task $task) { }
 };
 
 abstract class Extension_ExplorerToolbar extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function render(Model_ExplorerSet $item) { }
 };
 
 abstract class Extension_CommentBadge extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function render(Model_Comment $comment) {}
 };
 
 abstract class Extension_MessageBadge extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function render(Model_Message $message) {}
 };
 
 abstract class Extension_OrgTab extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function showTab() {}
 	function saveTab() {}
 };
 
+// [TODO] This is on the way out in favor of triggers
 abstract class Extension_MailFilterCriteria extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function matches(Model_PreParseRule $filter, CerberusParserMessage $message) {}
-	
 	function renderConfig(Model_PreParseRule $filter=null) {}
 	function saveConfig() { return array(); }
 };
 
+// [TODO] This is on the way out in favor of triggers
 abstract class Extension_MailFilterAction extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	function run(Model_PreParseRule $filter, CerberusParserMessage $message) {}
-	
 	function renderConfig(Model_PreParseRule $filter=null) {}
 	function saveConfig() { return array(); }
-};
-
-abstract class Extension_CustomFieldSource extends DevblocksExtension {
-	const EXTENSION_POINT = 'cerberusweb.fields.source';
-	
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
 };
 
 abstract class Extension_RssSource extends DevblocksExtension {
 	const EXTENSION_POINT = 'cerberusweb.rss.source';
 	
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-
 	function getFeedAsRss($feed) {}
 };
 
-abstract class Extension_WorkspaceSource extends DevblocksExtension {
-	const EXTENSION_POINT = 'cerberusweb.workspace.source';
-	
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-};
-
 abstract class Extension_LoginAuthenticator extends DevblocksExtension {
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-	
 	/**
 	 * draws html form for adding necessary settings (host, port, etc) to be stored in the db
 	 */
@@ -311,10 +309,6 @@ abstract class CerberusCronPageExtension extends DevblocksExtension {
     const PARAM_TERM = 'term';
     const PARAM_LASTRUN = 'lastrun';
     
-	function __construct($manifest) {
-		$this->DevblocksExtension($manifest);
-	}
-
 	/**
 	 * runs scheduled task
 	 *
@@ -324,6 +318,7 @@ abstract class CerberusCronPageExtension extends DevblocksExtension {
 	}
 	
 	function _run() {
+		$this->setParam(self::PARAM_LOCKED,time());
 	    $this->run();
 	    
 		$duration = $this->getParam(self::PARAM_DURATION, 5);
@@ -386,4 +381,56 @@ abstract class CerberusCronPageExtension extends DevblocksExtension {
 	public function configure($instance) {}
 	
 	public function saveConfigurationAction() {}
+};
+
+abstract class Extension_UsermeetTool extends DevblocksExtension implements DevblocksHttpRequestHandler {
+	private $portal = '';
+	
+    /*
+     * Site Key
+     * Site Name
+     * Site URL
+     */
+    
+	/**
+	 * @param DevblocksHttpRequest
+	 * @return DevblocksHttpResponse
+	 */
+	public function handleRequest(DevblocksHttpRequest $request) {
+	    $path = $request->path;
+
+		@$a = DevblocksPlatform::importGPC($_REQUEST['a'],'string');
+	    
+		if(empty($a)) {
+    	    @$action = array_shift($path) . 'Action';
+		} else {
+	    	@$action = $a . 'Action';
+		}
+
+	    switch($action) {
+	        case NULL:
+	            // [TODO] Index/page render
+	            break;
+//	            
+	        default:
+			    // Default action, call arg as a method suffixed with Action
+				if(method_exists($this,$action)) {
+					call_user_func(array(&$this, $action)); // [TODO] Pass HttpRequest as arg?
+				}
+	            break;
+	    }
+	}
+	
+	public function writeResponse(DevblocksHttpResponse $response) {
+	}
+	
+	/**
+	 * @param Model_CommunityTool $instance
+	 */
+	public function configure(Model_CommunityTool $instance) {
+	}
+	
+	public function saveConfiguration(Model_CommunityTool $instance) {
+	}
+    
 };

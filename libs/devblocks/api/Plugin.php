@@ -2,11 +2,7 @@
 class DevblocksStorageEngineDisk extends Extension_DevblocksStorageEngine {
 	const ID = 'devblocks.storage.engine.disk'; 
 	
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
-	public function setOptions($options) {
+	public function setOptions($options=array()) {
 		parent::setOptions($options);
 		
 		// Default
@@ -28,11 +24,10 @@ class DevblocksStorageEngineDisk extends Extension_DevblocksStorageEngine {
 	
 	function renderConfig(Model_DevblocksStorageProfile $profile) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(__FILE__)) . '/templates';
 		
 		$tpl->assign('profile', $profile);
 		
-		$tpl->display("file:{$path}/storage_engine/config/disk.tpl");
+		$tpl->display("devblocks:devblocks.core::storage_engine/config/disk.tpl");
 	}
 	
 	function saveConfig(Model_DevblocksStorageProfile $profile) {
@@ -158,11 +153,7 @@ class DevblocksStorageEngineDatabase extends Extension_DevblocksStorageEngine {
 	
 	private $_db = null;
 	
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
-	public function setOptions($options) {
+	public function setOptions($options=array()) {
 		parent::setOptions($options);
 		
 		// Use the existing local connection by default
@@ -212,11 +203,9 @@ class DevblocksStorageEngineDatabase extends Extension_DevblocksStorageEngine {
 	
 	function renderConfig(Model_DevblocksStorageProfile $profile) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(__FILE__)) . '/templates';
-		
 		$tpl->assign('profile', $profile);
 		
-		$tpl->display("file:{$path}/storage_engine/config/database.tpl");
+		$tpl->display("devblocks:devblocks.core::storage_engine/config/database.tpl");
 	}
 	
 	function saveConfig(Model_DevblocksStorageProfile $profile) {
@@ -257,8 +246,9 @@ class DevblocksStorageEngineDatabase extends Extension_DevblocksStorageEngine {
 				chunk SMALLINT UNSIGNED DEFAULT 1,
 				INDEX id (id),
 				INDEX chunk (chunk)
-			) ENGINE=MyISAM;",
-			$this->escapeNamespace($namespace)
+			) ENGINE=%s;",
+			$this->escapeNamespace($namespace),
+			APP_DB_ENGINE
 		), $this->_db);
 		
 		DevblocksPlatform::clearCache(DevblocksPlatform::CACHE_TABLES);
@@ -417,11 +407,7 @@ class DevblocksStorageEngineS3 extends Extension_DevblocksStorageEngine {
 	
 	private $_s3 = null;
 	
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
-	public function setOptions($options) {
+	public function setOptions($options=array()) {
 		parent::setOptions($options);
 		
 		// Fail, this info is required.
@@ -460,11 +446,9 @@ class DevblocksStorageEngineS3 extends Extension_DevblocksStorageEngine {
 	
 	function renderConfig(Model_DevblocksStorageProfile $profile) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(__FILE__)) . '/templates';
-		
 		$tpl->assign('profile', $profile);
 		
-		$tpl->display("file:{$path}/storage_engine/config/s3.tpl");
+		$tpl->display("devblocks:devblocks.core::storage_engine/config/s3.tpl");
 	}
 	
 	function saveConfig(Model_DevblocksStorageProfile $profile) {

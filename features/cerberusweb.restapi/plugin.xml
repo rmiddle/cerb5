@@ -1,5 +1,5 @@
-<!DOCTYPE plugin SYSTEM "../../libs/devblocks/plugin.dtd">
-<plugin>
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.devblocks.com/schema/plugin.xsd">
 	<id>cerberusweb.restapi</id>
 	<name>[Cerb5] Web Services API (JSON/XML) *EXPERIMENTAL*</name>
 	<description>A RESTful JSON/XML interface for integrating Cerb5 with other applications and tools.</description>
@@ -72,6 +72,30 @@
 			</class>
 			<params>
 				<param key="uri" value="attachments" />
+			</params>
+		</extension>		
+		
+        <extension point="cerberusweb.rest.controller">
+			<id>cerberusweb.rest.controller.comments</id>
+			<name>Comments</name>
+			<class>
+				<file>api/rest/comments.php</file>
+				<name>ChRest_Comments</name>
+			</class>
+			<params>
+				<param key="uri" value="comments" />
+			</params>
+		</extension>
+
+        <extension point="cerberusweb.rest.controller">
+			<id>cerberusweb.rest.controller.custom_fields</id>
+			<name>Custom Fields</name>
+			<class>
+				<file>api/rest/custom_fields.php</file>
+				<name>ChRest_CustomFields</name>
+			</class>
+			<params>
+				<param key="uri" value="customfields" />
 			</params>
 		</extension>		
 		
@@ -158,23 +182,6 @@
 				<param key="uri" value="workers" />
 			</params>
 		</extension>
-		
-		<!-- Config Tabs -->
-		
-		<!--
-		<extension point="cerberusweb.config.tab">
-			<id>webapi.config.tab</id>
-			<name>Web API Tab</name>
-			<class>
-				<file>api/App.php</file>
-				<name>ChWebApiConfigTab</name>
-			</class>
-			<params>
-				<param key="uri" value="webapi" />
-				<param key="title" value="Web API" />
-			</params>
-		</extension>
-		-->
 		
 	</extensions>
 </plugin>

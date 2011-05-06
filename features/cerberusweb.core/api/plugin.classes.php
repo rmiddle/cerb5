@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,7 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
@@ -51,10 +51,6 @@
 class ChPageController extends DevblocksControllerExtension {
     const ID = 'core.controller.page';
     
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-
 	// [TODO] We probably need a CerberusApplication scope for getting content that has ACL applied
 	private function _getAllowedPages() {
 		$active_worker = CerberusApplication::getActiveWorker();
@@ -140,7 +136,7 @@ class ChPageController extends DevblocksControllerExtension {
 
 		// Default page [TODO] This is supposed to come from framework.config.php
 		if(empty($controller)) 
-			$controller = 'home';
+			$controller = 'tickets';
 
 	    // [JAS]: Require us to always be logged in for Cerberus pages
 		if(empty($visit) && 0 != strcasecmp($controller,'login')) {
@@ -159,8 +155,15 @@ class ChPageController extends DevblocksControllerExtension {
 	    }
         
         if(empty($page)) {
-   		    header("Status: 404");
-        	return; // [TODO] 404
+			//header("HTTP/1.1 404 Not Found");
+			//header("Status: 404 Not Found");
+			//DevblocksPlatform::redirect(new DevblocksHttpResponse(''));
+			$tpl->assign('settings', $settings);
+			$tpl->assign('session', $_SESSION);
+			$tpl->assign('translate', $translate);
+			$tpl->assign('visit', $visit);
+			$tpl->display('devblocks:cerberusweb.core::404.tpl');
+        	return;
 		}
 	    
 		// [JAS]: Listeners (Step-by-step guided tour, etc.)
@@ -182,7 +185,7 @@ class ChPageController extends DevblocksControllerExtension {
 	    	$active_worker_memberships = $active_worker->getMemberships();
 	    	$tpl->assign('active_worker_memberships', $active_worker_memberships);
 			
-			$unread_notifications = DAO_WorkerEvent::getUnreadCountByWorker($active_worker->id);
+			$unread_notifications = DAO_Notification::getUnreadCountByWorker($active_worker->id);
 			$tpl->assign('active_worker_notify_count', $unread_notifications);
 			
 			DAO_Worker::logActivity($page->getActivity());
@@ -199,9 +202,6 @@ class ChPageController extends DevblocksControllerExtension {
 		$tpl->assign('page',$page);
 
 		$tpl->assign('response_uri', implode('/', $response->path));
-		
-		$core_tpl = APP_PATH . '/features/cerberusweb.core/templates/';
-		$tpl->assign('core_tpl', $core_tpl);
 		
 		// Prebody Renderers
 		$preBodyRenderers = DevblocksPlatform::getExtensions('cerberusweb.renderer.prebody', true);
@@ -220,60 +220,14 @@ class ChPageController extends DevblocksControllerExtension {
 			$tpl->assign('render_peak_memory', memory_get_peak_usage() - DevblocksPlatform::getStartPeakMemory());
 		}
 		
-		$tpl->display($core_tpl.'border.tpl');
+		$tpl->display('devblocks:cerberusweb.core::border.tpl');
 		
 //		$cache = DevblocksPlatform::getCacheService();
 //		$cache->printStatistics();
 	}
 };
 
-// Custom Field Sources
-
-class ChCustomFieldSource_Address extends Extension_CustomFieldSource {
-	const ID = 'cerberusweb.fields.source.address';
-};
-
-class ChCustomFieldSource_Org extends Extension_CustomFieldSource {
-	const ID = 'cerberusweb.fields.source.org';
-};
-
-class ChCustomFieldSource_Task extends Extension_CustomFieldSource {
-	const ID = 'cerberusweb.fields.source.task';
-};
-
-class ChCustomFieldSource_Ticket extends Extension_CustomFieldSource {
-	const ID = 'cerberusweb.fields.source.ticket';
-};
-
-class ChCustomFieldSource_Worker extends Extension_CustomFieldSource {
-	const ID = 'cerberusweb.fields.source.worker';
-};
-
-// Workspace Sources
-
-class ChWorkspaceSource_Address extends Extension_WorkspaceSource {
-	const ID = 'core.workspace.source.address';
-};
-
-class ChWorkspaceSource_Org extends Extension_WorkspaceSource {
-	const ID = 'core.workspace.source.org';
-};
-
-class ChWorkspaceSource_Notification extends Extension_WorkspaceSource {
-	const ID = 'core.workspace.source.notifications';
-};
-
-class ChWorkspaceSource_Task extends Extension_WorkspaceSource {
-	const ID = 'core.workspace.source.task';
-};
-
-class ChWorkspaceSource_Ticket extends Extension_WorkspaceSource {
-	const ID = 'core.workspace.source.ticket';
-};
-
-class ChWorkspaceSource_Worker extends Extension_WorkspaceSource {
-	const ID = 'core.workspace.source.worker';
-};
+// RSS Sources
 
 class ChRssSource_Notification extends Extension_RssSource {
 	function getSourceName() {
@@ -297,7 +251,7 @@ XML;
         $channel->addChild('description', '');
         
         // View
-        $view = new View_WorkerEvent();
+        $view = new View_Notification();
         $view->name = $feed->title;
         $view->addParams($feed->params['params'], true);
         $view->renderLimit = 100;
@@ -308,17 +262,17 @@ XML;
         list($results, $count) = $view->getData();
 
         foreach($results as $event) {
-        	$created = intval($event[SearchFields_WorkerEvent::CREATED_DATE]);
+        	$created = intval($event[SearchFields_Notification::CREATED_DATE]);
             if(empty($created)) $created = time();
 
             $eItem = $channel->addChild('item');
             
-            $escapedSubject = htmlspecialchars($event[SearchFields_WorkerEvent::MESSAGE],null,LANG_CHARSET_CODE);
+            $escapedSubject = htmlspecialchars($event[SearchFields_Notification::MESSAGE],null,LANG_CHARSET_CODE);
             $eDesc = $eItem->addChild('description', '');
 
-            if(isset($event[SearchFields_WorkerEvent::URL])) {
-//	            $link = $event[SearchFields_WorkerEvent::URL];
-	            $link = $url->write('c=home&a=redirectRead&id='.$event[SearchFields_WorkerEvent::ID], true);
+            if(isset($event[SearchFields_Notification::URL])) {
+//	            $link = $event[SearchFields_Notification::URL];
+	            $link = $url->write('c=preferences&a=redirectRead&id='.$event[SearchFields_Notification::ID], true);
 	            $eLink = $eItem->addChild('link', $link);
 	            
             } else {

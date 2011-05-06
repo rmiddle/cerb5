@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.devblocks.com/schema/plugin.xsd">
+	<id>cerberusweb.support_center</id>
+	<name>[Cerb5] Support Center</name>
+	<description>Adds a Support Center community portal for public-facing support.</description>
+	<author>WebGroup Media, LLC.</author>
+	<revision>1</revision>
+	<link>http://wiki.cerb5.com/wiki/Support_Center</link>
+	<image>plugin.png</image>
+ 
+	<!-- Plugin Dependencies -->
+	
+	<dependencies>
+		<require plugin_id="cerberusweb.core" version="5.1.0" />
+	</dependencies>
+
+	<!-- Patches -->
+	
+	<patches>
+		<patch version="4.1.0" revision="13" file="patches/4.1.0.php" />
+		<patch version="4.2.2" revision="14" file="patches/4.2.2.php" />
+		<patch version="4.3.0" revision="15" file="patches/4.3.0.php" />
+		<patch version="4.3.1" revision="16" file="patches/4.3.1.php" />
+		<patch version="5.0.0-beta" revision="19" file="patches/5.0.0_beta.php" />
+		<patch version="5.1.0-dev" revision="21" file="patches/5.1.0.php" />
+		<patch version="5.2.0-dev" revision="24" file="patches/5.2.0.php" />
+	</patches>
+	
+	<!-- Exported Classes -->
+	
+	<class_loader>
+		<file path="api/Extension.php">
+			<class name="Extension_ScLoginAuthenticator" />
+			<class name="Extension_SupportCenterMessageBadge" />
+			<class name="Extension_UmScController" />
+			<class name="Extension_UmScRssController" />
+		</file>
+		<file path="api/dao/supportcenter_address_share.php">
+			<class name="DAO_SupportCenterAddressShare" />
+			<class name="Model_SupportCenterAddressShare" />
+		</file>
+		<file path="api/sc/uri/ajax.php">
+			<class name="UmScAjaxController" />
+		</file>
+		<file path="api/sc/uri/history.php">
+			<class name="UmSc_TicketHistoryView" />
+		</file>
+	</class_loader>
+
+	<!-- Templates -->
+	
+	<templates set="cerberusweb.support_center">
+		<template path="support_center/index.tpl" />
+		<template path="support_center/header.tpl" />
+		<template path="support_center/footer.tpl" />
+		<template path="support_center/style.css.tpl" />
+		<template path="support_center/user_styles.css.tpl" />
+		<template path="support_center/account/sidebar_menu.tpl" />
+		<template path="support_center/account/delete/index.tpl" />
+		<template path="support_center/account/email/confirm.tpl" />
+		<template path="support_center/account/email/display.tpl" />
+		<template path="support_center/account/email/index.tpl" />
+		<template path="support_center/account/openid/display.tpl" />
+		<template path="support_center/account/openid/index.tpl" />
+		<template path="support_center/account/password/index.tpl" />
+		<template path="support_center/account/sharing/index.tpl" />
+		<template path="support_center/announcements/index.tpl" />
+		<template path="support_center/contact/confirm.tpl" />
+		<template path="support_center/contact/step1.tpl" />
+		<template path="support_center/contact/step2.tpl" />
+		<template path="support_center/history/display.tpl" />
+		<template path="support_center/history/index.tpl" />
+		<template path="support_center/history/view.tpl" />
+		<template path="support_center/home/index.tpl" />
+		<template path="support_center/internal/view/view_filters.tpl" />
+		<template path="support_center/login/default/forgot_confirm.tpl" />
+		<template path="support_center/login/default/forgot.tpl" />
+		<template path="support_center/login/default/login.tpl" />
+		<template path="support_center/login/default/register_confirm.tpl" />
+		<template path="support_center/login/default/register.tpl" />
+		<template path="support_center/login/openid/forgot_confirm.tpl" />
+		<template path="support_center/login/openid/forgot.tpl" />
+		<template path="support_center/login/openid/login.tpl" />
+		<template path="support_center/login/openid/register_confirm.tpl" />
+		<template path="support_center/login/openid/register.tpl" />
+		<template path="support_center/login/switcher.tpl" />
+	</templates>
+</plugin>

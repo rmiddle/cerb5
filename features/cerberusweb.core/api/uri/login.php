@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,24 +43,45 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class ChSignInPage extends CerberusPageExtension {
+	// [TODO] Move this to the default login handler
     const KEY_FORGOT_EMAIL = 'login.recover.email';
     const KEY_FORGOT_SENTCODE = 'login.recover.sentcode';
     const KEY_FORGOT_CODE = 'login.recover.code';
     
-	private $_TPL_PATH = '';
-	
-	function __construct($manifest) {
-		$this->_TPL_PATH = dirname(dirname(dirname(__FILE__))) . '/templates/';
-		parent::__construct($manifest);
-	}
-	
 	function isVisible() {
 		return true;
+	}
+	
+	function getLoginProvider() {
+		@$extension_id = DevblocksPlatform::importGPC($_COOKIE['login_extension_id'],'string','login.default');
+
+		if(!empty($extension_id) && null != ($extension = DevblocksPlatform::getExtension($extension_id, true, true))) {
+			return $extension;
+		} else {
+			return DevblocksPlatform::getExtension('login.default', true);
+		}
+	}
+	
+	function providerAction() {
+	    $request = DevblocksPlatform::getHttpRequest();
+	    $stack = $request->path;
+	    @array_shift($stack); // login
+	    @array_shift($stack); // provider
+        @$extension_id = array_shift($stack);
+		
+        if(!empty($extension_id) && null != ($ext = DevblocksPlatform::getExtension($extension_id, true, true)) 
+        	&& $ext instanceof Extension_LoginAuthenticator) {
+        		setcookie('login_extension_id', $ext->manifest->id, strtotime('+1 year'), '/');
+        } else {
+        	setcookie('login_extension_id', 'login.default', strtotime('+1 year'), '/');
+        }
+        
+		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('login')));
 	}
 	
 	function render() {
@@ -70,6 +91,7 @@ class ChSignInPage extends CerberusPageExtension {
         $section = array_shift($stack);
         
         switch($section) {
+        	// [TODO] Move this to the default login handler
             case "forgot":
                 $step = array_shift($stack);
                 $tpl = DevblocksPlatform::getTemplateService();
@@ -80,22 +102,28 @@ class ChSignInPage extends CerberusPageExtension {
                     	if ((@$failed = array_shift($stack)) == "failed") {
                     		$tpl->assign('failed',true);
                     	}
-                        $tpl->display('file:' . $this->_TPL_PATH . 'login/forgot1.tpl');
+                        $tpl->display('devblocks:cerberusweb.core::login/forgot1.tpl');
                         break;
                     
                     case "step2":
-                        $tpl->display('file:' . $this->_TPL_PATH . 'login/forgot2.tpl');
+                        $tpl->display('devblocks:cerberusweb.core::login/forgot2.tpl');
                         break;
                         
                     case "step3":
-                        $tpl->display('file:' . $this->_TPL_PATH . 'login/forgot3.tpl');
+                        $tpl->display('devblocks:cerberusweb.core::login/forgot3.tpl');
                         break;
                 }
                 
                 break;
+                
             default:
-				$manifest = DevblocksPlatform::getExtension('login.default');
-				$inst = $manifest->createInstance(); /* @var $inst Extension_LoginAuthenticator */
+				$inst = $this->getLoginProvider();
+
+				$tpl = DevblocksPlatform::getTemplateService();
+            	$login_extensions = DevblocksPlatform::getExtensions('cerberusweb.login', false, true);
+            	unset($login_extensions[$inst->id]); 
+            	$tpl->assign('login_extensions', $login_extensions);
+            	
 				$inst->renderLoginForm();
                 break;
         }
@@ -104,13 +132,31 @@ class ChSignInPage extends CerberusPageExtension {
 	function showAction() {
 		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('login')));
 	}
+	
+	// [TODO] Still needed?
+	function delegateAction() {
+	    $request = DevblocksPlatform::getHttpRequest();
+	    $stack = $request->path;
+	    array_shift($stack); // login
+	    array_shift($stack); // delegate
+		
+		if(null == (@$action = array_shift($stack)))
+			exit;
 
+		if(null != ($inst = $this->getLoginProvider())) {
+			if(method_exists($inst,$action.'Action')) {
+				call_user_func(array($inst,$action.'Action'));
+			}
+		}
+		
+		exit;
+	}
+	
 	// POST
 	function authenticateAction() {
 		@$redirect_path = explode('/',DevblocksPlatform::importGPC($_POST['original_path']));
 
-		$manifest = DevblocksPlatform::getExtension('login.default');
-		$inst = $manifest->createInstance(); /* @var $inst Extension_LoginAuthenticator */
+		$inst = $this->getLoginProvider(); /* @var $inst Extension_LoginAuthenticator */
 
 		$url_service = DevblocksPlatform::getUrlService();
 		
@@ -123,10 +169,10 @@ class ChSignInPage extends CerberusPageExtension {
 			// Only valid pages
 			if(is_array($redirect_path) && !empty($redirect_path)) {
 				$redirect_uri = current($redirect_path);
-				if(!CerberusApplication::getPageManifestByUri($redirect_uri))
+				if($redirect_uri != 'explore' && !CerberusApplication::getPageManifestByUri($redirect_uri))
 					$redirect_path = array();
 			}
-				
+			
 			$devblocks_response = new DevblocksHttpResponse($redirect_path);
 			$worker = CerberusApplication::getActiveWorker();
 			
@@ -161,13 +207,19 @@ class ChSignInPage extends CerberusPageExtension {
 			
 			if(empty($devblocks_response->path)) {
 				$tour_enabled = intval(DAO_WorkerPref::get($worker->id, 'assist_mode', 1));
-				$next_page = ($tour_enabled) ?  'welcome' : 'home';				
-				$devblocks_response = new DevblocksHttpResponse(array($next_page));
+				$next_page = ($tour_enabled) ?  array('welcome') : array('profiles','worker','me');				
+				$devblocks_response = new DevblocksHttpResponse($next_page);
 			}
 			
 		} else {
 			//authentication failed
-			$devblocks_response = new DevblocksHttpResponse(array('login','failed'));
+			$query = array();
+			
+			// Preserve a target page?
+			if(isset($_POST['original_path']))
+				$query['url'] = $_POST['original_path'];
+			
+			$devblocks_response = new DevblocksHttpResponse(array('login','failed'), $query);
 		}
 		
 		DevblocksPlatform::redirect($devblocks_response);
@@ -176,6 +228,8 @@ class ChSignInPage extends CerberusPageExtension {
 	function signoutAction() {
 		$session = DevblocksPlatform::getSessionService();
 		$visit = $session->getVisit();
+		
+		// [TODO] This also needs to invoke a signout on the login auth extension
 		
 		DAO_Worker::logActivity(new Model_Activity(null));
 		
@@ -202,16 +256,14 @@ class ChSignInPage extends CerberusPageExtension {
 		    $mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 			$mail = $mail_service->createMessage();
 		    
+		    $replyto_default = DAO_AddressOutgoing::getDefault();
 		    $code = CerberusApplication::generatePassword(10);
 		    
 		    $_SESSION[self::KEY_FORGOT_SENTCODE] = $code;
-		    $settings = DevblocksPlatform::getPluginSettingsService();
-			$from = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_FROM,CerberusSettingsDefaults::DEFAULT_REPLY_FROM);
-		    $personal = $settings->get('cerberusweb.core',CerberusSettings::DEFAULT_REPLY_PERSONAL,CerberusSettingsDefaults::DEFAULT_REPLY_PERSONAL);
-			
+		    
 			// Headers
 			$mail->setTo(array($email));
-			$mail->setFrom(array($from => $personal));
+			$mail->setFrom(array($replyto_default->email => $replyto_default->getReplyPersonal()));
 			$mail->setSubject($translate->_('signin.forgot.mail.subject'));
 			$mail->generateId();
 			

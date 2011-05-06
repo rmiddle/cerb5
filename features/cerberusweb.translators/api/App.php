@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,22 +43,20 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
-class ChTranslatorsConfigTab extends Extension_ConfigTab {
-	const ID = 'translators.config.tab';
+if(class_exists('Extension_PageSection')):
+class ChTranslators_SetupPageSection extends Extension_PageSection {
+	const ID = 'translators.setup.section.translations';
 	
-	function showTab() {
+	function render() {
 		$settings = DevblocksPlatform::getPluginSettingsService();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)) . '/templates/';
-		$core_tplpath = dirname(dirname(dirname(__FILE__))) . '/cerberusweb.core/templates/';
-		$tpl->assign('core_tplpath', $core_tplpath);
-
+	
 		$defaults = new C4_AbstractViewModel();
 		$defaults->class_name = 'C4_TranslationView';
 		$defaults->id = C4_TranslationView::DEFAULT_ID;
@@ -66,170 +64,13 @@ class ChTranslatorsConfigTab extends Extension_ConfigTab {
 		$view = C4_AbstractViewLoader::getView(C4_TranslationView::DEFAULT_ID, $defaults);
 		$tpl->assign('view', $view);
 		
-		$tpl->display('file:' . $tpl_path . 'config/translations/index.tpl');
+		$tpl->display('devblocks:cerberusweb.translators::config/section/index.tpl');
 	}
 	
-	function saveTab() {
+	function saveAction() {
 		@$plugin_id = DevblocksPlatform::importGPC($_REQUEST['plugin_id'],'string');
-
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('config','translators')));
+		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('config','translations')));
 		exit;
-	}
-	
-};
-
-class C4_TranslationView extends C4_AbstractView {
-	const DEFAULT_ID = 'translations';
-
-	function __construct() {
-		$this->id = self::DEFAULT_ID;
-		$this->name = 'Translations';
-		$this->renderLimit = 25;
-		$this->renderSortBy = SearchFields_Translation::STRING_ID;
-		$this->renderSortAsc = true;
-
-		$this->view_columns = array(
-			SearchFields_Translation::STRING_OVERRIDE,
-			SearchFields_Translation::STRING_ID,
-		);
-		$this->addColumnsHidden(array(
-			SearchFields_Translation::ID,
-		));
-		
-		$this->addParamsHidden(array(
-			SearchFields_Translation::ID,
-		));
-		
-		$this->doResetCriteria();
-	}
-
-	function getData() {
-		$objects = DAO_Translation::search(
-			$this->getParams(),
-			$this->renderLimit,
-			$this->renderPage,
-			$this->renderSortBy,
-			$this->renderSortAsc,
-			$this->renderTotal
-		);
-		return $objects;
-	}
-
-	function render() {
-		$this->_sanitize();
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('id', $this->id);
-		$tpl->assign('view', $this);
-
-		// Language Names
-		$langs = DAO_Translation::getDefinedLangCodes();
-		$tpl->assign('langs', $langs);
-		
-		// For defaulting
-		$english_map = DAO_Translation::getMapByLang('en_US');
-		$tpl->assign('english_map', $english_map);
-		
-		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.translators/templates/config/translations/view.tpl');
-	}
-
-	function renderCriteria($field) {
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('id', $this->id);
-
-		switch($field) {
-			case SearchFields_Translation::STRING_ID:
-			case SearchFields_Translation::STRING_DEFAULT:
-			case SearchFields_Translation::STRING_OVERRIDE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
-				break;
-			case SearchFields_Translation::ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__number.tpl');
-				break;
-			case SearchFields_Translation::LANG_CODE:
-				$langs = DAO_Translation::getDefinedLangCodes(); // [TODO] Cache!
-				$tpl->assign('langs', $langs);
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__language.tpl');
-				break;
-			default:
-				echo '';
-				break;
-		}
-	}
-
-	function renderCriteriaParam($param) {
-		$field = $param->field;
-		$values = !is_array($param->value) ? array($param->value) : $param->value;
-
-		switch($field) {
-			case SearchFields_Translation::LANG_CODE:
-				$langs = DAO_Translation::getDefinedLangCodes(); // [TODO] Cache!
-				$strings = array();
-
-				foreach($values as $val) {
-					if(!isset($langs[$val]))
-						continue;
-					$strings[] = $langs[$val];
-				}
-				echo implode(", ", $strings);
-				
-				break;
-				
-			default:
-				parent::renderCriteriaParam($param);
-				break;
-		}
-	}
-
-	function getFields() {
-		return SearchFields_Translation::getFields();
-	}
-
-	function doSetCriteria($field, $oper, $value) {
-		$criteria = null;
-
-		switch($field) {
-			case SearchFields_Translation::STRING_ID:
-			case SearchFields_Translation::STRING_DEFAULT:
-			case SearchFields_Translation::STRING_OVERRIDE:
-				// force wildcards if none used on a LIKE
-				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
-				&& false === (strpos($value,'*'))) {
-					$value = $value.'*';
-				}
-				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
-				break;
-			case SearchFields_Translation::ID:
-				$criteria = new DevblocksSearchCriteria($field,$oper,$value);
-				break;
-			case SearchFields_Translation::LANG_CODE:
-				@$lang_ids = DevblocksPlatform::importGPC($_REQUEST['lang_ids'],'array',array());
-				$criteria = new DevblocksSearchCriteria($field,$oper,$lang_ids);
-				break;
-		}
-
-		if(!empty($criteria)) {
-			$this->addParam($criteria);
-			$this->renderPage = 0;
-		}
-	}
-};
-
-class ChTranslatorsAjaxController extends DevblocksControllerExtension {
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
-	function isVisible() {
-		// check login
-		$session = DevblocksPlatform::getSessionService();
-		$visit = $session->getVisit();
-		
-		if(empty($visit)) {
-			return false;
-		} else {
-			return true;
-		}
 	}
 	
 	private function _clearCache() {
@@ -242,47 +83,14 @@ class ChTranslatorsAjaxController extends DevblocksControllerExtension {
 	    	$cache->remove(DevblocksPlatform::CACHE_TAG_TRANSLATIONS . '_' . $lang_code);
 	    }
 	}
-	
-	/*
-	 * Request Overload
-	 */
-	function handleRequest(DevblocksHttpRequest $request) {
-		if(!$this->isVisible())
-			return;
-		
-	    $path = $request->path;
-		$controller = array_shift($path); // timetracking
-
-	    @$action = DevblocksPlatform::strAlphaNumDash(array_shift($path)) . 'Action';
-
-	    switch($action) {
-	        case NULL:
-	            // [TODO] Index/page render
-	            break;
-	            
-	        default:
-			    // Default action, call arg as a method suffixed with Action
-				if(method_exists($this,$action)) {
-					call_user_func(array(&$this, $action));
-				}
-	            break;
-	    }
-	}
-	
-//	function writeResponse(DevblocksHttpResponse $response) {
-//		if(!$this->isVisible())
-//			return;
-//	}
 
 	function showFindStringsPanelAction($model=null) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)).'/templates/';
-		$tpl->assign('path', $tpl_path);
 
 		$codes = DAO_Translation::getDefinedLangCodes();
 		$tpl->assign('codes', $codes);
 		
-		$tpl->display('file:' . $tpl_path . 'translators/ajax/find_strings_panel.tpl');
+		$tpl->display('devblocks:cerberusweb.translators::config/ajax/find_strings_panel.tpl');
 	}
 
 	function saveFindStringsPanelAction() {
@@ -346,8 +154,6 @@ class ChTranslatorsAjaxController extends DevblocksControllerExtension {
 	
 	function showAddLanguagePanelAction($model=null) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)).'/templates/';
-		$tpl->assign('path', $tpl_path);
 
 		// Language Names
 		$translate = DevblocksPlatform::getTranslationService();
@@ -358,7 +164,7 @@ class ChTranslatorsAjaxController extends DevblocksControllerExtension {
 		$codes = DAO_Translation::getDefinedLangCodes();
 		$tpl->assign('codes', $codes);
 		
-		$tpl->display('file:' . $tpl_path . 'translators/ajax/add_language_panel.tpl');
+		$tpl->display('devblocks:cerberusweb.translators::config/ajax/add_language_panel.tpl');
 	}
 
 	function saveAddLanguagePanelAction() {
@@ -403,7 +209,7 @@ class ChTranslatorsAjaxController extends DevblocksControllerExtension {
 				
 				// If we have a valid source, copy its override or its default (in that order)
 				@$copy_string = $copy_strings[$string_id];
-				if(is_a($copy_string,'Model_Translation'))
+				if($copy_string instanceof Model_Translation)
 					$override = 
 						!empty($copy_string->string_override)
 						? $copy_string->string_override
@@ -457,10 +263,7 @@ class ChTranslatorsAjaxController extends DevblocksControllerExtension {
 	
 	function showImportStringsPanelAction($model=null) {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl_path = dirname(dirname(__FILE__)).'/templates/';
-		$tpl->assign('path', $tpl_path);
-
-		$tpl->display('file:' . $tpl_path . 'translators/ajax/import_strings_panel.tpl');
+		$tpl->display('devblocks:cerberusweb.translators::config/ajax/import_strings_panel.tpl');
 	}
 
 	function saveImportStringsPanelAction() {
@@ -491,7 +294,7 @@ class ChTranslatorsAjaxController extends DevblocksControllerExtension {
 		// Build TMX outline
 		$xml = simplexml_load_string(
 			'<?xml version="1.0" encoding="' . LANG_CHARSET_CODE . '"?>'.
-			'<!DOCTYPE tmx SYSTEM "tmx14.dtd">'.
+			'<!DOCTYPE tmx>'.
 			'<tmx version="1.4">'.
 			'<body></body>'.
 			'</tmx>'
@@ -559,8 +362,211 @@ class ChTranslatorsAjaxController extends DevblocksControllerExtension {
 		self::_clearCache();
 		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('config','translations')));
+	}	
+}
+endif;
+
+if(class_exists('Extension_PageMenuItem')):
+class ChTranslators_SetupPluginsMenuItem extends Extension_PageMenuItem {
+	const ID = 'translators.setup.menu.plugins.translations';
+	
+	function render() {
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->display('devblocks:cerberusweb.translators::config/menu_item.tpl');
+	}
+}
+endif;
+
+// [TODO] Rename View_*
+class C4_TranslationView extends C4_AbstractView implements IAbstractView_Subtotals {
+	const DEFAULT_ID = 'translations';
+
+	function __construct() {
+		$this->id = self::DEFAULT_ID;
+		$this->name = 'Translations';
+		$this->renderLimit = 25;
+		$this->renderSortBy = SearchFields_Translation::STRING_ID;
+		$this->renderSortAsc = true;
+
+		$this->view_columns = array(
+			SearchFields_Translation::STRING_OVERRIDE,
+			SearchFields_Translation::STRING_ID,
+		);
+		$this->addColumnsHidden(array(
+			SearchFields_Translation::ID,
+		));
+		
+		$this->addParamsHidden(array(
+			SearchFields_Translation::ID,
+		));
+		
+		$this->doResetCriteria();
+	}
+
+	function getData() {
+		$objects = DAO_Translation::search(
+			$this->getParams(),
+			$this->renderLimit,
+			$this->renderPage,
+			$this->renderSortBy,
+			$this->renderSortAsc,
+			$this->renderTotal
+		);
+		return $objects;
+	}
+
+	function getSubtotalFields() {
+		$all_fields = $this->getParamsAvailable();
+		
+		$fields = array();
+
+		if(is_array($all_fields))
+		foreach($all_fields as $field_key => $field_model) {
+			$pass = false;
+			
+			switch($field_key) {
+				// DAO
+				case SearchFields_Translation::LANG_CODE:
+					$pass = true;
+					break;
+					
+				// Valid custom fields
+				default:
+					if('cf_' == substr($field_key,0,3))
+						$pass = $this->_canSubtotalCustomField($field_key);
+					break;
+			}
+			
+			if($pass)
+				$fields[$field_key] = $field_model;
+		}
+		
+		return $fields;
 	}
 	
+	function getSubtotalCounts($column) {
+		$counts = array();
+		$fields = $this->getFields();
+
+		if(!isset($fields[$column]))
+			return array();
+		
+		switch($column) {
+			case SearchFields_Translation::LANG_CODE:
+				$codes = DAO_Translation::getDefinedLangCodes();
+				$counts = $this->_getSubtotalCountForStringColumn('DAO_Translation', $column, $codes, 'in', 'lang_ids[]');
+				break;
+
+			default:
+				// Custom fields
+				if('cf_' == substr($column,0,3)) {
+					$counts = $this->_getSubtotalCountForCustomColumn('DAO_Translation', $column, 't.id');
+				}
+				
+				break;
+		}
+		
+		return $counts;
+	}	
+	
+	function render() {
+		$this->_sanitize();
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('id', $this->id);
+		$tpl->assign('view', $this);
+
+		// Language Names
+		$langs = DAO_Translation::getDefinedLangCodes();
+		$tpl->assign('langs', $langs);
+		
+		// For defaulting
+		$english_map = DAO_Translation::getMapByLang('en_US');
+		$tpl->assign('english_map', $english_map);
+		
+		$tpl->assign('view_template', 'devblocks:cerberusweb.translators::config/section/view.tpl');
+		$tpl->display('devblocks:cerberusweb.core::internal/views/subtotals_and_view.tpl');
+	}
+
+	function renderCriteria($field) {
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('id', $this->id);
+
+		switch($field) {
+			case SearchFields_Translation::STRING_ID:
+			case SearchFields_Translation::STRING_DEFAULT:
+			case SearchFields_Translation::STRING_OVERRIDE:
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
+				break;
+			case SearchFields_Translation::ID:
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__number.tpl');
+				break;
+			case SearchFields_Translation::LANG_CODE:
+				$langs = DAO_Translation::getDefinedLangCodes(); // [TODO] Cache!
+				$tpl->assign('langs', $langs);
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__language.tpl');
+				break;
+			default:
+				echo '';
+				break;
+		}
+	}
+
+	function renderCriteriaParam($param) {
+		$field = $param->field;
+		$values = !is_array($param->value) ? array($param->value) : $param->value;
+
+		switch($field) {
+			case SearchFields_Translation::LANG_CODE:
+				$langs = DAO_Translation::getDefinedLangCodes(); // [TODO] Cache!
+				$strings = array();
+
+				foreach($values as $val) {
+					if(!isset($langs[$val]))
+						continue;
+					$strings[] = $langs[$val];
+				}
+				echo implode(", ", $strings);
+				
+				break;
+				
+			default:
+				parent::renderCriteriaParam($param);
+				break;
+		}
+	}
+
+	function getFields() {
+		return SearchFields_Translation::getFields();
+	}
+
+	function doSetCriteria($field, $oper, $value) {
+		$criteria = null;
+
+		switch($field) {
+			case SearchFields_Translation::STRING_ID:
+			case SearchFields_Translation::STRING_DEFAULT:
+			case SearchFields_Translation::STRING_OVERRIDE:
+				// force wildcards if none used on a LIKE
+				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
+				&& false === (strpos($value,'*'))) {
+					$value = $value.'*';
+				}
+				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
+				break;
+			case SearchFields_Translation::ID:
+				$criteria = new DevblocksSearchCriteria($field,$oper,$value);
+				break;
+			case SearchFields_Translation::LANG_CODE:
+				@$lang_ids = DevblocksPlatform::importGPC($_REQUEST['lang_ids'],'array',array());
+				$criteria = new DevblocksSearchCriteria($field,$oper,$lang_ids);
+				break;
+		}
+
+		if(!empty($criteria)) {
+			$this->addParam($criteria);
+			$this->renderPage = 0;
+		}
+	}
 };
 
-?>

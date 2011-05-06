@@ -1,6 +1,6 @@
-<div id="headerSubMenu">
-	<div style="padding-bottom:5px;"></div>
-</div>
+<ul class="submenu">
+</ul>
+<div style="clear:both;"></div>
 
 <div class="block">
 <h2>{$translate->_('timetracking.ui.reports.time_spent_org')}</h2>
@@ -27,27 +27,27 @@
 <br>
 
 <b>{$translate->_('reports.ui.filters.worker')}</b> 
-<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-add"></span></button>
-{if is_array($filter_worker_ids) && !empty($filter_worker_ids)}
+<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-view"></span></button>
 <ul class="chooser-container bubbles">
+{if is_array($filter_worker_ids) && !empty($filter_worker_ids)}
 	{foreach from=$filter_worker_ids item=filter_worker_id}
 	{$filter_worker = $workers.{$filter_worker_id}}
 	{if !empty($filter_worker)}
-	<li>{$filter_worker->getName()|escape}<input type="hidden" name="worker_id[]" value="{$filter_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
+	<li>{$filter_worker->getName()}<input type="hidden" name="worker_id[]" value="{$filter_worker->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
 	{/if}
 	{/foreach}
-</ul>
 {/if}
+</ul>
 <br>
 
 <b>{$translate->_('reports.ui.filters.org')}</b> 
-<button type="button" class="chooser_org"><span class="cerb-sprite sprite-add"></span></button>
+<button type="button" class="chooser_org"><span class="cerb-sprite sprite-view"></span></button>
 {if is_array($filter_org_ids) && !empty($filter_org_ids)}
 <ul class="chooser-container bubbles">
 	{foreach from=$filter_org_ids item=filter_org_id}
 	{$filter_org = $orgs.{$filter_org_id}}
 	{if !empty($filter_org)}
-	<li>{$filter_org->name|escape}<input type="hidden" name="org_id[]" value="{$filter_org_id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></ul>
+	<li>{$filter_org->name}<input type="hidden" name="org_id[]" value="{$filter_org_id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></ul>
 	{/if}
 	{/foreach}
 </ul>
@@ -72,7 +72,6 @@
 <script language="javascript" type="text/javascript" src="{devblocks_url}c=resource&plugin=cerberusweb.reports&f=js/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js{/devblocks_url}?v={$smarty.const.APP_BUILD}"></script>
 <script language="javascript" type="text/javascript" src="{devblocks_url}c=resource&plugin=cerberusweb.reports&f=js/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js{/devblocks_url}?v={$smarty.const.APP_BUILD}"></script>
 <script language="javascript" type="text/javascript" src="{devblocks_url}c=resource&plugin=cerberusweb.reports&f=js/jqplot/plugins/jqplot.categoryAxisRenderer.min.js{/devblocks_url}?v={$smarty.const.APP_BUILD}"></script>
-<script language="javascript" type="text/javascript" src="{devblocks_url}c=resource&plugin=cerberusweb.reports&f=js/jquery.qtip-1.0.0-rc3.min.js{/devblocks_url}?v={$smarty.const.APP_BUILD}"></script>
 <link rel="stylesheet" type="text/css" href="{devblocks_url}c=resource&plugin=cerberusweb.reports&f=css/jqplot/jquery.jqplot.min.css{/devblocks_url}?v={$smarty.const.APP_BUILD}" />
 
 <div id="reportLegend" style="margin:5px;"></div>
@@ -153,7 +152,7 @@ chartOptions = {
 		}
 	},
     series:[
-		{foreach from=$chart_data key=org_id item=org name=orgs}{ label:'{$orgs.$org_id->name|escape}' }{if !$smarty.foreach.orgs.last},{/if}{/foreach}
+		{foreach from=$chart_data key=org_id item=org name=orgs}{ label:'{$orgs.$org_id->name}' }{if !$smarty.foreach.orgs.last},{/if}{/foreach}
     ],
     axes:{
         xaxis:{
@@ -167,7 +166,7 @@ chartOptions = {
 			{/if}
 	        fontSize: '8pt'
 	      },
-		  ticks:['{implode("','",$xaxis_ticks)}']
+		  ticks:['{implode("','",$xaxis_ticks) nofilter}']
 		}, 
         yaxis:{
 		  labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
@@ -264,7 +263,7 @@ plot1 = $.jqplot('reportChart', chartData, chartOptions);
 	{foreach from=$data key=org_id item=plots name=orgs}
 		<div class="block" style="display:inline-block;">
 		{$sum = 0}
-		<h2>{$orgs.{$org_id}->name|escape}</h2>
+		<h2>{$orgs.{$org_id}->name}</h2>
 		{foreach from=$plots key=plot item=data name=plots}
 			{$plot}: {$data}<br>
 			{$sum = $sum + $data}
@@ -279,11 +278,11 @@ plot1 = $.jqplot('reportChart', chartData, chartOptions);
 
 <script type="text/javascript">
 	$('#frmRange button.chooser_worker').each(function(event) {
-		ajax.chooser(this,'cerberusweb.contexts.worker','worker_id');
+		ajax.chooser(this,'cerberusweb.contexts.worker','worker_id', { autocomplete:true });
 	});
 	
 	$('#frmRange button.chooser_org').each(function(event) {
-		ajax.chooser(this,'cerberusweb.contexts.org','org_id');
+		ajax.chooser(this,'cerberusweb.contexts.org','org_id', { autocomplete:true });
 	});	
 </script>
 

@@ -1,4 +1,4 @@
-{include file="file:$core_tpl/tickets/submenu.tpl"}
+{include file="devblocks:cerberusweb.core::tickets/submenu.tpl"}
 
 <table cellspacing="0" cellpadding="0" border="0" width="100%" style="padding-bottom:5px;">
 <tr>
@@ -21,7 +21,7 @@
 	<td width="98%" valign="middle">
 	</td>
 	<td width="1%" valign="middle" nowrap="nowrap">
-		{include file="file:$core_tpl/tickets/quick_search_box.tpl"}
+		{include file="devblocks:cerberusweb.core::tickets/quick_search_box.tpl"}
 	</td>
 </tr>
 </table>
@@ -29,29 +29,42 @@
 <div id="mailTabs">
 	<ul>
 		{$tabs = [workflow]}
+		{$point = Extension_MailTab::POINT}
 		
-		<li><a href="{devblocks_url}ajax.php?c=tickets&a=showWorkflowTab&request={$request_path|escape:'url'}{/devblocks_url}">{$translate->_('mail.workflow')|capitalize|escape:'quotes'}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=tickets&a=showWorkflowTab&request={$response_uri|escape:'url'}{/devblocks_url}">{$translate->_('mail.workflow')|capitalize}</a></li>
 		
 		{if $active_worker->hasPriv('core.mail.search')}
 			{$tabs[] = search}
-			<li><a href="{devblocks_url}ajax.php?c=tickets&a=showSearchTab&request={$request_path|escape:'url'}{/devblocks_url}">{$translate->_('mail.search.tickets')|capitalize|escape:'quotes'}</a></li>
+			<li><a href="{devblocks_url}ajax.php?c=tickets&a=showSearchTab&request={$response_uri|escape:'url'}{/devblocks_url}">{$translate->_('mail.search.tickets')|capitalize}</a></li>
 		{/if}
 
 		{if 1 || $active_worker->hasPriv('core.mail.messages')}
 			{$tabs[] = messages}
-			<li><a href="{devblocks_url}ajax.php?c=tickets&a=showMessagesTab&request={$request_path|escape:'url'}{/devblocks_url}">{$translate->_('mail.search.messages')|capitalize|escape:'quotes'}</a></li>
+			<li><a href="{devblocks_url}ajax.php?c=tickets&a=showMessagesTab&request={$response_uri|escape:'url'}{/devblocks_url}">{$translate->_('mail.search.messages')|capitalize}</a></li>
 		{/if}
 
 		{$tabs[] = drafts}
-		<li><a href="{devblocks_url}ajax.php?c=tickets&a=showDraftsTab&request={$request_path|escape:'url'}{/devblocks_url}">{$translate->_('mail.drafts')|capitalize|escape:'quotes'}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=tickets&a=showDraftsTab&request={$response_uri|escape:'url'}{/devblocks_url}">{$translate->_('mail.drafts')|capitalize}</a></li>
 
 		{$tabs[] = snippets}
-		<li><a href="{devblocks_url}ajax.php?c=tickets&a=showSnippetsTab&request={$request_path|escape:'url'}{/devblocks_url}">{$translate->_('common.snippets')|capitalize|escape:'quotes'}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=tickets&a=showSnippetsTab&request={$response_uri|escape:'url'}{/devblocks_url}">{$translate->_('common.snippets')|capitalize}</a></li>
 		
+		{$tab_manifests = DevblocksPlatform::getExtensions($point, false)}
 		{foreach from=$tab_manifests item=tab_manifest}
 			{$tabs[] = $tab_manifest->params.uri}
-			<li><a href="{devblocks_url}ajax.php?c=tickets&a=showTab&ext_id={$tab_manifest->id}&request={$request_path|escape:'url'}{/devblocks_url}"><i>{$tab_manifest->params.title|devblocks_translate|escape:'quotes'}</i></a></li>
+			<li><a href="{devblocks_url}ajax.php?c=tickets&a=showTab&point={$point}&ext_id={$tab_manifest->id}&request={$response_uri|escape:'url'}{/devblocks_url}"><i>{$tab_manifest->params.title|devblocks_translate}</i></a></li>
 		{/foreach}
+		
+		{if $active_worker->hasPriv('core.home.workspaces')}
+			{$enabled_workspaces = DAO_Workspace::getByEndpoint($point, $active_worker->id)}
+			{foreach from=$enabled_workspaces item=enabled_workspace}
+				{$tabs[] = 'w_'|cat:$enabled_workspace->id}
+				<li><a href="{devblocks_url}ajax.php?c=internal&a=showWorkspaceTab&point={$point}&id={$enabled_workspace->id}&request={$response_uri|escape:'url'}{/devblocks_url}"><i>{$enabled_workspace->name}</i></a></li>
+			{/foreach}
+			
+			{$tabs[] = "+"}
+			<li><a href="{devblocks_url}ajax.php?c=internal&a=showAddTab&point={$point}&request={$response_uri|escape:'url'}{/devblocks_url}"><i>+</i></a></li>
+		{/if}
 	</ul>
 </div> 
 <br>
@@ -97,13 +110,53 @@
 	}
 
 	function doWorkflowKeys(event) {
-		if(event.altKey || event.ctrlKey || event.shiftKey || event.metaKey)
-			return;
+		// Allow these special keys
+		switch(event.which) {
+			case 42: // (*)
+			case 126: // (~)
+				break;
+			default:
+				if(event.altKey || event.ctrlKey || event.shiftKey || event.metaKey)
+					return;
+				break;
+		}
 
 		switch(event.which) {
-			case 97:  // (A) list all
+			case 42: // (*) reset filters
+				$('#viewCustomFiltersmail_workflow TABLE TBODY.full TD:first FIELDSET SELECT[name=_preset]').val('reset').trigger('change');
+				break;
+			case 45: // (-) remove last filter
+				$('#viewCustomFiltersmail_workflow TABLE TBODY.summary UL.bubbles LI:last A.delete').click();
+				break;
+//			case 49: // 1
+//			case 50: // 2
+//			case 51: // 3
+//			case 52: // 4
+//			case 53: // 5
+//			case 54: // 6
+//			case 55: // 7
+//			case 56: // 8
+//			case 57: // 9
+//				digit = parseInt(event.which)-49;
+//				$('#viewmail_workflow_sidebar FIELDSET TABLE:first TR:nth('+digit+') TD:first A').click();
+//				break;
+			case 96: // (`)
+				$('#viewmail_workflow_sidebar FIELDSET:first TABLE:first TD:first A:first').focus();
+				break;
+			case 97:  // (A) select all
 				try {
-					$('#btnWorkflowListAll').click();
+					$('#viewmail_workflow TABLE.worklist input:checkbox').each(function(e) {
+						is_checked = !this.checked;
+						checkAll('viewFormmail_workflow',is_checked);
+						$rows=$('#viewFormmail_workflow').find('table.worklistBody').find('tbody > tr');
+						if(is_checked) { 
+							$rows.addClass('selected'); 
+							$(this).attr('checked','checked');
+						} else { 
+							$rows.removeClass('selected');
+							$(this).removeAttr('checked');
+						}
+					});
 				} catch(e) { } 
 				break;
 			case 98:  // (B) bulk update
@@ -116,6 +169,16 @@
 					$('#btnmail_workflowClose').click();
 				} catch(e) { } 
 				break;
+			case 101:  // (E) explore
+				try {
+					$('#btnExploremail_workflow').click();
+				} catch(e) { } 
+				break;
+			case 102:  // (f) follow
+				try {
+					$('#btnmail_workflowFollow').click();
+				} catch(e) { } 
+				break;
 			case 109:  // (M) my tickets
 				try {
 					$('#btnMyTickets').click();
@@ -126,14 +189,9 @@
 					$('#btnmail_workflowSpam').click();
 				} catch(e) { } 
 				break;
-			case 116:  // (T) take
+			case 117:  // (U) unfollow
 				try {
-					$('#btnmail_workflowTake').click();
-				} catch(e) { } 
-				break;
-			case 117:  // (U) surrender
-				try {
-					$('#btnmail_workflowSurrender').click();
+					$('#btnmail_workflowUnfollow').click();
 				} catch(e) { } 
 				break;
 			case 120:  // (X) delete
@@ -141,14 +199,50 @@
 					$('#btnmail_workflowDelete').click();
 				} catch(e) { } 
 				break;
+			case 126: // (~)
+				$('#viewmail_workflow_sidebar FIELDSET UL.cerb-popupmenu').toggle().find('a:first').focus();
+				break;
 		}
 	}
 	
 	function doSearchKeys(event) {
-		if(event.altKey || event.ctrlKey || event.shiftKey)
-			return;
-
+		// Allow these special keys
 		switch(event.which) {
+			case 42: // (*)
+			case 126: // (~)
+				break;
+			default:
+				if(event.altKey || event.ctrlKey || event.shiftKey || event.metaKey)
+					return;
+				break;
+		}
+		
+		switch(event.which) {
+			case 42: // (*) reset filters
+				$('#viewCustomFilterssearch TABLE TBODY.full TD:first FIELDSET SELECT[name=_preset]').val('reset').trigger('change');
+				break;
+			case 45: // (-) remove last filter
+				$('#viewCustomFilterssearch TABLE TBODY.summary UL.bubbles LI:last A.delete').click();
+				break;
+			case 96: // (`)
+				$('#viewsearch_sidebar FIELDSET:first TABLE:first TD:first A:first').focus();
+				break;
+			case 97:  // (A) select all
+				try {
+					$('#viewsearch TABLE.worklist input:checkbox').each(function(e) {
+						is_checked = !this.checked;
+						checkAll('viewFormsearch',is_checked);
+						$rows=$('#viewFormsearch').find('table.worklistBody').find('tbody > tr');
+						if(is_checked) { 
+							$rows.addClass('selected'); 
+							$(this).attr('checked','checked');
+						} else { 
+							$rows.removeClass('selected');
+							$(this).removeAttr('checked');
+						}
+					});
+				} catch(e) { } 
+				break;		
 			case 98:  // (B) bulk update
 				try {
 					$('#btnsearchBulkUpdate').click();
@@ -159,25 +253,33 @@
 					$('#btnsearchClose').click();
 				} catch(e) { } 
 				break;
+			case 101:  // (E) explore
+				try {
+					$('#btnExploresearch').click();
+				} catch(e) { } 
+				break;
+			case 102:  // (f) follow
+				try {
+					$('#btnsearchFollow').click();
+				} catch(e) { } 
+				break;
 			case 115:  // (S) spam
 				try {
 					$('#btnsearchSpam').click();
 				} catch(e) { } 
 				break;
-			case 116:  // (T) take
+			case 117:  // (U) unfollow
 				try {
-					$('#btnsearchTake').click();
-				} catch(e) { } 
-				break;
-			case 117:  // (S) surrender
-				try {
-					$('#btnsearchSurrender').click();
+					$('#btnsearchUnfollow').click();
 				} catch(e) { } 
 				break;
 			case 120:  // (X) delete
 				try {
 					$('#btnsearchDelete').click();
 				} catch(e) { } 
+				break;
+			case 126: // (~)
+				$('#viewsearch_sidebar FIELDSET UL.cerb-popupmenu').toggle().find('a:first').focus();
 				break;
 		}
 	}	

@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,7 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
@@ -110,7 +110,10 @@ class DAO_Worker extends C4_ORMHelper {
 			$data = $session->decodeSession($session_data['session_data']);
 			@$visit = $data['db_visit']; /* @var $visit CerberusVisit */
 			
-			if(null == ($worker = $visit->getWorker()))
+			if(empty($visit))
+				continue;
+			
+			if(!empty($visit) && null == ($worker = $visit->getWorker()))
 				continue;
 
 			// All workers from the sessions
@@ -315,8 +318,13 @@ class DAO_Worker extends C4_ORMHelper {
 		$db->Execute($sql);
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' worker_to_team records.');
 		
-		$sql = "DELETE QUICK worker_workspace_list FROM worker_workspace_list LEFT JOIN worker ON worker_workspace_list.worker_id = worker.id WHERE worker.id IS NULL";
+		$sql = "DELETE QUICK workspace FROM workspace LEFT JOIN worker ON workspace.worker_id = worker.id WHERE worker.id IS NULL";
 		$db->Execute($sql);
+		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' workspace records.');
+		
+		$sql = "DELETE QUICK workspace_list FROM workspace_list LEFT JOIN worker ON workspace_list.worker_id = worker.id WHERE worker.id IS NULL";
+		$db->Execute($sql);
+		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' workspace_list records.');
 		
 		// Context Links
 		$db->Execute(sprintf("DELETE QUICK context_link FROM context_link LEFT JOIN worker ON context_link.from_context_id=worker.id WHERE context_link.from_context = %s AND worker.id IS NULL",
@@ -328,10 +336,6 @@ class DAO_Worker extends C4_ORMHelper {
 			$db->qstr(CerberusContexts::CONTEXT_WORKER)
 		));
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' worker context link targets.');
-		
-		// [TODO] Clear out workers from any group_inbox_filter rows
-		
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' worker_workspace_list records.');
 	}
 	
 	static function delete($id) {
@@ -366,7 +370,10 @@ class DAO_Worker extends C4_ORMHelper {
 		$sql = sprintf("DELETE QUICK FROM view_rss WHERE worker_id = %d", $id);
 		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 
-		$sql = sprintf("DELETE QUICK FROM worker_workspace_list WHERE worker_id = %d", $id);
+		$sql = sprintf("DELETE QUICK FROM workspace WHERE worker_id = %d", $id);
+		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
+		 
+		$sql = sprintf("DELETE QUICK FROM workspace_list WHERE worker_id = %d", $id);
 		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 
 		// Clear roles
@@ -374,6 +381,9 @@ class DAO_Worker extends C4_ORMHelper {
 		
 		// Context links
 		DAO_ContextLink::delete(CerberusContexts::CONTEXT_WORKER, $id);
+		
+		// Virtual Attendants
+		DAO_TriggerEvent::deleteByOwner(CerberusContexts::CONTEXT_WORKER, $id);		
 		
 		// Invalidate caches
 		self::clearCache();
@@ -470,28 +480,14 @@ class DAO_Worker extends C4_ORMHelper {
 		}
 	}
 
-    /**
-     * Enter description here...
-     *
-     * @param DevblocksSearchCriteria[] $params
-     * @param integer $limit
-     * @param integer $page
-     * @param string $sortBy
-     * @param boolean $sortAsc
-     * @param boolean $withCounts
-     * @return array
-     */
-    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_Worker::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
+		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy]) || !in_array($sortBy,$columns))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
-		$total = -1;
 		
 		$select_sql = sprintf("SELECT ".
 			"w.id as %s, ".
@@ -534,6 +530,10 @@ class DAO_Worker extends C4_ORMHelper {
 		
 		// Virtuals
 		foreach($params as $param) {
+			// [TODO] This needs to be handled better (GROUP_AND/GROUP_OR)
+			if(is_array($param))
+				continue;
+			
 			$param_key = $param->field;
 			settype($param_key, 'string');
 			switch($param_key) {
@@ -551,6 +551,74 @@ class DAO_Worker extends C4_ORMHelper {
 			}
 		}
 		
+		$result = array(
+			'primary_table' => 'w',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => $has_multiple_values,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+	
+	static function autocomplete($term) {
+		$db = DevblocksPlatform::getDatabaseService();
+		$workers = DAO_Worker::getAll();
+		$objects = array();
+		
+		$results = $db->GetArray(sprintf("SELECT id ".
+			"FROM worker ".
+			"WHERE is_disabled = 0 ".
+			"AND (".
+			"first_name LIKE %s ".
+			"OR last_name LIKE %s ".
+			"%s".
+			")",
+			$db->qstr($term.'%'),
+			$db->qstr($term.'%'),
+			(false != strpos($term,' ') 
+				? sprintf("OR concat(first_name,' ',last_name) LIKE %s ", $db->qstr($term.'%')) 
+				: '')
+		));
+		
+		if(is_array($results))
+		foreach($results as $row) {
+			$worker_id = $row['id'];
+			
+			if(!isset($workers[$worker_id]))
+				continue;
+				
+			$objects[$worker_id] = $workers[$worker_id];
+		}
+		
+		return $objects;
+	}
+	
+    /**
+     * Enter description here...
+     *
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents($columns,$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
@@ -558,15 +626,15 @@ class DAO_Worker extends C4_ORMHelper {
 			($has_multiple_values ? 'GROUP BY w.id ' : '').
 			$sort_sql;
 			
-		// [TODO] Could push the select logic down a level too
 		if($limit > 0) {
-    		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+    		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		} else {
 		    $rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
             $total = mysql_num_rows($rs);
 		}
 		
 		$results = array();
+		$total = -1;
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			$result = array();
@@ -638,7 +706,7 @@ class SearchFields_Worker implements IDevblocksSearchFields {
 		);
 		
 		// Custom Fields
-		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Worker::ID);
+		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_WORKER);
 
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
@@ -747,7 +815,24 @@ class Model_Worker {
 	}
 };
 
-class View_Worker extends C4_AbstractView {
+class WorkerPrefs {
+	static function setDontNotifyOnActivities($worker_id, $array) {
+		if(empty($worker_id) || !is_array($array))
+			return;
+		
+		DAO_WorkerPref::set($worker_id, 'dont_notify_on_activities_json', json_encode($array));
+	}
+	
+	static function getDontNotifyOnActivities($worker_id) {
+		$dont_notify_on_activities = DAO_WorkerPref::get($worker_id, 'dont_notify_on_activities_json', null);
+		if(empty($dont_notify_on_activities) || false == ($dont_notify_on_activities = @json_decode($dont_notify_on_activities, true))) {
+			$dont_notify_on_activities = array();
+		}
+		return $dont_notify_on_activities;
+	}
+};
+
+class View_Worker extends C4_AbstractView implements IAbstractView_Subtotals {
 	const DEFAULT_ID = 'workers';
 
 	function __construct() {
@@ -794,6 +879,70 @@ class View_Worker extends C4_AbstractView {
 		);
 	}
 
+	function getSubtotalFields() {
+		$all_fields = $this->getParamsAvailable();
+		
+		$fields = array();
+
+		if(is_array($all_fields))
+		foreach($all_fields as $field_key => $field_model) {
+			$pass = false;
+			
+			switch($field_key) {
+				// DAO
+				case SearchFields_Worker::FIRST_NAME:
+				case SearchFields_Worker::IS_DISABLED:
+				case SearchFields_Worker::IS_SUPERUSER:
+				case SearchFields_Worker::LAST_NAME:
+				case SearchFields_Worker::TITLE:
+					$pass = true;
+					break;
+					
+				// Valid custom fields
+				default:
+					if('cf_' == substr($field_key,0,3))
+						$pass = $this->_canSubtotalCustomField($field_key);
+					break;
+			}
+			
+			if($pass)
+				$fields[$field_key] = $field_model;
+		}
+		
+		return $fields;
+	}
+	
+	function getSubtotalCounts($column) {
+		$counts = array();
+		$fields = $this->getFields();
+
+		if(!isset($fields[$column]))
+			return array();
+		
+		switch($column) {
+			case SearchFields_Worker::FIRST_NAME:
+			case SearchFields_Worker::LAST_NAME:
+			case SearchFields_Worker::TITLE:
+				$counts = $this->_getSubtotalCountForStringColumn('DAO_Worker', $column);
+				break;
+
+			case SearchFields_Worker::IS_DISABLED:
+			case SearchFields_Worker::IS_SUPERUSER:
+				$counts = $this->_getSubtotalCountForBooleanColumn('DAO_Worker', $column);
+				break;
+			
+			default:
+				// Custom fields
+				if('cf_' == substr($column,0,3)) {
+					$counts = $this->_getSubtotalCountForCustomColumn('DAO_Worker', $column, 'w.id');
+				}
+				
+				break;
+		}
+		
+		return $counts;
+	}	
+	
 	function render() {
 		$this->_sanitize();
 		
@@ -801,15 +950,16 @@ class View_Worker extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-		$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Worker::ID);
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_WORKER);
 		$tpl->assign('custom_fields', $custom_fields);
 
 		switch($this->renderTemplate) {
 			case 'contextlinks_chooser':
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/workers/view_contextlinks_chooser.tpl');
+				$tpl->display('devblocks:cerberusweb.core::workers/view_contextlinks_chooser.tpl');
 				break;
 			default:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/workers/view.tpl');
+				$tpl->assign('view_template', 'devblocks:cerberusweb.core::workers/view.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/subtotals_and_view.tpl');
 				break;
 		}
 	}
@@ -846,20 +996,20 @@ class View_Worker extends C4_AbstractView {
 			case SearchFields_Worker::FIRST_NAME:
 			case SearchFields_Worker::LAST_NAME:
 			case SearchFields_Worker::TITLE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
 				
 			case SearchFields_Worker::IS_DISABLED:
 			case SearchFields_Worker::IS_SUPERUSER:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
 				
 			case SearchFields_Worker::LAST_ACTIVITY_DATE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 				
 			case SearchFields_Worker::VIRTUAL_GROUPS:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__context_group.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_group.tpl');
 				break;
 				
 			default:
@@ -878,7 +1028,7 @@ class View_Worker extends C4_AbstractView {
 		$values = !is_array($param->value) ? array($param->value) : $param->value;
 
 		switch($field) {
-//			case SearchFields_WorkerEvent::WORKER_ID:
+//			case SearchFields_Notification::WORKER_ID:
 //				$workers = DAO_Worker::getAll();
 //				$strings = array();
 //
@@ -1005,7 +1155,7 @@ class View_Worker extends C4_AbstractView {
 			DAO_Worker::update($batch_ids, $change_fields);
 			
 			// Custom Fields
-			self::_doBulkSetCustomFields(ChCustomFieldSource_Worker::ID, $custom_fields, $batch_ids);
+			self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_WORKER, $custom_fields, $batch_ids);
 			
 			unset($batch_ids);
 		}
@@ -1071,7 +1221,6 @@ class DAO_WorkerPref extends DevblocksORMHelper {
 			
 			$objects = array();
 			
-			
 			while($row = mysql_fetch_assoc($rs)) {
 			    $objects[$row['setting']] = $row['value'];
 			}
@@ -1086,23 +1235,30 @@ class DAO_WorkerPref extends DevblocksORMHelper {
 };
 
 class Context_Worker extends Extension_DevblocksContext {
-    function __construct($manifest) {
-        parent::__construct($manifest);
-    }
-
-    function getPermalink($context_id) {
-    	// [TODO] Profiles
-    	$url_writer = DevblocksPlatform::getUrlService();
-    	return null;
-    	//return $url_writer->write('c=home&tab=orgs&action=display&id='.$context_id, true);
-    }
-    
+	function getMeta($context_id) {
+		$worker = DAO_Worker::get($context_id);
+		$url_writer = DevblocksPlatform::getUrlService();
+		
+		$worker_name = $worker->getName();
+		
+		$who = sprintf("%d-%s",
+			$worker->id,
+			DevblocksPlatform::strToPermalink($worker_name)
+		); 
+		
+		return array(
+			'id' => $worker->id,
+			'name' => $worker_name,
+			'permalink' => $url_writer->write('c=profiles&type=worker&who='.$who, true),
+		);
+	}
+	
 	function getContext($worker, &$token_labels, &$token_values, $prefix=null) {
 		if(is_null($prefix))
 			$prefix = 'Worker:';
 			
 		$translate = DevblocksPlatform::getTranslationService();
-		$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Worker::ID);
+		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_WORKER);
 		
 		// Polymorph
 		if(is_numeric($worker)) {
@@ -1116,6 +1272,7 @@ class Context_Worker extends Extension_DevblocksContext {
 		// Token labels
 		$token_labels = array(
 			'first_name' => $prefix.$translate->_('worker.first_name'),
+			'full_name' => $prefix.$translate->_('worker.full_name'),
 			'last_name' => $prefix.$translate->_('worker.last_name'),
 			'title' => $prefix.$translate->_('worker.title'),
 		);
@@ -1131,6 +1288,7 @@ class Context_Worker extends Extension_DevblocksContext {
 		// Worker token values
 		if(null != $worker) {
 			$token_values['id'] = $worker->id;
+			$token_values['full_name'] = $worker->getName();
 			if(!empty($worker->first_name))
 				$token_values['first_name'] = $worker->first_name;
 			if(!empty($worker->last_name))
@@ -1139,7 +1297,7 @@ class Context_Worker extends Extension_DevblocksContext {
 				$token_values['title'] = $worker->title;
 			$token_values['custom'] = array();
 			
-			$field_values = array_shift(DAO_CustomFieldValue::getValuesBySourceIds(ChCustomFieldSource_Worker::ID, $worker->id));
+			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_WORKER, $worker->id));
 			if(is_array($field_values) && !empty($field_values)) {
 				foreach($field_values as $cf_id => $cf_val) {
 					if(!isset($fields[$cf_id]))
@@ -1185,7 +1343,7 @@ class Context_Worker extends Extension_DevblocksContext {
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id;
 		$defaults->is_ephemeral = true;
-		$defaults->class_name = 'View_Worker';
+		$defaults->class_name = $this->getViewClass();
 		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
 		$view->name = 'Workers';
 		$view->view_columns = array(
@@ -1203,24 +1361,25 @@ class Context_Worker extends Extension_DevblocksContext {
 		return $view;
 	}
 	
-	function getView($context, $context_id, $options=array()) {
+	function getView($context=null, $context_id=null, $options=array()) {
 		$view_id = str_replace('.','_',$this->id);
 		
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id; 
-		$defaults->class_name = 'View_Worker';
+		$defaults->class_name = $this->getViewClass();
 		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
 		$view->name = 'Workers';
 		
-		$params = array(
-			new DevblocksSearchCriteria(SearchFields_Worker::CONTEXT_LINK,'=',$context),
-			new DevblocksSearchCriteria(SearchFields_Worker::CONTEXT_LINK_ID,'=',$context_id),
-		);
-
-		if(isset($options['filter_open']))
-			true; // Do nothing
+		$params_req = array();
 		
-		$view->addParams($params, true);
+		if(!empty($context) && !empty($context_id)) {
+			$params_req = array(
+				new DevblocksSearchCriteria(SearchFields_Worker::CONTEXT_LINK,'=',$context),
+				new DevblocksSearchCriteria(SearchFields_Worker::CONTEXT_LINK_ID,'=',$context_id),
+			);
+		}
+
+		$view->addParamsRequired($params_req, true);
 		
 		$view->renderTemplate = 'context';
 		C4_AbstractViewLoader::setView($view_id, $view);

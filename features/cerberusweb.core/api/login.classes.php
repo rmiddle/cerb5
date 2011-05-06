@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,7 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
@@ -63,7 +63,7 @@ class DefaultLoginModule extends Extension_LoginAuthenticator {
 		
 		// Must be a valid page controller
 		@$redir_path = explode('/',urldecode(DevblocksPlatform::importGPC($_REQUEST["url"],"string","")));
-		if(is_array($redir_path) && isset($redir_path[0]) && CerberusApplication::getPageManifestByUri($redir_path[0]))
+		if(is_array($redir_path) && isset($redir_path[0]) && ($redir_path[0]=='explore' || CerberusApplication::getPageManifestByUri($redir_path[0])))
 			$tpl->assign('original_path', implode('/',$redir_path));
 		
 		switch(array_shift($stack)) {
@@ -76,7 +76,7 @@ class DefaultLoginModule extends Extension_LoginAuthenticator {
 				break;
 		}
 		
-		$tpl->display('file:' . dirname(dirname(__FILE__)) . '/templates/login/login_form_default.tpl');
+		$tpl->display('devblocks:cerberusweb.core::login/login_form_default.tpl');
 	}
 	
 	function authenticate() {
