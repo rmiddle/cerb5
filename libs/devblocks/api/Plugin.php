@@ -111,9 +111,13 @@ class DevblocksStorageEngineDisk extends Extension_DevblocksStorageEngine {
 			$key
 		);
 		
+		if(!file_exists($path))
+			return false;
+		
 		// Read into file handle
 		if($fp && is_resource($fp)) {
 			$src_fp = fopen($path, 'rb');
+			if(is_resource($src_fp))
 			while(!feof($src_fp)) {
 				if(false === fwrite($fp, fread($src_fp, 65536))) {
 					fclose($src_fp);
@@ -307,6 +311,7 @@ class DevblocksStorageEngineDatabase extends Extension_DevblocksStorageEngine {
 		$chunks = 1;
 		
 		fseek($fp, 0);
+		if(is_resource($fp))
 		while(!feof($fp)) {
 			$chunk = fread($fp, $chunk_size);
 			

@@ -350,14 +350,14 @@ class ChWatchersPreferences extends Extension_PreferenceTab {
 			
 		}
 		
-		$view->paramsRequired = array(
+		$view->addParamsRequired(array(
 			SearchFields_WatcherMailFilter::WORKER_ID => new DevblocksSearchCriteria(SearchFields_WatcherMailFilter::WORKER_ID,'eq',$worker->id),
-		);
+		));
 		
-		$view->paramsHidden = array(
+		$view->addParamsHidden(array(
 			SearchFields_WatcherMailFilter::ID,
 			SearchFields_WatcherMailFilter::WORKER_ID,
-		);
+		));
 		
 		C4_AbstractViewLoader::setView($view->id, $view);
 		
@@ -726,13 +726,13 @@ class View_WatcherMailFilter extends C4_AbstractView {
 			SearchFields_WatcherMailFilter::WORKER_ID,
 			SearchFields_WatcherMailFilter::POS,
 		);
-		$this->columnsHidden = array(
+		$this->addColumnsHidden(array(
 			SearchFields_WatcherMailFilter::ID,
-		);
+		));
 		
-		$this->paramsHidden = array(
+		$this->addParamsHidden(array(
 			SearchFields_WatcherMailFilter::ID,
-		);
+		));
 		
 		$this->doResetCriteria();
 	}
@@ -831,7 +831,7 @@ class View_WatcherMailFilter extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
@@ -1148,7 +1148,7 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 		$fields = SearchFields_WatcherMailFilter::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields,$sortBy);
@@ -1223,7 +1223,17 @@ class DAO_WatcherMailFilter extends DevblocksORMHelper {
 		mysql_free_result($rs);
 		
 		return array($results,$total);
-    }	
+    }
+    
+    public static function maint() {
+    	$db = DevblocksPlatform::getDatabaseService();
+    	$logger = DevblocksPlatform::getConsoleLog();
+    	
+		$sql = "DELETE QUICK watcher_mail_filter FROM watcher_mail_filter LEFT JOIN worker ON watcher_mail_filter.worker_id = worker.id WHERE worker.id IS NULL";
+		$db->Execute($sql);
+		
+		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' watcher_mail_filter records.');
+    }
 	
 };
 

@@ -318,7 +318,7 @@ class DAO_Address extends C4_ORMHelper {
 		$fields = SearchFields_Address::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
 			$sortBy=null;
 		
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields,$sortBy);
@@ -508,23 +508,20 @@ class View_Address extends C4_AbstractView {
 			SearchFields_Address::NUM_NONSPAM,
 			SearchFields_Address::NUM_SPAM,
 		);
-		$this->columnsHidden = array(
+		$this->addColumnsHidden(array(
 			SearchFields_Address::CONTACT_ORG_ID,
 			SearchFields_Address::PASS,
 			SearchFields_Address::CONTEXT_LINK,
 			SearchFields_Address::CONTEXT_LINK_ID,
-		);
-		
-		$this->paramsDefault = array_merge($this->paramsDefault, array(
-			SearchFields_Address::IS_REGISTERED => new DevblocksSearchCriteria(SearchFields_Address::IS_REGISTERED,'=',1),
 		));
-		$this->paramsHidden = array(
+		
+		$this->addParamsHidden(array(
 			SearchFields_Address::CONTACT_ORG_ID,
 			SearchFields_Address::ID,
 			SearchFields_Address::PASS,
 			SearchFields_Address::CONTEXT_LINK,
 			SearchFields_Address::CONTEXT_LINK_ID,
-		);
+		));
 	}
 
 	function getData() {
@@ -620,7 +617,7 @@ class View_Address extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
@@ -888,14 +885,10 @@ class Context_Address extends Extension_DevblocksContext {
 			SearchFields_Address::ORG_NAME,
 		);
 		
-		$view->paramsDefault = array(
+		$view->addParamsDefault(array(
 			SearchFields_Address::IS_BANNED => new DevblocksSearchCriteria(SearchFields_Address::IS_BANNED,'=',0),
-		);
-		$view->paramsHidden = array(
-			SearchFields_Address::ID,
-			SearchFields_Address::CONTACT_ORG_ID,
-		);
-		$view->addParams($view->paramsDefault, true);
+		));
+		$view->addParams($view->getParamsDefault(), true);
 		
 		$view->renderSortBy = SearchFields_Address::EMAIL;
 		$view->renderSortAsc = true;

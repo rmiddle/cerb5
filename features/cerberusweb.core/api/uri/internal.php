@@ -197,11 +197,38 @@ class ChInternalController extends DevblocksControllerExtension {
 	// Snippets
 	
 	function snippetPasteAction() {
-		@$snippet_id = DevblocksPlatform::importGPC($_REQUEST['snippet_id'],'integer',0);
+		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
+
+		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+		$active_worker = CerberusApplication::getActiveWorker();
 		
-		if(null != ($snippet = DAO_Snippet::get($snippet_id))) {
-			echo $snippet->content;
+		// [TODO] Make sure the worker is allowed to view this context+ID
+		
+		if(null != ($snippet = DAO_Snippet::get($id))) {
+			switch($snippet->context) {
+				case 'cerberusweb.contexts.ticket':
+					CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, $context_id, $token_labels, $token_values);
+					break;
+				case 'cerberusweb.contexts.worker':
+					CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $context_id, $token_labels, $token_values);
+					break;
+				case 'cerberusweb.contexts.plaintext':
+					$token_values = array();
+					break;
+			}
+			
+			$snippet->incrementUse($active_worker->id);
 		}
+		
+		if(!empty($context_id)) {
+			$output = $tpl_builder->build($snippet->content, $token_values);
+		} else {
+			$output = $snippet->content;
+		}
+		
+		if(!empty($output))
+			echo rtrim($output,"\r\n"),"\n\n";		
 	}
 	
 	function snippetTestAction() {
@@ -373,19 +400,31 @@ class ChInternalController extends DevblocksControllerExtension {
 	function viewAddPresetAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id']);
 		@$preset_name = DevblocksPlatform::importGPC($_REQUEST['_preset_name'],'string','');
+		@$preset_replace_id = DevblocksPlatform::importGPC($_REQUEST['_preset_replace'],'integer',0);
 
 		$active_worker = CerberusApplication::getActiveWorker();
 
 		$view = C4_AbstractViewLoader::getView($id);
+		$params_json = json_encode($view->getEditableParams());
 
-		$fields = array(
-			DAO_ViewFiltersPreset::NAME => !empty($preset_name) ? $preset_name : 'New Preset',
-			DAO_ViewFiltersPreset::VIEW_CLASS => get_class($view),
-			DAO_ViewFiltersPreset::WORKER_ID => $active_worker->id,
-			DAO_ViewFiltersPreset::PARAMS_JSON => json_encode($view->getEditableParams()),
-		);
-		
-		DAO_ViewFiltersPreset::create($fields);
+		if(!empty($preset_replace_id)) {
+			$fields = array(
+				DAO_ViewFiltersPreset::NAME => !empty($preset_name) ? $preset_name : 'New Preset',
+				DAO_ViewFiltersPreset::PARAMS_JSON => $params_json,
+			);
+			
+			DAO_ViewFiltersPreset::update($preset_replace_id, $fields);
+			
+		} else { // new
+			$fields = array(
+				DAO_ViewFiltersPreset::NAME => !empty($preset_name) ? $preset_name : 'New Preset',
+				DAO_ViewFiltersPreset::VIEW_CLASS => get_class($view),
+				DAO_ViewFiltersPreset::WORKER_ID => $active_worker->id,
+				DAO_ViewFiltersPreset::PARAMS_JSON => $params_json,
+			);
+			
+			DAO_ViewFiltersPreset::create($fields);
+		}
 		
 		$this->_viewRenderInlineFilters($view);
 	}
@@ -437,7 +476,6 @@ class ChInternalController extends DevblocksControllerExtension {
 	function viewDoCopyAction() {
 		$translate = DevblocksPlatform::getTranslationService();
 		$active_worker = CerberusApplication::getActiveWorker();
-		$visit = CerberusApplication::getVisit();
 		
 	    @$view_id = DevblocksPlatform::importGPC($_POST['view_id'],'string');
 		$view = C4_AbstractViewLoader::getView($view_id);
@@ -485,9 +523,6 @@ class ChInternalController extends DevblocksControllerExtension {
 			);
 			$list_id = DAO_WorkerWorkspaceList::create($fields);
         }
-		
-		// Select the workspace tab
-		$visit->set(CerberusVisit::KEY_HOME_SELECTED_TAB, 'w_'.$workspace_name);
         
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('home')));
 	}
@@ -636,6 +671,33 @@ class ChInternalController extends DevblocksControllerExtension {
 		C4_AbstractViewLoader::setView($id, $view);
 		
 		$view->render();
+	}
+	
+	function viewSubtotalAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		@$category = DevblocksPlatform::importGPC($_REQUEST['category'],'string','');
+		
+		if(null == ($view = C4_AbstractViewLoader::getView($view_id)))
+			return;
+			
+		if(!method_exists($view, 'getCounts'))
+			return;
+		
+		$view->renderSubtotals = $category;
+
+		C4_AbstractViewLoader::setView($view->id, $view);
+		
+		if(empty($view->renderSubtotals))
+			return;
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('view_id', $view_id);
+		$tpl->assign('view', $view);
+			
+		$counts = $view->getCounts($view->renderSubtotals);
+		$tpl->assign('counts', $counts);
+		
+		$tpl->display('devblocks:cerberusweb.core::tickets/view_sidebar.tpl');
 	}
 	
 	function startAutoRefreshAction() {

@@ -54,18 +54,21 @@ abstract class C4_AbstractView {
 	public $name = "";
 	
 	public $view_columns = array();
-	public $columnsHidden = array();
+	private $_columnsHidden = array();
 	
 	private $_paramsEditable = array();
-	public $paramsDefault = array();
-	public $paramsRequired = array();
-	public $paramsHidden = array();
+	private $_paramsDefault = array();
+	private $_paramsRequired = array();
+	private $_paramsHidden = array();
 	
 	public $renderPage = 0;
 	public $renderLimit = 10;
 	public $renderTotal = true;
 	public $renderSortBy = '';
 	public $renderSortAsc = 1;
+
+	public $renderSubtotals = null;
+	public $renderSubtotalsClickable = 0;
 	
 	public $renderTemplate = null;
 
@@ -75,27 +78,42 @@ abstract class C4_AbstractView {
 	function getColumnsAvailable() {
 		$columns = $this->getFields();
 		
-		if(is_array($this->columnsHidden))
-		foreach($this->columnsHidden as $col)
+		foreach($this->getColumnsHidden() as $col)
 			unset($columns[$col]);
 			
 		return $columns;
 	}
 	
-	// Params
+	// Columns Hidden
+
+	function getColumnsHidden() {
+		$columnsHidden = $this->_columnsHidden;
+		
+		if(!is_array($columnsHidden))
+			$columnsHidden = array();
+			
+		return $columnsHidden;
+	}
+	
+	function addColumnsHidden($columnsToHide) {
+		$this->_columnsHidden = array_unique(array_merge($this->getColumnsHidden(), $columnsToHide));
+	}
+	
+	// Params Editable
 	
 	function getParamsAvailable() {
 		$params = $this->getFields();
 		
-		if(is_array($this->paramsHidden))
-		foreach($this->paramsHidden as $param)
+		if(is_array($this->_paramsHidden))
+		foreach($this->_paramsHidden as $param)
 			unset($params[$param]);
 		
 		return $params;
 	}
 	
 	function getParams() {
-		return array_merge($this->_paramsEditable, $this->paramsRequired);
+		// Required should override editable
+		return array_merge($this->_paramsEditable, $this->_paramsRequired);
 	}
 	
 	function getEditableParams() {
@@ -127,6 +145,36 @@ abstract class C4_AbstractView {
 	
 	function removeAllParams() {
 		$this->_paramsEditable = array();
+	}
+	
+	// Params Default
+	
+	function addParamsDefault($params) {
+		$this->_paramsDefault = array_merge($this->_paramsDefault, $params);
+	}
+	
+	function getParamsDefault() {
+		return $this->_paramsDefault;
+	}
+	
+	// Params Required
+	
+	function addParamsRequired($params) {
+		$this->_paramsRequired = array_merge($this->_paramsRequired, $params);
+	}
+	
+	function getParamsRequired() {
+		return $this->_paramsRequired;
+	}
+	
+	// Params Hidden
+	
+	function addParamsHidden($params) {
+		$this->_paramsHidden = array_unique(array_merge($this->_paramsHidden, $params));
+	}
+	
+	function getParamsHidden() {
+		return $this->_paramsHidden;
 	}
 	
 	// Render
@@ -222,7 +270,7 @@ abstract class C4_AbstractView {
 			default: // TYPE_SINGLE_LINE || TYPE_MULTI_LINE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($token,$oper,$value);
 				break;
@@ -368,7 +416,7 @@ abstract class C4_AbstractView {
 	}
 
 	function doResetCriteria() {
-		$this->addParams($this->paramsDefault, true);
+		$this->addParams($this->_paramsDefault, true);
 		$this->renderPage = 0;
 	}
 	
@@ -464,6 +512,9 @@ class C4_AbstractViewModel {
 	public $renderSortBy = '';
 	public $renderSortAsc = 1;
 	
+	public $renderSubtotals = null;
+	public $renderSubtotalsClickable = null;
+	
 	public $renderTemplate = null;
 };
 
@@ -527,12 +578,12 @@ class C4_AbstractViewLoader {
 		$model->name = $view->name;
 		
 		$model->view_columns = $view->view_columns;
-		$model->columnsHidden = $view->columnsHidden;
+		$model->columnsHidden = $view->getColumnsHidden();
 		
 		$model->paramsEditable = $view->getEditableParams();
-		$model->paramsDefault = $view->paramsDefault;
-		$model->paramsRequired = $view->paramsRequired;
-		$model->paramsHidden = $view->paramsHidden;
+		$model->paramsDefault = $view->getParamsDefault();
+		$model->paramsRequired = $view->getParamsRequired();
+		$model->paramsHidden = $view->getParamsHidden();
 		
 		$model->renderPage = $view->renderPage;
 		$model->renderLimit = $view->renderLimit;
@@ -540,6 +591,9 @@ class C4_AbstractViewLoader {
 		$model->renderSortBy = $view->renderSortBy;
 		$model->renderSortAsc = $view->renderSortAsc;
 
+		$model->renderSubtotals = $view->renderSubtotals;
+		$model->renderSubtotalsClickable = $view->renderSubtotalsClickable;
+		
 		$model->renderTemplate = $view->renderTemplate;
 		
 		return $model;
@@ -564,16 +618,16 @@ class C4_AbstractViewLoader {
 		if(!empty($model->view_columns))
 			$inst->view_columns = $model->view_columns;
 		if(!empty($model->columnsHidden))
-			$inst->columnsHidden = $model->columnsHidden;
+			$inst->addColumnsHidden($model->columnsHidden);
 		
 		if(!empty($model->paramsEditable))
 			$inst->addParams($model->paramsEditable, true);
 		if(!empty($model->paramsDefault))
-			$inst->paramsDefault = $model->paramsDefault;
+			$inst->addParamsDefault($model->paramsDefault);
 		if(!empty($model->paramsRequired))
-			$inst->paramsRequired = $model->paramsRequired;
+			$inst->addParamsRequired($model->paramsRequired);
 		if(!empty($model->paramsHidden))
-			$inst->paramsHidden = $model->paramsHidden;
+			$inst->addParamsHidden($model->paramsHidden);
 
 		if(null !== $model->renderPage)
 			$inst->renderPage = $model->renderPage;
@@ -586,8 +640,10 @@ class C4_AbstractViewLoader {
 		if(null !== $model->renderSortBy)
 			$inst->renderSortAsc = $model->renderSortAsc;
 
-		if(!empty($model->renderTemplate))
-			$inst->renderTemplate = $model->renderTemplate;
+		$inst->renderSubtotals = $model->renderSubtotals;
+		$inst->renderSubtotalsClickable = $model->renderSubtotalsClickable;
+			
+		$inst->renderTemplate = $model->renderTemplate;
 		
 		return $inst;
 	}
@@ -702,7 +758,7 @@ class View_DevblocksTemplate extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
@@ -817,11 +873,11 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 			SearchFields_DevblocksStorageProfile::NAME,
 			SearchFields_DevblocksStorageProfile::EXTENSION_ID,
 		);
-		$this->columnsHidden = array(
+		$this->_columnsHidden = array(
 			SearchFields_DevblocksStorageProfile::PARAMS_JSON,
 		);
 		
-		$this->paramsHidden = array(
+		$this->_paramsHidden = array(
 			SearchFields_DevblocksStorageProfile::ID,
 			SearchFields_DevblocksStorageProfile::PARAMS_JSON,
 		);
@@ -903,7 +959,7 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
@@ -964,6 +1020,7 @@ class View_DevblocksStorageProfile extends C4_AbstractView {
 		if(empty($ids))
 		do {
 			list($objects,$null) = DAO_DevblocksStorageProfile::search(
+				array(),
 				$this->getParams(),
 				100,
 				$pg++,
@@ -1410,7 +1467,6 @@ class CerberusVisit extends DevblocksVisit {
 	const KEY_VIEW_LAST_ACTION = 'view_last_action';
 	const KEY_MY_WORKSPACE = 'view_my_workspace';
 	const KEY_MAIL_MODE = 'mail_mode';
-	const KEY_HOME_SELECTED_TAB = 'home_selected_tab';
 	const KEY_WORKFLOW_FILTER = 'workflow_filter';
 
 	public function __construct() {

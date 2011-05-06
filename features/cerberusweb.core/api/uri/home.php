@@ -76,18 +76,16 @@ class ChHomePage extends CerberusPageExtension {
 		$active_worker = CerberusApplication::getActiveWorker();
 		$visit = CerberusApplication::getVisit();
 		
+		$response = DevblocksPlatform::getHttpResponse();
+
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 
-		$response = DevblocksPlatform::getHttpResponse();
-		$tpl->assign('request_path', implode('/',$response->path));
+		// Are we requesting a specific tab?
+		if(null != ($selected_tab = @$response->path[1]))
+			$tpl->assign('selected_tab', $selected_tab);
 		
-		// Remember the last tab/URL
-		if(null == ($selected_tab = @$response->path[1])) {
-			$selected_tab = $visit->get(CerberusVisit::KEY_HOME_SELECTED_TAB, 'events');
-		}
-		$tpl->assign('selected_tab', $selected_tab);
-		
+		// Tabs
 		$tab_manifests = DevblocksPlatform::getExtensions('cerberusweb.home.tab', false);
 		$tpl->assign('tab_manifests', $tab_manifests);
 		
@@ -110,15 +108,11 @@ class ChHomePage extends CerberusPageExtension {
 	}
 	
 	function showMyEventsAction() {
-		$visit = CerberusApplication::getVisit();
 		$translate = DevblocksPlatform::getTranslationService();
 		$active_worker = CerberusApplication::getActiveWorker();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
-		
-		// Select tab
-		$visit->set(CerberusVisit::KEY_HOME_SELECTED_TAB, 'events');
 		
 		// My Events
 		$defaults = new C4_AbstractViewModel();
@@ -133,22 +127,21 @@ class ChHomePage extends CerberusPageExtension {
 		
 		$myEventsView->name = vsprintf($translate->_('home.my_notifications.view.title'), $active_worker->getName());
 		
-		$myEventsView->columnsHidden = array(
+		$myEventsView->addColumnsHidden(array(
 			SearchFields_WorkerEvent::ID,
 			SearchFields_WorkerEvent::IS_READ,
 			SearchFields_WorkerEvent::WORKER_ID,
-		);
+		));
 		
-		$myEventsView->paramsHidden = array(
+		$myEventsView->addParamsHidden(array(
 			SearchFields_WorkerEvent::ID,
 			SearchFields_WorkerEvent::IS_READ,
 			SearchFields_WorkerEvent::WORKER_ID,
-		);
-		$myEventsView->paramsDefault = $defaults->paramsDefault;
-		$myEventsView->paramsRequired = array(
+		));
+		$myEventsView->addParamsRequired(array(
 			SearchFields_WorkerEvent::IS_READ => new DevblocksSearchCriteria(SearchFields_WorkerEvent::IS_READ,'=',0),
 			SearchFields_WorkerEvent::WORKER_ID => new DevblocksSearchCriteria(SearchFields_WorkerEvent::WORKER_ID,'=',$active_worker->id),
-		);
+		));
 		
 		/*
 		 * [TODO] This doesn't need to save every display, but it was possible to 
@@ -160,6 +153,62 @@ class ChHomePage extends CerberusPageExtension {
 		$tpl->assign('view', $myEventsView);
 		$tpl->display('file:' . $this->_TPL_PATH . 'home/tabs/my_events/index.tpl');
 	}
+	
+	function showNotificationsBulkPanelAction() {
+		@$ids = DevblocksPlatform::importGPC($_REQUEST['ids']);
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
+
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('view_id', $view_id);
+
+	    if(!empty($ids)) {
+	        $id_list = DevblocksPlatform::parseCsvString($ids);
+	        $tpl->assign('ids', implode(',', $id_list));
+	    }
+		
+		// Custom Fields
+		//$custom_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Task::ID);
+		//$tpl->assign('custom_fields', $custom_fields);
+		
+		$tpl->display('file:' . $this->_TPL_PATH . 'home/tabs/my_events/bulk.tpl');
+	}
+	
+	function doNotificationsBulkUpdateAction() {
+		// Filter: whole list or check
+	    @$filter = DevblocksPlatform::importGPC($_REQUEST['filter'],'string','');
+		$ids = array();
+	    
+	    // View
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
+		$view = C4_AbstractViewLoader::getView($view_id);
+		
+		// Task fields
+		$is_read = trim(DevblocksPlatform::importGPC($_POST['is_read'],'string',''));
+
+		$do = array();
+		
+		// Do: Mark Read
+		if(0 != strlen($is_read))
+			$do['is_read'] = $is_read;
+			
+		// Do: Custom fields
+		//$do = DAO_CustomFieldValue::handleBulkPost($do);
+
+		switch($filter) {
+			// Checked rows
+			case 'checks':
+			    @$ids_str = DevblocksPlatform::importGPC($_REQUEST['ids'],'string');
+				$ids = DevblocksPlatform::parseCsvString($ids_str);
+				break;
+			default:
+				break;
+		}
+		
+		$view->doBulkUpdate($filter, $do, $ids);
+		
+		$view->render();
+		return;
+	}	
 	
 	function viewEventsExploreAction() {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
@@ -244,7 +293,6 @@ class ChHomePage extends CerberusPageExtension {
 	
 	function doWorkspaceInitAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
-		$visit = CerberusApplication::getVisit();
 		
 		$workspace = 'My Work';
 		
@@ -274,9 +322,6 @@ class ChHomePage extends CerberusPageExtension {
 		);
 		DAO_WorkerWorkspaceList::create($fields);
 		
-		// Select the new tab
-		$visit->set(CerberusVisit::KEY_HOME_SELECTED_TAB, 'w_'.$workspace);
-		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('home')));
 	}
 	
@@ -303,7 +348,6 @@ class ChHomePage extends CerberusPageExtension {
 		@$new_workspace = DevblocksPlatform::importGPC($_REQUEST['new_workspace'], 'string', '');
 		
 		$active_worker = CerberusApplication::getActiveWorker();
-		$visit = CerberusApplication::getVisit();
 
 		// Source extension exists
 		if(null != ($source_manifest = DevblocksPlatform::getExtension($source, false))) {
@@ -341,9 +385,6 @@ class ChHomePage extends CerberusPageExtension {
 					DAO_WorkerWorkspaceList::SOURCE_EXTENSION => $source_manifest->id,
 				);
 				DAO_WorkerWorkspaceList::create($fields);
-				
-				// Select the new tab
-				$visit->set(CerberusVisit::KEY_HOME_SELECTED_TAB, 'w_'.$workspace);
 			}
 		}
 		
@@ -379,32 +420,6 @@ class ChHomePage extends CerberusPageExtension {
 		exit;
 	} 
 	
-	function doNotificationsMarkReadAction() {
-		$worker = CerberusApplication::getActiveWorker();
-		
-		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'], 'string', '');
-		@$row_ids = DevblocksPlatform::importGPC($_REQUEST['row_id'],'array',array());
-
-		if(is_array($row_ids) && !empty($row_ids)) {
-			DAO_WorkerEvent::updateWhere(
-				array(
-					DAO_WorkerEvent::IS_READ => 1,
-				), 
-				sprintf("%s = %d AND %s IN (%s)",
-					DAO_WorkerEvent::WORKER_ID,
-					$worker->id,
-					DAO_WorkerEvent::ID,
-					implode(',', $row_ids)
-				)
-			);
-			
-			DAO_WorkerEvent::clearCountCache($worker->id);
-		}
-		
-		$myEventsView = C4_AbstractViewLoader::getView($view_id);
-		$myEventsView->render();
-	}
-	
 	function explorerEventMarkReadAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'], 'integer', 0);
 
@@ -432,7 +447,6 @@ class ChHomePage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 		
-		$visit = CerberusApplication::getVisit();
 		$db = DevblocksPlatform::getDatabaseService();
 		$active_worker = CerberusApplication::getActiveWorker();
 		
@@ -450,9 +464,6 @@ class ChHomePage extends CerberusPageExtension {
 		}
 		
 		if(!empty($current_workspace)) {
-			// Remember the tab
-			$visit->set(CerberusVisit::KEY_HOME_SELECTED_TAB, 'w_'.$current_workspace);
-			
 			$lists = DAO_WorkerWorkspaceList::getWhere(sprintf("%s = %d AND %s = %s",
 				DAO_WorkerWorkspaceList::WORKER_ID,
 				$active_worker->id,
@@ -548,7 +559,6 @@ class ChHomePage extends CerberusPageExtension {
 		
 		$db = DevblocksPlatform::getDatabaseService();
 		$active_worker = CerberusApplication::getActiveWorker();
-		$visit = CerberusApplication::getVisit();
 		
 		$worklists = DAO_WorkerWorkspaceList::getWhere(sprintf("%s = %s",
 			DAO_WorkerWorkspaceList::WORKSPACE,
@@ -599,9 +609,6 @@ class ChHomePage extends CerberusPageExtension {
 			
 			$workspace = $rename_workspace;
 		}
-		
-		// Change active tab
-		$visit->set(CerberusVisit::KEY_HOME_SELECTED_TAB, 'w_'.$workspace);
 		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('home')));	
 	}
