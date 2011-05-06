@@ -8,7 +8,7 @@
 		<!-- [TODO] Title -->
 		<title>{$settings->get('cerberusweb.core','helpdesk_title')}</title>
 		*}
-		<title>{$title|escape}</title>
+		<title>{$title}</title>
 		<link type="image/x-icon" rel="shortcut icon" href="{devblocks_url}favicon.ico{/devblocks_url}">
 		
 		<script type="text/javascript">
@@ -22,6 +22,7 @@
 
 		<!-- Application -->
 		<link type="text/css" rel="stylesheet" href="{devblocks_url}c=resource&p=cerberusweb.core&f=css/cerberus.css{/devblocks_url}?v={$smarty.const.APP_BUILD}">
+		<script type="text/javascript" src="{devblocks_url}c=resource&p=cerberusweb.core&f=js/cerberus.js{/devblocks_url}?v={$smarty.const.APP_BUILD}"></script>
 
 		<style type="text/css">
 			BODY { margin:0px; padding:0px; }
@@ -37,15 +38,20 @@
 					<table cellpadding="0" cellspacing="0" border="0" width="100%">
 						<tr>
 							<td width="1%" nowrap="nowrap" align="left" style="padding-right:20px;padding-bottom:5px;">
-								<a href="{if !empty($return_url)}{$return_url|escape}{else}{devblocks_url}{/devblocks_url}{/if}"><span class="cerb-sprite sprite-logo_small"></span></a>
+								<a href="{if !empty($return_url)}{$return_url}{else}{devblocks_url}{/devblocks_url}{/if}"><span class="cerb-sprite sprite-logo_small"></span></a>
 							</td>
 							<td align="left" width="98%;" valign="top">
-								<h2 style="display:inline;">{$title|escape}</h2> &nbsp; 
-								<a href="{$url|escape}" target="_blank">{$url|truncate:128:'...':false|escape}</a>
-								<br>
+								<h2>{$title}</h2> &nbsp;
+								{if !empty($content)}
+									<a href="{$url}" target="_blank">{$content}</a>
+								{else} 
+									<a href="{$url}" target="_blank">{$url}</a>
+								{/if} 
+								<div style="margin-top:5px;">
 								{if !empty($toolbar_extension) && !empty($item) && method_exists($toolbar_extension, 'render')}
 									{$toolbar_extension->render($item)}
 								{/if}
+								</div>
 							</td>
 							<td width="1%" nowrap="nowrap" align="right" valign="top" style="padding-right:10px;padding-top:10px;">
 								{if !empty($count)}
@@ -57,7 +63,7 @@
 								{/if}
 							</td>
 							<td style="padding-right:10px;padding-top:10px;" valign="top">
-								<form action="{if !empty($url)}{$url|escape}{else}{$return_url}{/if}" method="get">
+								<form action="{if !empty($url)}{$url}{else}{$return_url}{/if}" method="get">
 								<button type="button" onclick="this.form.submit();"> X </button>
 								</form>
 							</td>
@@ -68,7 +74,7 @@
 			</tr>
 			<tr>
 				<td>
-					<iframe id="explorerFrame" src="{$url|escape}" frameborder="0"></iframe>
+					<iframe id="explorerFrame" src="{$url}" frameborder="0"></iframe>
 				</td>
 			</tr>
 		</table>
@@ -77,6 +83,9 @@
 
 <script type="text/javascript">
 var keys = function(event) {
+	if(event.altKey || event.ctrlKey || event.shiftKey || event.metaKey)
+		return;
+		
 	// Don't fire if we're inside any form elements
 	if($(event.target).filter(':input').length > 0)
 		return;

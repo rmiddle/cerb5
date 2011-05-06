@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE tmx SYSTEM "tmx14.dtd">
+<!DOCTYPE tmx>
 <tmx version="1.4">
 	<header datatype="winres" segtype="sentence" adminlang="en-us"
 		srclang="en-us" o-tmf="abc" />
@@ -8,15 +8,6 @@
 			<tuv xml:lang="en_US"><seg>Opportunities</seg></tuv>
 		</tu>
 		
-		<!-- Contexts -->
-		
-		<tu tuid='context.opportunity.assigned'>
-			<tuv xml:lang="en_US"><seg>%s assigned an opportunity to you.</seg></tuv>
-		</tu>
-		<tu tuid='context.opportunity.commented'>
-			<tuv xml:lang="en_US"><seg>%s commented on an opportunity.</seg></tuv>
-		</tu>
-
 		<!-- ACL -->
 		
 		<tu tuid='acl.crm.opp.actions.create'>
@@ -36,6 +27,12 @@
 		</tu>
 		<tu tuid='acl.crm.opp.view.actions.export'>
 			<tuv xml:lang="en_US"><seg>[Opportunities] Can export opportunity lists to CSV/XML</seg></tuv>
+		</tu>
+
+		<!-- Activities -->
+		
+		<tu tuid='activities.opp.status'>
+			<tuv xml:lang="en_US"><seg>{{actor}} changed opportunity {{target}} to status {{status}}</seg></tuv>
 		</tu>
 
 		<!-- Common Strings -->

@@ -5,6 +5,7 @@ class DAO_ViewFiltersPreset extends DevblocksORMHelper {
 	const VIEW_CLASS = 'view_class';
 	const WORKER_ID = 'worker_id';
 	const PARAMS_JSON = 'params_json';
+	const SORT_JSON = 'sort_json';
 
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
@@ -41,7 +42,7 @@ class DAO_ViewFiltersPreset extends DevblocksORMHelper {
 		list($where_sql, $sort_sql, $limit_sql) = self::_getWhereSQL($where, $sortBy, $sortAsc, $limit);
 		
 		// SQL
-		$sql = "SELECT id, name, view_class, worker_id, params_json ".
+		$sql = "SELECT id, name, view_class, worker_id, params_json, sort_json ".
 			"FROM view_filters_preset ".
 			$where_sql.
 			$sort_sql.
@@ -81,6 +82,16 @@ class DAO_ViewFiltersPreset extends DevblocksORMHelper {
 			$object->view_class = $row['view_class'];
 			$object->worker_id = $row['worker_id'];
 			$object->params = DAO_WorkerViewModel::decodeParamsJson($row['params_json']);
+			
+			// Sorting
+			if(!empty($row['sort_json'])) {
+				$sort_json = json_decode($row['sort_json'], true);
+				if(isset($sort_json['by']))
+					$object->sort_by = $sort_json['by']; 
+				if(isset($sort_json['asc']))
+					$object->sort_asc = $sort_json['asc']; 
+			}
+			
 			$objects[$object->id] = $object;
 		}
 		
@@ -103,29 +114,14 @@ class DAO_ViewFiltersPreset extends DevblocksORMHelper {
 		return true;
 	}
 	
-    /**
-     * Enter description here...
-     *
-     * @param array $columns
-     * @param DevblocksSearchCriteria[] $params
-     * @param integer $limit
-     * @param integer $page
-     * @param string $sortBy
-     * @param boolean $sortAsc
-     * @param boolean $withCounts
-     * @return array
-     */
-    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
-		$db = DevblocksPlatform::getDatabaseService();
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_ViewFiltersPreset::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy]) || !in_array($sortBy,$columns))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based
-		$total = -1;
 		
 		$select_sql = sprintf("SELECT ".
 			"view_filters_preset.id as %s, ".
@@ -153,7 +149,43 @@ class DAO_ViewFiltersPreset extends DevblocksORMHelper {
 			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
 			
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
-			
+		
+		$result = array(
+			'primary_table' => 'view_filters_preset',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => false,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+	
+    /**
+     * Enter description here...
+     *
+     * @param array $columns
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($columns, $params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents($columns,$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
@@ -163,13 +195,14 @@ class DAO_ViewFiltersPreset extends DevblocksORMHelper {
 			
 		// [TODO] Could push the select logic down a level too
 		if($limit > 0) {
-    		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
+    		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
 		} else {
 		    $rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); /* @var $rs ADORecordSet */
             $total = mysql_num_rows($rs);
 		}
 		
 		$results = array();
+		$total = -1;
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			$result = array();
@@ -202,6 +235,8 @@ class Model_ViewFiltersPreset {
 	public $view_class;
 	public $worker_id;
 	public $params;
+	public $sort_by;
+	public $sort_asc;
 };
 
 class SearchFields_ViewFiltersPreset implements IDevblocksSearchFields {
@@ -224,7 +259,7 @@ class SearchFields_ViewFiltersPreset implements IDevblocksSearchFields {
 		);
 		
 		// Custom Fields
-		//$fields = DAO_CustomField::getBySource(PsCustomFieldSource_XXX::ID);
+		//$fields = DAO_CustomField::getByContext(CerberusContexts::XXX);
 
 		//if(is_array($fields))
 		//foreach($fields as $field_id => $field) {

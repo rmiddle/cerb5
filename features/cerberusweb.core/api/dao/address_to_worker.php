@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,7 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
@@ -164,6 +164,24 @@ class DAO_AddressToWorker { // extends DevblocksORMHelper
 			return $addresses[$address];
 			
 		return NULL;
+	}
+	
+	static function getAll($nocache=false, $with_disabled=false) {
+		// [TODO] Cache? getAllActive?
+		
+		$workers = DAO_Worker::getAll();
+		$addresses = self::getWhere();
+		$results = array();
+		
+		foreach($addresses as $address) {
+			@$worker = $workers[$address->worker_id];
+			if(empty($worker) || $worker->is_disabled)
+				continue;
+
+			$results[$address->address] = $address;
+		}
+		
+		return $results;
 	}
 	
 	static function getWhere($where=null) {

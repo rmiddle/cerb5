@@ -58,71 +58,6 @@ var markitupHTMLSettings = {
 	]
 } 
 
-// ***********
-function CreateKeyHandler(cb) {
-//	if(is_ie) {
-//		func = window.eval("blank=function(e) {return window.cb(e);}");
-//	} else {
-//		func =  function(e) {return window.cb(e);}
-//	}
-
-	if(window.Event) {
-		document.captureEvents(Event.KEYDOWN);
-	}
-	
-	document.onkeydown = cb;
-}
-
-function getKeyboardKey(evt,as_code) {
-	var browser=navigator.userAgent.toLowerCase();
-	var is_ie=(browser.indexOf("msie")!=-1 && document.all);
-	
-	  if(window.Event) {
-	  	if(evt.altKey || evt.metaKey || evt.ctrlKey) {
-	  		return;
-	  	}
-	    mykey = evt.which;
-	  }
-	  else if(event) {
-	  	evt = event;
-	  	if((evt.modifiers & event.ALT_MASK) || (evt.modifiers & event.CTRL_MASK)) {
-			return;
-		}
-	  	if(evt.altKey || evt.metaKey || evt.ctrlKey) { // new style
-	  		return;
-	  	}
-   		mykey = evt.keyCode
-	  }
-	  
-	  mychar = String.fromCharCode(mykey);
-	  
-	var src=null;
-	
-	try {
-		if(evt.srcElement) src=evt.srcElement;
-		else if(evt.target) src=evt.target;
-	}
-	catch(e) {}
-
-	if(null == src) {
-		return;
-	}
-  
-	for(var element=src;element!=null;element=element.parentNode) {
-		var nodename=element.nodeName;
-		if(nodename=="TEXTAREA"	
-			|| (nodename=="SELECT")
-			|| (nodename=="INPUT") //  && element.type != "checkbox"
-			|| (nodename=="BUTTON")
-			)
-			{ return; }
-	}
-	
-	return (null==as_code||!as_code) ? mychar : mykey;
-}
-
-// ***********
-
 function appendFileInput(divName,fieldName) {
 	var frm = document.getElementById(divName);
 	if(null == frm) return;
@@ -209,7 +144,6 @@ var cAjaxCalls = function() {
 			genericAjaxPopupClose('peek');
 			
 			document.location = '#top';
-			genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 			
 			hideLoadingPanel();
 		});
@@ -298,7 +232,6 @@ var cAjaxCalls = function() {
 
 		genericAjaxPost(formName, divName, 'c=tickets&a=viewMoveTickets&view_id='+view_id, function(html) {
 			$('#'+divName).html(html);
-			genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 		});
 	}
 
@@ -312,42 +245,24 @@ var cAjaxCalls = function() {
 			case 'merge':
 				genericAjaxPost(formName, '', 'c=tickets&a=viewMergeTickets&view_id='+view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 			case 'not_spam':
 				genericAjaxPost(formName, '', 'c=tickets&a=viewNotSpamTickets&view_id='+view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
-					hideLoadingPanel();
-				});
-				break;
-			case 'take':
-				genericAjaxPost(formName, '', 'c=tickets&a=viewTakeTickets&view_id='+view_id, function(html) {
-					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
-					hideLoadingPanel();
-				});
-				break;
-			case 'surrender':
-				genericAjaxPost(formName, '', 'c=tickets&a=viewSurrenderTickets&view_id='+view_id, function(html) {
-					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 			case 'waiting':
 				genericAjaxPost(formName, '', 'c=tickets&a=viewWaitingTickets&view_id='+view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 			case 'not_waiting':
 				genericAjaxPost(formName, '', 'c=tickets&a=viewNotWaitingTickets&view_id='+view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
@@ -367,26 +282,84 @@ var cAjaxCalls = function() {
 			case 1: // spam
 				genericAjaxPost(formName, '', 'c=tickets&a=viewSpamTickets&view_id=' + view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 			case 2: // delete
 				genericAjaxPost(formName, '', 'c=tickets&a=viewDeleteTickets&view_id=' + view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 			default: // close
 				genericAjaxPost(formName, '', 'c=tickets&a=viewCloseTickets&view_id=' + view_id, function(html) {
 					$('#'+divName).html(html);
-					genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 					hideLoadingPanel();
 				});
 				break;
 		}
 	}
+	
+	this.viewAddFilter = function(view_id, field, oper, values) {
+		$view = $('#view'+view_id);
+		
+		post_str = 'c=internal' +
+			'&a=viewAddFilter' + 
+			'&id=' + view_id +
+			'&field=' + encodeURIComponent(field) +
+			'&oper=' + encodeURIComponent(oper) +
+			'&' + $.param(values, true)  
+			;
+		
+		cb = function(o) {
+			$view_filters = $('#viewCustomFilters'+view_id);
+			
+			if(0 != $view_filters.length) {
+				$view_filters.html(o);
+				$view_filters.trigger('view_refresh')
+			}
+		}
+		
+		options = {};
+		options.type = 'POST';
+		options.data = post_str; //$('#'+formName).serialize();
+		options.url = DevblocksAppPath+'ajax.php';//+(null!=args?('?'+args):''),
+		options.cache = false;
+		options.success = cb;
+		
+		$.ajax(options);
+	}
+	
+	this.viewRemoveFilter = function(view_id, fields) {
+		$view = $('#view'+view_id);
+		
+		post_str = 'c=internal' +
+			'&a=viewAddFilter' + 
+			'&id=' + view_id
+			;
+		
+		for(field in fields) {
+			post_str += '&field_deletes[]=' + encodeURIComponent(fields[field]);
+		}
+		
+		cb = function(o) {
+			$view_filters = $('#viewCustomFilters'+view_id);
+			
+			if(0 != $view_filters.length) {
+				$view_filters.html(o);
+				$view_filters.trigger('view_refresh')
+			}
+		}
+		
+		options = {};
+		options.type = 'POST';
+		options.data = post_str; //$('#'+formName).serialize();
+		options.url = DevblocksAppPath+'ajax.php';//+(null!=args?('?'+args):''),
+		options.cache = false;
+		options.success = cb;
+		
+		$.ajax(options);
+	}	
 	
 	this.postAndReloadView = function(frm,view_id) {
 		
@@ -395,8 +368,6 @@ var cAjaxCalls = function() {
 		genericAjaxPost(frm,view_id,'',
 			function(html) {
 				$('#'+view_id).html(html);
-				genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');					
-	
 				$('#'+view_id).fadeTo("slow", 1.0);
 	
 				genericAjaxPopupClose('peek');
@@ -408,7 +379,6 @@ var cAjaxCalls = function() {
 		genericAjaxGet('','c=tickets&a=viewUndo&view_id=' + view_id,
 			function(html) {
 				$('#view'+view_id).html(html);
-				genericAjaxGet('viewSidebar'+view_id,'c=tickets&a=refreshSidebar');
 			}
 		);		
 	}
@@ -419,6 +389,9 @@ var cAjaxCalls = function() {
 
 		if(null == options.minLength)
 			options.minLength = 2;
+		
+		if(null == options.autoFocus)
+			options.autoFocus = true;
 		
 		if(null != options.multiple && options.multiple) {
 			options.source = function (request, response) {
@@ -441,7 +414,6 @@ var cAjaxCalls = function() {
 					}
 				});
 			}
-			
 			options.select = function(event, ui) {
 				var value = $(this).val();
 				var pos = value.lastIndexOf(',');
@@ -472,10 +444,13 @@ var cAjaxCalls = function() {
 		
 		if(null == options.minLength)
 			options.minLength = 1;
+		
+		if(null == options.autoFocus)
+			options.autoFocus = true;
 
 		$(sel).autocomplete(options);
 	}
-
+	
 	this.countryAutoComplete = function(sel, options) {
 		if(null == options) options = { };
 		
@@ -484,50 +459,121 @@ var cAjaxCalls = function() {
 		if(null == options.minLength)
 			options.minLength = 1;
 
+		if(null == options.autoFocus)
+			options.autoFocus = true;
+		
 		$(sel).autocomplete(options);
 	}
-	
+
 	this.chooser = function(button, context, field_name, options) {
 		if(null == field_name)
 			field_name = 'context_id';
 		
 		if(null == options) 
 			options = { };
-		if(null == options.after)
-			options.after = true;
 		
 		$button = $(button);
 
+		// The <ul> buffer
+		$ul = $button.next('ul.chooser-container');
+		
+		// Add the container if it doesn't exist
+		if(0==$ul.length) {
+			$ul = $('<ul class="bubbles chooser-container"></ul>');
+			$ul.insertAfter($button);
+		}
+		
+		// The chooser search button
 		$button.click(function(event) {
 			$button = $(this);
+			$ul = $(this).nextAll('ul.chooser-container:first');
 			$chooser=genericAjaxPopup('chooser','c=internal&a=chooserOpen&context=' + context,null,true,'750');
 			$chooser.one('chooser_save', function(event) {
-				// Look for an existing label
-				if(!options.after)
-					$label = $button.prev('ul.chooser-container');
-				else
-					$label = $button.next('ul.chooser-container');
-				
-				// Add the container
-				if(0==$label.length) {
-					$label = $('<ul class="bubbles chooser-container"></ul>');
-					if(!options.after)
-						$label.insertBefore($button);
-					else
-						$label.insertAfter($button);
-				}
-				
 				// Add the labels
 				for(var idx in event.labels)
-					if(0==$label.find('input:hidden[value='+event.values[idx]+']').length) {
+					if(0==$ul.find('input:hidden[value='+event.values[idx]+']').length) {
 						$li = $('<li>'+event.labels[idx]+'<input type="hidden" name="' + field_name + '[]" value="'+event.values[idx]+'"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>');
 						if(null != options.style)
 							$li.addClass(options.style);
-						$label.append($li);
+						$ul.append($li);
 					}
 			});
 		});
+		
+		// Autocomplete
+		if(null != options.autocomplete && true == options.autocomplete) {
+			
+			if(null == options.autocomplete_class) {
+				options.autocomplete_class = ''; //'input_search';
+			}
+			
+			$autocomplete = $('<input type="text" class="'+options.autocomplete_class+'" size="45">');
+			$autocomplete.insertBefore($button);
+			
+			$autocomplete.autocomplete({
+				source: DevblocksAppPath+'ajax.php?c=internal&a=autocomplete&context=' + context,
+				minLength: 1,
+				focus:function(event, ui) {
+					return false;
+				},
+				autoFocus:true,
+				select:function(event, ui) {
+					$this = $(this);
+					$label = ui.item.label;
+					$labelEscaped = $label.replace("<","&lt;");
+					$labelEscaped = $labelEscaped.replace(">","&gt;");
+					$value = ui.item.value;
+					$ul = $(this).nextAll('button:first').nextAll('ul.chooser-container:first');
+					
+					if($label.length > 0 && $value.length > 0) {
+						if(0==$ul.find('input:hidden[value='+$value+']').length) {
+							$li = $('<li>'+$labelEscaped+'<input type="hidden" name="' + field_name + '[]" title="'+$labelEscaped+'" value="'+$value+'"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>');
+							$ul.append($li);
+						}
+					}
+					
+					$this.val('');
+					return false;
+				}
+			});
+		}
 	}
+	
+	this.chooserFile = function(button, field_name, options) {
+		if(null == field_name)
+			field_name = 'context_id';
+		
+		if(null == options) 
+			options = { };
+		
+		$button = $(button);
+
+		// The <ul> buffer
+		$ul = $button.next('ul.chooser-container');
+		
+		// Add the container if it doesn't exist
+		if(0==$ul.length) {
+			$ul = $('<ul class="bubbles chooser-container"></ul>');
+			$ul.insertAfter($button);
+		}
+		
+		// The chooser search button
+		$button.click(function(event) {
+			$button = $(this);
+			$ul = $(this).nextAll('ul.chooser-container:first');
+			$chooser=genericAjaxPopup('chooser','c=internal&a=chooserOpenFile',null,true,'750');
+			$chooser.one('chooser_save', function(event) {
+				// Add the labels
+				for(var idx in event.labels)
+					if(0==$ul.find('input:hidden[value='+event.values[idx]+']').length) {
+						$li = $('<li>'+event.labels[idx]+'<input type="hidden" name="' + field_name + '[]" value="'+event.values[idx]+'"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>');
+						if(null != options.style)
+							$li.addClass(options.style);
+						$ul.append($li);
+					}
+			});
+		});
+	}	
 }
 
 var ajax = new cAjaxCalls();

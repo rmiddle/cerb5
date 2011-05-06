@@ -1,4 +1,4 @@
-{include file="file:$core_tpl/tickets/submenu.tpl"}
+{include file="devblocks:cerberusweb.core::tickets/submenu.tpl"}
 
 {if !empty($last_ticket_mask)}
 <div class="ui-widget">
@@ -28,7 +28,7 @@
 					<td width="100%">
 						<select name="to" id="to" class="required" style="border:1px solid rgb(180,180,180);padding:2px;">
 							{foreach from=$destinations item=destination}
-							<option value="{$destination}" {if 0==strcasecmp($destination,$draft->params.to)}selected="selected"{/if}>{$destination}</option>
+							<option value="{$destination->email}" {if 0==strcasecmp($destination->email,$draft->params.to)}selected="selected"{/if}>{$destination->email}</option>
 							{/foreach}
 						</select>
 					</td>
@@ -36,12 +36,12 @@
 				<tr>
 					<td width="0%" nowrap="nowrap" valign="middle" align="right"><b>{'mail.log_message.requesters'|devblocks_translate}:</b>&nbsp;</td>
 					<td width="100%">
-						<input type="text" name="reqs" value="{$draft->params.requesters|escape}" class="required" style="border:1px solid rgb(180,180,180);padding:2px;width:98%;">
+						<input type="text" name="reqs" value="{$draft->params.requesters}" class="required" style="border:1px solid rgb(180,180,180);padding:2px;width:98%;">
 					</td>
 				</tr>
 				<tr>
 					<td width="0%" nowrap="nowrap" valign="middle" align="right"><b>{'message.header.subject'|devblocks_translate}:</b>&nbsp;</td>
-					<td width="100%"><input type="text" size="100" name="subject" value="{$draft->subject|escape}" class="required" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;"></td>
+					<td width="100%"><input type="text" size="100" name="subject" value="{$draft->subject}" class="required" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;"></td>
 				</tr>
 			</table>
 		</td>
@@ -49,22 +49,36 @@
 	
 	<tr>
 		<td>
-		<button id="btnSaveDraft" type="button" onclick="genericAjaxPost('frmLogTicket',null,'c=tickets&a=saveDraft&type=create',function(json) { var obj = $.parseJSON(json); if(!obj || !obj.html || !obj.draft_id) return; $('#divDraftStatus').html(obj.html); $('#frmLogTicket input[name=draft_id]').val(obj.draft_id); } );"><span class="cerb-sprite sprite-check"></span> Save Draft</button>
-		<button type="button" onclick="genericAjaxGet('','c=tickets&a=getLogTicketSignature&email='+escape(selectValue(this.form.to)),function(text) { insertAtCursor(document.getElementById('content'), text); } );"><span class="cerb-sprite sprite-document_edit"></span> Insert Signature</button>
-		<button type="button" onclick="genericAjaxPopup('peek','c=display&a=showSnippets&text=content&contexts=cerberusweb.contexts.worker',null,false,'550');"><span class="cerb-sprite sprite-text_rich"></span> {$translate->_('common.snippets')|capitalize}</button>
-		{* Plugin Toolbar *}
-		{if !empty($logmail_toolbaritems)}
-			{foreach from=$logmail_toolbaritems item=renderer}
-				{if !empty($renderer)}{$renderer->render($message)}{/if}
-			{/foreach}
-		{/if}
-		<br>
-		
-		<div id="logTicketToolbarOptions"></div>
-		<div id="divDraftStatus"></div>
-		
-		<textarea name="content" id="content" rows="15" cols="80" class="reply required" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;">{$draft->body}</textarea><br>
-		<label><input type="checkbox" name="send_to_requesters" value="1" {if $draft->params.send_to_reqs}checked="checked"{/if}> {'mail.log_message.send_to_requesters'|devblocks_translate}</label>
+			<div>
+				<fieldset style="display:inline-block;">
+					<legend>Actions</legend>
+					
+					<button id="btnSaveDraft" type="button" onclick="genericAjaxPost('frmLogTicket',null,'c=tickets&a=saveDraft&type=create',function(json) { var obj = $.parseJSON(json); if(!obj || !obj.html || !obj.draft_id) return; $('#divDraftStatus').html(obj.html); $('#frmLogTicket input[name=draft_id]').val(obj.draft_id); } );"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> Save Draft</button>
+					<button type="button" id="btnInsertSig" title="(Ctrl+Shift+G)" onclick="genericAjaxGet('','c=tickets&a=getLogTicketSignature&email='+escape(selectValue(this.form.to)),function(text) { insertAtCursor(document.getElementById('content'), text); } );"><span class="cerb-sprite sprite-document_edit"></span> Insert Signature</button>
+					{* Plugin Toolbar *}
+					{if !empty($logmail_toolbaritems)}
+						{foreach from=$logmail_toolbaritems item=renderer}
+							{if !empty($renderer)}{$renderer->render($message)}{/if}
+						{/foreach}
+					{/if}
+				</fieldset>
+				
+				<fieldset style="display:inline-block;">
+					<legend>{'common.snippets'|devblocks_translate|capitalize}</legend>
+					
+					<div>
+						Insert: 
+						<input type="text" size="25" class="context-snippet autocomplete">
+						<button type="button" onclick="openSnippetsChooser(this);"><span class="cerb-sprite sprite-view"></span></button>
+						<button type="button" onclick="genericAjaxPopup('peek','c=tickets&a=showSnippetsPeek&id=0&context=cerberusweb.contexts.worker&context_id={$active_worker->id}',null,false,'550');"><span class="cerb-sprite2 sprite-plus-circle-frame"></span></button>
+					</div>
+				</fieldset>
+			</div>
+			
+			<div id="logTicketToolbarOptions"></div>
+			<div id="divDraftStatus"></div>
+			
+			<textarea name="content" id="content" rows="15" cols="80" class="reply required" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;">{$draft->body}</textarea><br>
 		</td>
 	</tr>
 				
@@ -75,7 +89,7 @@
 			<tr>
 				<td style="background-color:rgb(0,184,4);width:10px;"></td>
 				<td style="padding-left:5px;">
-					<H2>{$translate->_('display.convo.attachments_label')|capitalize}</H2>
+					<H2>{$translate->_('common.attachments')|capitalize}:</H2>
 					{'display.reply.attachments_limit'|devblocks_translate:$upload_max_filesize}<br>
 					
 					<b>{$translate->_('display.reply.attachments_add')}</b> 
@@ -204,36 +218,10 @@
 								<br>
 								</div>
 		
-								{if $active_worker->hasPriv('core.ticket.actions.assign')}
-									<b>{$translate->_('display.reply.next.handle_reply')}</b><br>
-									<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-add"></span></button>
-							      	<br>
-							      	<br>
-								{/if}
-						      	
-								{if $active_worker->hasPriv('core.ticket.actions.move')}
-								<b>{$translate->_('display.reply.next.move')}</b><br>  
-						      	<select name="bucket_id">
-						      		<option value="">-- {$translate->_('display.reply.next.move.no_thanks')|lower} --</option>
-						      		<optgroup label="{$translate->_('common.inboxes')|capitalize}">
-						      		{foreach from=$teams item=team}
-						      			<option value="t{$team->id}">{$team->name}</option>
-						      		{/foreach}
-						      		</optgroup>
-						      		{foreach from=$team_categories item=categories key=teamId}
-										{if !empty($active_worker_memberships.$teamId)}
-							      			{assign var=team value=$teams.$teamId}
-							      			<optgroup label="-- {$team->name} --">
-							      			{foreach from=$categories item=category}
-							    				<option value="c{$category->id}">{$category->name}</option>
-							    			{/foreach}
-							    			</optgroup>
-										{/if}
-						     		{/foreach}
-						      	</select><br>
-						      	<br>
-								{/if}
-						      	
+								<label>
+								<input type="checkbox" name="add_me_as_watcher" value="1"> 
+								{'common.watchers.add_me'|devblocks_translate|capitalize}
+								</label>
 							</td>
 						</tr>
 					</table>
@@ -247,9 +235,9 @@
 	<tr>
 		<td>
 			<br>
-			<button type="submit" onclick="$('#btnSaveDraft').click();"><span class="cerb-sprite sprite-check"></span> Send Message</button>
+			<button type="submit" onclick="$('#btnSaveDraft').click();"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> Send Message</button>
 			<button type="button" onclick="$('#btnSaveDraft').click();document.location='{devblocks_url}c=tickets{/devblocks_url}';"><span class="cerb-sprite sprite-media_pause"></span> {$translate->_('display.ui.continue_later')|capitalize}</button>
-			<button type="button" onclick="if(confirm('Are you sure you want to discard this message?')) { if(0!==this.form.draft_id.value.length) { genericAjaxGet('', 'c=tickets&a=deleteDraft&draft_id='+escape(this.form.draft_id.value)); } document.location='{devblocks_url}c=tickets{/devblocks_url}'; } "><span class="cerb-sprite sprite-delete"></span> {$translate->_('display.ui.discard')|capitalize}</button>
+			<button type="button" onclick="if(confirm('Are you sure you want to discard this message?')) { if(0!==this.form.draft_id.value.length) { genericAjaxGet('', 'c=tickets&a=deleteDraft&draft_id='+escape(this.form.draft_id.value)); } document.location='{devblocks_url}c=tickets{/devblocks_url}'; } "><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('display.ui.discard')|capitalize}</button>
 		</td>
 	</tr>
   </tbody>
@@ -266,7 +254,98 @@
 		setInterval("$('#btnSaveDraft').click();", 30000);
 		
 		$('#frmLogTicket button.chooser_worker').each(function() {
-			ajax.chooser(this,'cerberusweb.contexts.worker','worker_id');
-		});		
+			ajax.chooser(this,'cerberusweb.contexts.worker','worker_id', { autocomplete:true });
+		});
+
+		$('#frmLogTicket input:text.context-snippet').autocomplete({
+			source: DevblocksAppPath+'ajax.php?c=internal&a=autocomplete&context=cerberusweb.contexts.snippet&contexts=&contexts=cerberusweb.contexts.worker',
+			minLength: 1,
+			focus:function(event, ui) {
+				return false;
+			},
+			autoFocus:true,
+			select:function(event, ui) {
+				$this = $(this);
+				$textarea = $('#frmLogTicket textarea#content');
+				
+				$label = ui.item.label.replace("<","&lt;").replace(">","&gt;");
+				$value = ui.item.value;
+				
+				// Now we need to read in each snippet as either 'raw' or 'parsed' via Ajax
+				url = 'c=internal&a=snippetPaste&id=' + $value;
+
+				// Context-dependent arguments
+				if ('cerberusweb.contexts.worker'==ui.item.context) {
+					url += "&context_id={$active_worker->id}";
+				}
+
+				genericAjaxGet('',url,function(txt) {
+					$textarea.insertAtCursor(txt);
+				}, { async: false });
+
+				$this.val('');
+				return false;
+			}
+		});
+		
+		{if $pref_keyboard_shortcuts}
+		
+		// Reply textbox
+		$('textarea#content').keypress(function(event) {
+			if(!$(this).is(':focus'))
+				return;
+			
+			if(!event.ctrlKey) //!event.altKey && !event.ctrlKey && !event.metaKey
+				return;
+			
+			event.preventDefault();
+
+			if(event.ctrlKey && event.shiftKey) {
+				switch(event.which) {
+					case 7:  // (G) Insert Signature
+						try {
+							$('#btnInsertSig').click();
+						} catch(ex) { } 
+						break;
+					case 9:  // (I) Insert Snippet
+						try {
+							$(this).closest('td').find('.context-snippet').focus();
+						} catch(ex) { } 
+						break;
+				}
+			}
+		});
+		
+		{/if}		
 	});
+	
+	function openSnippetsChooser(button) {
+		$chooser=genericAjaxPopup('chooser','c=internal&a=chooserOpen&context=cerberusweb.contexts.snippet&contexts[]=cerberusweb.contexts.worker',null,true,'750');
+		$chooser.one('chooser_save', function(event) {
+			event.stopPropagation();
+			$button = $(button);
+			$textarea = $('#content');
+			
+			for(idx in event.labels) {
+				value = event.values[idx];
+				valueParts = value.split('::');
+				
+				if(null == valueParts || null == valueParts[0] || null == valueParts[1])
+					continue;
+				
+				// Now we need to read in each snippet as either 'raw' or 'parsed' via Ajax
+				url = 'c=internal&a=snippetPaste&id='+valueParts[0];
+				
+				// Context-dependent arguments
+				if ('cerberusweb.contexts.worker'==valueParts[1]) {
+					url += "&context_id={$active_worker->id}";
+				}
+				
+				// Ajax the content (synchronously)
+				genericAjaxGet('',url,function(txt) {
+					$textarea.insertAtCursor(txt);
+				}, { async: false });
+			}
+		});
+	}	
 </script>

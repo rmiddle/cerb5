@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,39 +43,30 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-class ChSimulatorTour extends DevblocksHttpResponseListenerExtension implements IDevblocksTourListener {
-    function __construct($manifest) {
-        parent::__construct($manifest);
-    }
-    
-    /**
-     * @return DevblocksTourCallout[]
-     */
-    function registerCallouts() {
-        return array(
-            '' => new DevblocksTourCallout('',''),
-        );
-    }
-    
+class ChSimulatorTour extends DevblocksHttpResponseListenerExtension {
     function run(DevblocksHttpResponse $response, Smarty $tpl) {
         $path = $response->path;
 
         switch(array_shift($path)) {
-            case NULL:
-            case "simulator":
-		        $tour = array(
-		            'title' => 'Simulator',
-		            'body' => "With the Simulator you can create any number of high-quality sample tickets, which allows you to immediately experiment with how the helpdesk works. Sample tickets may be created in various \"flavors\", such as Retail or Spam.  These flavors allow you to test your FAQ, e-mail templates and anti-spam filtering.",
-		        );
+            case 'config':
+		        switch(array_shift($path)) {
+		        	case 'simulator':
+				        $tour = array(
+				            'title' => 'Simulator',
+				            'body' => "With the Simulator you can create any number of high-quality sample tickets, which allows you to immediately experiment with how the helpdesk works. Sample tickets may be created in various \"flavors\", such as Retail or Spam.  These flavors allow you to test your FAQ, e-mail templates and anti-spam filtering.",
+				        	'callouts' => array(
+				        	),
+				        );
+		        		break;
+		        }
                 break;
         }
         
         if(!empty($tour))
             $tpl->assign('tour', $tour);
     }
-}
-?>
+};

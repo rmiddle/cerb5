@@ -1,14 +1,14 @@
-<form action="{devblocks_url}{/devblocks_url}" method="POST" id="formDisplayReq" name="formDisplayReq">
+<form action="{devblocks_url}{/devblocks_url}" method="POST" id="formDisplayReq" name="formDisplayReq" onsubmit="return false;">
 <input type="hidden" name="c" value="display">
 <input type="hidden" name="a" value="saveRequestersPanel">
 <input type="hidden" name="ticket_id" value="{$ticket_id}">
 
 <b>{'display.ui.add_to_recipients'|devblocks_translate}:</b><br>
-<button type="button" class="chooser_address"><span class="cerb-sprite sprite-add"></span></button>
+<button type="button" class="chooser_address"><span class="cerb-sprite2 sprite-plus-circle-frame"></span></button>
 <ul class="chooser-container bubbles">
 {if !empty($requesters)}
 {foreach from=$requesters item=requester}
-<li>{$requester->email|escape}<input type="hidden" name="address_id[]" value="{$requester->id|escape}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
+<li>{$requester->email}<input type="hidden" name="address_id[]" value="{$requester->id}"><a href="javascript:;" onclick="$(this).parent().remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a></li>
 {/foreach}
 {/if}	
 </ul>
@@ -20,7 +20,7 @@
 <br>
 <br>
 
-<button id="btnSaveRequestersPanel" type="button"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')|capitalize}</button>
+<button id="btnSaveRequestersPanel" type="button"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')|capitalize}</button>
 <br>
 </form>
 

@@ -1,11 +1,11 @@
-<!DOCTYPE plugin SYSTEM "../../libs/devblocks/plugin.dtd">
-<plugin>
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.devblocks.com/schema/plugin.xsd">
 	<id>cerberusweb.crm</id>
 	<name>[Cerb5] Opportunity Tracking</name>
 	<description>Create opportunities (sales leads) linked to e-mail addresses. Opportunity records can be created from the Activity menu or while reading tickets.</description>
 	<author>WebGroup Media, LLC.</author>
 	<revision>0</revision>
-	<link>http://www.cerberusweb.com/</link>
+	<link>http://wiki.cerb5.com/wiki/Features:Opportunity_Tracking</link>
 	<image>plugin.png</image>
 	
 	<!-- Plugin Dependencies -->
@@ -19,14 +19,18 @@
 	<patches>
 		<patch version="4.0.0-alpha" revision="6" file="patches/4.0.0_alpha.php" />
 		<patch version="4.1.0" revision="12" file="patches/4.1.0.php" />
-		<patch version="5.1.0-dev" revision="14" file="patches/5.1.0.php" />
+		<patch version="5.1.0-dev" revision="15" file="patches/5.1.0.php" />
 	</patches>
 	
 	<!-- Exported Classes -->
 	
 	<class_loader>
 		<file path="api/App.php">
-			<class name="CrmCustomFieldSource_Opportunity" />
+			<class name="Extension_CrmOpportunityTab" />
+			<class name="Extension_CrmOpportunityToolbarItem" />
+		</file>
+		<file path="api/dao/crm_opportunity.php">
+			<class name="Context_CrmOpportunity" />
 			<class name="DAO_CrmOpportunity" />
 			<class name="Model_CrmOpportunity" />
 			<class name="SearchFields_CrmOpportunity" />
@@ -42,6 +46,20 @@
 		<priv id="crm.opp.view.actions.broadcast" label="acl.crm.opp.view.actions.broadcast" />
 		<priv id="crm.opp.view.actions.export" label="acl.crm.opp.view.actions.export" />
 	</acl>
+	
+	<!-- Activity Points -->
+	
+	<activity_points>
+		<activity point="opp.status.closed_lost">
+			<param key="label_key" value="Opportunity Closed/Lost" />
+		</activity>
+		<activity point="opp.status.closed_won">
+			<param key="label_key" value="Opportunity Closed/Won" />
+		</activity>
+		<activity point="opp.status.open">
+			<param key="label_key" value="Opportunity Opened" />
+		</activity>
+	</activity_points>
 	
 	<!-- Events -->
 	
@@ -61,14 +79,16 @@
 			<id>cerberusweb.contexts.opportunity</id>
 			<name>Opportunity</name>
 			<class>
-				<file>api/App.php</file>
+				<file>api/dao/crm_opportunity.php</file>
 				<name>Context_Opportunity</name>
 			</class>
 			<params>
-				<param key="events">
+				<param key="view_class" value="View_CrmOpportunity" />
+				<param key="options">
 					<value>
-						<data key="context.assigned" value="context.opportunity.assigned" />
-						<data key="context.commented" value="context.opportunity.commented" />
+						<data key="create" />
+						<data key="find" />
+						<data key="workspace" />
 					</value>
 				</param>
 			</params>
@@ -119,33 +139,6 @@
 			<params>
 				<param key="uri" value="crm" />
 				<param key="menutitle" value="" />
-			</params>
-		</extension>
-
-		<!-- Custom Field Sources -->
-		
-		<extension point="cerberusweb.fields.source">
-			<id>crm.fields.source.opportunity</id>
-			<name>Opportunity</name>
-			<class>
-				<file>api/App.php</file>
-				<name>CrmCustomFieldSource_Opportunity</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-
-		<!-- Workspace Sources -->
-		
-		<extension point="cerberusweb.workspace.source">
-			<id>crm.workspace.source.opportunity</id>
-			<name>Opportunities</name>
-			<class>
-				<file>api/App.php</file>
-				<name>CrmWorkspaceSource_Opportunity</name>
-			</class>
-			<params>
-				<param key="view_class" value="View_CrmOpportunity" />
 			</params>
 		</extension>
 

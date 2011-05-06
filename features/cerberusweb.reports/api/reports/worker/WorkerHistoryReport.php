@@ -1,9 +1,5 @@
 <?php
 class ChReportWorkerHistory extends Extension_Report {
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	function render() {
 		$db = DevblocksPlatform::getDatabaseService();
 		$tpl = DevblocksPlatform::getTemplateService();
@@ -115,7 +111,6 @@ class ChReportWorkerHistory extends Extension_Report {
 		
 		if(null != ($view = C4_AbstractViewLoader::getView($defaults->id, $defaults))) {
 			$view->is_ephemeral = true;
-			$view->paramsDefault = array();
 			$view->removeAllParams();
 
 			$view->view_columns = array(

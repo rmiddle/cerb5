@@ -10,14 +10,14 @@
 
 <H3>Welcome to the Cerberus Helpdesk community!</H3>
 
-Cerberus Helpdesk is the culmination of over 8 years of R&amp;D to
+Cerberus Helpdesk is the culmination of over 9 years of R&amp;D to
 improve team-based webmail.  As with any such innovation, there may be some 
 concepts introduced that are completely new to you and your team.  This is 
 especially likely if you are migrating away from desktop e-mail programs to the 
 web for the first time.<br>
 <br>
 The best place to become familiar with the concepts used in Cerberus Helpdesk 
-is the <a href="http://wiki.cerb4.com/wiki/Main_Page" target="_blank">online documentation</a>. 
+is the <a href="http://wiki.cerb5.com/wiki/" target="_blank">online documentation</a>. 
 This area is dedicated to creating and maintaining tutorials, feature guides and best practices.<br>
 <br>
 
