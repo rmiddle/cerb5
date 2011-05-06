@@ -1579,8 +1579,13 @@ class ChTicketsPage extends CerberusPageExtension {
 			$host = empty($requester->host) ? 'localhost' : $requester->host;
 			DAO_Ticket::createRequester($requester->mailbox . '@' . $host, $ticket_id);
 		}
-		
+
 		$fields = array();
+		
+		// Custom field saves
+		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
+		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
+ 		
 
 		// Status
 		if(!empty($closed)) {
