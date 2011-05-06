@@ -272,6 +272,7 @@ switch($step) {
 	case STEP_DATABASE:
 		// Import scope (if post)
 		@$db_driver = DevblocksPlatform::importGPC($_POST['db_driver'],'string');
+		@$db_engine = DevblocksPlatform::importGPC($_POST['db_engine'],'string');
 		@$db_server = DevblocksPlatform::importGPC($_POST['db_server'],'string');
 		@$db_name = DevblocksPlatform::importGPC($_POST['db_name'],'string');
 		@$db_user = DevblocksPlatform::importGPC($_POST['db_user'],'string');
@@ -297,13 +298,25 @@ switch($step) {
 		
 		$tpl->assign('drivers', $drivers);
 		
-		if(!empty($db_driver) && !empty($db_server) && !empty($db_name) && !empty($db_user)) {
+		// [JAS]: Possible storage engines
+		
+		$engines = array(
+			'myisam' => 'MyISAM (Default)',
+			'innodb' => 'InnoDB (Recommended)',
+		);
+		
+		$tpl->assign('engines', $engines);
+		
+		if(!empty($db_driver) && !empty($db_engine) && !empty($db_server) && !empty($db_name) && !empty($db_user)) {
 			$db_passed = false;
-			$db_engine = 'InnoDB';
+			$errors = array();
 			
-			if(false != ($_db = mysql_connect($db_server, $db_user, $db_pass))) {
+			if(false !== (@$_db = mysql_connect($db_server, $db_user, $db_pass))) {
 				if(false !== mysql_select_db($db_name, $_db)) {
 					$db_passed = true;
+				} else {
+					$db_passed = false;
+					$errors[] = mysql_error($_db);
 				}
 				
 				// Check if the engine we want exists, otherwise default
@@ -314,23 +327,78 @@ switch($step) {
 				}
 				mysql_free_result($rs);
 
-				// Default to InnoDB
-				if(in_array('innodb', $discovered_engines)) {
-					$db_engine = 'InnoDB';
-				} else {
-					$db_engine = 'MyISAM';
+				// Check the preferred DB engine
+				if(!in_array($db_engine, $discovered_engines)) {
+					$db_passed = false;
+					$errors[] = sprintf("The '%s' storage engine is not enabled.", $db_engine);
 				}
 
 				// We need this for fulltext indexing
 				if(!in_array('myisam', $discovered_engines)) {
-					$db_engine = null;
 					$db_passed = false;
+					$errors[] = "The 'MyISAM' storage engine is not enabled and is required for fulltext search.";
+				}
+
+				// Check user privileges
+				if($db_passed) {
+					// CREATE TABLE
+					if($db_passed && false === mysql_query("CREATE TABLE IF NOT EXISTS _installer_test_suite (id int)", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the CREATE privilege.");
+					}
+					// INSERT
+					if($db_passed && false === mysql_query("INSERT INTO _installer_test_suite (id) values(1)", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the INSERT privilege.");
+					}
+					// SELECT
+					if($db_passed && false === mysql_query("SELECT id FROM _installer_test_suite", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the SELECT privilege.");
+					}
+					// UPDATE
+					if($db_passed && false === mysql_query("UPDATE _installer_test_suite SET id = 2", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the UPDATE privilege.");
+					}
+					// DELETE
+					if($db_passed && false === mysql_query("DELETE FROM _installer_test_suite WHERE id > 0", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the DELETE privilege.");
+					}
+					// ALTER TABLE
+					if($db_passed && false === mysql_query("ALTER TABLE _installer_test_suite MODIFY COLUMN id int unsigned", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the ALTER privilege.");
+					}
+					// DROP TABLE
+					if($db_passed && false === mysql_query("DROP TABLE IF EXISTS _installer_test_suite", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the DROP privilege.");
+					}
+					// CREATE TEMPORARY TABLES
+					if($db_passed && false === mysql_query("CREATE TEMPORARY TABLE IF NOT EXISTS _installer_test_suite_tmp (id int)", $_db)) {
+						$db_passed = false;
+						$errors[] = sprintf("The database user lacks the CREATE TEMPORARY TABLES privilege.");
+					}
+					if($db_passed && false === mysql_query("DROP TABLE IF EXISTS _installer_test_suite_tmp", $_db)) {
+						$db_passed = false;
+					}
+					
+					// Privs summary
+					if(!$db_passed)
+						$errors[] = sprintf("The database user must have the following privileges: CREATE, ALTER, DROP, SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES");
 				}
 				
 				unset($discovered_engines);
+				
+			} else {
+				$db_passed = false;
+				$errors[] = "Database connection failed!  Please check your settings and try again.";
 			}
 			
 			$tpl->assign('db_driver', $db_driver);
+			$tpl->assign('db_engine', $db_engine);
 			$tpl->assign('db_server', $db_server);
 			$tpl->assign('db_name', $db_name);
 			$tpl->assign('db_user', $db_user);
@@ -358,6 +426,7 @@ switch($step) {
 				
 			} else { // If failed, re-enter
 				$tpl->assign('failed', true);
+				$tpl->assign('errors', $errors);
 				$tpl->assign('template', 'steps/step_database.tpl');
 			}
 			
@@ -370,6 +439,7 @@ switch($step) {
 	// [JAS]: If we didn't save directly to the config file, user action required		
 	case STEP_SAVE_CONFIG_FILE:
 		@$db_driver = DevblocksPlatform::importGPC($_POST['db_driver'],'string');
+		@$db_engine = DevblocksPlatform::importGPC($_POST['db_engine'],'string');
 		@$db_server = DevblocksPlatform::importGPC($_POST['db_server'],'string');
 		@$db_name = DevblocksPlatform::importGPC($_POST['db_name'],'string');
 		@$db_user = DevblocksPlatform::importGPC($_POST['db_user'],'string');
@@ -379,6 +449,7 @@ switch($step) {
 		// Check to make sure our constants match our input
 		if(
 			0 == strcasecmp($db_driver,APP_DB_DRIVER) &&
+			0 == strcasecmp($db_engine,APP_DB_ENGINE) &&
 			0 == strcasecmp($db_server,APP_DB_HOST) &&
 			0 == strcasecmp($db_name,APP_DB_DATABASE) &&
 			0 == strcasecmp($db_user,APP_DB_USER) &&
@@ -390,6 +461,7 @@ switch($step) {
 			
 		} else { // oops!
 			$tpl->assign('db_driver', $db_driver);
+			$tpl->assign('db_engine', $db_engine);
 			$tpl->assign('db_server', $db_server);
 			$tpl->assign('db_name', $db_name);
 			$tpl->assign('db_user', $db_user);
