@@ -148,28 +148,30 @@ class ChDisplayPage extends CerberusPageExtension {
 			))
 		);
 		
-		if (class_exists('Extension_TimeTrackingSource',true)):
+		if (DevblocksPlatform::isPluginEnabled('cerberusweb.timetracking')) {
 			// Adds total time worked per ticket to the token list.
 			$db = DevblocksPlatform::getDatabaseService();
+            $total_time_hours = 0;
 
-			$sql = "SELECT sum(tte.time_actual_mins) mins ";
-			$sql .= "FROM timetracking_entry tte ";
-			$sql .= sprintf("WHERE tte.source_id =  %d ", $ticket->id);
-			$sql .= "AND tte.source_extension_id = 'timetracking.source.ticket' ";
-			$sql .= "GROUP BY tte.source_id ";
-
-			$rs = $db->Execute($sql);
+			$sql .= sprintf("WHERE context_link.from_context_id =  %d ", $ticket->id);
+			$sql .= "GROUP BY context_link.from_context_id ";
+            
+			$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
-			$row = mysql_fetch_assoc($rs)
-			if(intval($row['mins'])) {
-				$total_time_all = intval($row['mins']);			
+			if($row = mysql_fetch_assoc($rs)) {
+				$total_time_minutes = intval($row['mins']);			
 			} else {
-				$total_time_all = 0;			
+				$minutes = 0;			
+			}
+			if($total_time_minutes > 59) {
+				$total_time_hours = (int)($total_time_minutes / 60);
+				$total_time_minutes -= $total_time_hours * 60;
 			}
 	    	mysql_free_result($rs);
-		endif;
-
-		$tpl->assign('total_time_all', $total_time_all);
+			$tpl->assign('total_time_hours', $total_time_hours);
+			$tpl->assign('total_time_minutes', $total_time_minutes);
+        }
+        
 		$tpl->display('devblocks:cerberusweb.core::display/index.tpl');
 	}
 	
