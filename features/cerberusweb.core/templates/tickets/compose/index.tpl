@@ -1,4 +1,4 @@
-{include file="file:$core_tpl/tickets/submenu.tpl"}
+{include file="devblocks:cerberusweb.core::tickets/submenu.tpl"}
 
 {if !empty($last_ticket_mask)}
 <div class="ui-widget">
@@ -36,24 +36,24 @@
 				<tr>
 					<td width="0%" nowrap="nowrap" valign="middle" align="right"><b>To:</b>&nbsp;</td>
 					<td width="100%">
-						<input type="text" name="to" value="{$draft->params.to|escape}" class="required" style="border:1px solid rgb(180,180,180);padding:2px;width:98%;">
+						<input type="text" name="to" value="{if !empty($draft)}{$draft->params.to}{else}{$defaults_to}{/if}" class="required" style="border:1px solid rgb(180,180,180);padding:2px;width:98%;">
 					</td>
 				</tr>
 				<tr>
 					<td width="0%" nowrap="nowrap" valign="middle" align="right">Cc:&nbsp;</td>
 					<td width="100%">
-						<input type="text" size="100" name="cc" value="{$draft->params.cc|escape}" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;">
+						<input type="text" size="100" name="cc" value="{$draft->params.cc}" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;">
 					</td>
 				</tr>
 				<tr>
 					<td width="0%" nowrap="nowrap" valign="middle" align="right">Bcc:&nbsp;</td>
 					<td width="100%">
-						<input type="text" size="100" name="bcc" value="{$draft->params.bcc|escape}" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;">
+						<input type="text" size="100" name="bcc" value="{$draft->params.bcc}" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;">
 					</td>
 				</tr>
 				<tr>
 					<td width="0%" nowrap="nowrap" valign="middle" align="right"><b>Subject:</b>&nbsp;</td>
-					<td width="100%"><input type="text" size="100" name="subject" value="{$draft->subject|escape}" class="required" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;"></td>
+					<td width="100%"><input type="text" size="100" name="subject" value="{$draft->subject}" class="required" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;"></td>
 				</tr>
 
 			</table>
@@ -62,21 +62,34 @@
 	
 	<tr>
 		<td>
-			<button id="btnSaveDraft" type="button" onclick="genericAjaxPost('frmCompose',null,'c=tickets&a=saveDraft&type=compose',function(json) { var obj = $.parseJSON(json); if(!obj || !obj.html || !obj.draft_id) return; $('#divDraftStatus').html(obj.html); $('#frmCompose input[name=draft_id]').val(obj.draft_id); } );"><span class="cerb-sprite sprite-check"></span> Save Draft</button>
-			<button type="button" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id='+selectValue(this.form.team_id),function(text) { insertAtCursor(document.getElementById('content'),text); } );"><span class="cerb-sprite sprite-document_edit"></span> Insert Signature</button>
-			<button type="button" onclick="genericAjaxPopup('peek','c=display&a=showSnippets&text=content&contexts=cerberusweb.contexts.worker',null,false,'550');"><span class="cerb-sprite sprite-text_rich"></span> {$translate->_('common.snippets')|capitalize}</button>
-			{* Plugin Toolbar *}
-			{if !empty($sendmail_toolbaritems)}
-				{foreach from=$sendmail_toolbaritems item=renderer}
-					{if !empty($renderer)}{$renderer->render($message)}{/if}
-				{/foreach}
-			{/if}
-			<br>
+			<div>
+				<fieldset style="display:inline-block;">
+					<legend>Actions</legend>
+					<button id="btnSaveDraft" type="button" onclick="genericAjaxPost('frmCompose',null,'c=tickets&a=saveDraft&type=compose',function(json) { var obj = $.parseJSON(json); if(!obj || !obj.html || !obj.draft_id) return; $('#divDraftStatus').html(obj.html); $('#frmCompose input[name=draft_id]').val(obj.draft_id); } );"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> Save Draft</button>
+					<button type="button" id="btnInsertSig" title="(Ctrl+Shift+G)" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id='+selectValue(this.form.team_id),function(text) { insertAtCursor(document.getElementById('content'),text); } );"><span class="cerb-sprite sprite-document_edit"></span> Insert Signature</button>
+					{* Plugin Toolbar *}
+					{if !empty($sendmail_toolbaritems)}
+						{foreach from=$sendmail_toolbaritems item=renderer}
+							{if !empty($renderer)}{$renderer->render($message)}{/if}
+						{/foreach}
+					{/if}
+				</fieldset>
+				
+				<fieldset style="display:inline-block;">
+					<legend>{'common.snippets'|devblocks_translate|capitalize}</legend>
+					<div>
+						Insert: 
+						<input type="text" size="25" class="context-snippet autocomplete">
+						<button type="button" onclick="openSnippetsChooser(this);"><span class="cerb-sprite sprite-view"></span></button>
+						<button type="button" onclick="genericAjaxPopup('peek','c=tickets&a=showSnippetsPeek&id=0&context=cerberusweb.contexts.worker&context_id={$active_worker->id}',null,false,'550');"><span class="cerb-sprite2 sprite-plus-circle-frame"></span></button>
+					</div>
+				</fieldset>
+			</div>
 			
 			<div id="sendMailToolbarOptions"></div>
 			<div id="divDraftStatus"></div>
 			
-			<textarea name="content" id="content" rows="15" cols="80" class="reply required" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;">{$draft->body|escape}</textarea>
+			<textarea name="content" id="content" rows="15" cols="80" class="reply required" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;">{$draft->body}</textarea>
 		</td>
 	</tr>
 
@@ -87,7 +100,7 @@
 			<tr>
 				<td style="background-color:rgb(0,184,4);width:10px;"></td>
 				<td style="padding-left:5px;">
-					<H2>{$translate->_('display.convo.attachments_label')|capitalize}</H2>
+					<H2>{$translate->_('common.attachments')|capitalize}:</H2>
 					{'display.reply.attachments_limit'|devblocks_translate:$upload_max_filesize}<br>
 					
 					<b>{$translate->_('display.reply.attachments_add')}</b> 
@@ -121,25 +134,24 @@
 					<table cellpadding="2" cellspacing="0" border="0">
 						<tr>
 							<td nowrap="nowrap" valign="top" colspan="2">
+								<div style="margin-bottom:10px;">
+									<label>
+									<input type="checkbox" name="add_me_as_watcher" value="1"> 
+									{'common.watchers.add_me'|devblocks_translate}
+									</label>
+								</div>
+							
 								<label><input type="radio" name="closed" value="0" onclick="toggleDiv('ticketClosed','none');">{$translate->_('status.open')|capitalize}</label>
 								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('ticketClosed','block');" checked>{$translate->_('status.waiting')|capitalize}</label>
 								{if $active_worker->hasPriv('core.ticket.actions.close')}<label><input type="radio" name="closed" value="1" onclick="toggleDiv('ticketClosed','block');">{$translate->_('status.closed')|capitalize}</label>{/if}
 								<br>
 								<br>
 
-								<div id="ticketClosed" style="display:block;margin-left:10px;">
+								<div id="ticketClosed" style="display:block;margin-left:10px;margin-bottom:10px;">
 								<b>{$translate->_('display.reply.next.resume')}</b> {$translate->_('display.reply.next.resume_eg')}<br> 
 								<input type="text" name="ticket_reopen" size="55" value=""><br>
 								{$translate->_('display.reply.next.resume_blank')}<br>
-								<br>
 								</div>
-		
-								{if $active_worker->hasPriv('core.ticket.actions.assign')}
-									<b>{$translate->_('display.reply.next.handle_reply')}</b><br>
-									<button type="button" class="chooser_worker"><span class="cerb-sprite sprite-add"></span></button>
-							      	<br>
-							      	<br>
-								{/if}
 		
 								{if $active_worker->hasPriv('core.ticket.actions.move')}
 								<b>{$translate->_('display.reply.next.move')}</b><br>  
@@ -176,9 +188,9 @@
 		
 	<tr>
 		<td>
-			<button type="submit" onclick="$('#btnSaveDraft').click();"><span class="cerb-sprite sprite-check"></span> Send Message</button>
+			<button type="submit" onclick="$('#btnSaveDraft').click();"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> Send Message</button>
 			<button type="button" onclick="$('#btnSaveDraft').click();document.location='{devblocks_url}c=tickets{/devblocks_url}';"><span class="cerb-sprite sprite-media_pause"></span> {$translate->_('display.ui.continue_later')|capitalize}</button>
-			<button type="button" onclick="if(confirm('Are you sure you want to discard this message?')) { if(0!==this.form.draft_id.value.length) { genericAjaxGet('', 'c=tickets&a=deleteDraft&draft_id='+escape(this.form.draft_id.value)); } document.location='{devblocks_url}c=tickets{/devblocks_url}'; } "><span class="cerb-sprite sprite-delete"></span> {$translate->_('display.ui.discard')|capitalize}</button>
+			<button type="button" onclick="if(confirm('Are you sure you want to discard this message?')) { if(0!==this.form.draft_id.value.length) { genericAjaxGet('', 'c=tickets&a=deleteDraft&draft_id='+escape(this.form.draft_id.value)); } document.location='{devblocks_url}c=tickets{/devblocks_url}'; } "><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('display.ui.discard')|capitalize}</button>
 		</td>
 	</tr>
   </tbody>
@@ -195,9 +207,97 @@
 		$('#frmCompose').validate();
 		
 		setInterval("$('#btnSaveDraft').click();", 30000);
+
+		$('#frmCompose input:text.context-snippet').autocomplete({
+			source: DevblocksAppPath+'ajax.php?c=internal&a=autocomplete&context=cerberusweb.contexts.snippet&contexts=&contexts=cerberusweb.contexts.worker',
+			minLength: 1,
+			focus:function(event, ui) {
+				return false;
+			},
+			autoFocus:true,
+			select:function(event, ui) {
+				$this = $(this);
+				$textarea = $('#frmCompose textarea#content');
+				
+				$label = ui.item.label.replace("<","&lt;").replace(">","&gt;");
+				$value = ui.item.value;
+				
+				// Now we need to read in each snippet as either 'raw' or 'parsed' via Ajax
+				url = 'c=internal&a=snippetPaste&id=' + $value;
+
+				// Context-dependent arguments
+				if ('cerberusweb.contexts.worker'==ui.item.context) {
+					url += "&context_id={$active_worker->id}";
+				}
+
+				genericAjaxGet('',url,function(txt) {
+					$textarea.insertAtCursor(txt);
+				}, { async: false });
+
+				$this.val('');
+				return false;
+			}
+		});
 		
-		$('#frmCompose button.chooser_worker').each(function() {
-			ajax.chooser(this,'cerberusweb.contexts.worker','worker_id');
-		});		
+		{if $pref_keyboard_shortcuts}
+		
+		// Reply textbox
+		$('textarea#content').keypress(function(event) {
+			if(!$(this).is(':focus'))
+				return;
+			
+			if(!event.ctrlKey) //!event.altKey && !event.ctrlKey && !event.metaKey
+				return;
+			
+			event.preventDefault();
+
+			if(event.ctrlKey && event.shiftKey) {
+				switch(event.which) {
+					case 7:  // (G) Insert Signature
+						try {
+							$('#btnInsertSig').click();
+						} catch(ex) { } 
+						break;
+					case 9:  // (I) Insert Snippet
+						try {
+							$(this).closest('td').find('.context-snippet').focus();
+						} catch(ex) { } 
+						break;
+				}
+			}
+		});
+		
+		{/if}
+		
 	});
+	
+	function openSnippetsChooser(button) {
+		$chooser=genericAjaxPopup('chooser','c=internal&a=chooserOpen&context=cerberusweb.contexts.snippet&contexts[]=cerberusweb.contexts.worker',null,true,'750');
+		$chooser.one('chooser_save', function(event) {
+			event.stopPropagation();
+			$button = $(button);
+			$textarea = $('#content');
+			
+			for(idx in event.labels) {
+				value = event.values[idx];
+				valueParts = value.split('::');
+				
+				if(null == valueParts || null == valueParts[0] || null == valueParts[1])
+					continue;
+				
+				// Now we need to read in each snippet as either 'raw' or 'parsed' via Ajax
+				url = 'c=internal&a=snippetPaste&id='+valueParts[0];
+				
+				// Context-dependent arguments
+				if ('cerberusweb.contexts.worker'==valueParts[1]) {
+					url += "&context_id={$active_worker->id}";
+				}
+				
+				// Ajax the content (synchronously)
+				genericAjaxGet('',url,function(txt) {
+					$textarea.insertAtCursor(txt);
+				}, { async: false });
+			}
+		});
+	}	
 </script>

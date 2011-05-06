@@ -1,42 +1,72 @@
-{include file="file:$core_tpl/tickets/submenu.tpl"}
+{include file="devblocks:cerberusweb.core::tickets/submenu.tpl"}
 
-<table cellpadding="0" cellspacing="0" width="100%" border="0">
+<table cellpadding="0" cellspacing="0" width="100%" border="0" id="displayProperties">
 <tr>
 	<td valign="top">
 		<table cellpadding="0" cellspacing="0" width="100%">
 			<tr>
 				<td valign="top">
 					<div style="float:right">
-					{include file="file:$core_tpl/tickets/quick_search_box.tpl"}
+					{include file="devblocks:cerberusweb.core::tickets/quick_search_box.tpl"}
 					</div>
 					
-					<h1>{$ticket->subject|escape}</h1>
+					<h1>{$ticket->subject}</h1>
 					{assign var=ticket_team_id value=$ticket->team_id}
 					{assign var=ticket_team value=$teams.$ticket_team_id}
 					{assign var=ticket_category_id value=$ticket->category_id}
 					{assign var=ticket_team_category_set value=$team_categories.$ticket_team_id}
 					{assign var=ticket_category value=$ticket_team_category_set.$ticket_category_id}
 					
-					<b>{$translate->_('ticket.status')|capitalize}:</b> {if $ticket->is_deleted}{$translate->_('status.deleted')}{elseif $ticket->is_closed}{$translate->_('status.closed')}{elseif $ticket->is_waiting}{$translate->_('status.waiting')}{else}{$translate->_('status.open')}{/if} &nbsp; 
-					<b>{$translate->_('common.group')|capitalize}:</b> {$teams.$ticket_team_id->name} &nbsp; 
-					<b>{$translate->_('common.bucket')|capitalize}:</b> {if !empty($ticket_category_id)}{$ticket_category->name}{else}{$translate->_('common.inbox')|capitalize}{/if} &nbsp; 
-					<b>{$translate->_('ticket.mask')|capitalize}:</b> {$ticket->mask} &nbsp; 
-					<b>{$translate->_('ticket.id')}:</b> {$ticket->id} &nbsp; 
-					<br>
-					
-					{if !empty($context_workers)}
-						<b>{'common.owners'|devblocks_translate|capitalize}:</b> 
-						{foreach from=$context_workers item=context_worker name=context_workers}
-						{$context_worker->getName()}{if !$smarty.foreach.context_workers.last}, {/if}
-						{/foreach}	
-					<br>
-					{/if}
-					
-					<b>{$translate->_('ticket.requesters')|capitalize}:</b>
-					<span id="displayTicketRequesterBubbles">
-						{include file="{$core_tpl}display/rpc/requester_list.tpl" ticket_id=$ticket->id}
-					</span>
-					(<a href="javascript:;" onclick="genericAjaxPopup('peek','c=display&a=showRequestersPanel&ticket_id={$ticket->id}',null,true,'500');">{$translate->_('common.edit')|lower}</a>)
+					<div class="cerb-properties">
+						<div>
+							<label>{$translate->_('ticket.status')|capitalize}:</label>
+							{if $ticket->is_deleted}
+								{$translate->_('status.deleted')}
+							{elseif $ticket->is_closed}
+								{$translate->_('status.closed')}
+								{if !empty($ticket->due_date)}
+									(<abbr title="{$ticket->due_date|devblocks_date}">{$ticket->due_date|devblocks_prettytime}</abbr>)
+								{/if}
+							{elseif $ticket->is_waiting}
+								{$translate->_('status.waiting')}
+								{if !empty($ticket->due_date)}
+									(<abbr title="{$ticket->due_date|devblocks_date}">{$ticket->due_date|devblocks_prettytime}</abbr>)
+								{/if}
+							{else}
+								{$translate->_('status.open')}
+							{/if} 
+						</div>
+						
+						<div>
+							<label>{$translate->_('common.group')|capitalize}:</label>
+							{$teams.$ticket_team_id->name}
+						</div>
+						
+						<div>
+							<label>{$translate->_('common.bucket')|capitalize}:</label>
+							{if !empty($ticket_category_id)}{$ticket_category->name}{else}{$translate->_('common.inbox')|capitalize}{/if}
+						</div>
+						
+						<div>
+							<label>{$translate->_('ticket.mask')|capitalize}:</label>
+							{$ticket->mask}
+						</div>
+						
+						<div>
+							<label>{$translate->_('ticket.id')}:</label>
+							{$ticket->id}
+						</div>
+					</div>
+
+					<div class="cerb-properties">
+						<div>
+							<label>{$translate->_('ticket.requesters')|capitalize}:</label>
+							<span id="displayTicketRequesterBubbles">
+								{include file="devblocks:cerberusweb.core::display/rpc/requester_list.tpl" ticket_id=$ticket->id}
+							</span>
+							(<a href="javascript:;" onclick="genericAjaxPopup('peek','c=display&a=showRequestersPanel&ticket_id={$ticket->id}',null,true,'500');">{$translate->_('common.edit')|lower}</a>)
+						</div>
+					</div>
 				</td>
 			</tr>
 		</table>
@@ -52,17 +82,21 @@
 			<input type="hidden" name="closed" value="{if $ticket->is_closed}1{else}0{/if}">
 			<input type="hidden" name="deleted" value="{if $ticket->is_deleted}1{else}0{/if}">
 			<input type="hidden" name="spam" value="0">
-			<input type="hidden" name="do_take" value="0">
-			<input type="hidden" name="do_surrender" value="0">
 			
 			<div style="padding-bottom:5px;">
+			
+			<span>
+			{$object_watchers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_TICKET, array($ticket->id), CerberusContexts::CONTEXT_WORKER)}
+			{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" context=CerberusContexts::CONTEXT_TICKET context_id=$ticket->id full=true}
+			</span>		
+			
 			<button type="button" id="btnDisplayTicketEdit"><span class="cerb-sprite sprite-document_edit"></span> Edit</button>
 			
 			{if !$ticket->is_deleted}
 				{if $ticket->is_closed}
 					<button type="button" onclick="this.form.closed.value='0';this.form.submit();"><span class="cerb-sprite sprite-folder_out"></span> {$translate->_('common.reopen')|capitalize}</button>
 				{else}
-					{if $active_worker->hasPriv('core.ticket.actions.close')}<button title="{$translate->_('display.shortcut.close')}" id="btnClose" type="button" onclick="this.form.closed.value=1;this.form.submit();"><span class="cerb-sprite sprite-folder_ok"></span> {$translate->_('common.close')|capitalize}</button>{/if}
+					{if $active_worker->hasPriv('core.ticket.actions.close')}<button title="{$translate->_('display.shortcut.close')}" id="btnClose" type="button" onclick="this.form.closed.value=1;this.form.submit();"><span class="cerb-sprite2 sprite-folder-tick-circle"></span> {$translate->_('common.close')|capitalize}</button>{/if}
 				{/if}
 				
 				{if empty($ticket->spam_training)}
@@ -71,13 +105,10 @@
 			{/if}
 			
 			{if $ticket->is_deleted}
-				<button type="button" onclick="this.form.deleted.value='0';this.form.closed.value=0;this.form.submit();"><span class="cerb-sprite sprite-delete_gray"></span> {$translate->_('common.undelete')|capitalize}</button>
+				<button type="button" onclick="this.form.deleted.value='0';this.form.closed.value=0;this.form.submit();"><span class="cerb-sprite2 sprite-cross-circle-frame-gray"></span> {$translate->_('common.undelete')|capitalize}</button>
 			{else}
-				{if $active_worker->hasPriv('core.ticket.actions.delete')}<button title="{$translate->_('display.shortcut.delete')}" id="btnDelete" type="button" onclick="this.form.deleted.value=1;this.form.closed.value=1;this.form.submit();"><span class="cerb-sprite sprite-delete"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
+				{if $active_worker->hasPriv('core.ticket.actions.delete')}<button title="{$translate->_('display.shortcut.delete')}" id="btnDelete" type="button" onclick="this.form.deleted.value=1;this.form.closed.value=1;this.form.submit();"><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
 			{/if}
-			
-			{if !isset($context_workers.{$active_worker->id})}<button id="btnTake" title="{$translate->_('display.shortcut.take')}" type="button" onclick="this.form.do_take.value='1';this.form.submit();"><span class="cerb-sprite sprite-hand_paper"></span> {$translate->_('mail.take')|capitalize}</button>{/if}
-			{if isset($context_workers.{$active_worker->id})}<button id="btnSurrender" title="{$translate->_('display.shortcut.surrender')}" type="button" onclick="this.form.do_surrender.value='1';this.form.submit();"><span class="cerb-sprite sprite-flag_white"></span> {$translate->_('mail.surrender')|capitalize}</button>{/if}
 			
 		   	<button id="btnPrint" title="{$translate->_('display.shortcut.print')}" type="button" onclick="document.frmPrint.action='{devblocks_url}c=print&a=ticket&id={$ticket->mask}{/devblocks_url}';document.frmPrint.submit();">&nbsp;<span class="cerb-sprite sprite-printer"></span>&nbsp;</button>
 		   	<button type="button" title="{$translate->_('display.shortcut.refresh')}" onclick="document.location='{devblocks_url}c=display&id={$ticket->mask}{/devblocks_url}';">&nbsp;<span class="cerb-sprite sprite-refresh"></span>&nbsp;</button>
@@ -85,13 +116,13 @@
 			</div>
 			
 			<div id="divDisplayToolbarMore" style="padding-bottom:5px;display:none;">
-				{if $active_worker->hasPriv('core.ticket.view.actions.merge')}<button id="btnMerge" type="button" onclick="genericAjaxPopup('peek','c=display&a=showMergePanel&ticket_id={$ticket->id|escape}',null,false,'500');"><span class="cerb-sprite sprite-folder_gear"></span> {$translate->_('mail.merge')|capitalize}</button>{/if}
+				{if $active_worker->hasPriv('core.ticket.view.actions.merge')}<button id="btnMerge" type="button" onclick="genericAjaxPopup('peek','c=display&a=showMergePanel&ticket_id={$ticket->id}',null,false,'500');"><span class="cerb-sprite2 sprite-folder-gear"></span> {$translate->_('mail.merge')|capitalize}</button>{/if}
 			</div>
 			
 			<div>
 			{if !$ticket->is_deleted}
 			{if $active_worker->hasPriv('core.ticket.actions.move')}
-		   	<select name="bucket_id" onchange="this.form.submit();">
+		   	<select name="bucket" onchange="this.form.submit();">
 		   		<option value="">-- {$translate->_('common.move_to')|lower} --</option>
 		   		{if empty($ticket->category_id)}{assign var=t_or_c value="t"}{else}{assign var=t_or_c value="c"}{/if}
 		   		<optgroup label="{$translate->_('common.inboxes')|capitalize}">
@@ -128,8 +159,6 @@
 			{if !$ticket->is_closed && $active_worker->hasPriv('core.ticket.actions.close')}(<b>c</b>) {$translate->_('common.close')|lower} {/if}
 			{if !$ticket->spam_trained && $active_worker->hasPriv('core.ticket.actions.spam')}(<b>s</b>) {$translate->_('common.spam')|lower} {/if}
 			{if !$ticket->is_deleted && $active_worker->hasPriv('core.ticket.actions.delete')}(<b>x</b>) {$translate->_('common.delete')|lower} {/if}
-			{if !isset($context_workers.{$active_worker->id})}(<b>t</b>) {$translate->_('mail.take')|lower} {/if}
-			{if isset($context_workers.{$active_worker->id})}(<b>u</b>) {$translate->_('mail.surrender')|lower} {/if}
 			{if !$expand_all}(<b>a</b>) {$translate->_('display.button.read_all')|lower} {/if} 
 			{if $active_worker->hasPriv('core.display.actions.reply')}(<b>r</b>) {$translate->_('display.ui.reply')|lower} {/if}  
 			(<b>p</b>) {$translate->_('common.print')|lower} 
@@ -153,15 +182,16 @@
 
 <div id="displayTabs">
 	<ul>
-		<li><a href="{devblocks_url}ajax.php?c=display&a=showConversation&ticket_id={$ticket->id}{if $expand_all}&expand_all=1{/if}{/devblocks_url}">{$translate->_('display.tab.conversation')|escape:'quotes'}</a></li>
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.ticket&id={$ticket->id}{/devblocks_url}">{$translate->_('common.links')|escape:'quotes'}</a></li>
-		<li><a href="{devblocks_url}ajax.php?c=display&a=showContactHistory&ticket_id={$ticket->id}{/devblocks_url}">{'display.tab.history'|devblocks_translate|escape:'quotes'}</a></li>
+		{$tabs = [conversation,activity,links,history]}
 
-		{$tabs = [conversation,links,history]}
+		<li><a href="{devblocks_url}ajax.php?c=display&a=showConversation&ticket_id={$ticket->id}{if $expand_all}&expand_all=1{/if}{/devblocks_url}">{$translate->_('display.tab.conversation')}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabActivityLog&scope=target&point={$point}&context={CerberusContexts::CONTEXT_TICKET}&context_id={$ticket->id}{/devblocks_url}">{'common.activity_log'|devblocks_translate|capitalize}</a></li>		
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.ticket&id={$ticket->id}{/devblocks_url}">{$translate->_('common.links')}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=display&a=showContactHistory&ticket_id={$ticket->id}{/devblocks_url}">{'display.tab.history'|devblocks_translate}</a></li>
 
 		{foreach from=$tab_manifests item=tab_manifest}
 			{$tabs[] = $tab_manifest->params.uri}
-			<li><a href="{devblocks_url}ajax.php?c=display&a=showTab&ext_id={$tab_manifest->id}&ticket_id={$ticket->id}{/devblocks_url}"><i>{$tab_manifest->params.title|devblocks_translate|escape:'quotes'}</i></a></li>
+			<li><a href="{devblocks_url}ajax.php?c=display&a=showTab&ext_id={$tab_manifest->id}&ticket_id={$ticket->id}{/devblocks_url}"><i>{$tab_manifest->params.title|devblocks_translate}</i></a></li>
 		{/foreach}
 	</ul>
 </div> 
@@ -180,7 +210,7 @@
 			$popup = genericAjaxPopup('peek','c=tickets&a=showPreview&tid={$ticket->id}&edit=1',null,false,'650');
 			$popup.one('ticket_save', function(event) {
 				event.stopPropagation();
-				document.location.href = '{devblocks_url}c=display&mask={$ticket->mask|escape}{/devblocks_url}';
+				document.location.href = '{devblocks_url}c=display&mask={$ticket->mask}{/devblocks_url}';
 			});
 		})
 	});
@@ -188,64 +218,60 @@
 
 <script type="text/javascript">
 {if $pref_keyboard_shortcuts}
-CreateKeyHandler(function doShortcuts(e) {
-	var mycode = getKeyboardKey(e,true);
+$(document).keypress(function(event) {
+	if(event.altKey || event.ctrlKey || event.shiftKey || event.metaKey)
+		return;
 	
-	switch(mycode) {
-		case 65:  // (A) read all
+	if($(event.target).is(':input'))
+		return;
+	
+	event.preventDefault();
+	
+	switch(event.which) {
+		case 97:  // (A) read all
 			try {
-				document.getElementById('btnReadAll').click();
+				$('#btnReadAll').click();
 			} catch(ex) { } 
 			break;
-		case 67:  // (C) close
+		case 99:  // (C) close
 			try {
-				document.getElementById('btnClose').click();
+				$('#btnClose').click();
 			} catch(ex) { } 
 			break;
-		case 69:  // (E) edit
+		case 101:  // (E) edit
 			try {
-				document.getElementById('btnDisplayTicketEdit').click();
+				$('#btnDisplayTicketEdit').click();
 			} catch(ex) { } 
 			break;
-		case 79:  // (O) comment
+		case 111:  // (O) comment
 			try {
 				$('#btnComment').click();
 			} catch(ex) { } 
 			break;
-		case 80:  // (P) print
+		case 112:  // (P) print
 			try {
-				document.getElementById('btnPrint').click();
+				$('#btnPrint').click();
 			} catch(ex) { } 
 			break;
-		case 82:  // (R) reply to first message
+		case 114:  // (R) reply to first message
 			try {
 				{if $expand_all}$('BUTTON.reply').last().click();{else}$('BUTTON.reply').first().click();{/if}
 			} catch(ex) { } 
 			break;
-		case 83:  // (S) spam
+		case 115:  // (S) spam
 			try {
-				document.getElementById('btnSpam').click();
+				$('#btnSpam').click();
 			} catch(ex) { } 
 			break;
-		case 84:  // (T) take/assign
+		case 120:  // (X) delete
 			try {
-				document.getElementById('btnTake').click();
-			} catch(ex) { } 
-			break;
-		case 85:  // (U) surrender/unassign
-			try {
-				document.getElementById('btnSurrender').click();
-			} catch(ex) { } 
-			break;
-		case 88:  // (X) delete
-			try {
-				document.getElementById('btnDelete').click();
+				$('#btnDelete').click();
 			} catch(ex) { } 
 			break;
 		default:
 			// We didn't find any obvious keys, try other codes
 			break;
 	}
-} );
+});
 {/if}
 </script>

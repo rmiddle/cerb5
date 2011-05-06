@@ -2,10 +2,10 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2010, WebGroup Media LLC
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
-| This source code is released under the Cerberus Public License.
+| This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
 | http://www.cerberusweb.com/license.php
 |
@@ -43,19 +43,19 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Joe Geck, Scott Luther,
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class DAO_Attachment extends DevblocksORMHelper {
     const ID = 'id';
-    const MESSAGE_ID = 'message_id';
     const DISPLAY_NAME = 'display_name';
     const MIME_TYPE = 'mime_type';
     const STORAGE_EXTENSION = 'storage_extension';
     const STORAGE_KEY = 'storage_key';
     const STORAGE_SIZE = 'storage_size';
     const STORAGE_PROFILE_ID = 'storage_profile_id';
+    const UPDATED = 'updated';
     
 	public static function create($fields) {
 	    $db = DevblocksPlatform::getDatabaseService();
@@ -70,6 +70,9 @@ class DAO_Attachment extends DevblocksORMHelper {
 	}
 	
 	public static function update($id, $fields) {
+	    if(!isset($fields[self::UPDATED]))
+	    	$fields[self::UPDATED] = time();
+		
         self::_update($id, 'attachment', $fields);
 	}
 	
@@ -98,7 +101,7 @@ class DAO_Attachment extends DevblocksORMHelper {
 	static function getWhere($where=null) {
 		$db = DevblocksPlatform::getDatabaseService();
 		
-		$sql = "SELECT id,message_id,display_name,mime_type,storage_size,storage_extension,storage_key,storage_profile_id ".
+		$sql = "SELECT id,display_name,mime_type,storage_size,storage_extension,storage_key,storage_profile_id,updated ".
 			"FROM attachment ".
 			(!empty($where) ? sprintf("WHERE %s ",$where) : "");
 		$rs = $db->Execute($sql);
@@ -112,13 +115,13 @@ class DAO_Attachment extends DevblocksORMHelper {
 		while($row = mysql_fetch_assoc($rs)) {
 		    $object = new Model_Attachment();
 		    $object->id = intval($row['id']);
-		    $object->message_id = intval($row['message_id']);
 		    $object->display_name = $row['display_name'];
 		    $object->mime_type = $row['mime_type'];
 		    $object->storage_size = intval($row['storage_size']);
 		    $object->storage_extension = $row['storage_extension'];
 		    $object->storage_key = $row['storage_key'];
 		    $object->storage_profile_id = $row['storage_profile_id'];
+		    $object->updated = intval($row['updated']);
 		    $objects[$object->id] = $object;
 		}
 		
@@ -127,51 +130,40 @@ class DAO_Attachment extends DevblocksORMHelper {
 		return $objects;
 	}
 	
-	/**
-	 * returns an array of Model_Attachment that
-	 * correspond to the supplied message id.
-	 *
-	 * @param integer $id
-	 * @return Model_Attachment[]
-	 */
-	static function getByMessageId($id) {
-		return self::getWhere(sprintf("%s = %d",
-			self::MESSAGE_ID,
-			$id
-		));
+	// [TODO] Move this??
+	static function getByContextIds($context, $context_ids) {
+		if(!is_array($context_ids))
+			$context_ids = array($context_ids);
+
+		if(empty($context_ids))
+			return array();
+		
+		$db = DevblocksPlatform::getDatabaseService();
+		
+		$sql = sprintf("SELECT id,display_name,mime_type,storage_size,storage_extension,storage_key,storage_profile_id,updated ".
+			"FROM attachment ".
+			"INNER JOIN attachment_link ON (attachment.id=attachment_link.attachment_id) ".
+			"WHERE attachment_link.context = %s AND attachment_link.context_id IN (%s) ",
+			$db->qstr($context),
+			implode(',', $context_ids)
+		);
+		$rs = $db->Execute($sql);
+		
+		return self::_getObjectsFromResult($rs);
 	}
 	
 	static function maint() {
 		$db = DevblocksPlatform::getDatabaseService();
 		$logger = DevblocksPlatform::getConsoleLog();
 		
-		$sql = "SELECT attachment.id FROM attachment LEFT JOIN message ON attachment.message_id = message.id WHERE message.id IS NULL";
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
-
-		$ids_buffer = array();
-		$count = 0;
-		
-		// Delete the physical files
-		while($row = mysql_fetch_assoc($rs)) {
-			$ids_buffer[$count++] = $row['id'];
-			
-			// Flush buffer every 50
-			if(0 == $count % 50) {
-				Storage_Attachments::delete($ids_buffer);
-				$ids_buffer = array();
-				$count = 0;
-			}
-		}
-		
-		// Finish the rest
-		if(!empty($ids_buffer)) {
-			Storage_Attachments::delete($ids_buffer);
-			unset($ids_buffer);
-			unset($count);
-		}
-		
-		$sql = "DELETE attachment FROM attachment LEFT JOIN message ON attachment.message_id = message.id WHERE message.id IS NULL";
-		$db->Execute($sql);
+		// Delete attachments where links=0 and created > 24h
+		$db->Execute(sprintf("DELETE attachment ".
+			"FROM attachment ".
+			"LEFT JOIN attachment_link ON (attachment.id = attachment_link.attachment_id) ".
+			"WHERE attachment_link.attachment_id IS NULL ".
+			"AND attachment.updated <= %d",
+			(time()-86400)
+		)); 
 		
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' attachment records.');
 	}
@@ -184,11 +176,65 @@ class DAO_Attachment extends DevblocksORMHelper {
 
 		Storage_Attachments::delete($ids);
 		
+		// Delete links
+		foreach($ids as $id)
+			DAO_AttachmentLink::removeAllByAttachment($id);
+		
 		// Delete DB manifests
 		$db = DevblocksPlatform::getDatabaseService();
 		$sql = sprintf("DELETE attachment FROM attachment WHERE id IN (%s)", implode(',', $ids));
 		$db->Execute($sql);
 	}
+	
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
+		$fields = SearchFields_Attachment::getFields();
+		
+		// Sanitize
+		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy]) || !in_array($sortBy,$columns))
+			$sortBy=null;
+
+        list($tables,$wheres) = parent::_parseSearchParams($params, array(),$fields,$sortBy);
+		
+		$select_sql = sprintf("SELECT ".
+			"a.id as %s, ".
+			"a.display_name as %s, ".
+			"a.mime_type as %s, ".
+			"a.storage_size as %s, ".
+			"a.storage_extension as %s, ".
+			"a.storage_key as %s, ".
+			"a.storage_profile_id as %s, ".
+			"a.updated as %s ".
+			"",
+			    SearchFields_Attachment::ID,
+			    SearchFields_Attachment::DISPLAY_NAME,
+			    SearchFields_Attachment::MIME_TYPE,
+			    SearchFields_Attachment::STORAGE_SIZE,
+			    SearchFields_Attachment::STORAGE_EXTENSION,
+			    SearchFields_Attachment::STORAGE_KEY,
+			    SearchFields_Attachment::STORAGE_PROFILE_ID,
+			    SearchFields_Attachment::UPDATED
+		);
+		
+		$join_sql = "FROM attachment a ".
+			(isset($tables['al']) ? "INNER JOIN attachment_link al ON (al.attachment_id=a.id)" : " ")
+			;
+			
+		$where_sql = "".
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
+			
+		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
+		
+		$result = array(
+			'primary_table' => 'a',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => false,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
 	
     /**
      * Enter description here...
@@ -203,76 +249,26 @@ class DAO_Attachment extends DevblocksORMHelper {
      */
     static function search($params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
 		$db = DevblocksPlatform::getDatabaseService();
-		$fields = SearchFields_Attachment::getFields();
-		
-		// Sanitize
-		if(!isset($fields[$sortBy]))
-			$sortBy=null;
 
-        list($tables,$wheres) = parent::_parseSearchParams($params, array(),$fields,$sortBy);
-		$start = ($page * $limit); // [JAS]: 1-based [TODO] clean up + document
-		$total = -1;
-		
-		$select_sql = sprintf("SELECT ".
-			"a.id as %s, ".
-			"a.message_id as %s, ".
-			"a.display_name as %s, ".
-			"a.mime_type as %s, ".
-			"a.storage_size as %s, ".
-			"a.storage_extension as %s, ".
-			"a.storage_key as %s, ".
-			"a.storage_profile_id as %s, ".
-		
-			"m.address_id as %s, ".
-			"m.created_date as %s, ".
-			"m.is_outgoing as %s, ".
-		
-			"t.id as %s, ".
-			"t.mask as %s, ".
-			"t.subject as %s, ".
-		
-			"ad.email as %s ".
-			"",
-			    SearchFields_Attachment::ID,
-			    SearchFields_Attachment::MESSAGE_ID,
-			    SearchFields_Attachment::DISPLAY_NAME,
-			    SearchFields_Attachment::MIME_TYPE,
-			    SearchFields_Attachment::STORAGE_SIZE,
-			    SearchFields_Attachment::STORAGE_EXTENSION,
-			    SearchFields_Attachment::STORAGE_KEY,
-			    SearchFields_Attachment::STORAGE_PROFILE_ID,
-			    
-			    SearchFields_Attachment::MESSAGE_ADDRESS_ID,
-			    SearchFields_Attachment::MESSAGE_CREATED_DATE,
-			    SearchFields_Attachment::MESSAGE_IS_OUTGOING,
-			    
-			    SearchFields_Attachment::TICKET_ID,
-			    SearchFields_Attachment::TICKET_MASK,
-			    SearchFields_Attachment::TICKET_SUBJECT,
-			    
-			    SearchFields_Attachment::ADDRESS_EMAIL
-		);
-		
-		$join_sql = "FROM attachment a ".
-			"INNER JOIN message m ON (a.message_id = m.id) ".
-			"INNER JOIN ticket t ON (m.ticket_id = t.id) ".
-			"INNER JOIN address ad ON (m.address_id = ad.id) ";
-//			(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ")
-			
-		$where_sql = "".
-			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
-			
-		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents(array(),$params,$sortBy,$sortAsc);
 
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
 		$sql = 
 			$select_sql.
 			$join_sql.
 			$where_sql.
-			($has_multiple_values ? 'GROUP BY t.id ' : '').
+			($has_multiple_values ? 'GROUP BY a.id ' : '').
 			$sort_sql;
-		$rs = $db->SelectLimit($sql,$limit,$start) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
 		$results = array();
+		$total = -1;
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			$result = array();
@@ -295,29 +291,20 @@ class DAO_Attachment extends DevblocksORMHelper {
 		
 		return array($results,$total);
     }
-	
 };
 
 class SearchFields_Attachment implements IDevblocksSearchFields {
     const ID = 'a_id';
-    const MESSAGE_ID = 'a_message_id';
     const DISPLAY_NAME = 'a_display_name';
     const MIME_TYPE = 'a_mime_type';
     const STORAGE_SIZE = 'a_storage_size';
     const STORAGE_EXTENSION = 'a_storage_extension';
     const STORAGE_KEY = 'a_storage_key';
     const STORAGE_PROFILE_ID = 'a_storage_profile_id';
+    const UPDATED = 'a_updated';
 	
-    const MESSAGE_ADDRESS_ID = 'm_address_id';
-    const MESSAGE_CREATED_DATE = 'm_created_date';
-    const MESSAGE_IS_OUTGOING = 'm_is_outgoing';
-    
-    const TICKET_ID = 't_id';
-    const TICKET_GROUP_ID = 't_group_id';
-    const TICKET_MASK = 't_mask';
-    const TICKET_SUBJECT = 't_subject';
-    
-    const ADDRESS_EMAIL = 'ad_email';
+    const LINK_CONTEXT = 'al_context';
+    const LINK_CONTEXT_ID = 'al_context_id';
     
 	/**
 	 * @return DevblocksSearchField[]
@@ -327,24 +314,16 @@ class SearchFields_Attachment implements IDevblocksSearchFields {
 		
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'a', 'id', $translate->_('attachment.id')),
-			self::MESSAGE_ID => new DevblocksSearchField(self::MESSAGE_ID, 'a', 'message_id', $translate->_('attachment.message_id')),
 			self::DISPLAY_NAME => new DevblocksSearchField(self::DISPLAY_NAME, 'a', 'display_name', $translate->_('attachment.display_name')),
 			self::MIME_TYPE => new DevblocksSearchField(self::MIME_TYPE, 'a', 'mime_type', $translate->_('attachment.mime_type')),
 			self::STORAGE_SIZE => new DevblocksSearchField(self::STORAGE_SIZE, 'a', 'storage_size', $translate->_('attachment.storage_size')),
 			self::STORAGE_EXTENSION => new DevblocksSearchField(self::STORAGE_EXTENSION, 'a', 'storage_extension', $translate->_('attachment.storage_extension')),
 			self::STORAGE_KEY => new DevblocksSearchField(self::STORAGE_KEY, 'a', 'storage_key', $translate->_('attachment.storage_key')),
 			self::STORAGE_PROFILE_ID => new DevblocksSearchField(self::STORAGE_PROFILE_ID, 'a', 'storage_profile_id', $translate->_('attachment.storage_profile_id')),
-			
-			self::MESSAGE_ADDRESS_ID => new DevblocksSearchField(self::MESSAGE_ADDRESS_ID, 'm', 'address_id'),
-			self::MESSAGE_CREATED_DATE => new DevblocksSearchField(self::MESSAGE_CREATED_DATE, 'm', 'created_date', $translate->_('message.created_date')),
-			self::MESSAGE_IS_OUTGOING => new DevblocksSearchField(self::MESSAGE_IS_OUTGOING, 'm', 'is_outgoing', $translate->_('mail.sent')),
-			
-			self::TICKET_ID => new DevblocksSearchField(self::TICKET_ID, 't', 'id', $translate->_('ticket.id')),
-			self::TICKET_GROUP_ID => new DevblocksSearchField(self::TICKET_GROUP_ID, 't', 'team_id'), //, $translate->_('ticket.team_id')
-			self::TICKET_MASK => new DevblocksSearchField(self::TICKET_MASK, 't', 'mask', $translate->_('ticket.mask')),
-			self::TICKET_SUBJECT => new DevblocksSearchField(self::TICKET_SUBJECT, 't', 'subject', $translate->_('ticket.subject')),
-			
-			self::ADDRESS_EMAIL => new DevblocksSearchField(self::ADDRESS_EMAIL, 'ad', 'email', $translate->_('message.header.from')),
+			self::UPDATED => new DevblocksSearchField(self::UPDATED, 'a', 'updated', $translate->_('common.updated')),
+
+			self::LINK_CONTEXT => new DevblocksSearchField(self::LINK_CONTEXT, 'al', 'context', $translate->_('common.context')),
+			self::LINK_CONTEXT_ID => new DevblocksSearchField(self::LINK_CONTEXT_ID, 'al', 'context_id', $translate->_('common.context_id')),
 		);
 		
 		// Sort by label (translation-conscious)
@@ -356,13 +335,13 @@ class SearchFields_Attachment implements IDevblocksSearchFields {
 
 class Model_Attachment {
 	public $id;
-	public $message_id;
 	public $display_name;
 	public $mime_type = '';
 	public $storage_extension;
 	public $storage_key;
 	public $storage_size = 0;
 	public $storage_profile_id;
+	public $updated;
 
 	public function getFileContents(&$fp=null) {
 		return Storage_Attachments::get($this, $fp);
@@ -372,34 +351,28 @@ class Model_Attachment {
 class Storage_Attachments extends Extension_DevblocksStorageSchema {
 	const ID = 'cerberusweb.storage.schema.attachments';
 	
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	public static function getActiveStorageProfile() {
 		return DAO_DevblocksExtensionPropertyStore::get(self::ID, 'active_storage_profile', 'devblocks.storage.engine.disk');
 	}
 
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(dirname(__FILE__))) . '/templates';
 		
 		$tpl->assign('active_storage_profile', $this->getParam('active_storage_profile', 'devblocks.storage.engine.disk'));
 		$tpl->assign('archive_storage_profile', $this->getParam('archive_storage_profile', 'devblocks.storage.engine.disk'));
 		$tpl->assign('archive_after_days', $this->getParam('archive_after_days', 7));
 		
-		$tpl->display("file:{$path}/configuration/tabs/storage/schemas/attachments/render.tpl");
+		$tpl->display("devblocks:cerberusweb.core::configuration/section/storage_profiles/schemas/attachments/render.tpl");
 	}	
 	
 	function renderConfig() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		$path = dirname(dirname(dirname(__FILE__))) . '/templates';
 		
 		$tpl->assign('active_storage_profile', $this->getParam('active_storage_profile', 'devblocks.storage.engine.disk'));
 		$tpl->assign('archive_storage_profile', $this->getParam('archive_storage_profile', 'devblocks.storage.engine.disk'));
 		$tpl->assign('archive_after_days', $this->getParam('archive_after_days', 7));
 		
-		$tpl->display("file:{$path}/configuration/tabs/storage/schemas/attachments/config.tpl");
+		$tpl->display("devblocks:cerberusweb.core::configuration/section/storage_profiles/schemas/attachments/config.tpl");
 	}
 	
 	function saveConfig() {
@@ -487,14 +460,14 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 		$db = DevblocksPlatform::getDatabaseService();
 		
 		$sql = sprintf("SELECT storage_extension, storage_key, storage_profile_id FROM attachment WHERE id IN (%s)", implode(',',$ids));
-		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+		$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg());
 		
 		// Delete the physical files
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			$profile = !empty($row['storage_profile_id']) ? $row['storage_profile_id'] : $row['storage_extension'];
-			$storage = DevblocksPlatform::getStorageService($profile);
-			return $storage->delete('attachments', $row['storage_key']);
+			if(null != ($storage = DevblocksPlatform::getStorageService($profile)))
+				$storage->delete('attachments', $row['storage_key']);
 		}
 		
 		mysql_free_result($rs);
@@ -519,10 +492,7 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 		// Find inactive attachments
 		$sql = sprintf("SELECT attachment.id, attachment.storage_extension, attachment.storage_key, attachment.storage_profile_id, attachment.storage_size ".
 			"FROM attachment ".
-			"INNER JOIN message ON (message.id=attachment.message_id) ".
-			"INNER JOIN ticket ON (ticket.id=message.ticket_id) ".
-			"WHERE ticket.is_deleted = 0 ".
-			"AND ticket.updated_date < %d ".
+			"WHERE attachment.updated < %d ".
 			"AND NOT (attachment.storage_extension = %s AND attachment.storage_profile_id = %d) ".
 			"ORDER BY attachment.id ASC ",
 				time()-(86400*$archive_after_days),
@@ -552,10 +522,7 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 		// Find active attachments
 		$sql = sprintf("SELECT attachment.id, attachment.storage_extension, attachment.storage_key, attachment.storage_profile_id, attachment.storage_size ".
 			"FROM attachment ".
-			"INNER JOIN message ON (message.id=attachment.message_id) ".
-			"INNER JOIN ticket ON (ticket.id=message.ticket_id) ".
-			"WHERE ticket.is_deleted = 0 ".
-			"AND ticket.updated_date >= %d ".
+			"WHERE attachment.updated >= %d ".
 			"AND NOT (attachment.storage_extension = %s AND attachment.storage_profile_id = %d) ".
 			"ORDER BY attachment.id DESC ",
 				time()-(86400*$archive_after_days),
@@ -687,38 +654,39 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 	}
 };
 
-class View_Attachment extends C4_AbstractView {
-	const DEFAULT_ID = 'attachments';
+class View_AttachmentLink extends C4_AbstractView {
+	const DEFAULT_ID = 'attachment_links';
 
 	function __construct() {
 		$this->id = self::DEFAULT_ID;
 		$this->name = 'Attachments';
 		$this->renderLimit = 100;
-		$this->renderSortBy = SearchFields_Attachment::STORAGE_SIZE;
+		$this->renderSortBy = SearchFields_AttachmentLink::ATTACHMENT_STORAGE_SIZE;
 		$this->renderSortAsc = false;
 
 		$this->view_columns = array(
-			SearchFields_Attachment::MIME_TYPE,
-			SearchFields_Attachment::STORAGE_SIZE,
-			SearchFields_Attachment::MESSAGE_CREATED_DATE,
-			SearchFields_Attachment::ADDRESS_EMAIL,
-			SearchFields_Attachment::TICKET_MASK,
+			SearchFields_AttachmentLink::ATTACHMENT_MIME_TYPE,
+			SearchFields_AttachmentLink::ATTACHMENT_STORAGE_SIZE,
+			SearchFields_AttachmentLink::LINK_CONTEXT,
+			SearchFields_AttachmentLink::ATTACHMENT_UPDATED,
 		);
-		$this->columnsHidden = array(
-			SearchFields_Attachment::ID,
-			SearchFields_Attachment::MESSAGE_ID,
-		);
+		$this->addColumnsHidden(array(
+			SearchFields_AttachmentLink::ID,
+//			SearchFields_AttachmentLink::LINK_CONTEXT,
+			SearchFields_AttachmentLink::LINK_CONTEXT_ID,
+		));
 		
-		$this->paramsHidden = array(
-			SearchFields_Attachment::ID,
-			SearchFields_Attachment::MESSAGE_ID,
-		);
+		$this->addParamsHidden(array(
+			SearchFields_AttachmentLink::ID,
+//			SearchFields_AttachmentLink::LINK_CONTEXT,
+			SearchFields_AttachmentLink::LINK_CONTEXT_ID,
+		));
 		
 		$this->doResetCriteria();
 	}
 
 	function getData() {
-		$objects = DAO_Attachment::search(
+		$objects = DAO_AttachmentLink::search(
 			$this->getParams(),
 			$this->renderLimit,
 			$this->renderPage,
@@ -728,6 +696,10 @@ class View_Attachment extends C4_AbstractView {
 		);
 		return $objects;
 	}
+	
+	function getDataSample($size) {
+		return $this->_doGetDataSample('DAO_AttachmentLink', $size);
+	}
 
 	function render() {
 		$this->_sanitize();
@@ -736,7 +708,12 @@ class View_Attachment extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 		$tpl->assign('view', $this);
 
-		$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/configuration/tabs/attachments/view.tpl');
+		// Contexts
+		$contexts = Extension_DevblocksContext::getAll();
+		$tpl->assign('contexts', $contexts);
+		
+		// [TODO] Move
+		$tpl->display('devblocks:cerberusweb.core::configuration/section/storage_attachments/view.tpl');
 	}
 
 	function renderCriteria($field) {
@@ -744,27 +721,26 @@ class View_Attachment extends C4_AbstractView {
 		$tpl->assign('id', $this->id);
 
 		switch($field) {
-			case SearchFields_Attachment::DISPLAY_NAME:
-			case SearchFields_Attachment::STORAGE_EXTENSION:
-			case SearchFields_Attachment::STORAGE_KEY:
-			case SearchFields_Attachment::MIME_TYPE:
-			case SearchFields_Attachment::TICKET_MASK:
-			case SearchFields_Attachment::TICKET_SUBJECT:
-			case SearchFields_Attachment::ADDRESS_EMAIL:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__string.tpl');
+			case SearchFields_AttachmentLink::GUID:
+			case SearchFields_AttachmentLink::ATTACHMENT_DISPLAY_NAME:
+			case SearchFields_AttachmentLink::ATTACHMENT_STORAGE_EXTENSION:
+			case SearchFields_AttachmentLink::ATTACHMENT_STORAGE_KEY:
+			case SearchFields_AttachmentLink::ATTACHMENT_MIME_TYPE:
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__string.tpl');
 				break;
-//			case SearchFields_Attachment::ID:
-//			case SearchFields_Attachment::MESSAGE_ID:
-			case SearchFields_Attachment::TICKET_ID:
-			case SearchFields_Attachment::STORAGE_SIZE:
-			case SearchFields_Attachment::STORAGE_PROFILE_ID:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__number.tpl');
+			case SearchFields_AttachmentLink::ATTACHMENT_STORAGE_SIZE:
+			case SearchFields_AttachmentLink::ATTACHMENT_STORAGE_PROFILE_ID:
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__number.tpl');
 				break;
-			case SearchFields_Attachment::MESSAGE_IS_OUTGOING:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__bool.tpl');
+			case 'placeholder_bool':
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
-			case SearchFields_Attachment::MESSAGE_CREATED_DATE:
-				$tpl->display('file:' . APP_PATH . '/features/cerberusweb.core/templates/internal/views/criteria/__date.tpl');
+			case SearchFields_AttachmentLink::ATTACHMENT_UPDATED:
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
+				break;
+			case SearchFields_AttachmentLink::LINK_CONTEXT:
+				$tpl->assign('contexts', Extension_DevblocksContext::getAll());
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context.tpl');
 				break;
 			default:
 				echo '';
@@ -777,6 +753,17 @@ class View_Attachment extends C4_AbstractView {
 		$values = !is_array($param->value) ? array($param->value) : $param->value;
 
 		switch($field) {
+			case SearchFields_AttachmentLink::LINK_CONTEXT:
+				$contexts = Extension_DevblocksContext::getAll();
+				$strings = array();
+				foreach($values as $v) {
+					if(isset($contexts[$v]))
+						$strings[] = $contexts[$v]->name;
+				}
+				if(!empty($strings))
+					echo implode(', ', $strings);
+				break;
+				
 			default:
 				parent::renderCriteriaParam($param);
 				break;
@@ -784,36 +771,31 @@ class View_Attachment extends C4_AbstractView {
 	}
 
 	function getFields() {
-		return SearchFields_Attachment::getFields();
+		return SearchFields_AttachmentLink::getFields();
 	}
 
 	function doSetCriteria($field, $oper, $value) {
 		$criteria = null;
 
 		switch($field) {
-			case SearchFields_Attachment::DISPLAY_NAME:
-			case SearchFields_Attachment::MIME_TYPE:
-			case SearchFields_Attachment::STORAGE_EXTENSION:
-			case SearchFields_Attachment::STORAGE_KEY:
-			case SearchFields_Attachment::TICKET_MASK:
-			case SearchFields_Attachment::TICKET_SUBJECT:
-			case SearchFields_Attachment::ADDRESS_EMAIL:
+			case SearchFields_AttachmentLink::GUID:
+			case SearchFields_AttachmentLink::ATTACHMENT_DISPLAY_NAME:
+			case SearchFields_AttachmentLink::ATTACHMENT_MIME_TYPE:
+			case SearchFields_AttachmentLink::ATTACHMENT_STORAGE_EXTENSION:
+			case SearchFields_AttachmentLink::ATTACHMENT_STORAGE_KEY:
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
-			case SearchFields_Attachment::ID:
-			case SearchFields_Attachment::MESSAGE_ID:
-			case SearchFields_Attachment::TICKET_ID:
-			case SearchFields_Attachment::STORAGE_SIZE:
-			case SearchFields_Attachment::STORAGE_PROFILE_ID:
+			case SearchFields_AttachmentLink::ATTACHMENT_STORAGE_SIZE:
+			case SearchFields_AttachmentLink::ATTACHMENT_STORAGE_PROFILE_ID:
 				$criteria = new DevblocksSearchCriteria($field,$oper,$value);
 				break;
 				
-			case SearchFields_Attachment::MESSAGE_CREATED_DATE:
+			case SearchFields_AttachmentLink::ATTACHMENT_UPDATED:
 				@$from = DevblocksPlatform::importGPC($_REQUEST['from'],'string','');
 				@$to = DevblocksPlatform::importGPC($_REQUEST['to'],'string','');
 
@@ -823,9 +805,14 @@ class View_Attachment extends C4_AbstractView {
 				$criteria = new DevblocksSearchCriteria($field,$oper,array($from,$to));
 				break;
 				
-			case SearchFields_Attachment::MESSAGE_IS_OUTGOING:
+			case 'placeholder_bool':
 				@$bool = DevblocksPlatform::importGPC($_REQUEST['bool'],'integer',1);
 				$criteria = new DevblocksSearchCriteria($field,$oper,$bool);
+				break;
+				
+			case SearchFields_AttachmentLink::LINK_CONTEXT:
+				@$contexts = DevblocksPlatform::importGPC($_REQUEST['contexts'],'array',array());
+				$criteria = new DevblocksSearchCriteria($field,$oper,$contexts);
 				break;
 		}
 
@@ -864,11 +851,11 @@ class View_Attachment extends C4_AbstractView {
 
 		if(empty($ids))
 		do {
-			list($objects,$null) = DAO_Attachment::search(
+			list($objects,$null) = DAO_AttachmentLink::search(
 				$this->getParams(),
 				100,
 				$pg++,
-				SearchFields_Attachment::ID,
+				SearchFields_AttachmentLink::GUID,
 				true,
 				false
 			);
@@ -881,9 +868,11 @@ class View_Attachment extends C4_AbstractView {
 			$batch_ids = array_slice($ids,$x,100);
 			
 			if(!$deleted) { 
-				DAO_Attachment::update($batch_ids, $change_fields);
+				//DAO_AttachmentLink::update($batch_ids, $change_fields);
 			} else {
-				DAO_Attachment::delete($batch_ids);
+				if(!empty($batch_ids))
+				foreach($batch_ids as $batch_id)
+					DAO_AttachmentLink::deleteByGUID($batch_id);
 			}
 			
 			unset($batch_ids);
@@ -891,4 +880,398 @@ class View_Attachment extends C4_AbstractView {
 
 		unset($ids);
 	}			
+};
+
+class DAO_AttachmentLink extends C4_ORMHelper {
+	const GUID = 'guid';
+	const ATTACHMENT_ID = 'attachment_id';
+	const CONTEXT = 'context';
+	const CONTEXT_ID = 'context_id';
+	
+	/**
+	 * @param string $where
+	 * @return Model_Attachment[]
+	 */
+	static function getWhere($where=null) {
+		$db = DevblocksPlatform::getDatabaseService();
+		
+		$sql = "SELECT guid, attachment_id, context, context_id ".
+			"FROM attachment_link ".
+			(!empty($where) ? sprintf("WHERE %s ",$where) : "");
+		$rs = $db->Execute($sql);
+		
+		return self::_getObjectsFromResult($rs);
+	}
+	
+	/**
+	 * ...
+	 * 
+	 * @param string $guid
+	 * @return Model_AttachmentLink
+	 */
+	static function getByGUID($guid) {
+		return array_shift(self::getWhere(sprintf("%s = %s",
+			self::GUID,
+			self::qstr($guid)
+		)));
+	}
+	
+	static function create($attachment_id, $context, $context_id) {
+		$db = DevblocksPlatform::getDatabaseService();
+		$db->Execute(sprintf("INSERT IGNORE INTO attachment_link (attachment_id, context, context_id, guid) ".
+			"VALUES (%d, %s, %d, UUID())",
+			$attachment_id,
+			$db->qstr($context),
+			$context_id
+		));
+	}
+	
+	/**
+	 * ...
+	 * 
+	 * @param unknown_type $context
+	 * @param unknown_type $context_id
+	 * @param unknown_type $attachment_ids
+	 */
+	static function setLinks($context, $context_id, $attachment_ids) {
+		if(!is_array($attachment_ids))
+			$attachment_ids = array($attachment_ids);
+		
+		// Load the links for the context ID and compare the attachments
+		$a_map = self::getLinksAndAttachments($context, $context_id);
+		//$links = $a_map['links'];
+		$attachments = $a_map['attachments'];
+		
+		$deleted_ids = array_diff(array_keys($attachments), $attachment_ids);
+		$new_ids = array_diff($attachment_ids, array_keys($attachments));
+		
+		// Remove those that are missing
+		if(!empty($deleted_ids))
+		foreach($deleted_ids as $deleted_id)
+			DAO_AttachmentLink::deleteByAttachment($deleted_id);
+			
+		// Add those that are new
+		if(!empty($new_ids))
+		foreach($new_ids as $new_id)
+			DAO_AttachmentLink::create($new_id, $context, $context_id);
+			
+		return TRUE;
+	}
+	
+	static function getLinksAndAttachments($context, $context_id) {
+		if(empty($context) || empty($context_id))
+			return array();
+			
+		$file_ids = array();
+		
+		$db = DevblocksPlatform::getDatabaseService();
+		
+		$sql = sprintf("SELECT attachment_id, context, context_id, guid ".
+			"FROM attachment_link ".
+			"WHERE attachment_link.context = %s ".
+			"AND attachment_link.context_id = %d ",
+			$db->qstr($context),
+			$context_id
+		);
+		$rs = $db->Execute($sql);
+		
+		$links = self::_getObjectsFromResult($rs);
+		
+		foreach($links as $link) {
+			$file_ids[] = $link->attachment_id;
+		}
+		
+		if(empty($file_ids)) {
+			$files = array();
+		} else {
+			$files = DAO_Attachment::getWhere(sprintf("%s IN (%s)",
+				DAO_Attachment::ID,
+				implode(',', $file_ids)
+			));
+		}
+		
+		return array(
+			'links' => $links,
+			'attachments' => $files,
+		);
+	}
+	
+	static function getByContextIds($context, $context_ids) {
+		if(!is_array($context_ids))
+			$context_ids = array($context_ids);
+
+		if(empty($context_ids))
+			return array();
+		
+		$db = DevblocksPlatform::getDatabaseService();
+		
+		$sql = sprintf("SELECT ".
+			"attachment_id, context, context_id, guid ".
+			"FROM attachment_link ".
+			"WHERE attachment_link.context = %s ".
+			"AND attachment_link.context_id IN (%s) ",
+			$db->qstr($context),
+			implode(',', $context_ids)
+		);
+		$rs = $db->Execute($sql);
+
+		return self::_getObjectsFromResult($rs);
+	}
+	
+	static function getIdsByContext($attachment_ids, $context=null) {
+		if(!is_array($attachment_ids))
+			$attachment_ids = array($attachment_ids);
+		
+		if(empty($attachment_ids))
+			return array();
+			
+		$db = DevblocksPlatform::getDatabaseService();
+		$rows = $db->GetArray(sprintf("SELECT attachment_id, context, context_id ".
+			"FROM attachment_link ".
+			"WHERE attachment_id IN (%s) ".
+			((!empty($context)) ? sprintf("AND context = %s ", $db->qstr($context)) : ""),
+			implode(',', $attachment_ids)
+		));
+		
+		$results = array();
+		
+		foreach($rows as $row) {
+			if(!isset($results[$row['attachment_id']]))
+				$results[$row['attachment_id']] = array();
+				
+			if(!isset($results[$row['attachment_id']][$row['context']]))
+				$results[$row['attachment_id']][$row['context']] = array();
+			
+			$results[$row['attachment_id']][$row['context']][$row['context_id']] = $row['attachment_id']; 
+		}
+		
+		return $results;
+	}
+	
+	static function removeAllByAttachment($attachment_id) {
+		$db = DevblocksPlatform::getDatabaseService();
+		$db->Execute(sprintf("DELETE FROM attachment_link WHERE attachment_id = %d", 
+			$attachment_id
+		));
+	}
+	
+	static function removeAllByContext($context, $context_ids) {
+		if(!is_array($context_ids))
+			$context_ids = array($context_ids);
+			
+		if(empty($context_ids))
+			return;
+		
+		$db = DevblocksPlatform::getDatabaseService();
+		$db->Execute(sprintf("DELETE FROM attachment_link WHERE context = %s AND context_id IN (%s)",
+			$db->qstr($context),
+			implode(',', $context_ids)
+		));
+	}
+	
+	static function deleteByAttachment($attachment_id) {
+		$db = DevblocksPlatform::getDatabaseService();
+		$db->Execute(sprintf("DELETE FROM attachment_link WHERE attachment_id = %d",
+			$attachment_id
+		));
+	}
+	
+	static function deleteByGUID($guid) {
+		$db = DevblocksPlatform::getDatabaseService();
+		$db->Execute(sprintf("DELETE FROM attachment_link WHERE guid = %s",
+			$db->qstr($guid)
+		));
+	}
+		
+	private static function _getObjectsFromResult($rs) {
+		$objects = array();
+		
+		while($row = mysql_fetch_assoc($rs)) {
+		    $object = new Model_AttachmentLink();
+		    $object->guid = $row['guid'];
+		    $object->attachment_id = intval($row['attachment_id']);
+		    $object->context = $row['context'];
+		    $object->context_id = intval($row['context_id']);
+		    $objects[$object->guid] = $object;
+		}
+		
+		mysql_free_result($rs);
+		
+		return $objects;
+	}
+	
+	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
+		$fields = SearchFields_AttachmentLink::getFields();
+		
+		// Sanitize
+		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy]) || !in_array($sortBy,$columns))
+			$sortBy=null;
+
+        list($tables,$wheres) = parent::_parseSearchParams($params, array(),$fields,$sortBy);
+		
+		$select_sql = sprintf("SELECT ".
+			"al.attachment_id as %s, ".
+			"al.context as %s, ".
+			"al.context_id as %s, ".
+			"al.guid as %s, ".
+			"a.display_name as %s, ".
+			"a.mime_type as %s, ".
+			"a.storage_size as %s, ".
+			"a.storage_extension as %s, ".
+			"a.storage_key as %s, ".
+			"a.storage_profile_id as %s, ".
+			"a.updated as %s ".
+			"",
+			    SearchFields_AttachmentLink::ID,
+			    SearchFields_AttachmentLink::LINK_CONTEXT,
+			    SearchFields_AttachmentLink::LINK_CONTEXT_ID,
+			    SearchFields_AttachmentLink::GUID,
+			    SearchFields_AttachmentLink::ATTACHMENT_DISPLAY_NAME,
+			    SearchFields_AttachmentLink::ATTACHMENT_MIME_TYPE,
+			    SearchFields_AttachmentLink::ATTACHMENT_STORAGE_SIZE,
+			    SearchFields_AttachmentLink::ATTACHMENT_STORAGE_EXTENSION,
+			    SearchFields_AttachmentLink::ATTACHMENT_STORAGE_KEY,
+			    SearchFields_AttachmentLink::ATTACHMENT_STORAGE_PROFILE_ID,
+			    SearchFields_AttachmentLink::ATTACHMENT_UPDATED
+		);
+		
+		$join_sql = "FROM attachment_link al ".
+			"INNER JOIN attachment a ON (al.attachment_id=a.id) "
+			//(isset($tables['al']) ? "INNER JOIN attachment_link al ON (al.attachment_id=a.id)" : " ")
+			;
+			
+		$where_sql = "".
+			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
+			
+		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
+		
+		$result = array(
+			'primary_table' => 'al',
+			'select' => $select_sql,
+			'join' => $join_sql,
+			'where' => $where_sql,
+			'has_multiple_values' => false,
+			'sort' => $sort_sql,
+		);
+		
+		return $result;
+	}	
+	
+    /**
+     * Enter description here...
+     *
+     * @param DevblocksSearchCriteria[] $params
+     * @param integer $limit
+     * @param integer $page
+     * @param string $sortBy
+     * @param boolean $sortAsc
+     * @param boolean $withCounts
+     * @return array
+     */
+    static function search($params, $limit=10, $page=0, $sortBy=null, $sortAsc=null, $withCounts=true) {
+		$db = DevblocksPlatform::getDatabaseService();
+
+		// Build search queries
+		$query_parts = self::getSearchQueryComponents(array(),$params,$sortBy,$sortAsc);
+
+		$select_sql = $query_parts['select'];
+		$join_sql = $query_parts['join'];
+		$where_sql = $query_parts['where'];
+		$has_multiple_values = $query_parts['has_multiple_values'];
+		$sort_sql = $query_parts['sort'];
+		
+		$sql = 
+			$select_sql.
+			$join_sql.
+			$where_sql.
+			($has_multiple_values ? 'GROUP BY al.attachment_id ' : '').
+			$sort_sql;
+		$rs = $db->SelectLimit($sql,$limit,$page*$limit) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+
+		$results = array();
+		$total = -1;
+		
+		while($row = mysql_fetch_assoc($rs)) {
+			$result = array();
+			foreach($row as $f => $v) {
+				$result[$f] = $v;
+			}
+			$id = intval($row[SearchFields_AttachmentLink::ID]);
+			$results[$id] = $result;
+		}
+
+		if($withCounts) {
+			$count_sql = 
+				"SELECT COUNT(al.attachment_id) ".
+				$join_sql.
+				$where_sql;
+			$total = $db->GetOne($count_sql);
+		}
+		
+		mysql_free_result($rs);
+		
+		return array($results,$total);
+    }
+    	
+};
+
+class SearchFields_AttachmentLink implements IDevblocksSearchFields {
+    const ID = 'al_attachment_id';
+    const LINK_CONTEXT = 'al_context';
+    const LINK_CONTEXT_ID = 'al_context_id';
+    const GUID = 'al_guid';
+    const ATTACHMENT_DISPLAY_NAME = 'a_display_name';
+    const ATTACHMENT_MIME_TYPE = 'a_mime_type';
+    const ATTACHMENT_STORAGE_SIZE = 'a_storage_size';
+    const ATTACHMENT_STORAGE_EXTENSION = 'a_storage_extension';
+    const ATTACHMENT_STORAGE_KEY = 'a_storage_key';
+    const ATTACHMENT_STORAGE_PROFILE_ID = 'a_storage_profile_id';
+    const ATTACHMENT_UPDATED = 'a_updated';
+    
+	/**
+	 * @return DevblocksSearchField[]
+	 */
+	static function getFields() {
+		$translate = DevblocksPlatform::getTranslationService();
+		
+		$columns = array(
+			self::ID => new DevblocksSearchField(self::ID, 'al', 'attachment_id', $translate->_('attachment.id')),
+			self::LINK_CONTEXT => new DevblocksSearchField(self::LINK_CONTEXT, 'al', 'context', $translate->_('common.context')),
+			self::LINK_CONTEXT_ID => new DevblocksSearchField(self::LINK_CONTEXT_ID, 'al', 'context_id', $translate->_('common.context_id')),
+			self::GUID => new DevblocksSearchField(self::GUID, 'al', 'guid', $translate->_('common.guid')),
+			self::ATTACHMENT_DISPLAY_NAME => new DevblocksSearchField(self::ATTACHMENT_DISPLAY_NAME, 'a', 'display_name', $translate->_('attachment.display_name')),
+			self::ATTACHMENT_MIME_TYPE => new DevblocksSearchField(self::ATTACHMENT_MIME_TYPE, 'a', 'mime_type', $translate->_('attachment.mime_type')),
+			self::ATTACHMENT_STORAGE_SIZE => new DevblocksSearchField(self::ATTACHMENT_STORAGE_SIZE, 'a', 'storage_size', $translate->_('attachment.storage_size')),
+			self::ATTACHMENT_STORAGE_EXTENSION => new DevblocksSearchField(self::ATTACHMENT_STORAGE_EXTENSION, 'a', 'storage_extension', $translate->_('attachment.storage_extension')),
+			self::ATTACHMENT_STORAGE_KEY => new DevblocksSearchField(self::ATTACHMENT_STORAGE_KEY, 'a', 'storage_key', $translate->_('attachment.storage_key')),
+			self::ATTACHMENT_STORAGE_PROFILE_ID => new DevblocksSearchField(self::ATTACHMENT_STORAGE_PROFILE_ID, 'a', 'storage_profile_id', $translate->_('attachment.storage_profile_id')),
+			self::ATTACHMENT_UPDATED => new DevblocksSearchField(self::ATTACHMENT_UPDATED, 'a', 'updated', $translate->_('common.updated')),
+		);
+		
+		// Sort by label (translation-conscious)
+		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
+
+		return $columns;		
+	}
+};
+
+class Model_AttachmentLink {
+	public $guid;
+	public $attachment_id;
+	public $context;
+	public $context_id;
+
+	/**
+	 * @return Model_Attachment
+	 */
+	public function getAttachment() {
+		return DAO_Attachment::get($this->attachment_id);
+	}
+	
+	/**
+	 * @return Extension_DevblocksContext
+	 */
+	public function getContext() {
+		return DevblocksPlatform::getExtension($this->context, true, true);
+	}
 };

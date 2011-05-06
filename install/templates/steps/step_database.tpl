@@ -3,15 +3,26 @@
 <form action="index.php" method="POST">
 <input type="hidden" name="step" value="{$smarty.const.STEP_DATABASE}">
 
-{if $failed}
-<span class='bad'>Database Connection Failed!  Please check your settings and try again.</span><br>
-<br>
+{if $failed && !empty($errors)}
+<ul>
+{foreach from=$errors item=error}
+<li style="font-weight:bold;color:rgb(220,0,0);">{$error}</li>
+{/foreach}
+</ul>
 {/if}
 
-<b>Database Driver:</b> (from PHP environment)<br>
+<b>Driver:</b><br>
 <select name="db_driver">
 	{foreach from=$drivers item=driver key=k}
 	<option value="{$k}" {if $k==$db_driver}selected{/if}>{$driver}
+	{/foreach}
+</select><br>
+<br>
+
+<b>Engine:</b><br>
+<select name="db_engine">
+	{foreach from=$engines item=engine key=k}
+	<option value="{$k}" {if $k==$db_engine}selected{/if}>{$engine}
 	{/foreach}
 </select><br>
 <br>

@@ -7,7 +7,7 @@
 <div class="ui-widget">
 	<div class="ui-state-highlight ui-corner-all" style="padding: 0 .7em; margin: 0.2em; "> 
 		<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span> 
-		This ticket has <strong>{$drafts|count}</strong> pending draft(s): 
+		This ticket has <strong>{$drafts|count nofilter}</strong> pending draft(s): 
 		{foreach from=$pending_drafts item=draft name=drafts}
 			<a href="#draft{$draft->id}">{$draft->updated|devblocks_prettytime}</a>{if !$smarty.foreach.drafts.last}, {/if} 
 		{/foreach}
@@ -33,21 +33,21 @@
 				<div id="{$message->id}t" style="background-color:rgb(255,255,255);">
 					{assign var=expanded value=false}
 					{if $expand_all || $latest_message_id==$message_id || isset($message_notes.$message_id)}{assign var=expanded value=true}{/if}
-					{include file="$core_tpl/display/modules/conversation/message.tpl" expanded=$expanded}
+					{include file="devblocks:cerberusweb.core::display/modules/conversation/message.tpl" expanded=$expanded}
 				</div>
 				
 			{elseif $convo_set.0=='c'}
 				{assign var=comment_id value=$convo_set.1}
 				{assign var=comment value=$comments.$comment_id}
 				<div id="comment{$comment->id}" style="background-color:rgb(255,255,255);">
-					{include file="$core_tpl/internal/comments/comment.tpl"}
+					{include file="devblocks:cerberusweb.core::internal/comments/comment.tpl"}
 				</div>
 				
 			{elseif $convo_set.0=='d'}
 				{assign var=draft_id value=$convo_set.1}
 				{assign var=draft value=$drafts.$draft_id}
 				<div id="draft{$draft->id}" style="background-color:rgb(255,255,255);">
-					{include file="$core_tpl/display/modules/conversation/draft.tpl"}
+					{include file="devblocks:cerberusweb.core::display/modules/conversation/draft.tpl"}
 				</div>
 			{/if}
 			
@@ -74,7 +74,8 @@
 	function displayReply(msgid, is_forward, draft_id) {
 		msgid = parseInt(msgid);
 		var div = document.getElementById('reply' + msgid);
-		if(null == div) return;
+		if(null == div)	
+			return;
 		is_forward = (null == is_forward || 0 == is_forward) ? 0 : 1;
 		draft_id = (null == draft_id) ? 0 : parseInt(draft_id);
 		

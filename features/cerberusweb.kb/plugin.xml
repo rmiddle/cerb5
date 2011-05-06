@@ -1,11 +1,11 @@
-<!DOCTYPE plugin SYSTEM "../../libs/devblocks/plugin.dtd">
-<plugin>
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.devblocks.com/schema/plugin.xsd">
 	<id>cerberusweb.kb</id>
 	<name>[Cerb5] Knowledgebase</name>
-	<description>((Knowledgebase))</description>
+	<description>Create and categorize articles to share knowledge between workers or your community.</description>
 	<author>WebGroup Media, LLC.</author>
 	<revision>0</revision>
-	<link>http://www.cerberusweb.com/</link>
+	<link>http://wiki.cerb5.com/wiki/Features:Knowledgebase</link>
 	<image>plugin.png</image>
 	
 	<!-- Plugin Dependencies -->
@@ -25,16 +25,23 @@
 	
 	<class_loader>
 		<file path="api/App.php">
-			<class name="ChCustomFieldSource_KbArticle" />
-			<class name="DAO_KbArticle" />
+			<class name="Context_KbCategory" />
 			<class name="DAO_KbCategory" />
 			<class name="Extension_KnowledgebaseTab" />
-			<class name="Model_KbArticle" />
 			<class name="Model_KbCategory" />
+			<class name="SearchFields_KbCategory" />
+		</file>
+        <file path="api/dao/kb_article.php">
+			<class name="Context_KbArticle" />
+			<class name="DAO_KbArticle" />
+			<class name="Model_KbArticle" />
 			<class name="Search_KbArticle" />
 			<class name="SearchFields_KbArticle" />
 			<class name="View_KbArticle" />
-		</file>
+        </file>
+        <file path="api/sc/kb.php">
+			<class name="UmSc_KbArticleView" />
+		</file>		
 	</class_loader>
 
 	<!-- Templates -->
@@ -58,6 +65,52 @@
 	</acl>
 	
 	<extensions>
+	
+		<!-- Contexts -->
+		
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.kb_article</id>
+			<name>Knowledgebase Article</name>
+			<class>
+				<file>api/dao/kb_article.php</file>
+				<name>Context_KbArticle</name>
+			</class>
+			<params>
+				<param key="view_class" value="View_KbArticle" />
+				<param key="options">
+					<value>
+					<!--
+						<data key="create" />
+					-->
+						<data key="find" />
+						<data key="workspace" />
+					</value>
+				</param>
+			</params>
+		</extension>
+			
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.kb_category</id>
+			<name>Knowledgebase Category</name>
+			<class>
+				<file>api/dao/kb_category.php</file>
+				<name>Context_KbCategory</name>
+			</class>
+			<params>
+				<param key="view_class" value="View_KbCategory" />
+				<param key="options">
+					<value>
+					<!--
+						<data key="create" />
+						<data key="find" />
+						<data key="workspace" />
+					-->
+					</value>
+				</param>
+			</params>
+		</extension>	
+	
+		<!-- Pages -->
 	
 		<extension point="cerberusweb.page">
 			<id>core.page.kb</id>
@@ -154,19 +207,6 @@
 			</params>
 		</extension>
 		
-		<!-- Custom Fields -->
-		
-		<extension point="cerberusweb.fields.source">
-			<id>cerberusweb.fields.source.kb_article</id>
-			<name>Knowledgebase Article</name>
-			<class>
-				<file>api/App.php</file>
-				<name>ChCustomFieldSource_KbArticle</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-		
 		<!-- Support Center Module -->
 		
 		<extension point="usermeet.sc.controller">
@@ -203,7 +243,7 @@
 			<id>cerberusweb.search.schema.kb_article</id>
 			<name>Knowledgebase Articles</name>
 			<class>
-				<file>api/App.php</file>
+				<file>api/dao/kb_article.php</file>
 				<name>Search_KbArticle</name>
 			</class>
 			<params>
@@ -222,7 +262,19 @@
 			<params>
 				<param key="uri" value="kbarticles" />
 			</params>
-		</extension>		
+		</extension>
+		
+		<extension point="cerberusweb.rest.controller">
+			<id>cerberusweb.rest.controller.kbcategories</id>
+			<name>KB Categories</name>
+			<class>
+				<file>api/rest/kbcategories.php</file>
+				<name>ChRest_KbCategories</name>
+			</class>
+			<params>
+				<param key="uri" value="kbcategories" />
+			</params>
+		</extension>	
 		
 	</extensions>
 </plugin>

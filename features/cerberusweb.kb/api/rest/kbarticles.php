@@ -1,9 +1,5 @@
 <?php
 class ChRest_KbArticles extends Extension_RestController implements IExtensionRestController {
-	function __construct($manifest) {
-		parent::__construct($manifest);
-	}
-	
 	function getAction($stack) {
 		@$action = array_shift($stack);
 		
@@ -50,7 +46,19 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 	}
 	
 	function deleteAction($stack) {
-		$this->error(self::ERRNO_NOT_IMPLEMENTED);
+		$worker = $this->getActiveWorker();
+		if(!$worker->hasPriv('core.kb.articles.modify'))
+			$this->error(self::ERRNO_ACL);
+
+		$id = array_shift($stack);
+
+		if(null == ($kbarticle = DAO_KbArticle::get($id)))
+			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid Knowledgebase article ID %d", $id));
+
+		DAO_KbArticle::delete($id);
+
+		$result = array('id' => $id);
+		$this->success($result);		
 	}
 	
 	private function getId($id) {
@@ -112,7 +120,9 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 	function search($filters=array(), $sortToken='id', $sortAsc=1, $page=1, $limit=10) {
 		$worker = $this->getActiveWorker();
 
+		$custom_field_params = $this->_handleSearchBuildParamsCustomFields($filters, CerberusContexts::CONTEXT_KB_ARTICLE);
 		$params = $this->_handleSearchBuildParams($filters);
+		$params = array_merge($params, $custom_field_params);
 		
 		// Sort
 		$sortBy = $this->translateToken($sortToken, 'search');
@@ -207,7 +217,7 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 		// Handle custom fields
 		$customfields = $this->_handleCustomFields($_POST);
 		if(is_array($customfields))
-			DAO_CustomFieldValue::formatAndSetFieldValues(ChCustomFieldSource_KbArticle::ID, $id, $customfields, true, true, true);
+			DAO_CustomFieldValue::formatAndSetFieldValues(CerberusContexts::CONTEXT_KB_ARTICLE, $id, $customfields, true, true, true);
 		
 		// Check required fields
 //		$reqfields = array(DAO_Address::EMAIL);
@@ -282,7 +292,7 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 			// Handle custom fields
 			$customfields = $this->_handleCustomFields($_POST);
 			if(is_array($customfields))
-				DAO_CustomFieldValue::formatAndSetFieldValues(ChCustomFieldSource_KbArticle::ID, $id, $customfields, true, true, true);
+				DAO_CustomFieldValue::formatAndSetFieldValues(CerberusContexts::CONTEXT_KB_ARTICLE, $id, $customfields, true, true, true);
 			
 			// Handle delta categories
 			if(isset($_POST['category_id'])) {

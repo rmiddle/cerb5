@@ -1,10 +1,8 @@
-<div id="headerSubMenu">
-	<div style="padding-bottom:5px;">
-	</div>
-</div>
+<ul class="submenu">
+</ul>
+<div style="clear:both;"></div>
 
 <h2>{$translate->_('reports.ui.ticket.oldest_open')}</h2>
-
 
 <form action="{devblocks_url}c=reports&report=report.tickets.oldest_open_tickets{/devblocks_url}" method="POST" id="frmRange" name="frmRange">
 <input type="hidden" name="c" value="reports">
@@ -13,17 +11,17 @@
 <button type="submit" id="btnSubmit">{$translate->_('reports.common.run_report')|capitalize}</button>
 <div id="divCal"></div>
 
-{$translate->_('reports.ui.date_past')} <a href="javascript:;" onclick="$('#start').val('-1 year');$('#end').val('now');document.getElementById('btnSubmit').click();">{$translate->_('reports.ui.filters.1_year')|lower}</a>
-| <a href="javascript:;" onclick="$('#start').val('-6 months');$('#end').val('now');document.getElementById('btnSubmit').click();">{'reports.ui.filters.n_months'|devblocks_translate:6}</a>
-| <a href="javascript:;" onclick="$('#start').val('-3 months');$('#end').val('now');document.getElementById('btnSubmit').click();">{'reports.ui.filters.n_months'|devblocks_translate:3}</a>
-| <a href="javascript:;" onclick="$('#start').val('-1 month');$('#end').val('now');document.getElementById('btnSubmit').click();">{$translate->_('reports.ui.filters.1_month')|lower}</a>
-| <a href="javascript:;" onclick="$('#start').val('-1 week');$('#end').val('now');document.getElementById('btnSubmit').click();">{$translate->_('reports.ui.filters.1_week')|lower}</a>
-| <a href="javascript:;" onclick="$('#start').val('-1 day');$('#end').val('now');document.getElementById('btnSubmit').click();">{$translate->_('reports.ui.filters.1_day')|lower}</a>
-| <a href="javascript:;" onclick="$('#start').val('today');$('#end').val('now');document.getElementById('btnSubmit').click();">{$translate->_('common.today')|lower}</a>
+{$translate->_('reports.ui.date_past')} <a href="javascript:;" onclick="$('#start').val('-1 year');$('#end').val('now');$('#btnSubmit').click();">{$translate->_('reports.ui.filters.1_year')|lower}</a>
+| <a href="javascript:;" onclick="$('#start').val('-6 months');$('#end').val('now');$('#btnSubmit').click();">{'reports.ui.filters.n_months'|devblocks_translate:6}</a>
+| <a href="javascript:;" onclick="$('#start').val('-3 months');$('#end').val('now');$('#btnSubmit').click();">{'reports.ui.filters.n_months'|devblocks_translate:3}</a>
+| <a href="javascript:;" onclick="$('#start').val('-1 month');$('#end').val('now');$('#btnSubmit').click();">{$translate->_('reports.ui.filters.1_month')|lower}</a>
+| <a href="javascript:;" onclick="$('#start').val('-1 week');$('#end').val('now');$('#btnSubmit').click();">{$translate->_('reports.ui.filters.1_week')|lower}</a>
+| <a href="javascript:;" onclick="$('#start').val('-1 day');$('#end').val('now');$('#btnSubmit').click();">{$translate->_('reports.ui.filters.1_day')|lower}</a>
+| <a href="javascript:;" onclick="$('#start').val('today');$('#end').val('now');$('#btnSubmit').click();">{$translate->_('common.today')|lower}</a>
 <br>{$active_worker->name}
 {if !empty($years)}
 	{foreach from=$years item=year name=years}
-		{if !$smarty.foreach.years.first} | {/if}<a href="javascript:;" onclick="$('#start').val('Jan 1 {$year}');$('#end').val('Dec 31 {$year} 23:59:59');document.getElementById('btnSubmit').click();">{$year}</a>
+		{if !$smarty.foreach.years.first} | {/if}<a href="javascript:;" onclick="$('#start').val('Jan 1 {$year}');$('#end').val('Dec 31 {$year} 23:59:59');$('#btnSubmit').click();">{$year}</a>
 	{/foreach}
 	<br>
 {/if}

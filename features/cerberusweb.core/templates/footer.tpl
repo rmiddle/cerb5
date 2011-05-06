@@ -2,9 +2,9 @@
 
 <table align="center" border="0" cellpadding="2" cellspacing="0" width="100%">
     <tr>
-      <td nowrap="nowrap" valign="top">
+      <td valign="top">
       	{$fair_pay=CerberusLicense::getInstance()}
-      	<b>Cerberus Helpdesk</b>&trade; &copy; 2002-2010, WebGroup Media&trade; LLC - Version {$smarty.const.APP_VERSION} (Build {$smarty.const.APP_BUILD}) 
+      	<b>Cerb5</b>&trade;, Cerberus Helpdesk&trade;, Devblocks&trade;, Apptendant&trade; &copy; 2002-2011, WebGroup Media LLC - Version {$smarty.const.APP_VERSION} (Build {$smarty.const.APP_BUILD}) 
       	<br>
       	{if (1 || $debug) && !empty($render_time)}
 		<span style="color:rgb(180,180,180);font-size:90%;">
@@ -20,7 +20,7 @@
 		</span>
       </td>
       <td  valign="top" align="right">
-      	<a href="http://www.cerberusweb.com/" target="_blank"><span class="cerb-sprite sprite-logo_small"></span></a>
+      	<a href="http://www.cerberusweb.com/" target="_blank"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/wgm/powered_by_cerb5.png{/devblocks_url}?v={$smarty.const.APP_BUILD}" border="0"></span></a>
       </td>
     </tr>
 </table>

@@ -6,12 +6,12 @@
 <input type="file" name="csv_file" size="45"><br>
 <br>
 
-{if $active_worker->hasPriv('crm.opp.actions.import')}<button type="submit"><span class="cerb-sprite sprite-check"></span> {$translate->_('common.upload')|capitalize}</button>{/if}
+{if $active_worker->hasPriv('crm.opp.actions.import')}<button type="submit"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.upload')|capitalize}</button>{/if}
 </form>
 
 <script type="text/javascript">
 	$popup = genericAjaxPopupFetch('peek');
 	$popup.one('popup_open', function(event,ui) {
-		$(this).dialog('option','title',"{'common.import'|devblocks_translate|capitalize|escape:'quotes'}");
+		$(this).dialog('option','title',"{'common.import'|devblocks_translate|capitalize}");
 	} );
 </script>
