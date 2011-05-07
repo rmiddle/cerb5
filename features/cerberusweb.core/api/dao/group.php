@@ -384,7 +384,7 @@ class DAO_Group extends C4_ORMHelper {
 		$fields = SearchFields_Group::getFields();
 
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
@@ -609,12 +609,12 @@ class View_Group extends C4_AbstractView {
 			SearchFields_Group::NAME,
 		);
 		
-		$this->columnsHidden = array(
+		$this->addColumnsHidden(array(
 			SearchFields_Group::ID,
-		);
-		$this->paramsHidden = array(
+		));
+		$this->addParamsHidden(array(
 			SearchFields_Group::ID,
-		);
+		));
 		
 		$this->doResetCriteria();
 	}
@@ -716,7 +716,7 @@ class View_Group extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
@@ -787,15 +787,14 @@ class View_Group extends C4_AbstractView {
 		if(empty($ids))
 		do {
 			list($objects,$null) = DAO_Group::search(
-			array(),
-			$this->getParams(),
-			100,
-			$pg++,
-			SearchFields_Group::ID,
-			true,
-			false
+				array(),
+				$this->getParams(),
+				100,
+				$pg++,
+				SearchFields_Group::ID,
+				true,
+				false
 			);
-			 
 			$ids = array_merge($ids, array_keys($objects));
 			 
 		} while(!empty($objects));

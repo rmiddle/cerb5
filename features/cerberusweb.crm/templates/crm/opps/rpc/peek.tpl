@@ -3,6 +3,10 @@
 <input type="hidden" name="a" value="saveOppPanel">
 <input type="hidden" name="opp_id" value="{$opp->id}">
 <input type="hidden" name="view_id" value="{$view_id}">
+{if empty($id) && !empty($context)}
+<input type="hidden" name="context" value="{$context}">
+<input type="hidden" name="context_id" value="{$context_id}">
+{/if}
 <input type="hidden" name="do_delete" value="0">
 
 <table cellpadding="0" cellspacing="2" border="0" width="98%">
@@ -81,7 +85,7 @@
 <br>
 
 {if $active_worker->hasPriv('crm.opp.actions.create')}
-	<button type="button" onclick="if($('#formOppPeek').validate().form()) { genericAjaxPopupClose('peek', 'opp_save'); genericAjaxPost('formOppPeek', 'view{$view_id}'); } "><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
+	<button type="button" onclick="if($('#formOppPeek').validate().form()) { genericAjaxPopupPostCloseReloadView('peek','formOppPeek','{$view_id}',false,'opp_save'); } "><span class="cerb-sprite sprite-check"></span> {$translate->_('common.save_changes')}</button>
 	{if !empty($opp)}<button type="button" onclick="if(confirm('Are you sure you want to permanently delete this opportunity?')) { this.form.do_delete.value='1';genericAjaxPopupClose('peek');genericAjaxPost('formOppPeek', 'view{$view_id}'); } "><span class="cerb-sprite sprite-delete2"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
 {else}
 	<div class="error">You do not have permission to modify this record.</div>

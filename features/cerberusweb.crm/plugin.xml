@@ -5,7 +5,7 @@
 	<description>Create opportunities (sales leads) linked to e-mail addresses. Opportunity records can be created from the Activity menu or while reading tickets.</description>
 	<author>WebGroup Media, LLC.</author>
 	<revision>0</revision>
-	<link>http://www.cerberusweb.com/</link>
+	<link>http://wiki.cerb5.com/wiki/Features:Opportunity_Tracking</link>
 	<image>plugin.png</image>
 	
 	<!-- Plugin Dependencies -->
@@ -19,13 +19,14 @@
 	<patches>
 		<patch version="4.0.0-alpha" revision="6" file="patches/4.0.0_alpha.php" />
 		<patch version="4.1.0" revision="12" file="patches/4.1.0.php" />
-		<patch version="5.1.0-dev" revision="14" file="patches/5.1.0.php" />
+		<patch version="5.1.0-dev" revision="15" file="patches/5.1.0.php" />
 	</patches>
 	
 	<!-- Exported Classes -->
 	
 	<class_loader>
 		<file path="api/App.php">
+			<class name="Extension_CrmOpportunityToolbarItem" />
 			<class name="CrmCustomFieldSource_Opportunity" />
 			<class name="DAO_CrmOpportunity" />
 			<class name="Model_CrmOpportunity" />
@@ -65,6 +66,12 @@
 				<name>Context_Opportunity</name>
 			</class>
 			<params>
+				<param key="link_options">
+					<value>
+						<data key="create" />
+						<data key="find" />
+					</value>
+				</param>
 				<param key="events">
 					<value>
 						<data key="context.assigned" value="context.opportunity.assigned" />

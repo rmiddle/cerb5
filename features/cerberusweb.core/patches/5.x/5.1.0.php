@@ -97,7 +97,7 @@ if(!isset($indexes['last_name'])) {
 }
 
 if(!empty($changes))
-	$db->Execute("ALTER TABLE address " . implode('', $changes));
+	$db->Execute("ALTER TABLE address " . implode(', ', $changes));
 
 // ===========================================================================
 // Comment
@@ -105,7 +105,7 @@ if(!empty($changes))
 if(!isset($tables['comment'])) {
 	$sql = "
 		CREATE TABLE IF NOT EXISTS comment (
-			id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
+			id INT UNSIGNED NOT NULL AUTO_INCREMENT,
 			context VARCHAR(128) DEFAULT '',
 			context_id INT UNSIGNED NOT NULL DEFAULT 0,
 			created INT UNSIGNED NOT NULL DEFAULT 0,
@@ -314,6 +314,18 @@ if(!isset($tables['worker_view_model'])) {
 	$db->Execute("DELETE FROM worker_pref WHERE setting LIKE 'view%'");
 }
 
+// Add render_subtotals
+list($columns, $indexes) = $db->metaTable('worker_view_model');
+
+if(!isset($columns['render_subtotals'])) {
+	$db->Execute("ALTER TABLE worker_view_model ADD COLUMN render_subtotals VARCHAR(255) NOT NULL DEFAULT ''");
+	$db->Execute("UPDATE worker_view_model SET render_subtotals = 'group' WHERE view_id = 'mail_workflow'");
+}
+
+if(!isset($columns['render_subtotals_clickable'])) {
+	$db->Execute("ALTER TABLE worker_view_model ADD COLUMN render_subtotals_clickable TINYINT(1) NOT NULL DEFAULT 0");
+}
+
 // ===========================================================================
 // Clean up the last bit of parent orgs
 
@@ -409,6 +421,12 @@ if(!isset($tables['snippet']))
 $db->Execute("UPDATE snippet SET content=REPLACE(content,'{{worker_','{{') WHERE context='cerberusweb.snippets.worker'");
 
 // ===========================================================================
+// Fix orphaned ticket.last_message_id
+
+$db->Execute("UPDATE ticket SET last_message_id=(SELECT max(id) FROM message WHERE message.ticket_id=ticket.id) WHERE last_message_id=0 AND is_deleted=0");
+$db->Execute("UPDATE ticket SET is_closed=1, is_deleted=1 WHERE last_message_id=0 AND is_deleted=0");
+
+// ===========================================================================
 // Convert sequences to MySQL AUTO_INCREMENT, make UNSIGNED
 
 // Drop sequence tables
@@ -441,6 +459,7 @@ $tables_autoinc = array(
 	'bayes_words',
 	'category',
 	'comment',
+	'contact_org',
 	'custom_field',
 	'fnr_external_resource',
 	'fnr_topic',

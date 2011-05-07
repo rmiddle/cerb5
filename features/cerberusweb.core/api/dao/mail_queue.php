@@ -185,7 +185,7 @@ class DAO_MailQueue extends DevblocksORMHelper {
 		$fields = SearchFields_MailQueue::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
@@ -578,14 +578,14 @@ class View_MailQueue extends C4_AbstractView {
 			SearchFields_MailQueue::HINT_TO,
 			SearchFields_MailQueue::UPDATED,
 		);
-		$this->columnsHidden = array(
+		$this->addColumnsHidden(array(
 			SearchFields_MailQueue::TICKET_ID,
-		);
+		));
 		
-		$this->paramsHidden = array(
+		$this->addParamsHidden(array(
 			SearchFields_MailQueue::ID,
 			SearchFields_MailQueue::TICKET_ID,
-		);
+		));
 		
 		$this->doResetCriteria();
 	}
@@ -686,7 +686,7 @@ class View_MailQueue extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
@@ -766,8 +766,10 @@ class View_MailQueue extends C4_AbstractView {
 
 		if(empty($ids))
 		do {
+			$params = $this->getParams();
 			list($objects,$null) = DAO_MailQueue::search(
-				$this->getParams(),
+				array(),
+				$params,
 				100,
 				$pg++,
 				SearchFields_MailQueue::ID,

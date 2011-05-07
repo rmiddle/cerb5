@@ -168,6 +168,11 @@ class ChContactsPage extends CerberusPageExtension {
 		);
 		
 		$view = C4_AbstractViewLoader::getView(View_Address::DEFAULT_ID, $defaults);
+		
+		$view->addParamsDefault(array(
+			SearchFields_Address::IS_REGISTERED => new DevblocksSearchCriteria(SearchFields_Address::IS_REGISTERED,'=',1),
+		));
+		
 		$tpl->assign('view', $view);
 		$tpl->assign('contacts_page', 'addresses');
 		
@@ -607,6 +612,12 @@ class ChContactsPage extends CerberusPageExtension {
 		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
+
+		// Handle context links ([TODO] as an optional array)
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer','');
+		$tpl->assign('context', $context);
+		$tpl->assign('context_id', $context_id);
 		
 		if(!empty($address_id)) {
 			$email = '';
@@ -758,6 +769,12 @@ class ChContactsPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', $this->_TPL_PATH);
 		
+		// Handle context links ([TODO] as an optional array)
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer','');
+		$tpl->assign('context', $context);
+		$tpl->assign('context_id', $context_id);
+				
 		$contact = DAO_ContactOrg::get($id);
 		$tpl->assign('contact', $contact);
 
@@ -821,6 +838,13 @@ class ChContactsPage extends CerberusPageExtension {
 			if($id==0) {
 				$fields = $fields + array(DAO_Address::EMAIL => $email);
 				$id = DAO_Address::create($fields);
+				
+				// Context Link (if given)
+				@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+				@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer','');
+				if(!empty($id) && !empty($context) && !empty($context_id)) {
+					DAO_ContextLink::setLink(CerberusContexts::CONTEXT_ADDRESS, $id, $context, $context_id);
+				}
 			}
 			else {
 				DAO_Address::update($id, $fields);
@@ -936,6 +960,13 @@ class ChContactsPage extends CerberusPageExtension {
 		
 				if($id==0) {
 					$id = DAO_ContactOrg::create($fields);
+					
+					// Context Link (if given)
+					@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+					@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer','');
+					if(!empty($id) && !empty($context) && !empty($context_id)) {
+						DAO_ContextLink::setLink(CerberusContexts::CONTEXT_ORG, $id, $context, $context_id);
+					}
 				}
 				else {
 					DAO_ContactOrg::update($id, $fields);	
@@ -979,7 +1010,7 @@ class ChContactsPage extends CerberusPageExtension {
 			$do['banned'] = $is_banned;
 		
 		// Broadcast: Compose
-		if($active_worker->hasPriv('crm.opp.view.actions.broadcast')) {
+		if($active_worker->hasPriv('core.addybook.addy.view.actions.broadcast')) {
 			@$do_broadcast = DevblocksPlatform::importGPC($_REQUEST['do_broadcast'],'string',null);
 			@$broadcast_group_id = DevblocksPlatform::importGPC($_REQUEST['broadcast_group_id'],'integer',0);
 			@$broadcast_subject = DevblocksPlatform::importGPC($_REQUEST['broadcast_subject'],'string',null);
@@ -1098,6 +1129,20 @@ class ChContactsPage extends CerberusPageExtension {
 		// Do: Country
 		if(0 != strlen($country))
 			$do['country'] = $country;
+			
+		// Owners
+		$owner_options = array();
+		
+		@$owner_add_ids = DevblocksPlatform::importGPC($_REQUEST['do_owner_add_ids'],'array',array());
+		if(!empty($owner_add_ids))
+			$owner_params['add'] = $owner_add_ids;
+			
+		@$owner_remove_ids = DevblocksPlatform::importGPC($_REQUEST['do_owner_remove_ids'],'array',array());
+		if(!empty($owner_remove_ids))
+			$owner_params['remove'] = $owner_remove_ids;
+		
+		if(!empty($owner_params))
+			$do['owner'] = $owner_params;
 			
 		// Do: Custom fields
 		$do = DAO_CustomFieldValue::handleBulkPost($do);

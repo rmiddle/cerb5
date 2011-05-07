@@ -188,7 +188,7 @@ class DAO_Task extends C4_ORMHelper {
 		$fields = SearchFields_Task::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
 			$sortBy=null;
 		
         list($tables, $wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
@@ -232,7 +232,8 @@ class DAO_Task extends C4_ORMHelper {
 		$sort_sql =	(!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
 		
 		// Virtuals
-		foreach($params as $param_key => $param) {
+		foreach($params as $param) {
+			$param_key = $param->field;
 			settype($param_key, 'string');
 			switch($param_key) {
 				case SearchFields_Task::VIRTUAL_WORKERS:
@@ -361,21 +362,21 @@ class View_Task extends C4_AbstractView {
 			SearchFields_Task::UPDATED_DATE,
 			SearchFields_Task::DUE_DATE,
 		);
-		$this->columnsHidden = array(
+		$this->addColumnsHidden(array(
 			SearchFields_Task::ID,
 			SearchFields_Task::CONTEXT_LINK,
 			SearchFields_Task::CONTEXT_LINK_ID,
 			SearchFields_Task::VIRTUAL_WORKERS,
-		);
+		));
 		
-		$this->paramsHidden = array(
+		$this->addParamsHidden(array(
 			SearchFields_Task::ID,
 			SearchFields_Task::CONTEXT_LINK,
 			SearchFields_Task::CONTEXT_LINK_ID,
-		);
-		$this->paramsDefault = array(
+		));
+		$this->addParamsDefault(array(
 			SearchFields_Task::IS_COMPLETED => new DevblocksSearchCriteria(SearchFields_Task::IS_COMPLETED,'=',0),
-		);
+		));
 		
 		$this->doResetCriteria();
 	}
@@ -505,7 +506,7 @@ class View_Task extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
@@ -609,6 +610,17 @@ class View_Task extends C4_AbstractView {
 			
 			// Custom Fields
 			self::_doBulkSetCustomFields(ChCustomFieldSource_Task::ID, $custom_fields, $batch_ids);
+			
+			// Owners
+			if(isset($do['owner']) && is_array($do['owner'])) {
+				$owner_params = $do['owner'];
+				foreach($batch_ids as $batch_id) {
+					if(isset($owner_params['add']) && is_array($owner_params['add']))
+						CerberusContexts::addWorkers(CerberusContexts::CONTEXT_TASK, $batch_id, $owner_params['add']);
+					if(isset($owner_params['remove']) && is_array($owner_params['remove']))
+						CerberusContexts::removeWorkers(CerberusContexts::CONTEXT_TASK, $batch_id, $owner_params['remove']);
+				}
+			}
 			
 			unset($batch_ids);
 		}

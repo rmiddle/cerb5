@@ -96,32 +96,56 @@ class DAO_Worker extends C4_ORMHelper {
 		return self::getAll(false, true);
 	}
 	
-	static function getAllOnline($idle_limit=600, $idle_kick=false) {
+	static function getAllOnline($idle_limit=600, $idle_kick_limit=0) {
 		$session = DevblocksPlatform::getSessionService();
 
-		$workers = array();
-
-		foreach($session->getAll() as $sess) {
-			$key = $sess['session_key'];
-			$data = $session->decodeSession($sess['session_data']);
-			
+		$sessions = $session->getAll();
+		$session_workers = array();
+		$active_workers = array();
+		$workers_to_sessions = array();
+		
+		// Track the active workers based on session data
+		foreach($sessions as $session_id => $session_data) {
+			$key = $session_data['session_key'];
+			$data = $session->decodeSession($session_data['session_data']);
 			@$visit = $data['db_visit']; /* @var $visit CerberusVisit */
-			if(is_null($visit))
-				continue;
-				
-			$worker = $visit->getWorker();
 			
-			// Check the last activity date (and log out as needed)
-			$idle_secs = time() - $worker->last_activity_date;
-			if($idle_secs > $idle_limit) {
-				if($idle_kick)
-					$session->clear($key);
+			if(null == ($worker = $visit->getWorker()))
+				continue;
+
+			// All workers from the sessions
+			$session_workers[$worker->id] = $worker;
+
+			// Map workers to sessions
+			if(!isset($workers_to_sessions[$worker->id]))
+				$workers_to_sessions[$worker->id] = array();
+			$workers_to_sessions[$worker->id][$key] = $data;
+		}
+		
+		// Sort workers by idle time (newest first)
+		$sort_func = create_function('$a, $b', "return \$a->last_activity_date > \$b->last_activity_date;");
+		uasort($session_workers, $sort_func);
+		
+		// Find active workers from sessions (idle but not logged out)
+		foreach($session_workers as $worker_id => $worker) {
+			if($worker->last_activity_date > time() - $idle_limit) {
+				$active_workers[$worker->id] = $worker;
+				
 			} else {
-				$workers[$worker->id] = $worker;
+				if($idle_kick_limit) {
+					// Kill all sessions for this worker
+					foreach($workers_to_sessions[$worker->id] as $session_key => $session_data) {
+						$session->clear($session_key);
+					}
+					$idle_kick_limit--;
+				}
 			}
 		}
 		
-		return $workers;
+		// Most recently active first
+		$active_workers = array_reverse($active_workers, true);
+		
+		return $active_workers;
 	}
 	
 	static function getAll($nocache=false, $with_disabled=true) {
@@ -277,13 +301,7 @@ class DAO_Worker extends C4_ORMHelper {
 		
 		$sql = "DELETE QUICK view_rss FROM view_rss LEFT JOIN worker ON view_rss.worker_id = worker.id WHERE worker.id IS NULL";
 		$db->Execute($sql);
-
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' view_rss records.');
-		
-		$sql = "DELETE QUICK watcher_mail_filter FROM watcher_mail_filter LEFT JOIN worker ON watcher_mail_filter.worker_id = worker.id WHERE worker.id IS NULL";
-		$db->Execute($sql);
-		
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' watcher_mail_filter records.');
 		
 		$sql = "DELETE QUICK worker_pref FROM worker_pref LEFT JOIN worker ON worker_pref.worker_id = worker.id WHERE worker.id IS NULL";
 		$db->Execute($sql);
@@ -295,7 +313,6 @@ class DAO_Worker extends C4_ORMHelper {
 		
 		$sql = "DELETE QUICK worker_to_team FROM worker_to_team LEFT JOIN worker ON worker_to_team.agent_id = worker.id WHERE worker.id IS NULL";
 		$db->Execute($sql);
-		
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' worker_to_team records.');
 		
 		$sql = "DELETE QUICK worker_workspace_list FROM worker_workspace_list LEFT JOIN worker ON worker_workspace_list.worker_id = worker.id WHERE worker.id IS NULL";
@@ -469,7 +486,7 @@ class DAO_Worker extends C4_ORMHelper {
 		$fields = SearchFields_Worker::getFields();
 		
 		// Sanitize
-		if(!isset($fields[$sortBy]))
+		if(!isset($fields[$sortBy]) || '*'==substr($sortBy,0,1))
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields, $sortBy);
@@ -516,7 +533,8 @@ class DAO_Worker extends C4_ORMHelper {
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
 		
 		// Virtuals
-		foreach($params as $param_key => $param) {
+		foreach($params as $param) {
+			$param_key = $param->field;
 			settype($param_key, 'string');
 			switch($param_key) {
 				case SearchFields_Worker::VIRTUAL_GROUPS:
@@ -525,7 +543,7 @@ class DAO_Worker extends C4_ORMHelper {
 						$join_sql .= "LEFT JOIN worker_to_team ON (worker_to_team.agent_id = w.id) ";
 						$where_sql .= "AND worker_to_team.agent_id IS NULL ";
 					} else {
-						$join_sql .= sprintf("INNER JOIN worker_to_team ON (worker_to_team.agent_id = w.id) ",
+						$join_sql .= sprintf("INNER JOIN worker_to_team ON (worker_to_team.agent_id = w.id AND worker_to_team.team_id IN (%s)) ",
 							implode(',', $param->value)
 						);
 					}
@@ -748,18 +766,18 @@ class View_Worker extends C4_AbstractView {
 			SearchFields_Worker::IS_SUPERUSER,
 		);
 		
-		$this->columnsHidden = array(
+		$this->addColumnsHidden(array(
 			SearchFields_Worker::LAST_ACTIVITY,
 			SearchFields_Worker::CONTEXT_LINK,
 			SearchFields_Worker::CONTEXT_LINK_ID,
 			SearchFields_Worker::VIRTUAL_GROUPS,
-		);
-		$this->paramsHidden = array(
+		));
+		$this->addParamsHidden(array(
 			SearchFields_Worker::ID,
 			SearchFields_Worker::LAST_ACTIVITY,
 			SearchFields_Worker::CONTEXT_LINK,
 			SearchFields_Worker::CONTEXT_LINK_ID,
-		);
+		));
 		
 		$this->doResetCriteria();
 	}
@@ -895,7 +913,7 @@ class View_Worker extends C4_AbstractView {
 				// force wildcards if none used on a LIKE
 				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
 				&& false === (strpos($value,'*'))) {
-					$value = '*'.$value.'*';
+					$value = $value.'*';
 				}
 				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
 				break;
@@ -969,15 +987,14 @@ class View_Worker extends C4_AbstractView {
 		if(empty($ids))
 		do {
 			list($objects,$null) = DAO_Worker::search(
-			array(),
-			$this->getParams(),
-			100,
-			$pg++,
-			SearchFields_Worker::ID,
-			true,
-			false
+				array(),
+				$this->getParams(),
+				100,
+				$pg++,
+				SearchFields_Worker::ID,
+				true,
+				false
 			);
-			 
 			$ids = array_merge($ids, array_keys($objects));
 			 
 		} while(!empty($objects));
