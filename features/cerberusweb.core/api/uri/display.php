@@ -159,8 +159,8 @@ class ChDisplayPage extends CerberusPageExtension {
 			$sql .= "GROUP BY context_link.from_context_id ";
             
 			$rs = $db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
-		
-			if($row = mysql_fetch_assoc($rs)) {
+
+            if($row = mysql_fetch_assoc($rs)) {
 				$total_time_minutes = intval($row['mins']);			
 			} else {
 				$minutes = 0;			
