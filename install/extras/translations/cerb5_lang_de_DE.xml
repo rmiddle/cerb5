@@ -141,11 +141,6 @@
         <seg>[Aufgaben] Kann die Aufgaben jedes Bearbeiters übernehmen</seg>
       </tuv>
     </tu>
-    <tu tuid="acl.core.tasks.actions.update_nobody">
-      <tuv xml:lang="de_DE">
-        <seg>[Aufgaben] Kann nicht zugewiesene Aufgaben übernehmen</seg>
-      </tuv>
-    </tu>
     <tu tuid="acl.core.tasks.view.actions.export">
       <tuv xml:lang="de_DE">
         <seg>[Aufgaben] Kann Aufgaben exportieren in CSV/XML</seg>
@@ -214,11 +209,6 @@
     <tu tuid="acl.crm.opp.actions.update_all">
       <tuv xml:lang="de_DE">
         <seg>[Absatzchancen] Kann Absatzchancen jeden Benutzers verwalten</seg>
-      </tuv>
-    </tu>
-    <tu tuid="acl.crm.opp.actions.update_nobody">
-      <tuv xml:lang="de_DE">
-        <seg>[Absatzchancen] Kann nicht zugewiesene Absatzchancen verwalten</seg>
       </tuv>
     </tu>
     <tu tuid="acl.crm.opp.view.actions.broadcast">

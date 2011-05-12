@@ -663,10 +663,10 @@
 			<tuv xml:lang="en_US"><seg>[Tasks] Can create tasks</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.tasks.actions.update_all'>
-			<tuv xml:lang="en_US"><seg>[Tasks] Can manage everyone's tasks</seg></tuv>
+			<tuv xml:lang="en_US"><seg>[Tasks] Can edit tasks</seg></tuv>
 		</tu>
-		<tu tuid='acl.core.tasks.actions.update_nobody'>
-			<tuv xml:lang="en_US"><seg>[Tasks] Can manage unassigned tasks</seg></tuv>
+		<tu tuid='acl.core.tasks.actions.delete'>
+			<tuv xml:lang="en_US"><seg>[Tasks] Can delete tasks</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.tasks.view.actions.export'>
 			<tuv xml:lang="en_US"><seg>[Tasks] Can export task lists to CSV/XML</seg></tuv>
@@ -702,6 +702,12 @@
 		</tu>
 		<tu tuid='acl.core.ticket.view.actions.pile_sort'>
 			<tuv xml:lang="en_US"><seg>[Tickets] Can use the pile sorter on lists</seg></tuv>
+		</tu>
+		<tu tuid='acl.core.watchers.assign'>
+			<tuv xml:lang="en_US"><seg>[Watchers] Can add other workers as watchers</seg></tuv>
+		</tu>
+		<tu tuid='acl.core.watchers.unassign'>
+			<tuv xml:lang="en_US"><seg>[Watchers] Can remove other workers as watchers</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.ticket.view.whos_online'>
 			<tuv xml:lang="en_US"><seg>[Tickets] Allows user to see who's Online</seg></tuv>

@@ -230,8 +230,8 @@ $(document).keypress(function(event) {
 	
 	if($(event.target).is(':input'))
 		return;
-	
-	event.preventDefault();
+
+	hotkey_activated = true;
 	
 	switch(event.which) {
 		case 97:  // (A) read all
@@ -276,8 +276,12 @@ $(document).keypress(function(event) {
 			break;
 		default:
 			// We didn't find any obvious keys, try other codes
+			hotkey_activated = false;
 			break;
 	}
+
+	if(hotkey_activated)
+		event.preventDefault();
 });
 {/if}
 </script>
