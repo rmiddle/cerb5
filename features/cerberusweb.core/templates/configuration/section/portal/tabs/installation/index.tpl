@@ -21,22 +21,19 @@ define('LOCAL_HOST', $_SERVER['HTTP_HOST']);
 define('LOCAL_BASE', DevblocksRouter::getLocalBase()); // NO trailing slash!
 define('SCRIPT_LAST_MODIFY', 2011012001); // last change
 
-if(DEBUG_MODE') {
-    $log = fopen("support.log", "a");
-}
-
-
 @session_start();
 
 class DevblocksProxy {
     function proxy($local_path) {
-		if(DEBUG_MODE') {
-            fwrite($log, "RPT: " . REMOTE_PROTOCOL . "\n";    	
-            fwrite($log, "RH: " . REMOTE_HOST . "\n";    	
-            fwrite($log, "RP: " . REMOTE_PORT . "\n";    	
-            fwrite($log, "RB: " . REMOTE_BASE . "\n";    	
-            fwrite($log, "RU: " . REMOTE_URI . "\n";    	
-            fwrite($log, "LP: $local_path\n";    	
+		if(DEBUG_MODE) {
+            $log = fopen("support.log", "a");
+            fwrite($log, "RPT: " . REMOTE_PROTOCOL . "\n");    	
+            fwrite($log, "RH: " . REMOTE_HOST . "\n");    	
+            fwrite($log, "RP: " . REMOTE_PORT . "\n");    	
+            fwrite($log, "RB: " . REMOTE_BASE . "\n");    	
+            fwrite($log, "RU: " . REMOTE_URI . "\n");    	
+            fwrite($log, "LP: $local_path\n");
+            fclose($log);
         }
 
 		$path = '';
@@ -266,8 +263,10 @@ class DevblocksProxy_Socket extends DevblocksProxy {
             $out .= "Connection: Close\r\n\r\n";
 
             $this->_send($fp, $out);
-       		if(DEBUG_MODE') {
-                fwrite($log, "DevblocksProxy_Socket::_get" . $out . "\n";    	
+       		if(DEBUG_MODE) {
+                $log = fopen("support.log", "a");
+                fwrite($log, "DevblocksProxy_Socket::_get" . $out . "\n");    	
+                fclose($log);
             }
         }
     }
@@ -294,29 +293,35 @@ class DevblocksProxy_Socket extends DevblocksProxy {
             $out .= $content;
             
             $this->_send($fp, $out);
-       		if(DEBUG_MODE') {
-                fwrite($log, "DevblocksProxy_Socket::_put" . $out . "\n";    	
+       		if(DEBUG_MODE) {
+                $log = fopen("support.log", "a");
+                fwrite($log, "DevblocksProxy_Socket::_put" . $out . "\n");    	
+                fclose($log);
             }
         }
     }
     
     function _send($fp, $out) {
 	    fwrite($fp, $out);
-   		if(DEBUG_MODE') {
-            fwrite($log, "DevblocksProxy_Socket::_send" . $out . "\n";    	
+   		if(DEBUG_MODE) {
+            $log = fopen("support.log", "a");
+            fwrite($log, "DevblocksProxy_Socket::_send" . $out . "\n");    	
         }
 	
 	    $content = '';
 	    
 		while(!feof($fp)) {
 			$content .= fread($fp, 1024);
-       		if(DEBUG_MODE') {
+       		if(DEBUG_MODE) {
                 fwrite($log, "DevblocksProxy_Socket::_send" . $out . "\n";
             }
         }
 
         }
 	    fclose($fp);
+   		if(DEBUG_MODE) {
+            fclose($log);
+        }
 	    
 	    list($headers, $content) = $this->_parseResponse($content);
 	    
@@ -408,8 +413,10 @@ class DevblocksProxy_Curl extends DevblocksProxy {
         	header("Content-type: " . $content_type);
         
         echo $content;
-   		if(DEBUG_MODE') {
-            fwrite($log, "DevblocksProxy_Curl::_returnTransfer" . $content . "\n";
+   		if(DEBUG_MODE) {
+            $log = fopen("support.log", "a");
+            fwrite($log, "DevblocksProxy_Curl::_returnTransfer" . $content . "\n");
+            fclose($log);
         }
     }
 };
@@ -429,7 +436,7 @@ class DevblocksRouter {
     
 		$local_path = substr($location,strlen(LOCAL_BASE));
 		
-   		if(DEBUG_MODE') {
+   		if(DEBUG_MODE) {
             fwrite($log, "SRU: " . $_SERVER['REQUEST_URI'] . "\n";
             fwrite($log, "Localbase: " . LOCAL_BASE . "\n";
             fwrite($log, "Localpath: " . $local_path . "\n";
