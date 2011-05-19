@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011051802);
+define("APP_BUILD", 2011051803);
 define("APP_VERSION", '5.4.2');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -793,7 +793,7 @@ class CerberusContexts {
 				if(isset($entry['urls']))
 				foreach($entry['urls'] as $token => $url) {
 					if(0 != strcasecmp('http',substr($url,0,4)))
-						$url = $url_writer->write($url, true);
+						$url = $url_writer->writeNoProxy($url, true);
 					
 					$vars[$token] = '<a href="'.$url.'" style="font-weight:bold;">'.$vars[$token].'</a>';
 				}
@@ -803,7 +803,7 @@ class CerberusContexts {
 				if(isset($entry['urls']))
 				foreach($entry['urls'] as $token => $url) {
 					if(0 != strcasecmp('http',substr($url,0,4)))
-						$url = $url_writer->write($url, true);
+						$url = $url_writer->writeNoProxy($url, true);
 					
 					$vars[$token] = '['.$vars[$token].']('.$url.')';
 				}
@@ -816,7 +816,7 @@ class CerberusContexts {
 					break;
 					
 				if(0 != strcasecmp('http',substr($url,0,4)))
-					$url = $url_writer->write($url, true);
+					$url = $url_writer->writeNoProxy($url, true);
 					
 				$entry['message'] .= ' <' . $url . '>'; 
 				break;
@@ -967,7 +967,7 @@ class CerberusContexts {
 			@$url = reset($entry_array['urls']); 
 			
 			if(0 != strcasecmp('http',substr($url,0,4)))
-				$url = $url_writer->write($url, true);
+				$url = $url_writer->writeNoProxy($url, true);
 			
 			foreach($watcher_ids as $watcher_id) {
 				// Skip a watcher if they are the actor
