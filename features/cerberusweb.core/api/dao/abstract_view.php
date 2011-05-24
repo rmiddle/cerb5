@@ -1070,8 +1070,12 @@ class C4_AbstractViewLoader {
 
 		// Check if we've ever persisted this view
 		if(false !== ($model = DAO_WorkerViewModel::getView($active_worker->id, $view_id))) {
-			return self::unserializeAbstractView($model);
-			
+			if(null != ($view = self::unserializeAbstractView($model)))  {
+				return $view;
+			else if(null != ($view = self::unserializeAbstractView($defaults)))  {
+				self::setView($view_id, $view);
+				return $view;
+			}
 		} elseif(!empty($defaults) && $defaults instanceof C4_AbstractViewModel) {
 			// Load defaults if they were provided
 			if(null != ($view = self::unserializeAbstractView($defaults)))  {
