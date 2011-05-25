@@ -810,8 +810,8 @@ class View_TimeTracking extends C4_AbstractView implements IAbstractView_Subtota
 	}
 
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(0);
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 

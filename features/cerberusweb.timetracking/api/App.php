@@ -574,6 +574,8 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 	}
 	
 	function doBulkUpdateAction() {
+		@set_time_limit(600); // 10m
+		
 		// Filter: whole list or check
 	    @$filter = DevblocksPlatform::importGPC($_REQUEST['filter'],'string','');
 	    $ids = array();

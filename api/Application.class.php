@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011051803);
+define("APP_BUILD", 2011052402);
 define("APP_VERSION", '5.4.2');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -861,9 +861,9 @@ class CerberusContexts {
 			
 			// See if we're inside of an attendant's running decision tree
 			if(EventListener_Triggers::getDepth() > 0
-				&& null != ($trigger_id = end(EventListener_Triggers::getTriggerLog())) 
-				&& !empty($trigger_id) 
-				&& null != ($trigger = DAO_TriggerEvent::get($trigger_id)) 
+				&& null != ($trigger_id = end(EventListener_Triggers::getTriggerStack())) 
+				&& !empty($trigger_id)
+				&& null != ($trigger = DAO_TriggerEvent::get($trigger_id))
 			) {
 				/* @var $trigger Model_TriggerEvent */
 				

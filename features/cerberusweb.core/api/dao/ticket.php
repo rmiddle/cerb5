@@ -2164,8 +2164,8 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 	 * @return boolean
 	 */
 	function doBulkUpdate($filter, $filter_param, $data, $do, $ids=array()) {
-		@set_time_limit(600);
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 
