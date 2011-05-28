@@ -492,6 +492,12 @@ class ChPreferencesPage extends CerberusPageExtension {
 		$mail_always_show_all = DAO_WorkerPref::get($worker->id,'mail_always_show_all',0);
 		$tpl->assign('mail_always_show_all', $mail_always_show_all);
 
+		$mail_reply_button = DAO_WorkerPref::get($worker->id,'mail_reply_button',0);
+		$tpl->assign('mail_reply_button', $mail_reply_button);
+		
+		$mail_no_discard_warning = DAO_WorkerPref::get($worker->id,'mail_no_discard_warning',0);
+		$tpl->assign('mail_no_discard_warning', $mail_no_discard_warning);
+
 		$mail_signature_pos = DAO_WorkerPref::get($worker->id,'mail_signature_pos',2);
 		$tpl->assign('mail_signature_pos', $mail_signature_pos);
 
@@ -564,6 +570,12 @@ class ChPreferencesPage extends CerberusPageExtension {
 
 		@$mail_always_show_all = DevblocksPlatform::importGPC($_REQUEST['mail_always_show_all'],'integer',0);
 		DAO_WorkerPref::set($worker->id, 'mail_always_show_all', $mail_always_show_all);
+
+		@$mail_reply_button = DevblocksPlatform::importGPC($_REQUEST['mail_reply_button'],'integer',0);
+		DAO_WorkerPref::set($worker->id, 'mail_reply_button', $mail_reply_button);
+		
+		@$mail_no_discard_warning = DevblocksPlatform::importGPC($_REQUEST['mail_no_discard_warning'],'integer',0);
+		DAO_WorkerPref::set($worker->id, 'mail_no_discard_warning', $mail_no_discard_warning);
 		
 		@$mail_signature_pos = DevblocksPlatform::importGPC($_REQUEST['mail_signature_pos'],'integer',0);
 		DAO_WorkerPref::set($worker->id, 'mail_signature_pos', $mail_signature_pos);
