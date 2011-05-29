@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011052601);
+define("APP_BUILD", 2011052802);
 define("APP_VERSION", '5.4.3-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -1366,5 +1366,58 @@ class C4_ORMHelper extends DevblocksORMHelper {
 		}
 		
 		return array($select_sql, $join_sql, $return_multiple_values);
+	}
+	
+	static function _searchComponentsVirtualWatchers(&$param, $from_context, $from_index, &$join_sql, &$where_sql) {
+		// Join and return anything
+		if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
+			$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+		} else {
+			if(empty($param->value)) {
+				switch($param->operator) {
+					case DevblocksSearchCriteria::OPER_IN:
+						$param->operator = DevblocksSearchCriteria::OPER_IS_NULL;
+						break;
+					case DevblocksSearchCriteria::OPER_NIN:
+						$param->operator = DevblocksSearchCriteria::OPER_IS_NOT_NULL;
+						break;
+				}
+			}
+			
+			switch($param->operator) {
+				case DevblocksSearchCriteria::OPER_IN:
+					$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id IN (%s)) ",
+						$from_context,
+						$from_index,
+						implode(',', $param->value)
+					);
+					break;
+				case DevblocksSearchCriteria::OPER_IN_OR_NULL:
+				case DevblocksSearchCriteria::OPER_IS_NULL:
+					$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+					$where_sql .= sprintf("AND (context_watcher.to_context_id IS NULL %s) ",
+						(!empty($param->value) ? sprintf("OR context_watcher.to_context_id IN (%s)", implode(',',$param->value)) : '')
+					);
+					break;
+				case DevblocksSearchCriteria::OPER_NIN:
+					$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id NOT IN (%s)) ",
+						$from_context,
+						$from_index,
+						implode(',', $param->value)
+					);
+					break;
+				case DevblocksSearchCriteria::OPER_IS_NOT_NULL:
+					$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+					$where_sql .= sprintf("AND (context_watcher.to_context_id IS NOT NULL) "); //,%s
+						//(!empty($param->value) ? sprintf("OR context_watcher.to_context_id IN (%s)", implode(',',$param->value)) : '')
+					break;
+				case DevblocksSearchCriteria::OPER_NIN_OR_NULL:
+					$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+					$where_sql .= sprintf("AND (context_watcher.to_context_id IS NULL %s) ",
+						(!empty($param->value) ? sprintf("OR context_watcher.to_context_id NOT IN (%s)", implode(',',$param->value)) : '')
+					);
+					break;
+			}
+		}
 	}
 };
