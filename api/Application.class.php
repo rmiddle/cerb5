@@ -47,7 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011052802);
+define("APP_BUILD", 2011052901);
 define("APP_VERSION", '5.4.3-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -332,12 +332,12 @@ class CerberusApplication extends DevblocksApplication {
 		 */
 		foreach($core_patches as $patch) { /* @var $patch DevblocksPatch */
 			if(!file_exists($patch->getFilename()))
-				throw new Exception("Missing application patch: ".$path);
+				throw new Exception("Missing application patch: ".$patch->getFilename());
 			
 			$version = $patch->getVersion();
 			
 			if(!$patch->run())
-				throw new Exception("Application patch failed to apply: ".$path);
+				throw new Exception("Application patch failed to apply: ".$patch->getFilename());
 			
 			// Patch this version and then patch plugins up to this version
 			foreach($plugin_patches as $plugin_id => $patches) {
@@ -842,6 +842,14 @@ class CerberusContexts {
 	}
 	
 	static public function logActivity($activity_point, $target_context, $target_context_id, $entry_array, $actor_context=null, $actor_context_id=null, $also_notify_worker_ids=array()) {
+		// Target meta
+		if(!isset($target_meta)) {
+			if(null != ($target_ctx = DevblocksPlatform::getExtension($target_context, true))
+				&& $target_ctx instanceof Extension_DevblocksContext) {
+					$target_meta = $target_ctx->getMeta($target_context_id);
+			}
+		}
+		
 		// Forced actor
 		if(!empty($actor_context) && !empty($actor_context_id)) {
 			if(null != ($ctx = DevblocksPlatform::getExtension($actor_context, true))
@@ -933,6 +941,14 @@ class CerberusContexts {
 		// Tell target watchers about the activity
 		
 		$watchers = array();
+		
+		// Merge in the record owner if defined
+		if(isset($target_meta) && isset($target_meta['owner_id']) && !empty($target_meta['owner_id'])) {
+			$watchers = array_merge(
+				$watchers,
+				array($target_meta['owner_id'])
+			);
+		}
 		
 		// Merge in watchers of the actor (if not a worker)
 		if(CerberusContexts::CONTEXT_WORKER != $actor_context) {
