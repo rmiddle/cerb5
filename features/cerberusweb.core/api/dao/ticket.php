@@ -2673,7 +2673,7 @@ class Context_Ticket extends Extension_DevblocksContext {
 		
 		CerberusContexts::merge(
 			'initial_message_',
-			'Initial:',
+			'Ticket:Initial:',
 			$merge_token_labels,
 			$merge_token_values,
 			$token_labels,
@@ -2690,6 +2690,21 @@ class Context_Ticket extends Extension_DevblocksContext {
 		CerberusContexts::merge(
 			'latest_message_',
 			'Ticket:Latest:',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);
+		
+		// Owner
+		$owner_id = $ticket[SearchFields_Ticket::TICKET_OWNER_ID];
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $owner_id, $merge_token_labels, $merge_token_values, '', true);
+		
+		CerberusContexts::merge(
+			'owner_',
+			'Owner:',
 			$merge_token_labels,
 			$merge_token_values,
 			$token_labels,

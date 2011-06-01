@@ -248,8 +248,8 @@
 	</tr>
 	<tr>
 		<td>
-			<button type="button" onclick="window.onbeforeunload=null;if($('#reply{$message->id}_part1').validate().form()) { genericAjaxPost('reply{$message->id}_part2',null,'c=display&a=saveDraftReply&is_ajax=1',function(json) { $('#reply{$message->id}_part2').submit(); } ); } "><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {if $is_forward}{$translate->_('display.ui.forward')|capitalize}{else}{$translate->_('display.ui.send_message')}{/if}</button>
-			<button type="button" onclick="window.onbeforeunload=null;if($('#reply{$message->id}_part1').validate().form()) { this.form.a.value='saveDraftReply'; this.form.submit(); } "><span class="cerb-sprite sprite-media_pause"></span> {$translate->_('display.ui.continue_later')|capitalize}</button>
+			<button type="button" onclick="window.onbeforeunload=null;if($('#reply{$message->id}_part1').validate().form()) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } genericAjaxPost('reply{$message->id}_part2',null,'c=display&a=saveDraftReply&is_ajax=1',function(json) { $('#reply{$message->id}_part2').submit(); } ); } "><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {if $is_forward}{$translate->_('display.ui.forward')|capitalize}{else}{$translate->_('display.ui.send_message')}{/if}</button>
+			<button type="button" onclick="window.onbeforeunload=null;if($('#reply{$message->id}_part1').validate().form()) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } this.form.a.value='saveDraftReply'; this.form.submit(); } "><span class="cerb-sprite sprite-media_pause"></span> {$translate->_('display.ui.continue_later')|capitalize}</button>
 			<button type="button" onclick="window.onbeforeunload=null;if(confirm('Are you sure you want to discard this reply?')) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } if(0!==this.form.draft_id.value.length) { genericAjaxGet('', 'c=tickets&a=deleteDraft&draft_id='+escape(this.form.draft_id.value)); $('#draft'+escape(this.form.draft_id.value)).remove(); } $('#reply{$message->id}').html(''); } "><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('display.ui.discard')|capitalize}</button>
 		</td>
 	</tr>
@@ -336,18 +336,20 @@
 			
 			if(!event.ctrlKey) //!event.altKey && !event.ctrlKey && !event.metaKey
 				return;
-			
-			event.preventDefault();
 
 			if(event.ctrlKey && event.shiftKey) {
 				switch(event.which) {
-					case 7:  // (G) Insert Signature
+					case 7:  
+					case 71: // (G) Insert Signature
 						try {
+							event.preventDefault();
 							$('#btnInsertReplySig{$message->id}').click();
 						} catch(ex) { } 
 						break;
-					case 9:  // (I) Insert Snippet
+					case 9:  
+					case 73: // (I) Insert Snippet
 						try {
+							event.preventDefault();
 							$('#reply{$message->id}_part1').find('.context-snippet').focus();
 						} catch(ex) { } 
 						break;

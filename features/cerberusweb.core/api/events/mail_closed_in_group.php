@@ -108,6 +108,9 @@ class Event_MailClosedInGroup extends Extension_DevblocksEvent {
 	function getConditionExtensions() {
 		$labels = $this->getLabels();
 		
+		$labels['ticket_has_owner'] = 'Ticket has owner';
+		$labels['ticket_watcher_count'] = 'Ticket watcher count';
+		
 		$types = array(
 			'ticket_initial_message_content' => Model_CustomField::TYPE_MULTI_LINE,
 			'ticket_initial_message_created|date' => Model_CustomField::TYPE_DATE,
@@ -153,6 +156,12 @@ class Event_MailClosedInGroup extends Extension_DevblocksEvent {
 		
 			"group_name" => Model_CustomField::TYPE_SINGLE_LINE,
 		
+			'ticket_owner_address_address' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_owner_first_name' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_owner_full_name' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_owner_last_name' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_owner_title' => Model_CustomField::TYPE_SINGLE_LINE,
+		
 			"ticket_bucket_name|default('Inbox')" => Model_CustomField::TYPE_SINGLE_LINE,
 			'ticket_created|date' => Model_CustomField::TYPE_DATE,
 			'ticket_group_name' => Model_CustomField::TYPE_SINGLE_LINE,
@@ -163,6 +172,9 @@ class Event_MailClosedInGroup extends Extension_DevblocksEvent {
 			'ticket_subject' => Model_CustomField::TYPE_SINGLE_LINE,
 			'ticket_updated|date' => Model_CustomField::TYPE_DATE,
 			'ticket_url' => Model_CustomField::TYPE_URL,
+		
+			'ticket_has_owner' => null,
+			'ticket_watcher_count' => null,
 		);
 
 		$conditions = $this->_importLabelsTypesAsConditions($labels, $types);
@@ -178,6 +190,12 @@ class Event_MailClosedInGroup extends Extension_DevblocksEvent {
 			$tpl->assign('namePrefix','condition'.$seq);
 		
 		switch($token) {
+			case 'ticket_has_owner':
+				$tpl->display('devblocks:cerberusweb.core::internal/decisions/conditions/_bool.tpl');
+				break;
+			case 'ticket_watcher_count':
+				$tpl->display('devblocks:cerberusweb.core::internal/decisions/conditions/_number.tpl');
+				break;
 			case 'ticket_spam_score':
 				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_group/condition_spam_score.tpl');
 				break;
@@ -197,6 +215,35 @@ class Event_MailClosedInGroup extends Extension_DevblocksEvent {
 		$pass = true;
 		
 		switch($token) {
+			case 'ticket_has_owner':
+				$bool = $params['bool'];
+				@$value = $values['ticket_owner_id'];
+				$pass = ($bool == !empty($value));
+				break;
+				
+			case 'ticket_watcher_count':
+				$not = (substr($params['oper'],0,1) == '!');
+				$oper = ltrim($params['oper'],'!');
+				@$ticket_id = $values['ticket_id'];
+
+				$watchers = CerberusContexts::getWatchers(CerberusContexts::CONTEXT_TICKET, $ticket_id);
+				$value = count($watchers);
+				
+				switch($oper) {
+					case 'is':
+						$pass = intval($value)==intval($params['value']);
+						break;
+					case 'gt':
+						$pass = intval($value) > intval($params['value']);
+						break;
+					case 'lt':
+						$pass = intval($value) < intval($params['value']);
+						break;
+				}
+				
+				$pass = ($not) ? !$pass : $pass;
+				break;
+							
 			case 'ticket_spam_score':
 				$not = (substr($params['oper'],0,1) == '!');
 				$oper = ltrim($params['oper'],'!');
@@ -262,8 +309,10 @@ class Event_MailClosedInGroup extends Extension_DevblocksEvent {
 				//'move_to_group' => array('label' => 'Move to group'),
 				'send_email' => array('label' => 'Send email'),
 				'send_email_recipients' => array('label' => 'Send email to recipients'),
+				'set_owner' => array('label' =>'Set owner'),
 				'set_spam_training' => array('label' => 'Set spam training'),
 				'set_status' => array('label' => 'Set status'),
+				'set_subject' => array('label' => 'Set subject'),
 			)
 			+ DevblocksEventHelper::getActionCustomFields(CerberusContexts::CONTEXT_TICKET)
 			;
@@ -282,6 +331,10 @@ class Event_MailClosedInGroup extends Extension_DevblocksEvent {
 		$tpl->assign('token_labels', $labels);
 			
 		switch($token) {
+			case 'set_owner':
+				DevblocksEventHelper::renderActionSetTicketOwner();
+				break;
+			
 			case 'add_watchers':
 				DevblocksEventHelper::renderActionAddWatchers();
 				break;
@@ -320,6 +373,10 @@ class Event_MailClosedInGroup extends Extension_DevblocksEvent {
 				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_group/action_set_status.tpl');
 				break;
 				
+			case 'set_subject':
+				$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_string.tpl');
+				break;
+				
 			case 'move_to_bucket':
 				$buckets = DAO_Bucket::getByTeam($trigger->owner_context_id);
 				$tpl->assign('buckets', $buckets);
@@ -341,6 +398,10 @@ class Event_MailClosedInGroup extends Extension_DevblocksEvent {
 			return;
 		
 		switch($token) {
+			case 'set_owner':
+				DevblocksEventHelper::runActionSetTicketOwner($params, $values, $ticket_id);
+				break;
+			
 			case 'add_watchers':
 				DevblocksEventHelper::runActionAddWatchers($params, $values, CerberusContexts::CONTEXT_TICKET, $ticket_id);
 				break;
@@ -450,6 +511,13 @@ class Event_MailClosedInGroup extends Extension_DevblocksEvent {
 					DAO_Ticket::update($ticket_id, $fields);
 					$values['ticket_status'] = $to_status;
 				}
+				break;
+				
+			case 'set_subject':
+				DAO_Ticket::update($ticket_id,array(
+					DAO_Ticket::SUBJECT => $params['value'],
+				));
+				$values['ticket_subject'] = $params['value'];
 				break;
 				
 			case 'move_to_bucket':

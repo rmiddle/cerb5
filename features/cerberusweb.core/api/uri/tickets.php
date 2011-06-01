@@ -105,6 +105,9 @@ class ChTicketsPage extends CerberusPageExtension {
 				// Attachments				
 				$tpl->assign('upload_max_filesize', ini_get('upload_max_filesize'));
 
+				// Preferences
+				$tpl->assign('mail_status_compose', DAO_WorkerPref::get($active_worker->id,'mail_status_compose','waiting'));
+				
 				// Continue a draft?
 				// [TODO] We could also display "you have xxx unsent drafts, would you like to continue one?"
 				if(null != ($draft_id = @$response->path[2])) {
@@ -171,6 +174,9 @@ class ChTicketsPage extends CerberusPageExtension {
 				// Attachments
 				$tpl->assign('upload_max_filesize', ini_get('upload_max_filesize'));
 
+				// Preferences
+				$tpl->assign('mail_status_create', DAO_WorkerPref::get($active_worker->id,'mail_status_create','open'));
+				
 				// Continue a draft?
 				// [TODO] We could also display "you have xxx unsent drafts, would you like to continue one?"
 				if(null != ($draft_id = @$response->path[2])) {
@@ -1157,6 +1163,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		@$to = DevblocksPlatform::importGPC($_REQUEST['to'],'string','');
 	    
 		$visit = CerberusApplication::getVisit();
+		$active_worker = CerberusApplication::getActiveWorker();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
 		
@@ -1176,8 +1183,8 @@ class ChTicketsPage extends CerberusPageExtension {
 		$subject = $visit->get('compose.defaults.subject', '');
 		$tpl->assign('default_subject', $subject);
 		
-		$closed = intval($visit->get('compose.defaults.closed', ''));
-		$tpl->assign('default_closed', $closed);
+		// Preferences
+		$tpl->assign('mail_status_compose', DAO_WorkerPref::get($active_worker->id,'mail_status_compose','waiting'));
 		
 		$tpl->display('devblocks:cerberusweb.core::tickets/compose/peek.tpl');
 	}
@@ -1200,7 +1207,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		// Save Defaults
 		$visit->set('compose.defaults.from', $team_id);
 		$visit->set('compose.defaults.subject', $subject);
-		$visit->set('compose.defaults.closed', $closed);
 		
 		// Send
 		$properties = array(

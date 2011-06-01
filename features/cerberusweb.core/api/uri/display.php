@@ -280,7 +280,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		@$closed = DevblocksPlatform::importGPC($_REQUEST['closed'],'integer',0);
 		@$spam = DevblocksPlatform::importGPC($_REQUEST['spam'],'integer',0);
 		@$deleted = DevblocksPlatform::importGPC($_REQUEST['deleted'],'integer',0);
-		@$bucket = DevblocksPlatform::importGPC($_REQUEST['bucket'],'string','');		
 		
 		if(null == ($ticket = DAO_Ticket::get($id)))
 			return;
@@ -311,16 +310,6 @@ class ChDisplayPage extends CerberusPageExtension {
 				$score = CerberusBayes::calculateTicketSpamProbability($id);
 				$properties[DAO_Ticket::SPAM_SCORE] = $score['probability']; 
 				$properties[DAO_Ticket::SPAM_TRAINING] = CerberusTicketSpamTraining::BLANK;
-		}
-		
-		// Team/Category
-		if(!empty($bucket)) {
-			list($team_id, $bucket_id) = CerberusApplication::translateTeamCategoryCode($bucket);
-
-			if(!empty($team_id)) {
-			    $properties[DAO_Ticket::TEAM_ID] = $team_id;
-			    $properties[DAO_Ticket::CATEGORY_ID] = $bucket_id;
-			}
 		}
 		
 		// Don't double set the closed property (auto-close replies)
@@ -548,11 +537,9 @@ class ChDisplayPage extends CerberusPageExtension {
 				$tpl->assign('signature', $signature);
 			}
 
-			$signature_pos = DAO_WorkerPref::get($active_worker->id, 'mail_signature_pos', 2);
-			$tpl->assign('signature_pos', $signature_pos);
-			
-			$mail_no_discard_warning = DAO_WorkerPref::get($active_worker->id, 'mail_no_discard_warning', 0);
-			$tpl->assign('mail_no_discard_warning', $mail_no_discard_warning);
+			$tpl->assign('signature_pos', DAO_WorkerPref::get($active_worker->id, 'mail_signature_pos', 2));
+			$tpl->assign('mail_no_discard_warning', DAO_WorkerPref::get($active_worker->id, 'mail_no_discard_warning', 0));
+			$tpl->assign('mail_status_reply', DAO_WorkerPref::get($active_worker->id,'mail_status_reply','waiting'));			
 		}
 		
 		$tpl->assign('upload_max_filesize', ini_get('upload_max_filesize'));

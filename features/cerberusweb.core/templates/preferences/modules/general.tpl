@@ -22,11 +22,11 @@
 	<br>
 
 	<b>{$translate->_('preferences.account.assist')|capitalize}</b><br>
-	<label><input type="checkbox" name="assist_mode" value="1" {if $assist_mode eq 1}checked{/if}> {$translate->_('common.enabled')|capitalize}</label><br>
+	<label><input type="checkbox" name="assist_mode" value="1" {if $prefs.assist_mode eq 1}checked{/if}> {$translate->_('common.enabled')|capitalize}</label><br>
 	<br>
 
 	<b>{$translate->_('preferences.account.keyboard.shortcuts')|capitalize}</b><br>
-	<label><input type="checkbox" name="keyboard_shortcuts" value="1" {if $keyboard_shortcuts eq 1}checked{/if}> {$translate->_('common.enabled')|capitalize}</label><br>
+	<label><input type="checkbox" name="keyboard_shortcuts" value="1" {if $prefs.keyboard_shortcuts eq 1}checked{/if}> {$translate->_('common.enabled')|capitalize}</label><br>
 	
 </fieldset>
 
@@ -35,21 +35,42 @@
 	
 	<b>{$translate->_('common.options')|capitalize}:</b>
 	<div style="margin:0px 0px 10px 10px;">
-		<label><input type="checkbox" name="mail_always_show_all" value="1" {if $mail_always_show_all}checked{/if}> {$translate->_('preferences.account.mail.readall')}</label><br>
-		<label><input type="checkbox" name="mail_no_discard_warning" value="1" {if $mail_no_discard_warning}checked{/if}> {$translate->_('preferences.account.mail.no_discard_warning')}</label>
+		<label><input type="checkbox" name="mail_always_show_all" value="1" {if $prefs.mail_always_show_all}checked{/if}> {$translate->_('preferences.account.mail.readall')}</label><br>
+		<label><input type="checkbox" name="mail_no_discard_warning" value="1" {if $prefs.mail_no_discard_warning}checked{/if}> {$translate->_('preferences.account.mail.no_discard_warning')}</label>
 	</div>
 
 	<b>{'preferences.account.mail.reply_button'|devblocks_translate}</b>
 	<div style="margin:0px 0px 10px 10px;">
-		<label><input type="radio" name="mail_reply_button" value="0" {if empty($mail_reply_button)}checked="checked"{/if}> {'display.reply.quote'|devblocks_translate}</label><br>
-		<label><input type="radio" name="mail_reply_button" value="1" {if 1==$mail_reply_button}checked="checked"{/if}> {'display.reply.no_quote'|devblocks_translate}</label><br>
+		<label><input type="radio" name="mail_reply_button" value="0" {if empty($prefs.mail_reply_button)}checked="checked"{/if}> {'display.reply.quote'|devblocks_translate}</label><br>
+		<label><input type="radio" name="mail_reply_button" value="1" {if 1==$prefs.mail_reply_button}checked="checked"{/if}> {'display.reply.no_quote'|devblocks_translate}</label><br>
 	</div>
 
-	<b>Signature:</b>
+	<b>{'preferences.account.mail.signature'|devblocks_translate}</b>
 	<div style="margin:0px 0px 10px 10px;">
-		<label><input type="radio" name="mail_signature_pos" value="0" {if empty($mail_signature_pos)}checked="checked"{/if}> Don't automatically insert signature.</label><br>
-		<label><input type="radio" name="mail_signature_pos" value="1" {if 1==$mail_signature_pos}checked="checked"{/if}> Insert above quoted message.</label><br>
-		<label><input type="radio" name="mail_signature_pos" value="2" {if 2==$mail_signature_pos}checked="checked"{/if}> Insert below quoted message.</label><br>
+		<label><input type="radio" name="mail_signature_pos" value="0" {if empty($prefs.mail_signature_pos)}checked="checked"{/if}> {'preferences.account.mail.signature.none'|devblocks_translate}</label><br>
+		<label><input type="radio" name="mail_signature_pos" value="1" {if 1==$prefs.mail_signature_pos}checked="checked"{/if}> {'preferences.account.mail.signature.above'|devblocks_translate}</label><br>
+		<label><input type="radio" name="mail_signature_pos" value="2" {if 2==$prefs.mail_signature_pos}checked="checked"{/if}> {'preferences.account.mail.signature.below'|devblocks_translate}</label><br>
+	</div>
+
+	<b>{'preferences.account.mail.status.compose'|devblocks_translate}</b>
+	<div style="margin:0px 0px 10px 10px;">
+		<label><input type="radio" name="mail_status_compose" value="open" {if 'open'==$prefs.mail_status_compose}checked="checked"{/if}> {'status.open'|devblocks_translate}</label>
+		<label><input type="radio" name="mail_status_compose" value="waiting" {if empty($prefs.mail_status_compose) || 'waiting'==$prefs.mail_status_compose}checked="checked"{/if}> {'status.waiting'|devblocks_translate}</label>
+		<label><input type="radio" name="mail_status_compose" value="closed" {if 'closed'==$prefs.mail_status_compose}checked="checked"{/if}> {'status.closed'|devblocks_translate}</label>
+	</div>
+
+	<b>{'preferences.account.mail.status.create'|devblocks_translate}</b>
+	<div style="margin:0px 0px 10px 10px;">
+		<label><input type="radio" name="mail_status_create" value="open" {if 'open'==$prefs.mail_status_create}checked="checked"{/if}> {'status.open'|devblocks_translate}</label>
+		<label><input type="radio" name="mail_status_create" value="waiting" {if empty($prefs.mail_status_create) || 'waiting'==$prefs.mail_status_create}checked="checked"{/if}> {'status.waiting'|devblocks_translate}</label>
+		<label><input type="radio" name="mail_status_create" value="closed" {if 'closed'==$prefs.mail_status_create}checked="checked"{/if}> {'status.closed'|devblocks_translate}</label>
+	</div>
+	
+	<b>{'preferences.account.mail.status.reply'|devblocks_translate}</b>
+	<div style="margin:0px 0px 10px 10px;">
+		<label><input type="radio" name="mail_status_reply" value="open" {if 'open'==$prefs.mail_status_reply}checked="checked"{/if}> {'status.open'|devblocks_translate}</label>
+		<label><input type="radio" name="mail_status_reply" value="waiting" {if empty($prefs.mail_status_reply) || 'waiting'==$prefs.mail_status_reply}checked="checked"{/if}> {'status.waiting'|devblocks_translate}</label>
+		<label><input type="radio" name="mail_status_reply" value="closed" {if 'closed'==$prefs.mail_status_reply}checked="checked"{/if}> {'status.closed'|devblocks_translate}</label>
 	</div>
 </fieldset>
 
