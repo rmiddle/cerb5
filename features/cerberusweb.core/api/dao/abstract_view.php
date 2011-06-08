@@ -154,8 +154,14 @@ abstract class C4_AbstractView {
 	}
 	
 	function getParams() {
-		// Required should override editable
-		return array_merge($this->_paramsEditable, $this->_paramsRequired);
+		$params = $this->_paramsEditable;
+		
+		// Required should supersede editable
+		if(is_array($this->_paramsRequired))
+		foreach($this->_paramsRequired as $key => $param)
+			$params['req_'.$key] = $param;
+		
+		return $params;
 	}
 	
 	function getEditableParams() {
@@ -1265,6 +1271,12 @@ class C4_AbstractViewLoader {
 		$inst->renderSubtotals = $model->renderSubtotals;
 			
 		$inst->renderTemplate = $model->renderTemplate;
+		
+		// Enforce class restrictions
+		$parent = new $model->class_name;
+		$inst->addColumnsHidden($parent->getColumnsHidden());
+		$inst->addParamsHidden($parent->getParamsHidden());
+		$inst->addParamsRequired($parent->getParamsRequired());
 		
 		return $inst;
 	}
