@@ -317,14 +317,15 @@ class ChTicketsPage extends CerberusPageExtension {
 			SearchFields_Ticket::CONTEXT_LINK,
 			SearchFields_Ticket::CONTEXT_LINK_ID,
 			SearchFields_Ticket::VIRTUAL_ASSIGNABLE,
+			SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER,
 			SearchFields_Ticket::VIRTUAL_STATUS,
 		), true);
 		$workflowView->addParamsDefault(array(
 		), true);
 		$workflowView->addParamsRequired(array(
 			SearchFields_Ticket::VIRTUAL_STATUS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_STATUS,'',array('open')),
+			SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER,'=',$active_worker->id),
 			SearchFields_Ticket::VIRTUAL_ASSIGNABLE => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_ASSIGNABLE,null,true),
-			'_req_group_id' => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'in',array_keys($active_worker->getMemberships())),
 		), true);
 		
 		$workflowView->renderPage = 0;
@@ -398,7 +399,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$visit = CerberusApplication::getVisit();
 		$active_worker = CerberusApplication::getActiveWorker();
-		$memberships = $active_worker->getMemberships();
 		
 		// Log activity
 		DAO_Worker::logActivity(
@@ -420,7 +420,7 @@ class ChTicketsPage extends CerberusPageExtension {
 			SearchFields_Ticket::VIRTUAL_STATUS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_STATUS,'',array('open','waiting')),
 		), true);
 		$view->addParamsRequired(array(
-			'_req_group_id' => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'in',array_keys($memberships)), // censor
+			SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER,'=',$active_worker->id),
 		), true);
 		
 		C4_AbstractViewLoader::setView($view->id,$view);
@@ -1522,6 +1522,8 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		if(!$active_worker->hasPriv('core.mail.log_ticket'))
 			return;
+			
+		$translate = DevblocksPlatform::getTranslationService();
 		
 		@$to = DevblocksPlatform::importGPC($_POST['to'],'string');
 		@$reqs = DevblocksPlatform::importGPC($_POST['reqs'],'string');
@@ -1554,12 +1556,12 @@ class ChTicketsPage extends CerberusPageExtension {
 		$from_address = $from->mailbox . '@' . $from->host;
 		$message->headers['from'] = $from_address;
 
-		$message->body = sprintf(
-				"#### This message was logged by %s on behalf of the requesters\n".
-				"\n",
-				$active_worker->getName()
-			).
-			$content;
+		$message->body =
+			vsprintf($translate->_('mail.create.on_behalf'), $active_worker->getName()). 
+			"\n".
+			"\n".
+			$content
+			;
 		
 		// Files
 		if(isset($_FILES['attachment']))

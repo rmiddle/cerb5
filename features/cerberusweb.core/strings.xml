@@ -1337,6 +1337,10 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		
 		<!-- Mail -->
 		
+		<tu tuid='mail.create.on_behalf'>
+			<tuv xml:lang="en_US"><seg>#### This message was created by %s on your behalf.</seg></tuv>
+		</tu>
+		
 		<tu tuid='mail.drafts'>
 			<tuv xml:lang="en_US"><seg>Drafts</seg></tuv>
 		</tu>
@@ -1695,6 +1699,9 @@ For example: *receipt*</seg></tuv>
 		</tu>
 		<tu tuid='ticket.first_wrote'>
 			<tuv xml:lang="en_US"><seg>First Wrote</seg></tuv>
+		</tu>
+		<tu tuid='ticket.groups_of_worker'>
+			<tuv xml:lang="en_US"><seg>In Groups of Worker</seg></tuv>
 		</tu>
 		<tu tuid='ticket.interesting_words'>
 			<tuv xml:lang="en_US"><seg>Interesting Words</seg></tuv>
