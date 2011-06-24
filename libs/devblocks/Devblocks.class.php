@@ -3315,7 +3315,7 @@ class _DevblocksEmailManager {
 	}
 	
 	/**
-	 * @return Swift
+	 * @return Swift_Mailer
 	 */
 	function getMailer($options) {
 
