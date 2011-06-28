@@ -1,5 +1,5 @@
 <?php
-class ChRest_TimeTracking extends Extension_RestController implements IExtensionRestController {
+class ChRest_Groups extends Extension_RestController implements IExtensionRestController {
 	function getAction($stack) {
 		@$action = array_shift($stack);
 		
@@ -34,24 +34,35 @@ class ChRest_TimeTracking extends Extension_RestController implements IExtension
 	
 	function deleteAction($stack) {
 		$this->error(self::ERRNO_NOT_IMPLEMENTED);
+//		$worker = $this->getActiveWorker();
+//
+//		$id = array_shift($stack);
+//
+//		if(null == ($group = DAO_Group::get($id)))
+//			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid group ID %d", $id));
+//
+//		DAO_Group::delete($id);
+//		$result = array('id' => $id);
+//		$this->success($result);		
 	}
 	
 	private function getId($id) {
 		$worker = $this->getActiveWorker();
+		$memberships = $worker->getMemberships();
 		
-		// ACL
-		if(!$worker->hasPriv('plugin.cerberusweb.timetracking'))
-			$this->error(self::ERRNO_ACL);
-
 		$container = $this->search(array(
 			array('id', '=', $id),
 		));
+		if(is_array($container) && isset($container['results']) && isset($container['results'][$id])) {
+			if(!in_array($id, array_keys($memberships))) {
+				$this->error(self::ERRNO_CUSTOM, sprintf("Permission denied for group id '%d'", $id));
+			} else {
+				$this->success($container['results'][$id]);	
+			}
+		}
 		
-		if(is_array($container) && isset($container['results']) && isset($container['results'][$id]))
-			$this->success($container['results'][$id]);
-
 		// Error
-		$this->error(self::ERRNO_CUSTOM, sprintf("Invalid time entry id '%d'", $id));
+		$this->error(self::ERRNO_CUSTOM, sprintf("Invalid group id '%d'", $id));
 	}
 
 	function translateToken($token, $type='dao') {
@@ -63,11 +74,8 @@ class ChRest_TimeTracking extends Extension_RestController implements IExtension
 			);
 		} else {
 			$tokens = array(
-				'activity_id' => SearchFields_TimeTrackingEntry::ACTIVITY_ID,
-				'created' => SearchFields_TimeTrackingEntry::LOG_DATE,
-				'id' => SearchFields_TimeTrackingEntry::ID,
-				'mins' => SearchFields_TimeTrackingEntry::TIME_ACTUAL_MINS,
-				'worker_id' => SearchFields_TimeTrackingEntry::WORKER_ID,
+				'id' => SearchFields_Group::ID,
+				'name' => SearchFields_Group::NAME,
 			);
 		}
 		
@@ -80,7 +88,7 @@ class ChRest_TimeTracking extends Extension_RestController implements IExtension
 	function getContext($id) {
 		$labels = array();
 		$values = array();
-		$context = CerberusContexts::getContext(CerberusContexts::CONTEXT_TIMETRACKING, $id, $labels, $values, null, true);
+		$context = CerberusContexts::getContext(CerberusContexts::CONTEXT_GROUP, $id, $labels, $values, null, true);
 
 		return $values;
 	}
@@ -90,12 +98,22 @@ class ChRest_TimeTracking extends Extension_RestController implements IExtension
 
 		$params = $this->_handleSearchBuildParams($filters);
 		
+		// (ACL) Add worker group privs
+		if(!$worker->is_superuser) {
+			$memberships = $worker->getMemberships();
+			$params['tmp_worker_memberships'] = new DevblocksSearchCriteria(
+				SearchFields_Group::ID,
+				'in',
+				(!empty($memberships) ? array_keys($memberships) : array(0))
+			);
+		}
+		
 		// Sort
 		$sortBy = $this->translateToken($sortToken, 'search');
 		$sortAsc = !empty($sortAsc) ? true : false;
 		
 		// Search
-		list($results, $total) = DAO_TimeTrackingEntry::search(
+		list($results, $total) = DAO_Group::search(
 			array($sortBy),
 			$params,
 			$limit,
@@ -111,7 +129,7 @@ class ChRest_TimeTracking extends Extension_RestController implements IExtension
 			$values = $this->getContext($id);
 			$objects[$id] = $values;
 		}
-		
+
 		$container = array(
 			'total' => $total,
 			'count' => count($objects),
@@ -122,13 +140,7 @@ class ChRest_TimeTracking extends Extension_RestController implements IExtension
 		return $container;		
 	}
 	
-	function postSearch() {
-		$worker = $this->getActiveWorker();
-		
-		// ACL
-		if(!$worker->hasPriv('plugin.cerberusweb.timetracking'))
-			$this->error(self::ERRNO_ACL);
-
+	function postSearch() {		
 		$container = $this->_handlePostSearch();
 		
 		$this->success($container);

@@ -145,7 +145,8 @@ class ChDisplayPage extends CerberusPageExtension {
 		    		htmlspecialchars($ticket->subject, ENT_QUOTES, LANG_CHARSET_CODE),
 		    		$ticket->mask
 		    	)
-			))
+			)),
+			true
 		);
 		
 		if (DevblocksPlatform::isPluginEnabled('cerberusweb.timetracking')) {
