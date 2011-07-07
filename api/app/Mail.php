@@ -547,9 +547,12 @@ class CerberusMail {
 					}
 				}
 			}
+
+			// Send
+			$recipients = $mail->getTo();
 			
-			// If we're not supposed to send
-			if(isset($properties['dont_send']) && $properties['dont_send']) {
+			// If blank recipients or we're not supposed to send
+			if(empty($recipients) || (isset($properties['dont_send']) && $properties['dont_send'])) {
 				// ...do nothing
 			} else { // otherwise send
 				if(!@$mailer->send($mail)) {
@@ -571,7 +574,9 @@ class CerberusMail {
 					
 				if(isset($properties['bcc']))
 					$params['bcc'] = $properties['bcc'];
-				
+					
+				if(!empty($is_autoreply))
+					$params['is_autoreply'] = true;
 				
 				if(empty($to)) {
 					$hint_to = '(requesters)';

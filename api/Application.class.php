@@ -47,11 +47,7 @@
  * 		and Jerry Kanoholani. 
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-<<<<<<< HEAD
-define("APP_BUILD", 2011062801);
-=======
 define("APP_BUILD", 2011070601);
->>>>>>> wgm/5.5
 define("APP_VERSION", '5.5.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -1360,6 +1356,15 @@ class C4_ORMHelper extends DevblocksORMHelper {
 		return $db->qstr($str);	
 	}
 	
+	static protected function paramExistsInSet($key, $params) {
+		foreach($params as $k => $param) {
+			if(0==strcasecmp($param->field,$key))
+				return true;
+		}
+		
+		return false;
+	}
+	
 	static protected function _appendSelectJoinSqlForCustomFieldTables($tables, $params, $key, $select_sql, $join_sql) {
 		$custom_fields = DAO_CustomField::getAll();
 		$field_ids = array();
@@ -1415,7 +1420,7 @@ class C4_ORMHelper extends DevblocksORMHelper {
 			}
 			
 			// If we have multiple values but we don't need to WHERE the JOIN, be efficient and don't GROUP BY
-			if(!isset($params['cf_'.$field_id])) {
+			if(!C4_ORMHelper::paramExistsInSet('cf_'.$field_id, $params)) {
 				$select_sql .= sprintf(",(SELECT field_value FROM %s WHERE %s=context_id AND field_id=%d LIMIT 0,1) AS %s ",
 					$value_table,
 					$field_key,
