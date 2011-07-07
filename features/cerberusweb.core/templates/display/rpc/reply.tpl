@@ -252,9 +252,15 @@
 			<button type="button" class="send split-left" onclick="$(this).closest('td').find('ul li:first a').click();"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {if $is_forward}{$translate->_('display.ui.forward')|capitalize}{else}{$translate->_('display.ui.send_message')}{/if}</button><!--
       		--><button type="button" class="split-right" onclick="$(this).next('ul').toggle();"><span class="cerb-sprite sprite-arrow-down-white"></span></button>
       		<ul class="cerb-popupmenu cerb-float" style="margin-top:-5px;">
+<<<<<<< HEAD
       			<li><a href="javascript:;" class="send" onclick="window.onbeforeunload=null;if($('#reply{$message->id}_part1').validate().form()) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } $frm = $(this).closest('form'); $frm.find('input:hidden[name=reply_mode]').val(''); $frm.submit(); }">{if $is_forward}{$translate->_('display.ui.forward')}{else}{$translate->_('display.ui.send_message')}{/if}</a></li>
       			<li><a href="javascript:;" class="save" onclick="window.onbeforeunload=null;if($('#reply{$message->id}_part1').validate().form()) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } $frm = $(this).closest('form'); $frm.find('input:hidden[name=reply_mode]').val('save'); $frm.submit(); }">{'display.ui.save_nosend'|devblocks_translate}</a></li>
       			<li><a href="javascript:;" class="draft" onclick="window.onbeforeunload=null;if($('#reply{$message->id}_part1').validate().form()) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } $frm = $(this).closest('form'); $frm.find('input:hidden[name=a]').val('saveDraftReply'); $frm.submit(); } ">{$translate->_('display.ui.continue_later')}</a></li>
+=======
+      			<li><a href="javascript:;" class="send" onclick="if($('#reply{$message->id}_part1').validate().form()) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } $frm = $(this).closest('form'); $frm.find('input:hidden[name=reply_mode]').val(''); $frm.submit(); }">{if $is_forward}{$translate->_('display.ui.forward')}{else}{$translate->_('display.ui.send_message')}{/if}</a></li>
+      			<li><a href="javascript:;" class="save" onclick="if($('#reply{$message->id}_part1').validate().form()) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } $frm = $(this).closest('form'); $frm.find('input:hidden[name=reply_mode]').val('save'); $frm.submit(); }">{'display.ui.save_nosend'|devblocks_translate}</a></li>
+      			<li><a href="javascript:;" class="draft" onclick="if($('#reply{$message->id}_part1').validate().form()) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } $frm = $(this).closest('form'); $frm.find('input:hidden[name=a]').val('saveDraftReply'); $frm.submit(); } ">{$translate->_('display.ui.continue_later')}</a></li>
+>>>>>>> wgm/5.5
       		</ul>
 			<button type="button" class="discard" onclick="window.onbeforeunload=null;if(confirm('Are you sure you want to discard this reply?')) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } $frm = $(this).closest('form'); genericAjaxGet('', 'c=tickets&a=deleteDraft&draft_id='+escape($frm.find('input:hidden[name=draft_id]').val()), function(o) { $frm = $('#reply{$message->id}_part2'); $('#draft'+escape($frm.find('input:hidden[name=draft_id]').val())).remove(); $('#reply{$message->id}').html('');  } ); }"><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('display.ui.discard')|capitalize}</button>
 		</td>
@@ -269,12 +275,15 @@
 		var draftAutoSaveInterval = null;
 	
 	$(function() {
+<<<<<<< HEAD
 		{if !$mail_no_discard_warning}
 		window.onbeforeunload = function() {
 			return "You are currently composing an email message.  Are you sure you want to abandon it?";
 		}
 		{/if}
 
+=======
+>>>>>>> wgm/5.5
 		// Autocompletes
 		ajax.emailAutoComplete('#reply{$message->id}_part1 input[name=to]', { multiple: true } );
 		ajax.emailAutoComplete('#reply{$message->id}_part1 input[name=cc]', { multiple: true } );
