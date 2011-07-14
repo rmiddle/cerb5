@@ -39,7 +39,7 @@
 		<patch version="5.4.0" revision="934" file="patches/5.x/5.4.0.php" />
 		<patch version="5.4.3" revision="935" file="patches/5.x/5.4.3.php" />
 		<patch version="5.4.4" revision="936" file="patches/5.x/5.4.4.php" />
-		<patch version="5.5.0" revision="940" file="patches/5.x/5.5.0.php" />
+		<patch version="5.5.0" revision="941" file="patches/5.x/5.5.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -329,6 +329,14 @@
 		
 		<file path="api/events/group/mail_sent_by_group.php">
 			<class name="Event_MailSentByGroup" />
+		</file>
+
+		<file path="api/events/macro/task_macro.php">
+			<class name="Event_TaskMacro" />
+		</file>
+		
+		<file path="api/events/macro/ticket_macro.php">
+			<class name="Event_TicketMacro" />
 		</file>
 		
 		<file path="api/events/notification_received_by_worker.php">
@@ -835,6 +843,38 @@
 				<param key="contexts">
 					<value>
 						<data key="cerberusweb.contexts.group" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.event">
+			<id>event.macro.task</id>
+			<name>Task macro</name>
+			<class>
+				<file>api/events/macro/task_macro.php</file>
+				<name>Event_TaskMacro</name>
+			</class>
+			<params>
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.worker" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.event">
+			<id>event.macro.ticket</id>
+			<name>Ticket macro</name>
+			<class>
+				<file>api/events/macro/ticket_macro.php</file>
+				<name>Event_TicketMacro</name>
+			</class>
+			<params>
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.worker" />
 					</value>
 				</param>
 			</params>

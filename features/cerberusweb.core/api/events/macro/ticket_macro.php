@@ -1,31 +1,30 @@
 <?php
-class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
-	const ID = 'event.mail.received.group';
+class Event_TicketMacro extends Extension_DevblocksEvent {
+	const ID = 'event.macro.ticket';
 	
-	static function trigger($message_id, $group_id) {
+	static function trigger($trigger_id, $ticket_id) {
 		$events = DevblocksPlatform::getEventService();
 		$events->trigger(
 	        new Model_DevblocksEvent(
 	            self::ID,
                 array(
-                    'message_id' => $message_id,
-                    'group_id' => $group_id,
+                    'ticket_id' => $ticket_id,
                 	'_whisper' => array(
-                		CerberusContexts::CONTEXT_GROUP => array($group_id),
+                		'_trigger_id' => array($trigger_id),
                 	),
                 )
             )
 		);
-	} 
+	}
 	
 	/**
 	 * 
-	 * @param integer $message_id
-	 * @param integer $group_id
+	 * @param integer $ticket_id
 	 * @return Model_DevblocksEvent
 	 */
-	function generateSampleEventModel($message_id=null, $group_id=null) {
-		if(empty($message_id)) {
+	function generateSampleEventModel($ticket_id=null) {
+		
+		if(empty($ticket_id)) {
 			// Pull the latest ticket
 			list($results) = DAO_Ticket::search(
 				array(),
@@ -43,58 +42,30 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 			
 			$result = array_shift($results);
 			
-			$message_id = $result[SearchFields_Ticket::TICKET_LAST_MESSAGE_ID];
-			$group_id = $result[SearchFields_Ticket::TICKET_TEAM_ID];
+			$ticket_id = $result[SearchFields_Ticket::TICKET_ID];
 		}
 		
 		return new Model_DevblocksEvent(
 			self::ID,
 			array(
-				'message_id' => $message_id,
-				'group_id' => $group_id,
+				'ticket_id' => $ticket_id,
 			)
 		);
-	}
+	}	
 	
 	function setEvent(Model_DevblocksEvent $event_model=null) {
-		/**
-		 * Message
-		 */
-		
-		@$message_id = $event_model->params['message_id'];
 		$labels = array();
 		$values = array();
-		CerberusContexts::getContext(CerberusContexts::CONTEXT_MESSAGE, $message_id, $labels, $values, null, true);
 
-		// Fill in some custom values
-		$values['sender_is_worker'] = (!empty($values['worker_id'])) ? 1 : 0;
-		
 		/**
 		 * Ticket
 		 */
 		
-		@$ticket_id = $values['ticket_id']; 
+		@$ticket_id = $event_model->params['ticket_id']; 
 		$ticket_labels = array();
 		$ticket_values = array();
 		CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, $ticket_id, $ticket_labels, $ticket_values, null, true);
 
-			// Fill some custom values
-			if(!is_null($event_model)) {
-				$values['is_first'] = ($values['id'] == $ticket_values['initial_message_id']) ? 1 : 0;
-			}
-		
-			// Clear dupe content
-			CerberusContexts::scrubTokensWithRegexp(
-				$ticket_labels,
-				$ticket_values,
-				array(
-					"#^initial_message_#",
-					"#^latest_message_#",
-					"#^group_#",
-					"#^id$#",
-				)
-			);
-			
 			// Merge
 			CerberusContexts::merge(
 				'ticket_',
@@ -108,7 +79,7 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 		/**
 		 * Group
 		 */
-		@$group_id = $event_model->params['group_id'];
+		@$group_id = $values['group_id'];
 		$group_labels = array();
 		$group_values = array();
 		CerberusContexts::getContext(CerberusContexts::CONTEXT_GROUP, $group_id, $group_labels, $group_values, null, true);
@@ -123,37 +94,12 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 				$values
 			);
 		
-		/**
-		 * Sender Worker
-		 */
-		@$worker_id = $values['worker_id'];
-		$worker_labels = array();
-		$worker_values = array();
-		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $worker_id, $worker_labels, $worker_values, null, true);
-				
-			// Clear dupe content
-			CerberusContexts::scrubTokensWithRegexp(
-				$worker_labels,
-				$worker_values,
-				array(
-					"#^address_org_#",
-				)
-			);
-		
-			// Merge
-			CerberusContexts::merge(
-				'sender_worker_',
-				'Message sender ',
-				$worker_labels,
-				$worker_values,
-				$labels,
-				$values
-			);
+		// [TODO] Set active worker fields
 			
 		/**
 		 * Return
 		 */
-		
+
 		$this->setLabels($labels);
 		$this->setValues($values);		
 	}
@@ -161,37 +107,51 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 	function getConditionExtensions() {
 		$labels = $this->getLabels();
 		
-		$labels['header'] = 'Message header';
-		$labels['is_first'] = 'Message is first in conversation';
-		$labels['sender_is_worker'] = 'Message sender is a worker';
 		$labels['ticket_has_owner'] = 'Ticket has owner';
 		$labels['ticket_watcher_count'] = 'Ticket watcher count';
 		
 		$types = array(
-			'content' => Model_CustomField::TYPE_MULTI_LINE,
-			'created|date' => Model_CustomField::TYPE_DATE,
-			'is_first' => Model_CustomField::TYPE_CHECKBOX,
-			'is_outgoing' => Model_CustomField::TYPE_CHECKBOX,
-			'sender_address' => Model_CustomField::TYPE_SINGLE_LINE,
-			'sender_first_name' => Model_CustomField::TYPE_SINGLE_LINE,
-			'sender_full_name' => Model_CustomField::TYPE_SINGLE_LINE,
-			'sender_is_banned' => Model_CustomField::TYPE_CHECKBOX,
-			'sender_is_worker' => Model_CustomField::TYPE_CHECKBOX,
-			'sender_last_name' => Model_CustomField::TYPE_SINGLE_LINE,
-			'sender_num_nonspam' => Model_CustomField::TYPE_NUMBER,
-			'sender_num_spam' => Model_CustomField::TYPE_NUMBER,
-			'sender_org_city' => Model_CustomField::TYPE_SINGLE_LINE,
-			'sender_org_country' => Model_CustomField::TYPE_SINGLE_LINE,
-			'sender_org_created' => Model_CustomField::TYPE_DATE,
-			'sender_org_name' => Model_CustomField::TYPE_SINGLE_LINE,
-			'sender_org_phone' => Model_CustomField::TYPE_SINGLE_LINE,
-			'sender_org_postal' => Model_CustomField::TYPE_SINGLE_LINE,
-			'sender_org_province' => Model_CustomField::TYPE_SINGLE_LINE,
-			'sender_org_street' => Model_CustomField::TYPE_SINGLE_LINE,
-			'sender_org_website' => Model_CustomField::TYPE_SINGLE_LINE,
-			'sender_worker_address_address' => Model_CustomField::TYPE_SINGLE_LINE,
-			'sender_worker_full_name' => Model_CustomField::TYPE_SINGLE_LINE,
-			'storage_size' => Model_CustomField::TYPE_NUMBER,
+			'ticket_initial_message_content' => Model_CustomField::TYPE_MULTI_LINE,
+			'ticket_initial_message_created|date' => Model_CustomField::TYPE_DATE,
+			'ticket_initial_message_is_outgoing' => Model_CustomField::TYPE_CHECKBOX,
+			'ticket_initial_message_sender_address' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_initial_message_sender_first_name' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_initial_message_sender_full_name' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_initial_message_sender_is_banned' => Model_CustomField::TYPE_CHECKBOX,
+			'ticket_initial_message_sender_last_name' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_initial_message_sender_num_nonspam' => Model_CustomField::TYPE_NUMBER,
+			'ticket_initial_message_sender_num_spam' => Model_CustomField::TYPE_NUMBER,
+			'ticket_initial_message_sender_org_city' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_initial_message_sender_org_country' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_initial_message_sender_org_created' => Model_CustomField::TYPE_DATE,
+			'ticket_initial_message_sender_org_name' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_initial_message_sender_org_phone' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_initial_message_sender_org_postal' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_initial_message_sender_org_province' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_initial_message_sender_org_street' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_initial_message_sender_org_website' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_initial_message_storage_size' => Model_CustomField::TYPE_NUMBER,
+		
+			'ticket_latest_message_content' => Model_CustomField::TYPE_MULTI_LINE,
+			'ticket_latest_message_created|date' => Model_CustomField::TYPE_DATE,
+			'ticket_latest_message_is_outgoing' => Model_CustomField::TYPE_CHECKBOX,
+			'ticket_latest_message_sender_address' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_latest_message_sender_first_name' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_latest_message_sender_full_name' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_latest_message_sender_is_banned' => Model_CustomField::TYPE_CHECKBOX,
+			'ticket_latest_message_sender_last_name' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_latest_message_sender_num_nonspam' => Model_CustomField::TYPE_NUMBER,
+			'ticket_latest_message_sender_num_spam' => Model_CustomField::TYPE_NUMBER,
+			'ticket_latest_message_sender_org_city' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_latest_message_sender_org_country' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_latest_message_sender_org_created' => Model_CustomField::TYPE_DATE,
+			'ticket_latest_message_sender_org_name' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_latest_message_sender_org_phone' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_latest_message_sender_org_postal' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_latest_message_sender_org_province' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_latest_message_sender_org_street' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_latest_message_sender_org_website' => Model_CustomField::TYPE_SINGLE_LINE,
+			'ticket_latest_message_storage_size' => Model_CustomField::TYPE_NUMBER,
 		
 			"group_name" => Model_CustomField::TYPE_SINGLE_LINE,
 		
@@ -203,6 +163,7 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 		
 			"ticket_bucket_name|default('Inbox')" => Model_CustomField::TYPE_SINGLE_LINE,
 			'ticket_created|date' => Model_CustomField::TYPE_DATE,
+			'ticket_group_name' => Model_CustomField::TYPE_SINGLE_LINE,
 			'ticket_mask' => Model_CustomField::TYPE_SINGLE_LINE,
 			'ticket_spam_score' => null,
 			'ticket_spam_training' => null,
@@ -213,8 +174,6 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 		
 			'ticket_has_owner' => null,
 			'ticket_watcher_count' => null,
-		
-			'header' => null,
 		);
 
 		$conditions = $this->_importLabelsTypesAsConditions($labels, $types);
@@ -244,10 +203,6 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 				break;
 			case 'ticket_status':
 				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_group/condition_status.tpl');
-				break;
-			// [TODO] Internalize
-			case 'header':
-				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_group/condition_header.tpl');
 				break;
 		}
 
@@ -287,7 +242,7 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 				
 				$pass = ($not) ? !$pass : $pass;
 				break;
-			
+							
 			case 'ticket_spam_score':
 				$not = (substr($params['oper'],0,1) == '!');
 				$oper = ltrim($params['oper'],'!');
@@ -333,38 +288,6 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 				$pass = ($not) ? !$pass : $pass;
 				break;
 				
-			case 'header':
-				$not = (substr($params['oper'],0,1) == '!');
-				$oper = ltrim($params['oper'],'!');
-				@$header = $params['header'];
-				@$param_value = $params['value'];
-				
-				// Lazy load
-				$value = DAO_MessageHeader::getOne($values['id'], $header);
-				
-				// Operators
-				switch($oper) {
-					case 'is':
-						$pass = (0==strcasecmp($value,$param_value));
-						break;
-					case 'like':
-						$regexp = DevblocksPlatform::strToRegExp($param_value);
-						$pass = @preg_match($regexp, $value);
-						break;
-					case 'contains':
-						$pass = (false !== stripos($value, $param_value)) ? true : false;
-						break;
-					case 'regexp':
-						$pass = @preg_match($param_value, $value);
-						break;
-					default:
-						$pass = false;
-						break;
-				}
-				
-				$pass = ($not) ? !$pass : $pass;
-				break;				
-				
 			default:
 				$pass = false;
 				break;
@@ -383,7 +306,6 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 				'create_ticket' => array('label' =>'Create a ticket'),
 				'move_to_bucket' => array('label' => 'Move to bucket'),
 				'move_to_group' => array('label' => 'Move to group'),
-				'relay_email' => array('label' => 'Relay to external email'),
 				'schedule_email_recipients' => array('label' => 'Schedule email to recipients'),
 				'send_email' => array('label' => 'Send email'),
 				'send_email_recipients' => array('label' => 'Send email to recipients'),
@@ -394,7 +316,7 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 			)
 			+ DevblocksEventHelper::getActionCustomFields(CerberusContexts::CONTEXT_TICKET)
 			;
-		
+			
 		return $actions;
 	}
 	
@@ -412,29 +334,23 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 			case 'set_owner':
 				DevblocksEventHelper::renderActionSetTicketOwner();
 				break;
-				
+			
 			case 'add_watchers':
 				DevblocksEventHelper::renderActionAddWatchers();
 				break;
-				
-			case 'relay_email':
-				// [TODO] Filter to group members
-				$group = DAO_Group::get($trigger->owner_context_id);
-				DevblocksEventHelper::renderActionRelayEmail(array_keys($group->getMembers()));
-				break;
-				
-			case 'schedule_email_recipients':
-				DevblocksEventHelper::renderActionScheduleTicketReply();
-				break;
-				
+			
 			case 'send_email':
 				DevblocksEventHelper::renderActionSendEmail();
 				break;
 				
+			// [TODO] Share
 			case 'send_email_recipients':
-				// [TODO] Share
 				$tpl->assign('workers', DAO_Worker::getAll());
 				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_owner/action_send_email_recipients.tpl');
+				break;
+				
+			case 'schedule_email_recipients':
+				DevblocksEventHelper::renderActionScheduleTicketReply();
 				break;
 				
 			case 'create_comment':
@@ -466,7 +382,6 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 				break;
 				
 			case 'move_to_bucket':
-				// [TODO] Share
 				$buckets = DAO_Bucket::getByTeam($trigger->owner_context_id);
 				$tpl->assign('buckets', $buckets);
 				$tpl->display('devblocks:cerberusweb.core::events/mail_received_by_group/action_move_to_bucket.tpl');
@@ -494,8 +409,8 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 	}
 	
 	function runActionExtension($token, $trigger, $params, &$values) {
-		@$message_id = $values['id'];
 		@$ticket_id = $values['ticket_id'];
+		@$message_id = $values['ticket_latest_message_id'];
 
 		if(empty($message_id) || empty($ticket_id))
 			return;
@@ -504,21 +419,13 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 			case 'set_owner':
 				DevblocksEventHelper::runActionSetTicketOwner($params, $values, $ticket_id);
 				break;
-				
+			
 			case 'add_watchers':
 				DevblocksEventHelper::runActionAddWatchers($params, $values, CerberusContexts::CONTEXT_TICKET, $ticket_id);
 				break;
 			
 			case 'send_email':
 				DevblocksEventHelper::runActionSendEmail($params, $values);
-				break;
-				
-			case 'relay_email':
-				DevblocksEventHelper::runActionRelayEmail($params, $values, CerberusContexts::CONTEXT_TICKET, $ticket_id);
-				break;
-				
-			case 'schedule_email_recipients':
-				DevblocksEventHelper::runActionScheduleTicketReply($params, $values, $ticket_id, $message_id);
 				break;
 				
 			case 'send_email_recipients':
@@ -537,6 +444,10 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 					$properties['is_autoreply'] = true;
 				
 				CerberusMail::sendTicketMessage($properties);
+				break;
+				
+			case 'schedule_email_recipients':
+				DevblocksEventHelper::runActionScheduleTicketReply($params, $values, $ticket_id, $message_id);
 				break;
 				
 			case 'create_comment':
@@ -663,7 +574,7 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 					$labels,
 					$values
 				);
-				break;				
+				break;
 				
 			case 'move_to_bucket':
 				@$to_bucket_id = intval($params['bucket_id']);
@@ -702,7 +613,7 @@ class Event_MailReceivedByGroup extends Extension_DevblocksEvent {
 					if(!empty($context) && !empty($context_id))
 						DevblocksEventHelper::runActionSetCustomField($custom_field, 'ticket_custom', $params, $values, $context, $context_id);
 				}
-				break;				
+				break;	
 		}
-	}
+	}	
 };

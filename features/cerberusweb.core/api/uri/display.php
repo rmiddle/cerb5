@@ -115,6 +115,10 @@ class ChDisplayPage extends CerberusPageExtension {
 		
 		$tpl->assign('ticket', $ticket);
 
+		// Macros
+		$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.ticket');
+		$tpl->assign('macros', $macros);
+		
 		// TicketToolbarItem Extensions
 		$ticketToolbarItems = DevblocksPlatform::getExtensions('cerberusweb.ticket.toolbaritem', true);
 		if(!empty($ticketToolbarItems))
@@ -631,7 +635,7 @@ class ChDisplayPage extends CerberusPageExtension {
 			DAO_MailQueue::BODY => $content,
 			DAO_MailQueue::PARAMS_JSON => json_encode($params),
 			DAO_MailQueue::IS_QUEUED => 0,
-			DAO_MailQueue::QUEUE_PRIORITY => 0,
+			DAO_MailQueue::QUEUE_DELIVERY_DATE => time(),
 		);
 		
 		// Make sure the current worker is the draft author
@@ -758,7 +762,11 @@ class ChDisplayPage extends CerberusPageExtension {
 		// Thread drafts into conversation
 		if(!empty($drafts)) {
 			foreach($drafts as $draft_id => $draft) { /* @var $draft Model_MailQueue */
-				$key = $draft->updated . '_d' . $draft_id;
+				if(!empty($draft->queue_delivery_date)) {
+					$key = $draft->queue_delivery_date . '_d' . $draft_id;
+				} else {
+					$key = $draft->updated . '_d' . $draft_id;
+				}
 				$convo_timeline[$key] = array('d', $draft_id);
 			}
 		}
