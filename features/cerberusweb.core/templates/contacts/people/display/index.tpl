@@ -6,11 +6,12 @@
 <h2>Contact</h2>
 
 {$primary_email = $person->getPrimaryAddress()}
+{$person_addresses = $person->getAddresses()}
 
 <fieldset class="properties">
 	<legend>{$primary_email->getName()} &lt;{$primary_email->email}&gt;</legend>
 	
-	<form action="{devblocks_url}{/devblocks_url}" method="post">
+	<form action="{devblocks_url}{/devblocks_url}" method="post" style="margin-bottom:5px;">
 
 		{foreach from=$properties item=v key=k name=props}
 			<div class="property">
@@ -28,24 +29,31 @@
 		<br clear="all">
 
 		<!-- Toolbar -->
-		<span>
+		<div style="margin-top:5px;">
 		{$object_watchers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_CONTACT_PERSON, array($person->id), CerberusContexts::CONTEXT_WORKER)}
 		{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" context=CerberusContexts::CONTEXT_CONTACT_PERSON context_id=$person->id full=true}
-		</span>		
+		</div>		
 
 	</form>
+	
+	{if $pref_keyboard_shortcuts}
+	<small>
+		{$translate->_('common.keyboard')|lower}:
+		(<b>1-9</b>) change tab
+	</small> 
+	{/if}
 </fieldset>
 
 <div style="clear:both;" id="contactPersonTabs">
 	<ul>
-		{$tabs = [activity,notes,links,history]}
-		{$point = ''}
+		{$tabs = [activity,notes,links,addresses,mail]}
+		{$point = 'cerberusweb.contact_person.tab'}
 
 		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabActivityLog&scope=target&point={$point}&context={CerberusContexts::CONTEXT_CONTACT_PERSON}&context_id={$person->id}{/devblocks_url}">{'common.activity_log'|devblocks_translate|capitalize}</a></li>		
 		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context=cerberusweb.contexts.contact_person&id={$person->id}{/devblocks_url}">{$translate->_('common.comments')|capitalize}</a></li>
 		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.contact_person&id={$person->id}{/devblocks_url}">{$translate->_('common.links')}</a></li>
 		<li><a href="{devblocks_url}ajax.php?c=contacts&a=showTabPeopleAddresses&id={$person->id}{/devblocks_url}">{'Email Addresses'}</a></li>
-		<li><a href="{devblocks_url}ajax.php?c=contacts&a=showTabPeopleHistory&id={$person->id}{/devblocks_url}">{$translate->_('addy_book.org.tabs.mail_history')}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=contacts&a=showTabMailHistory&point={$point}&address_ids={foreach from=$person_addresses item=v key=k name=addys}{$v->id}{if !$smarty.foreach.addys.last},{/if}{/foreach}{/devblocks_url}">{$translate->_('addy_book.org.tabs.mail_history')}</a></li>
 
 		{foreach from=$tab_manifests item=tab_manifest}
 			{$tabs[] = $tab_manifest->params.uri}
@@ -64,4 +72,44 @@
 	$(function() {
 		var tabs = $("#contactPersonTabs").tabs( { selected:{$tab_selected_idx} } );
 	});
+</script>
+
+<script type="text/javascript">
+{if $pref_keyboard_shortcuts}
+$(document).keypress(function(event) {
+	if(event.altKey || event.ctrlKey || event.shiftKey || event.metaKey)
+		return;
+	
+	if($(event.target).is(':input'))
+		return;
+
+	hotkey_activated = true;
+	
+	switch(event.which) {
+		case 49:  // (1) tab cycle
+		case 50:  // (2) tab cycle
+		case 51:  // (3) tab cycle
+		case 52:  // (4) tab cycle
+		case 53:  // (5) tab cycle
+		case 54:  // (6) tab cycle
+		case 55:  // (7) tab cycle
+		case 56:  // (8) tab cycle
+		case 57:  // (9) tab cycle
+		case 58:  // (0) tab cycle
+			try {
+				idx = event.which-49;
+				$tabs = $("#contactPersonTabs").tabs();
+				$tabs.tabs('select', idx);
+			} catch(ex) { } 
+			break;
+		default:
+			// We didn't find any obvious keys, try other codes
+			hotkey_activated = false;
+			break;
+	}
+	
+	if(hotkey_activated)
+		event.preventDefault();
+});
+{/if}
 </script>

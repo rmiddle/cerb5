@@ -30,7 +30,7 @@
 		{/if}
 	</legend>
 	
-	<form action="{devblocks_url}{/devblocks_url}" method="post">
+	<form action="{devblocks_url}{/devblocks_url}" method="post" style="margin-bottom:5px;">
 	<input type="hidden" name="c" value="tasks">
 	<input type="hidden" name="a" value="">
 	<input type="hidden" name="id" value="{$task->id}">
@@ -58,27 +58,25 @@
 		<!-- Toolbar -->
 		<button type="button" id="btnDisplayAddyEdit"><span class="cerb-sprite sprite-document_edit"></span> Edit</button>
 	</form>
+	
+	{if $pref_keyboard_shortcuts}
+	<small>
+		{$translate->_('common.keyboard')|lower}:
+		(<b>e</b>) {'common.edit'|devblocks_translate|lower}
+		(<b>1-9</b>) change tab
+	</small> 
+	{/if}
 </fieldset>
 
 <div style="clear:both;" id="contactTabs">
 	<ul>
-		{$tabs = [activity,notes,links]}
+		{$tabs = [activity,notes,links,mail]}
 		{$point = 'cerberusweb.address.tab'}
 		
 		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabActivityLog&scope=target&point={$point}&context={CerberusContexts::CONTEXT_ADDRESS}&context_id={$address->id}{/devblocks_url}">{'common.activity_log'|devblocks_translate|capitalize}</a></li>
 		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context={CerberusContexts::CONTEXT_ADDRESS}&id={$address->id}{/devblocks_url}">{$translate->_('common.comments')|capitalize}</a></li>
 		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context={CerberusContexts::CONTEXT_ADDRESS}&id={$address->id}{/devblocks_url}">{$translate->_('common.links')}</a></li>
-		
-		{*
-		<li><a href="{devblocks_url}ajax.php?c=contacts&a=showTabHistory&org={$address->id}{/devblocks_url}">{$translate->_('addy_book.org.tabs.mail_history')}</a></li>
-		*}
-
-		{*
-		{foreach from=$tab_manifests item=tab_manifest}
-			{$tabs[] = $tab_manifest->params.uri}
-			<li><a href="{devblocks_url}ajax.php?c=contacts&a=showAddressTab&ext_id={$tab_manifest->id}&org_id={$address->id}{/devblocks_url}"><i>{$tab_manifest->params.title|devblocks_translate}</i></a></li>
-		{/foreach}
-		*}
+		<li><a href="{devblocks_url}ajax.php?c=contacts&a=showTabMailHistory&point={$point}&address_ids={$address->id}{/devblocks_url}">{$translate->_('addy_book.org.tabs.mail_history')}</a></li>
 	</ul>
 </div> 
 <br>
@@ -100,4 +98,49 @@
 			});
 		})
 	});
+</script>
+
+<script type="text/javascript">
+{if $pref_keyboard_shortcuts}
+$(document).keypress(function(event) {
+	if(event.altKey || event.ctrlKey || event.shiftKey || event.metaKey)
+		return;
+	
+	if($(event.target).is(':input'))
+		return;
+
+	hotkey_activated = true;
+	
+	switch(event.which) {
+		case 49:  // (1) tab cycle
+		case 50:  // (2) tab cycle
+		case 51:  // (3) tab cycle
+		case 52:  // (4) tab cycle
+		case 53:  // (5) tab cycle
+		case 54:  // (6) tab cycle
+		case 55:  // (7) tab cycle
+		case 56:  // (8) tab cycle
+		case 57:  // (9) tab cycle
+		case 58:  // (0) tab cycle
+			try {
+				idx = event.which-49;
+				$tabs = $("#contactTabs").tabs();
+				$tabs.tabs('select', idx);
+			} catch(ex) { } 
+			break;
+		case 101:  // (E) edit
+			try {
+				$('#btnDisplayAddyEdit').click();
+			} catch(ex) { } 
+			break;
+		default:
+			// We didn't find any obvious keys, try other codes
+			hotkey_activated = false;
+			break;
+	}
+	
+	if(hotkey_activated)
+		event.preventDefault();
+});
+{/if}
 </script>

@@ -5,7 +5,7 @@
 <fieldset class="properties">
 	<legend>{$server->name|truncate:128}</legend>
 	
-	<form action="{devblocks_url}{/devblocks_url}" method="post">
+	<form action="{devblocks_url}{/devblocks_url}" method="post" style="margin-bottom:5px;">
 
 		{foreach from=$properties item=v key=k name=props}
 			<div class="property">
@@ -34,6 +34,14 @@
 		<button type="button" id="btnDatacenterServerEdit"><span class="cerb-sprite sprite-document_edit"></span> Edit</button>
 	
 	</form>
+	
+	{if $pref_keyboard_shortcuts}
+	<small>
+		{$translate->_('common.keyboard')|lower}:
+		(<b>e</b>) {'common.edit'|devblocks_translate|lower}
+		(<b>1-9</b>) change tab
+	</small> 
+	{/if}
 </fieldset>
 
 <div id="datacenterServerTabs">
@@ -70,4 +78,49 @@
 			});
 		})
 	});
+</script>
+
+<script type="text/javascript">
+{if $pref_keyboard_shortcuts}
+$(document).keypress(function(event) {
+	if(event.altKey || event.ctrlKey || event.shiftKey || event.metaKey)
+		return;
+	
+	if($(event.target).is(':input'))
+		return;
+
+	hotkey_activated = true;
+	
+	switch(event.which) {
+		case 49:  // (1) tab cycle
+		case 50:  // (2) tab cycle
+		case 51:  // (3) tab cycle
+		case 52:  // (4) tab cycle
+		case 53:  // (5) tab cycle
+		case 54:  // (6) tab cycle
+		case 55:  // (7) tab cycle
+		case 56:  // (8) tab cycle
+		case 57:  // (9) tab cycle
+		case 58:  // (0) tab cycle
+			try {
+				idx = event.which-49;
+				$tabs = $("#datacenterServerTabs").tabs();
+				$tabs.tabs('select', idx);
+			} catch(ex) { } 
+			break;
+		case 101:  // (E) edit
+			try {
+				$('#btnDatacenterServerEdit').click();
+			} catch(ex) { } 
+			break;
+		default:
+			// We didn't find any obvious keys, try other codes
+			hotkey_activated = false;
+			break;
+	}
+	
+	if(hotkey_activated)
+		event.preventDefault();
+});
+{/if}
 </script>

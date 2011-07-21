@@ -5,7 +5,7 @@
 <fieldset class="properties">
 	<legend>{$opp->name|truncate:128}</legend>
 	
-	<form action="{devblocks_url}{/devblocks_url}" onsubmit="return false;">
+	<form action="{devblocks_url}{/devblocks_url}" onsubmit="return false;" style="margin-bottom:5px;">
 
 		{foreach from=$properties item=v key=k name=props}
 			<div class="property">
@@ -62,19 +62,26 @@
 			{$ext->render($opp)}
 		{/foreach}
 	</form>
+	
+	{if $pref_keyboard_shortcuts}
+	<small>
+		{$translate->_('common.keyboard')|lower}:
+		(<b>e</b>) {'common.edit'|devblocks_translate|lower}
+		{if !empty($macros)}(<b>m</b>) {'common.macros'|devblocks_translate|lower} {/if}
+		(<b>1-9</b>) change tab
+	</small> 
+	{/if}
 </fieldset>
 
 <div id="oppTabs">
-	{$tabs = []}
-	{$point = Extension_CrmOpportunityTab::POINT}
-	
 	<ul>
+		{$point = Extension_CrmOpportunityTab::POINT}
 		{$tabs = [activity,notes,links,mail]}
 		
 		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabActivityLog&scope=target&point={$point}&context={CerberusContexts::CONTEXT_OPPORTUNITY}&context_id={$opp->id}{/devblocks_url}">{'common.activity_log'|devblocks_translate|capitalize}</a></li>
 		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context={CerberusContexts::CONTEXT_OPPORTUNITY}&point={$point}&id={$opp->id}{/devblocks_url}">{$translate->_('common.comments')|capitalize}</a></li>		
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context={CerberusContexts::CONTEXT_OPPORTUNITY}&point={$point}&id={$opp->id}{/devblocks_url}">{$translate->_('common.links')}</a></li>		
-		<li><a href="{devblocks_url}ajax.php?c=crm&a=showOppMailTab&id={$opp->id}{/devblocks_url}">{'crm.opp.tab.mail_history'|devblocks_translate}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context={CerberusContexts::CONTEXT_OPPORTUNITY}&point={$point}&id={$opp->id}{/devblocks_url}">{$translate->_('common.links')}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=contacts&a=showTabMailHistory&point={$point}&address_ids={$opp->primary_email_id}{/devblocks_url}">{$translate->_('addy_book.org.tabs.mail_history')}</a></li>
 
 		{$tab_manifests = DevblocksPlatform::getExtensions($point, false)}
 		{foreach from=$tab_manifests item=tab_manifest}
@@ -181,23 +188,53 @@ $(document).keypress(function(event) {
 	if($(event.target).is(':input'))
 		return;
 
+	hotkey_activated = true;
+	
 	switch(event.which) {
+		case 49:  // (1) tab cycle
+		case 50:  // (2) tab cycle
+		case 51:  // (3) tab cycle
+		case 52:  // (4) tab cycle
+		case 53:  // (5) tab cycle
+		case 54:  // (6) tab cycle
+		case 55:  // (7) tab cycle
+		case 56:  // (8) tab cycle
+		case 57:  // (9) tab cycle
+		case 58:  // (0) tab cycle
+			try {
+				idx = event.which-49;
+				$tabs = $("#oppTabs").tabs();
+				$tabs.tabs('select', idx);
+			} catch(ex) { } 
+			break;
 		case 97:  // (A) E-mail Peek
 			try {
-				event.preventDefault();
 				$('#btnOppAddyPeek').click();
 			} catch(e) { } 
 			break;
+		case 101:  // (E) edit
+			try {
+				$('#btnDisplayOppEdit').click();
+			} catch(ex) { } 
+			break;
+		case 109:  // (M) macros
+			try {
+				$('#btnDisplayMacros').click();
+			} catch(ex) { } 
+			break;
 		case 113:  // (Q) quick compose
 			try {
-				event.preventDefault();
 				$('#btnQuickCompose').click();
 			} catch(e) { } 
 			break;
 		default:
 			// We didn't find any obvious keys, try other codes
+			hotkey_activated = false;
 			break;
 	}
+	
+	if(hotkey_activated)
+		event.preventDefault();
 });
 {/if}
 </script>
