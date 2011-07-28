@@ -677,10 +677,10 @@ class DevblocksEventHelper {
 	 * Action: Schedule Macro
 	 */
 	
-	static function renderActionScheduleBehavior($context, $context_id) {
+	static function renderActionScheduleBehavior($context, $context_id, $event_point) {
 		$tpl = DevblocksPlatform::getTemplateService();
 		
-		$macros = DAO_TriggerEvent::getByOwner($context, $context_id, 'event.macro.ticket');
+		$macros = DAO_TriggerEvent::getByOwner($context, $context_id, $event_point);
 		$tpl->assign('macros', $macros);
 		
 		$tpl->display('devblocks:cerberusweb.core::events/action_schedule_behavior.tpl');
@@ -806,10 +806,13 @@ class DevblocksEventHelper {
 		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_create_notification.tpl');
 	}
 	
-	static function runActionCreateNotification($params, $values, $url) {
+	static function runActionCreateNotification($params, $values, $context, $context_id) {
 		@$notify_worker_ids = $params['notify_worker_id'];
 		
 		if(!is_array($notify_worker_ids) || empty($notify_worker_ids))
+			return;
+		
+		if(empty($context))
 			return;
 		
 		// Translate message tokens
@@ -818,10 +821,12 @@ class DevblocksEventHelper {
 		
 		foreach($notify_worker_ids as $notify_worker_id) {
 			$fields = array(
+				DAO_Notification::CONTEXT => $context,
+				DAO_Notification::CONTEXT_ID => $context_id,
 				DAO_Notification::WORKER_ID => $notify_worker_id,
 				DAO_Notification::CREATED_DATE => time(),
 				DAO_Notification::MESSAGE => $content,
-				DAO_Notification::URL => $url,
+				DAO_Notification::URL => '',
 			);
 			$notification_id = DAO_Notification::create($fields);
 			

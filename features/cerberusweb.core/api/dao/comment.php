@@ -168,11 +168,20 @@ class DAO_Comment extends DevblocksORMHelper {
 		// Comments
 		$db->Execute(sprintf("DELETE FROM comment WHERE id IN (%s)", $ids_list));
 		
-		// Attachments
-		DAO_AttachmentLink::removeAllByContext(CerberusContexts::CONTEXT_COMMENT, $ids);
-		
 		// Search index
 		Search_CommentContent::delete($ids);
+		
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => CerberusContexts::CONTEXT_COMMENT,
+                	'context_ids' => $ids
+                )
+            )
+	    );
 		
 		return true;
 	}
@@ -307,6 +316,19 @@ class DAO_Comment extends DevblocksORMHelper {
 		$sql = "DELETE QUICK fulltext_comment_content FROM fulltext_comment_content LEFT JOIN comment ON fulltext_comment_content.id = comment.id WHERE comment.id IS NULL";
 		$db->Execute($sql);
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' fulltext_comment_content records.');
+		
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.maint',
+                array(
+                	'context' => CerberusContexts::CONTEXT_COMMENT,
+                	'context_table' => 'comment',
+                	'context_key' => 'id',
+                )
+            )
+	    );
 	}		
 };
 

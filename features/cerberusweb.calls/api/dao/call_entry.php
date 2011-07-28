@@ -82,19 +82,18 @@ class DAO_CallEntry extends C4_ORMHelper {
 	}
 
 	static function maint() {
-		$db = DevblocksPlatform::getDatabaseService();
-		$logger = DevblocksPlatform::getConsoleLog();
-
-		// Context Links
-		$db->Execute(sprintf("DELETE QUICK context_link FROM context_link LEFT JOIN call_entry ON context_link.from_context_id=call_entry.id WHERE context_link.from_context = %s AND call_entry.id IS NULL",
-			$db->qstr(CerberusContexts::CONTEXT_OPPORTUNITY)
-		));
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' call_entry context link sources.');
-		
-		$db->Execute(sprintf("DELETE QUICK context_link FROM context_link LEFT JOIN call_entry ON context_link.to_context_id=call_entry.id WHERE context_link.to_context = %s AND call_entry.id IS NULL",
-			$db->qstr(CerberusContexts::CONTEXT_OPPORTUNITY)
-		));
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' call_entry context link targets.');
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.maint',
+                array(
+                	'context' => CerberusContexts::CONTEXT_CALL,
+                	'context_table' => 'call_entry',
+                	'context_key' => 'id',
+                )
+            )
+	    );
 	}
 	
 	static function delete($ids) {
@@ -103,15 +102,19 @@ class DAO_CallEntry extends C4_ORMHelper {
 		
 		$ids_list = implode(',', $ids);
 		
-		// Context links
-		// [TODO] These can be grouped under a shared Context convenience method for deletion (to ensure coverage)
-		DAO_ContextLink::delete(CerberusContexts::CONTEXT_CALL, $ids);
-		// Custom fields
-		DAO_CustomFieldValue::deleteByContextIds(CerberusContexts::CONTEXT_CALL, $ids);
-		// Comments
-		DAO_Comment::deleteByContext(CerberusContexts::CONTEXT_CALL, $ids);
-		
 		$db->Execute(sprintf("DELETE FROM call_entry WHERE id IN (%s)", $ids_list));
+		
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => CerberusContexts::CONTEXT_CALL,
+                	'context_ids' => $ids
+                )
+            )
+	    );
 		
 		return true;
 	}

@@ -39,7 +39,7 @@
 		<patch version="5.4.0" revision="934" file="patches/5.x/5.4.0.php" />
 		<patch version="5.4.3" revision="935" file="patches/5.x/5.4.3.php" />
 		<patch version="5.4.4" revision="936" file="patches/5.x/5.4.4.php" />
-		<patch version="5.5.0" revision="943" file="patches/5.x/5.5.0.php" />
+		<patch version="5.5.0" revision="944" file="patches/5.x/5.5.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -447,6 +447,15 @@
 			<name>Comment Create</name>
 			<param key="comment_id" />
 			<param key="fields" />
+		</event>
+		<event id="context.delete">
+			<name>Context Delete</name>
+			<param key="context" />
+			<param key="context_ids" />
+		</event>
+		<event id="context.maint">
+			<name>Context Maint</name>
+			<param key="context" />
 		</event>
 		<event id="context_link.set">
 			<name>Context Link Set</name>
@@ -857,7 +866,7 @@
 		
 		<extension point="devblocks.event">
 			<id>event.macro.task</id>
-			<name>Task macro</name>
+			<name>Custom task behavior</name>
 			<class>
 				<file>api/events/macro/task_macro.php</file>
 				<name>Event_TaskMacro</name>
@@ -873,7 +882,7 @@
 		
 		<extension point="devblocks.event">
 			<id>event.macro.ticket</id>
-			<name>Ticket macro</name>
+			<name>Custom ticket behavior</name>
 			<class>
 				<file>api/events/macro/ticket_macro.php</file>
 				<name>Event_TicketMacro</name>
@@ -932,9 +941,11 @@
 			<params>
 				<param key="events">
 					<value>
+						<data key="comment.create" />
+						<data key="context.delete" />
+						<data key="context.maint" />
 						<data key="cron.heartbeat" />
 						<data key="cron.maint" />
-						<data key="comment.create" />
 					</value>
 				</param>
 			</params>
@@ -1729,19 +1740,6 @@
 			<class>
 				<file>api/plugin.classes.php</file>
 				<name>ChRssSource_Ticket</name>
-			</class>
-			<params>
-			</params>
-		</extension>		
-		
-		<!-- Explorer Toolbars -->
-		
-		<extension point="cerberusweb.explorer.toolbar">
-			<id>cerberusweb.explorer.toolbar.notifications</id>
-			<name>Worker Events</name>
-			<class>
-				<file>api/uri/preferences.php</file>
-				<name>ChExplorerToolbarNotifications</name>
 			</class>
 			<params>
 			</params>

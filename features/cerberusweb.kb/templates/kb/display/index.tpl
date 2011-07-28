@@ -50,17 +50,28 @@
 		<br clear="all">
 		{/if}
 		
-		{if $active_worker->hasPriv('core.kb.articles.modify')}<button id="btnDisplayKbEdit" type="button" onclick="genericAjaxPopup('peek','c=kb.ajax&a=showArticleEditPanel&id={$article->id}&return_uri={"kb/article/{$article->id}"}',null,false,'725');"><span class="cerb-sprite sprite-document_edit"></span> {$translate->_('common.edit')|capitalize}</button>{/if}
+		<div style="margin-top:5px;">
+			<!-- Macros -->
+			{devblocks_url assign=return_url full=true}c=kb&tab=article&id={$article->id}-{$article->title|devblocks_permalink}{/devblocks_url}
+			{include file="devblocks:cerberusweb.core::internal/macros/display/button.tpl" context=CerberusContexts::CONTEXT_KB_ARTICLE context_id=$article->id macros=$macros return_url=$return_url}		
+
+			<!-- Edit -->					
+			{if $active_worker->hasPriv('core.kb.articles.modify')}<button id="btnDisplayKbEdit" type="button" onclick="genericAjaxPopup('peek','c=kb.ajax&a=showArticleEditPanel&id={$article->id}&return_uri={"kb/article/{$article->id}"}',null,false,'725');"><span class="cerb-sprite sprite-document_edit"></span> {$translate->_('common.edit')|capitalize}</button>{/if}
+		</div>
 	</form>
 	
 	{if $pref_keyboard_shortcuts}
 	<small>
 		{$translate->_('common.keyboard')|lower}:
 		{if $active_worker->hasPriv('core.kb.articles.modify')}(<b>e</b>) {'common.edit'|devblocks_translate|lower}{/if}
+		{if !empty($macros)}(<b>m</b>) {'common.macros'|devblocks_translate|lower} {/if}
 	</small> 
 	{/if}
 </fieldset>
-<br clear="all">
+
+{include file="devblocks:cerberusweb.core::internal/notifications/context_profile.tpl" context=CerberusContexts::CONTEXT_KB_ARTICLE context_id=$article->id}
+
+<br>
 
 <div id="kbArticleContent">
 	<h1 class="title"><b>{$article->title}</b></h1>
@@ -69,6 +80,10 @@
 </div>
 
 {include file="devblocks:cerberusweb.core::internal/attachments/list.tpl" context={CerberusContexts::CONTEXT_KB_ARTICLE} context_id={$article->id}}
+
+<script type="text/javascript">
+	{include file="devblocks:cerberusweb.core::internal/macros/display/menu_script.tpl"}
+</script>
 
 <script type="text/javascript">
 {if $pref_keyboard_shortcuts}
@@ -89,6 +104,11 @@ $(document).keypress(function(event) {
 			} catch(ex) { } 
 			break;
 		{/if}
+		case 109:  // (M) macros
+			try {
+				$('#btnDisplayMacros').click();
+			} catch(ex) { } 
+			break;
 		default:
 			// We didn't find any obvious keys, try other codes
 			hotkey_activated = false;

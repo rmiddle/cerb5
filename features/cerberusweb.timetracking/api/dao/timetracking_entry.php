@@ -135,7 +135,6 @@ class DAO_TimeTrackingActivity extends DevblocksORMHelper {
 		
 		return true;
 	}
-
 };
 
 class Model_TimeTrackingActivity {
@@ -245,12 +244,36 @@ class DAO_TimeTrackingEntry extends C4_ORMHelper {
 		// Entries
 		$db->Execute(sprintf("DELETE FROM timetracking_entry WHERE id IN (%s)", $ids_list));
 		
-		// Custom fields
-		DAO_CustomFieldValue::deleteByContextIds(CerberusContexts::CONTEXT_TIMETRACKING, $ids);
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => CerberusContexts::CONTEXT_TIMETRACKING,
+                	'context_ids' => $ids
+                )
+            )
+	    );
 		
 		return true;
 	}
 
+	static function maint() {
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.maint',
+                array(
+                	'context' => CerberusContexts::CONTEXT_TIMETRACKING,
+                	'context_table' => 'timetracking_entry',
+                	'context_key' => 'id',
+                )
+            )
+	    );
+	}
+	
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 			$fields = SearchFields_TimeTrackingEntry::getFields();
 		

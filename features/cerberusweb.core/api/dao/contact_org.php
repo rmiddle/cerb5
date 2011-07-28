@@ -147,6 +147,13 @@ class DAO_ContactOrg extends C4_ORMHelper {
 			implode(',', $from_ids)
 		));
 
+		// Merge notifications
+		$db->Execute(sprintf("UPDATE IGNORE notification SET context_id = %d WHERE context = %s AND context_id IN (%s)",
+			$to_id,
+			$db->qstr(CerberusContexts::CONTEXT_ORG),
+			implode(',', $from_ids)
+		));
+		
 		// Merge context_activity_log
 		$db->Execute(sprintf("UPDATE IGNORE context_activity_log SET target_context_id = %d WHERE target_context = %s AND target_context_id IN (%s)",
 			$to_id,
@@ -181,14 +188,32 @@ class DAO_ContactOrg extends C4_ORMHelper {
 		);
 		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 		
-		// Context links
-		DAO_ContextLink::delete(CerberusContexts::CONTEXT_ORG, $ids);
-        
-        // Custom fields
-        DAO_CustomFieldValue::deleteByContextIds(CerberusContexts::CONTEXT_ORG, $ids);
-
-        // Notes
-        DAO_Comment::deleteByContext(CerberusContexts::CONTEXT_ORG, $ids);
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => CerberusContexts::CONTEXT_ORG,
+                	'context_ids' => $ids
+                )
+            )
+	    );
+	}
+	
+	static function maint() {
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.maint',
+                array(
+                	'context' => CerberusContexts::CONTEXT_ORG,
+                	'context_table' => 'contact_org',
+                	'context_key' => 'id',
+                )
+            )
+	    );
 	}
 	
 	/**

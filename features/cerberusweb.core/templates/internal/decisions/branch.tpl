@@ -2,6 +2,7 @@
 
 {* Label *}
 <div class="node {$node->node_type}">
+	<input type="hidden" name="node_id" value="{$node_id}">
 	{*<span class="ui-icon ui-icon-arrowthick-2-n-s handle" style="display:inline-block;vertical-align:middle;"></span>*}
 
 	{if $node->node_type == 'switch'}
@@ -13,7 +14,7 @@
 	
 	{elseif $node->node_type == 'outcome'}
 		<div class="badge badge-lightgray">
-			<a href="javascript:;" style="text-decoration:none;font-weight:bold;{if 0==strcasecmp($node->title,'yes')}color:rgb(0,150,0);{elseif 0==strcasecmp($node->title,'no')}color:rgb(150,0,0);{/if}" onclick="decisionNodeMenu(this,'{$node->id}','{$trigger_id}');">
+			<a href="javascript:;" style="text-decoration:none;font-weight:bold;{if preg_match('#^yes($|,| )#i',$node->title)}color:rgb(0,150,0);{elseif preg_match('#^no($|,| )#i',$node->title)}color:rgb(150,0,0);{/if}" onclick="decisionNodeMenu(this,'{$node->id}','{$trigger_id}');">
 				{$node->title} &#x25be;
 			</a>
 		</div>

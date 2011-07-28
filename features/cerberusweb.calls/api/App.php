@@ -9,9 +9,9 @@ class CallsPage extends CerberusPageExtension {
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-
 		$visit = CerberusApplication::getVisit();
 		$translate = DevblocksPlatform::getTranslationService();
+		$active_worker = CerberusApplication::getActiveWorker();
 		
 		$response = DevblocksPlatform::getHttpResponse();
 		$stack = $response->path;
@@ -86,6 +86,13 @@ class CallsPage extends CerberusPageExtension {
 			}
 			
 			$tpl->assign('properties', $properties);				
+			
+			// Macros
+			
+			$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.call');
+			$tpl->assign('macros', $macros);
+			
+			// Template
 			
 			$tpl->display('devblocks:cerberusweb.calls::calls/display/index.tpl');
 			
@@ -394,6 +401,20 @@ class CallsActivityTab extends Extension_ActivityTab {
 		
 		$tpl->display('devblocks:cerberusweb.calls::activity_tab/index.tpl');		
 	}
-}
+};
 endif;
 
+if (class_exists('DevblocksEventListenerExtension')):
+class CallsEventListener extends DevblocksEventListenerExtension {
+	/**
+	 * @param Model_DevblocksEvent $event
+	 */
+	function handleEvent(Model_DevblocksEvent $event) {
+		switch($event->id) {
+			case 'cron.maint':
+				DAO_CallEntry::maint();
+				break;
+		}
+	}
+};
+endif;

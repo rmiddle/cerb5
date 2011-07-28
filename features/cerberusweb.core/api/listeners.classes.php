@@ -752,6 +752,18 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 	function handleEvent(Model_DevblocksEvent $event) {
 		// Cerberus Helpdesk Workflow
 		switch($event->id) {
+			case 'comment.create':
+				$this->_handleCommentCreate($event);
+				break;
+				
+			case 'context.delete':
+				$this->_handleContextDelete($event);
+				break;
+				
+			case 'context.maint':
+				$this->_handleContextMaint($event);
+				break;
+				
 			case 'cron.heartbeat':
 				$this->_handleCronHeartbeat($event);
 				break;
@@ -759,24 +771,195 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 			case 'cron.maint':
 				$this->_handleCronMaint($event);
 				break;
-				
-			case 'comment.create':
-				$this->_handleCommentCreate($event);
-				break;
 		}
 	}
 
+	private function _handleContextDelete($event) {
+		@$context = $event->params['context'];
+		@$context_ids = $event->params['context_ids'];
+		
+		// Core
+    	DAO_AttachmentLink::removeAllByContext($context, $context_ids);
+		DAO_Comment::deleteByContext($context, $context_ids);
+		DAO_ContextActivityLog::deleteByContext($context, $context_ids);
+		DAO_ContextLink::delete($context, $context_ids);
+		DAO_CustomFieldValue::deleteByContextIds($context, $context_ids);
+		DAO_Notification::deleteByContext($context, $context_ids);
+		DAO_TriggerEvent::deleteByOwner($context, $context_ids);
+	}
+	
+	private function _handleContextMaint($event) {
+		$db = DevblocksPlatform::getDatabaseService();
+		$logger = DevblocksPlatform::getConsoleLog('Maint');
+		
+		@$context = $event->params['context'];
+		@$context_table = $event->params['context_table'];
+		@$context_key = $event->params['context_key'];
+
+		$context_index = $context_table . '.' . $context_key;
+		
+		$logger->info(sprintf("Running maintenance on context: %s", $context));
+		
+		// ===========================================================================
+		// Comments
+
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM comment AS ctx ".
+			"LEFT JOIN %s ON ctx.context_id=%s ".
+			"WHERE ctx.context = %s ". 
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s comments.", $deletes, $context));
+		
+		// ===========================================================================
+		// Context Activity Log
+
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM context_activity_log AS ctx ".
+			"LEFT JOIN %s ON ctx.target_context_id=%s ".
+			"WHERE ctx.target_context = %s ". 
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s activity log entries.", $deletes, $context));
+		
+		// ===========================================================================
+		// Context Links
+		
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM context_link AS ctx ".
+			"LEFT JOIN %s ON ctx.from_context_id=%s ".
+			"WHERE ctx.from_context = %s ". 
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s context link sources.", $deletes, $context));
+		
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM context_link AS ctx ".
+			"LEFT JOIN %s ON ctx.to_context_id=%s ".
+			"WHERE ctx.to_context = %s ".
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s context link targets.", $deletes, $context));
+		
+		// ===========================================================================
+		// Custom fields
+		
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM custom_field_stringvalue AS ctx ".
+			"LEFT JOIN %s ON (%s=ctx.context_id) ".
+			"WHERE ctx.context = %s ".
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s custom field strings.", $deletes, $context));
+		
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM custom_field_numbervalue AS ctx ".
+			"LEFT JOIN %s ON (%s=ctx.context_id) ".
+			"WHERE ctx.context = %s ".
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s custom field numbers.", $deletes, $context));
+		
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM custom_field_clobvalue AS ctx ".
+			"LEFT JOIN %s ON (%s=ctx.context_id) ".
+			"WHERE ctx.context = %s ".
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s custom field clobs.", $deletes, $context));
+		
+		// ===========================================================================
+		// Notifications
+		
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM notification AS ctx ".
+			"LEFT JOIN %s ON ctx.context_id=%s ".
+			"WHERE ctx.context = %s ". 
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s notifications.", $deletes, $context));
+		
+		// ===========================================================================
+		// Virtual Attendant Behavior
+		
+		$rs = $db->Execute(sprintf("SELECT ctx.id ".
+			"FROM trigger_event AS ctx ".
+			"LEFT JOIN %s ON ctx.owner_context_id=%s ".
+			"WHERE ctx.owner_context = %s ". 
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		
+		if(is_resource($rs)) {
+			$deletes = 0;
+			
+			while($row = mysql_fetch_row($rs)) {
+				DAO_TriggerEvent::delete($row[0]);
+				$deletes++;
+			}
+			
+			if(null != ($deletes = $db->Affected_Rows()))
+				$logger->info(sprintf("Purged %d %s virtual attendant behaviors.", $deletes, $context));
+		}
+	}
+	
 	private function _handleCronMaint($event) {
 		DAO_Address::maint();
+		DAO_Bucket::maint();
 		DAO_Comment::maint();
 		DAO_ConfirmationCode::maint();
 		DAO_ExplorerSet::maint();
 		DAO_Group::maint();
+		DAO_Task::maint();
 		DAO_Ticket::maint();
 		DAO_Message::maint();
 		DAO_Worker::maint();
 		DAO_Notification::maint();
 		DAO_Snippet::maint();
+		DAO_ContactOrg::maint();
 		DAO_ContactPerson::maint();
 		DAO_OpenIdToContactPerson::maint();
 		DAO_Attachment::maint();
