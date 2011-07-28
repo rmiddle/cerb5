@@ -314,8 +314,16 @@
 			<class name="View_Workspace" />
 		</file>
 		
+		<file path="api/events/abstract/abstract_event_address.php">
+			<class name="AbstractEvent_Address" />
+		</file>
+		
 		<file path="api/events/abstract/abstract_event_message.php">
 			<class name="AbstractEvent_Message" />
+		</file>
+		
+		<file path="api/events/abstract/abstract_event_org.php">
+			<class name="AbstractEvent_Org" />
 		</file>
 		
 		<file path="api/events/abstract/abstract_event_task.php">
@@ -350,6 +358,18 @@
 			<class name="Event_MailSentByGroup" />
 		</file>
 
+		<file path="api/events/macro/address_macro.php">
+			<class name="Event_AddressMacro" />
+		</file>
+		
+		<file path="api/events/macro/message_macro.php">
+			<class name="Event_MessageMacro" />
+		</file>
+		
+		<file path="api/events/macro/org_macro.php">
+			<class name="Event_OrgMacro" />
+		</file>
+		
 		<file path="api/events/macro/task_macro.php">
 			<class name="Event_TaskMacro" />
 		</file>
@@ -859,6 +879,38 @@
 				<param key="contexts">
 					<value>
 						<data key="cerberusweb.contexts.group" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.event">
+			<id>event.macro.address</id>
+			<name>Custom address behavior</name>
+			<class>
+				<file>api/events/macro/address_macro.php</file>
+				<name>Event_AddressMacro</name>
+			</class>
+			<params>
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.worker" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.event">
+			<id>event.macro.org</id>
+			<name>Custom organization behavior</name>
+			<class>
+				<file>api/events/macro/org_macro.php</file>
+				<name>Event_OrgMacro</name>
+			</class>
+			<params>
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.worker" />
 					</value>
 				</param>
 			</params>
