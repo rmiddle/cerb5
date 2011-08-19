@@ -131,6 +131,19 @@ class ChInternalController extends DevblocksControllerExtension {
 			$tpl->display('devblocks:cerberusweb.core::context_links/choosers/__generic.tpl');
 		}
 	}
+	
+	function chooserOpenSnippetAction() {
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string');
+		@$layer = DevblocksPlatform::importGPC($_REQUEST['layer'],'string');
+
+		if(null != ($context_extension = DevblocksPlatform::getExtension($context, true))) {
+			$tpl = DevblocksPlatform::getTemplateService();
+			$tpl->assign('context', $context_extension);
+			$tpl->assign('layer', $layer);
+			$tpl->assign('view', $context_extension->getChooserView());
+			$tpl->display('devblocks:cerberusweb.core::context_links/choosers/__snippet.tpl');
+		}
+	}
 
 	function chooserOpenFileAction() {
 		@$layer = DevblocksPlatform::importGPC($_REQUEST['layer'],'string');
@@ -261,6 +274,8 @@ class ChInternalController extends DevblocksControllerExtension {
 		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
 		@$term = DevblocksPlatform::importGPC($_REQUEST['term'],'string','');
 
+		$active_worker = CerberusApplication::getActiveWorker();
+		
 		$list = array();
 
 		// [TODO] This should be handled by the context extension
@@ -336,8 +351,24 @@ class ChInternalController extends DevblocksControllerExtension {
 			case CerberusContexts::CONTEXT_SNIPPET:
 				$contexts = DevblocksPlatform::getExtensions('devblocks.context', false);
 				
+				// Restrict owners
+				$param_ownership = array(
+					DevblocksSearchCriteria::GROUP_OR,
+					array(
+						DevblocksSearchCriteria::GROUP_AND,
+						SearchFields_Snippet::OWNER_CONTEXT => new DevblocksSearchCriteria(SearchFields_Snippet::OWNER_CONTEXT,DevblocksSearchCriteria::OPER_EQ,CerberusContexts::CONTEXT_WORKER),
+						SearchFields_Snippet::OWNER_CONTEXT_ID => new DevblocksSearchCriteria(SearchFields_Snippet::OWNER_CONTEXT_ID,DevblocksSearchCriteria::OPER_EQ,$active_worker->id),
+					),
+					array(
+						DevblocksSearchCriteria::GROUP_AND,
+						SearchFields_Snippet::OWNER_CONTEXT => new DevblocksSearchCriteria(SearchFields_Snippet::OWNER_CONTEXT,DevblocksSearchCriteria::OPER_EQ,CerberusContexts::CONTEXT_GROUP),
+						SearchFields_Snippet::OWNER_CONTEXT_ID => new DevblocksSearchCriteria(SearchFields_Snippet::OWNER_CONTEXT_ID,DevblocksSearchCriteria::OPER_IN,array_keys($active_worker->getMemberships())),
+					),
+				);
+				
 				$params = array(
 					new DevblocksSearchCriteria(SearchFields_Snippet::TITLE,DevblocksSearchCriteria::OPER_LIKE,'%'.$term.'%'),
+					$param_ownership,
 				);
 				
 				@$context_list = DevblocksPlatform::importGPC($_REQUEST['contexts'],'array',array());
@@ -503,6 +534,159 @@ class ChInternalController extends DevblocksControllerExtension {
 	
 	// Snippets
 
+	function showTabSnippetsAction() {
+		@$point = DevblocksPlatform::importGPC($_REQUEST['point'],'string','');
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',null);
+		
+		$active_worker = CerberusApplication::getActiveWorker();
+		$visit = CerberusApplication::getVisit();
+		$tpl = DevblocksPlatform::getTemplateService();
+
+		$tpl->assign('owner_context', $context);
+		$tpl->assign('owner_context_id', $context_id);
+		
+		// Remember the tab
+		$visit->set($point, 'snippets');
+
+		$view_id = str_replace('.','_',$point) . '_snippets';
+		
+		$view = C4_AbstractViewLoader::getView($view_id);
+		
+		if(null == $view) {
+			$view = new View_Snippet();
+			$view->id = $view_id;
+			$view->name = 'Snippets';
+		}
+		
+		$view->addParamsRequired(array(
+			SearchFields_Snippet::OWNER_CONTEXT => new DevblocksSearchCriteria(SearchFields_Snippet::OWNER_CONTEXT, DevblocksSearchCriteria::OPER_EQ, $context),
+			SearchFields_Snippet::OWNER_CONTEXT_ID => new DevblocksSearchCriteria(SearchFields_Snippet::OWNER_CONTEXT_ID, DevblocksSearchCriteria::OPER_EQ, $context_id),
+		), true);
+		
+		C4_AbstractViewLoader::setView($view->id,$view);
+		$tpl->assign('view', $view);
+		
+		$tpl->display('devblocks:cerberusweb.core::internal/snippets/index.tpl');
+	}	
+	
+	function showSnippetsPeekAction() {
+		@$snippet_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		$tpl->assign('view_id', $view_id);
+		
+		if(empty($snippet_id) || null == ($snippet = DAO_Snippet::get($snippet_id))) {
+			@$owner_context = DevblocksPlatform::importGPC($_REQUEST['owner_context'],'string','');
+			@$owner_context_id = DevblocksPlatform::importGPC($_REQUEST['owner_context_id'],'integer',0);
+		
+			$snippet = new Model_Snippet();
+			$snippet->id = 0;
+			$snippet->owner_context = !empty($owner_context) ? $owner_context : '';
+			$snippet->owner_context_id = $owner_context_id;
+		}
+		
+		$tpl->assign('snippet', $snippet);
+		
+		$contexts = Extension_DevblocksContext::getAll(false);
+		$tpl->assign('contexts', $contexts);
+
+		// Custom fields
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_SNIPPET); 
+		$tpl->assign('custom_fields', $custom_fields);
+
+		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_SNIPPET, $snippet_id);
+		if(isset($custom_field_values[$snippet_id]))
+			$tpl->assign('custom_field_values', $custom_field_values[$snippet_id]);
+		
+		$types = Model_CustomField::getTypes();
+		$tpl->assign('types', $types);
+		
+		$tpl->display('devblocks:cerberusweb.core::internal/snippets/peek.tpl');
+	}
+	
+	function showSnippetsPeekToolbarAction() {
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('context', $context);
+		
+		if(!empty($context)) {
+			$token_labels = array();
+			$token_values = array();
+			
+			CerberusContexts::getContext($context, null, $token_labels, $token_values);
+			
+			$tpl->assign('token_labels', $token_labels);
+		}
+		
+		$tpl->display('devblocks:cerberusweb.core::internal/snippets/peek_toolbar.tpl');
+	}
+	
+	function saveSnippetsPeekAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		
+		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+		@$title = DevblocksPlatform::importGPC($_REQUEST['title'],'string','');
+		@$owner_context = DevblocksPlatform::importGPC($_REQUEST['owner_context'],'string','');
+		@$owner_context_id = DevblocksPlatform::importGPC($_REQUEST['owner_context_id'],'integer',0);
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+		@$content = DevblocksPlatform::importGPC($_REQUEST['content'],'string','');
+		@$do_delete = DevblocksPlatform::importGPC($_REQUEST['do_delete'],'integer',0);
+
+		$active_worker = CerberusApplication::getActiveWorker();
+
+		$fields = array(
+			DAO_Snippet::TITLE => $title,
+			DAO_Snippet::CONTEXT => $context,
+			DAO_Snippet::CONTENT => $content,
+		);
+
+		if($do_delete) {
+			if(null != ($snippet = DAO_Snippet::get($id))) { /* @var $snippet Model_Snippet */
+// 				if($active_worker->hasPriv('core.snippets.actions.update_all') 
+// 					|| $snippet->created_by == $active_worker->id
+// 				) {
+					DAO_Snippet::delete($id);
+// 				}
+			}
+			
+		} else { // Create || Update
+			if(empty($id)) {
+				if($active_worker->hasPriv('core.snippets.actions.create')) {
+					$fields[DAO_Snippet::OWNER_CONTEXT] = $owner_context;
+					$fields[DAO_Snippet::OWNER_CONTEXT_ID] = $owner_context_id;
+					
+					$id = DAO_Snippet::create($fields);
+					
+					// Custom field saves
+					@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
+					DAO_CustomFieldValue::handleFormPost(CerberusContexts::CONTEXT_SNIPPET, $id, $field_ids);
+				} 
+				
+			} else {
+				if(null != ($snippet = DAO_Snippet::get($id))) { /* @var $snippet Model_Snippet */
+// 					if($active_worker->hasPriv('core.snippets.actions.update_all') 
+// 						|| $snippet->created_by == $active_worker->id
+// 					) {
+						DAO_Snippet::update($id, $fields);
+						
+						// Custom field saves
+						@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
+						DAO_CustomFieldValue::handleFormPost(CerberusContexts::CONTEXT_SNIPPET, $id, $field_ids);
+// 					}
+				}
+			}
+		}
+		
+		
+		if(null !== ($view = C4_AbstractViewLoader::getView($view_id))) {
+			$view->render();
+		}
+	}	
+	
 	function snippetPasteAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
 		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
@@ -519,17 +703,7 @@ class ChInternalController extends DevblocksControllerExtension {
 					exit;
 			}
 			
-			switch($snippet->context) {
-				case 'cerberusweb.contexts.ticket':
-					CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, $context_id, $token_labels, $token_values);
-					break;
-				case 'cerberusweb.contexts.worker':
-					CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $context_id, $token_labels, $token_values);
-					break;
-				case '':
-					$token_values = array();
-					break;
-			}
+			CerberusContexts::getContext($snippet->context, $context_id, $token_labels, $token_values);
 
 			$snippet->incrementUse($active_worker->id);
 		}
@@ -559,56 +733,42 @@ class ChInternalController extends DevblocksControllerExtension {
 		$token_labels = array();
 		$token_value = array();
 
-		if(!empty($snippet_context_id)) {
-			CerberusContexts::getContext($snippet_context, $snippet_context_id, $token_labels, $token_values);
-		}
-		
-		// [TODO] Randomize
-		if(empty($token_values)) {
-			switch($snippet_context) {
-				case '':
-					break;
-	
-				case 'cerberusweb.contexts.ticket':
-					list($result, $count) = DAO_Ticket::search(
-						array(
-							SearchFields_Ticket::TICKET_UPDATED_DATE,
-						),
-						array(
-						),
-						25,
-						0,
-						SearchFields_Ticket::TICKET_UPDATED_DATE,
-						false,
-						false
-					);
-	
-					shuffle($result);
-	
-					CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, array_shift($result), $token_labels, $token_values);
-					break;
-	
-				case 'cerberusweb.contexts.worker':
-					$active_worker = CerberusApplication::getActiveWorker();
-					CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $active_worker, $token_labels, $token_values);
-					break;
-			}
-		}
+		$ctx = Extension_DevblocksContext::get($snippet_context);
 
+		// If no ID is given, randomize one
+		if(empty($snippet_context_id) && method_exists($ctx, 'getRandom'))
+			$snippet_context_id = $ctx->getRandom();
+		
+		CerberusContexts::getContext($snippet_context, $snippet_context_id, $token_labels, $token_values);
+		
 		$success = false;
 		$output = '';
 
 		if(!empty($token_values)) {
-			// Try to build the template
-			if(false === ($out = $tpl_builder->build($content, $token_values))) {
-				// If we failed, show the compile errors
-				$errors = $tpl_builder->getErrors();
-				$success= false;
-				$output = @array_shift($errors);
+			// Tokenize
+			$tokens = $tpl_builder->tokenize($content);
+			
+			// Test legal values
+			$unknown_tokens = array_diff($tokens,array_keys($token_labels));
+			$valid_tokens = array_intersect($tokens,array_keys($token_labels));
+			
+			if(!empty($unknown_tokens)) {
+				$success = false;
+				$output = "The following placeholders are unknown: ".
+					implode(', ', $unknown_tokens);
+				
 			} else {
-				// If successful, return the parsed template
-				$success = true;
-				$output = $out;
+				// Try to build the template
+				if(false === ($out = $tpl_builder->build($content, $token_values))) {
+					// If we failed, show the compile errors
+					$errors = $tpl_builder->getErrors();
+					$success= false;
+					$output = @array_shift($errors);
+				} else {
+					// If successful, return the parsed template
+					$success = true;
+					$output = $out;
+				}
 			}
 		}
 

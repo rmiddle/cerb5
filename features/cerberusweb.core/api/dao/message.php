@@ -15,7 +15,7 @@
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
 
-class DAO_Message extends DevblocksORMHelper {
+class DAO_Message extends C4_ORMHelper {
     const ID = 'id';
     const TICKET_ID = 'ticket_id';
     const CREATED_DATE = 'created_date';
@@ -236,6 +236,10 @@ class DAO_Message extends DevblocksORMHelper {
             )
 	    );
     }
+    
+	public static function random() {
+		return self::_getRandom('message');
+	}
     
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_Message::getFields();
@@ -1388,6 +1392,10 @@ class Context_Message extends Extension_DevblocksContext {
 		}
 		
 		return FALSE;
+	}
+	
+	function getRandom() {
+		return DAO_Message::random();
 	}
 	
 	function getMeta($context_id) {
