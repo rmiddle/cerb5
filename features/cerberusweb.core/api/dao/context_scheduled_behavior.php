@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class DAO_ContextScheduledBehavior extends C4_ORMHelper {
 	const ID = 'id';
 	const CONTEXT = 'context';
@@ -65,6 +81,13 @@ class DAO_ContextScheduledBehavior extends C4_ORMHelper {
 		return null;
 	}
 
+	/**
+	 * 
+	 * Enter description here ...
+	 * @param unknown_type $context
+	 * @param unknown_type $context_id
+	 * @return Model_ContextScheduledBehavior
+	 */
 	static public function getByContext($context, $context_id) {
 		$objects = self::getWhere(
 			sprintf("%s = %s AND %s = %d",
@@ -113,6 +136,20 @@ class DAO_ContextScheduledBehavior extends C4_ORMHelper {
 
 		$db->Execute(sprintf("DELETE FROM context_scheduled_behavior WHERE id IN (%s)", $ids_list));
 
+		return true;
+	}
+	
+	static function deleteByBehavior($behavior_ids) {
+		if(!is_array($behavior_ids)) $behavior_ids = array($behavior_ids);
+		$db = DevblocksPlatform::getDatabaseService();
+		
+		if(empty($behavior_ids))
+			return;
+
+		$ids_list = implode(',', $behavior_ids);
+		
+		$db->Execute(sprintf("DELETE FROM context_scheduled_behavior WHERE behavior_id IN (%s)", $ids_list));
+		
 		return true;
 	}
 

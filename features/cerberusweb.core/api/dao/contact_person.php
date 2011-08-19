@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class DAO_ContactPerson extends DevblocksORMHelper {
 	const ID = 'id';
 	const EMAIL_ID = 'email_id';
@@ -793,6 +809,7 @@ class Context_ContactPerson extends Extension_DevblocksContext {
 			'created' => $prefix.$translate->_('common.created'),
 			'id' => $prefix.$translate->_('common.id'),
 			'last_login' => $prefix.$translate->_('dao.contact_person.last_login'),
+			'record_url' => $prefix.$translate->_('common.url.record'),
 		);
 		
 //		if(is_array($fields))
@@ -810,6 +827,11 @@ class Context_ContactPerson extends Extension_DevblocksContext {
 				$token_values['created'] = $person->created;
 			if(!empty($person->last_login))
 				$token_values['last_login'] = $person->last_login;
+			
+			// URL
+			$url_writer = DevblocksPlatform::getUrlService();
+			$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=contacts&tab=people&id=%d",$person->id), true);
+			
 			$token_values['custom'] = array();
 			
 			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_CONTACT_PERSON, $person->id));

@@ -699,7 +699,7 @@ class DevblocksEventHelper {
 	}
 	
 	/*
-	 * Action: Schedule Macro
+	 * Action: Schedule Behavior
 	 */
 	
 	static function renderActionScheduleBehavior($context, $context_id, $event_point) {
@@ -714,12 +714,46 @@ class DevblocksEventHelper {
 	static function runActionScheduleBehavior($params, $values, $context, $context_id) {
 		@$behavior_id = $params['behavior_id'];
 		@$run_date = $params['run_date'];
+		@$on_dupe = $params['on_dupe'];
 		
 		// [TODO] Relative dates
 		@$run_timestamp = strtotime($run_date);
 		
 		if(empty($behavior_id))
 			return FALSE;
+		
+		switch($on_dupe) {
+			// Only keep first
+			case 'first':
+				// Keep the first, delete everything else, and don't add a new one
+				$behaviors = DAO_ContextScheduledBehavior::getByContext($context, $context_id);
+				$found_first = false;
+				foreach($behaviors as $k => $behavior) { /* @var $behavior Model_ContextScheduledBehavior */
+					if($behavior->behavior_id == $behavior_id) {
+						if($found_first) {
+							DAO_ContextScheduledBehavior::delete($k);
+						}
+						$found_first = $k;
+					}
+				}
+				
+				// If we already have one, don't make a new one.
+				if($found_first)
+					return $found_first;
+				
+				break;
+
+			// Only keep latest
+			case 'last':
+				// Delete everything prior so we only have the new one below
+				DAO_ContextScheduledBehavior::deleteByBehavior($behavior_id);
+				break;
+			
+			// Allow dupes
+			default:
+				// Do nothing
+				break;
+		}
 		
 		$fields = array(
 			DAO_ContextScheduledBehavior::CONTEXT => $context,
@@ -728,6 +762,28 @@ class DevblocksEventHelper {
 			DAO_ContextScheduledBehavior::RUN_DATE => intval($run_timestamp),
 		);
 		return DAO_ContextScheduledBehavior::create($fields);
+	}
+	
+	/*
+	 * Action: Unschedule Behavior
+	 */
+	
+	static function renderActionUnscheduleBehavior($context, $context_id, $event_point) {
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		$macros = DAO_TriggerEvent::getByOwner($context, $context_id, $event_point);
+		$tpl->assign('macros', $macros);
+		
+		$tpl->display('devblocks:cerberusweb.core::events/action_unschedule_behavior.tpl');
+	}
+	
+	static function runActionUnscheduleBehavior($params, $values, $context, $context_id) {
+		@$behavior_id = $params['behavior_id'];
+		
+		if(empty($behavior_id))
+			return FALSE;
+		
+		return DAO_ContextScheduledBehavior::deleteByBehavior($behavior_id);
 	}
 	
 	/*
@@ -832,8 +888,15 @@ class DevblocksEventHelper {
 	}
 	
 	static function runActionCreateNotification($params, $values, $context, $context_id) {
-		@$notify_worker_ids = $params['notify_worker_id'];
-		
+		$notify_worker_ids = isset($params['notify_worker_id']) ? $params['notify_worker_id'] : array();
+
+		// Watchers?
+		if(isset($params['notify_watchers']) && !empty($params['notify_watchers'])) {
+			// [TODO] Lazy load from values (and set back to)
+			$watchers = CerberusContexts::getWatchers($context, $context_id);
+			$notify_worker_ids = array_merge($notify_worker_ids, array_keys($watchers));
+		}
+
 		if(!is_array($notify_worker_ids) || empty($notify_worker_ids))
 			return;
 		
@@ -885,25 +948,26 @@ class DevblocksEventHelper {
 			DAO_Task::DUE_DATE => $due_date,
 		);
 		$task_id = DAO_Task::create($fields);
+
+		// Watchers
+		if(isset($params['worker_id']) && !empty($params['worker_id']))
+			CerberusContexts::addWatchers(CerberusContexts::CONTEXT_TASK, $task_id, $params['worker_id']);
 		
 		// Comment content
 		if(!empty($comment)) {
 			$fields = array(
-				DAO_Comment::ADDRESS_ID => 0, // [TODO] ???
+				DAO_Comment::ADDRESS_ID => 0,
 				DAO_Comment::COMMENT => $comment,
 				DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_TASK,
 				DAO_Comment::CONTEXT_ID => $task_id,
 				DAO_Comment::CREATED => time(),
 			);
-			DAO_Comment::create($fields);
+			
+			// Notify
+			@$notify_worker_ids = $params['notify_worker_id'];
+			DAO_Comment::create($fields, $notify_worker_ids);
 		}
 		
-		// Watchers
-		if(isset($params['worker_id']) && !empty($params['worker_id']))
-			CerberusContexts::addWatchers(CerberusContexts::CONTEXT_TASK, $task_id, $params['worker_id']);
-		
-		// [TODO] Notify
-
 		// Connection
 		if(!empty($context) && !empty($context_id))
 			DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TASK, $task_id, $context, $context_id);

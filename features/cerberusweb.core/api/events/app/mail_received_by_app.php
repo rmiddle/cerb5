@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class Event_MailReceivedByApp extends Extension_DevblocksEvent {
 	const ID = 'event.mail.received.app';
 	
@@ -377,11 +393,11 @@ class Event_MailReceivedByApp extends Extension_DevblocksEvent {
 		switch($token) {
 			case 'append_to_content':
 			case 'prepend_to_content':
-				$tpl->display('devblocks:cerberusweb.core::events/mail_sent_by_group/action_add_content.tpl');
+				$tpl->display('devblocks:cerberusweb.core::events/mail_before_sent_by_group/action_add_content.tpl');
 				break;
 				
 			case 'replace_content':
-				$tpl->display('devblocks:cerberusweb.core::events/mail_sent_by_group/action_replace_content.tpl');
+				$tpl->display('devblocks:cerberusweb.core::events/mail_before_sent_by_group/action_replace_content.tpl');
 				break;
 				
 			case 'reject':

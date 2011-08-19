@@ -1,5 +1,21 @@
 <?php
-class Event_MailSentByGroup extends Extension_DevblocksEvent {
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
+class Event_MailBeforeSentByGroup extends Extension_DevblocksEvent {
 	const ID = 'event.mail.sent.group';
 	
 	static function trigger(&$properties, Model_Message $message, Model_Ticket $ticket, Model_Group $group) {

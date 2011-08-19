@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class Event_MailReceivedByWatcher extends Extension_DevblocksEvent {
 	const ID = 'event.mail.received.watcher';
 	
@@ -234,6 +250,7 @@ class Event_MailReceivedByWatcher extends Extension_DevblocksEvent {
 			'create_notification' => array('label' =>'Create a notification'),
 			'create_task' => array('label' =>'Create a task'),
 			'create_ticket' => array('label' =>'Create a ticket'),
+			'unschedule_behavior' => array('label' => 'Unschedule behavior'),
 		);
 		
 		// [TODO] Add set custom fields
@@ -280,6 +297,10 @@ class Event_MailReceivedByWatcher extends Extension_DevblocksEvent {
 				$tpl->assign('dates', $dates);
 			
 				DevblocksEventHelper::renderActionScheduleBehavior($trigger->owner_context, $trigger->owner_context_id, 'event.macro.ticket');
+				break;
+				
+			case 'unschedule_behavior':
+				DevblocksEventHelper::renderActionUnscheduleBehavior($trigger->owner_context, $trigger->owner_context_id, 'event.macro.ticket');
 				break;
 				
 			case 'create_comment':
@@ -356,6 +377,10 @@ class Event_MailReceivedByWatcher extends Extension_DevblocksEvent {
 				
 			case 'schedule_behavior':
 				DevblocksEventHelper::runActionScheduleBehavior($params, $values, CerberusContexts::CONTEXT_TICKET, $ticket_id);
+				break;
+				
+			case 'unschedule_behavior':
+				DevblocksEventHelper::runActionUnscheduleBehavior($params, $values, CerberusContexts::CONTEXT_TICKET, $ticket_id);
 				break;
 				
 			case 'create_comment':

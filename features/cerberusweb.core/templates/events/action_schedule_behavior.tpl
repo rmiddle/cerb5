@@ -10,7 +10,16 @@
 <b>When should this behavior happen?</b> (default: now)<br>
 <input type="text" name="{$namePrefix}[run_date]" value="{if empty($params.run_date)}now{else}{$params.run_date}{/if}" size="45" style="width:100%;"><br>
 <i>e.g. +2 days; next Monday; tomorrow 8am; 5:30pm; Dec 21 2012</i><br>
+<br>
 
+<b>If duplicate behavior is scheduled:</b><br>
+<div style="margin-left:10px;">
+	<label><input type="radio" name="{$namePrefix}[on_dupe]" value="" {if empty($params.on_dupe)}checked="checked"{/if}> Allow multiple occurrences</label><br>
+	<label><input type="radio" name="{$namePrefix}[on_dupe]" value="first" {if 'first'==$params.on_dupe}checked="checked"{/if}> Only schedule earliest occurrence</label><br>
+	<label><input type="radio" name="{$namePrefix}[on_dupe]" value="last" {if 'last'==$params.on_dupe}checked="checked"{/if}> Only schedule latest occurrence</label><br>
+</div>
+
+{*
 <br>
 <b>Relative to:</b><br>
 <select name="{$namePrefix}[date_relative_to]">
@@ -20,3 +29,4 @@
 	{/foreach}
 </select>
 <br>
+*}
