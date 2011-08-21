@@ -66,6 +66,12 @@
 	<br clear="all">
 	
 	<a style="color:black;font-weight:bold;" href="javascript:;" onclick="genericAjaxPopup('peek','c=display&a=showRequestersPanel&ticket_id={$ticket->id}',null,true,'500');">{'ticket.requesters'|devblocks_translate|capitalize}</a>:
+                        {if DevblocksPlatform::isPluginEnabled('cerberusweb.timetracking')}
+                            <div>
+                            <label>Total Ticket Time Worked:</label> {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp;
+                            </div> 
+                        {/if}
+                        
 	<span id="displayTicketRequesterBubbles">
 		{include file="devblocks:cerberusweb.core::display/rpc/requester_list.tpl" ticket_id=$ticket->id}
 	</span>

@@ -33,6 +33,9 @@
 					{/if}
 				{/foreach}
 				<br clear="all">
+		{if isset($total_time_minutes)}
+			<b>Total Ticket Time Worked: </b> {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp; 
+		{/if}
 				
 				<!-- Toolbar -->
 		
