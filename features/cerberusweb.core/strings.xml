@@ -16,14 +16,14 @@
 		<tu tuid='display.tab.comments'>
 			<tuv xml:lang="en_US"><seg>Comments (%s)</seg></tuv>
 		</tu>
-		<tu tuid='display.tab.conversation'>
-			<tuv xml:lang="en_US"><seg>Conversation</seg></tuv>
-		</tu>
 		<tu tuid='display.tab.history'>
 			<tuv xml:lang="en_US"><seg>Recipient History</seg></tuv>
 		</tu>
 		<tu tuid='display.tab.tasks'>
 			<tuv xml:lang="en_US"><seg>Tasks</seg></tuv>
+		</tu>
+		<tu tuid='display.tab.timeline'>
+			<tuv xml:lang="en_US"><seg>Timeline</seg></tuv>
 		</tu>
 
 		<tu tuid='home.tab.my_notifications'>
@@ -54,6 +54,9 @@
 		<tu tuid='activities.task.status.completed'>
 			<tuv xml:lang="en_US"><seg>{{actor}} completed task {{target}}</seg></tuv>
 		</tu>
+		<tu tuid='activities.ticket.assigned'>
+			<tuv xml:lang="en_US"><seg>{{actor}} assigned ticket {{target}} to worker {{worker}}</seg></tuv>
+		</tu>
 		<tu tuid='activities.ticket.merge'>
 			<tuv xml:lang="en_US"><seg>{{actor}} merged ticket {{source}} with ticket {{target}}</seg></tuv>
 		</tu>
@@ -65,6 +68,9 @@
 		</tu>
 		<tu tuid='activities.ticket.status'>
 			<tuv xml:lang="en_US"><seg>{{actor}} changed ticket {{target}} to status {{status}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.ticket.unassigned'>
+			<tuv xml:lang="en_US"><seg>{{actor}} unassigned ticket {{target}}</seg></tuv>
 		</tu>
 		<tu tuid='activities.watcher.assigned'>
 			<tuv xml:lang="en_US"><seg>{{actor}} added {{watcher}} as a watcher to {{target_object}} {{target}}</seg></tuv>
@@ -110,6 +116,9 @@
 		</tu>
 		<tu tuid='common.available'>
 			<tuv xml:lang="en_US"><seg>Available</seg></tuv>
+		</tu>
+		<tu tuid='common.behavior'>
+			<tuv xml:lang="en_US"><seg>Behavior</seg></tuv>
 		</tu>
 		<tu tuid='common.bucket'>
 			<tuv xml:lang="en_US"><seg>Bucket</seg></tuv>
@@ -167,6 +176,9 @@
 		</tu>
 		<tu tuid='common.continue'>
 			<tuv xml:lang="en_US"><seg>continue</seg></tuv>
+		</tu>
+		<tu tuid='common.conversation'>
+			<tuv xml:lang="en_US"><seg>conversation</seg></tuv>
 		</tu>
 		<tu tuid='common.copy'>
 			<tuv xml:lang="en_US"><seg>copy</seg></tuv>
@@ -261,6 +273,12 @@
 		<tu tuid='common.knowledgebase'>
 			<tuv xml:lang="en_US"><seg>Knowledgebase</seg></tuv>
 		</tu>
+		<tu tuid='common.macro'>
+			<tuv xml:lang="en_US"><seg>Macro</seg></tuv>
+		</tu>
+		<tu tuid='common.macros'>
+			<tuv xml:lang="en_US"><seg>Macros</seg></tuv>
+		</tu>
 		<tu tuid='common.mail'>
 			<tuv xml:lang="en_US"><seg>Mail</seg></tuv>
 		</tu>
@@ -335,6 +353,9 @@
 		</tu>		
 		<tu tuid='common.order'>
 			<tuv xml:lang="en_US"><seg>order</seg></tuv>
+		</tu>		
+		<tu tuid='common.owner'>
+			<tuv xml:lang="en_US"><seg>owner</seg></tuv>
 		</tu>		
 		<tu tuid='common.languages'>
 			<tuv xml:lang="en_US"><seg>Languages</seg></tuv>
@@ -479,6 +500,9 @@
 		</tu>
 		<tu tuid='common.url'>
 			<tuv xml:lang="en_US"><seg>URL</seg></tuv>
+		</tu>
+		<tu tuid='common.url.record'>
+			<tuv xml:lang="en_US"><seg>Record URL</seg></tuv>
 		</tu>
 		<tu tuid='common.watcher'>
 			<tuv xml:lang="en_US"><seg>watcher</seg></tuv>
@@ -650,15 +674,23 @@
 			<tuv xml:lang="en_US"><seg>[RSS] Can export lists as RSS feeds</seg></tuv>
 		</tu>
 
+			<!-- Snippets -->
+		<tu tuid='acl.core.snippets.actions.create'>
+			<tuv xml:lang="en_US"><seg>[Snippets] Can create snippets</seg></tuv>
+		</tu>
+		<tu tuid='acl.core.snippets.actions.update_all'>
+			<tuv xml:lang="en_US"><seg>[Snippets] Can modify any snippet</seg></tuv>
+		</tu>
+
 			<!-- Tasks -->
 		<tu tuid='acl.core.tasks.actions.create'>
 			<tuv xml:lang="en_US"><seg>[Tasks] Can create tasks</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.tasks.actions.update_all'>
-			<tuv xml:lang="en_US"><seg>[Tasks] Can manage everyone's tasks</seg></tuv>
+			<tuv xml:lang="en_US"><seg>[Tasks] Can edit tasks</seg></tuv>
 		</tu>
-		<tu tuid='acl.core.tasks.actions.update_nobody'>
-			<tuv xml:lang="en_US"><seg>[Tasks] Can manage unassigned tasks</seg></tuv>
+		<tu tuid='acl.core.tasks.actions.delete'>
+			<tuv xml:lang="en_US"><seg>[Tasks] Can delete tasks</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.tasks.view.actions.export'>
 			<tuv xml:lang="en_US"><seg>[Tasks] Can export task lists to CSV/XML</seg></tuv>
@@ -694,6 +726,12 @@
 		</tu>
 		<tu tuid='acl.core.ticket.view.actions.pile_sort'>
 			<tuv xml:lang="en_US"><seg>[Tickets] Can use the pile sorter on lists</seg></tuv>
+		</tu>
+		<tu tuid='acl.core.watchers.assign'>
+			<tuv xml:lang="en_US"><seg>[Watchers] Can add other workers as watchers</seg></tuv>
+		</tu>
+		<tu tuid='acl.core.watchers.unassign'>
+			<tuv xml:lang="en_US"><seg>[Watchers] Can remove other workers as watchers</seg></tuv>
 		</tu>
 
 		<!-- Addresses -->
@@ -922,6 +960,12 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 			<tuv xml:lang="en_US"><seg>Website</seg></tuv>
 		</tu>
 
+		<!-- Comment -->
+
+		<tu tuid='comment.filters.content'>
+			<tuv xml:lang="en_US"><seg>Comment Content</seg></tuv>
+		</tu>
+
 		<!-- Contact People -->
 		
 		<tu tuid='dao.contact_person.auth_salt'>
@@ -955,6 +999,12 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		</tu>
 		<tu tuid='dao.context_activity_log.target_context_id'>
 			<tuv xml:lang="en_US"><seg>Target Context ID</seg></tuv>
+		</tu>
+
+		<!-- ContextScheduledBehavior -->
+		
+		<tu tuid='dao.context_scheduled_behavior.run_date'>
+			<tuv xml:lang="en_US"><seg>Run Date</seg></tuv>
 		</tu>
 
 		<!-- Cron -->
@@ -1204,6 +1254,9 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		<tu tuid='display.reply.next.move.no_thanks'>
 			<tuv xml:lang="en_US"><seg>no thanks!</seg></tuv>
 		</tu>
+		<tu tuid='display.reply.next.owner'>
+			<tuv xml:lang="en_US"><seg>Who should this be assigned to?</seg></tuv>
+		</tu>
 		<tu tuid='display.reply.next.resume'>
 			<tuv xml:lang="en_US"><seg>When would you like to resume this conversation?</seg></tuv>
 		</tu>
@@ -1212,6 +1265,12 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		</tu>
 		<tu tuid='display.reply.next.resume_eg'>
 			<tuv xml:lang="en_US"><seg>(e.g. "Friday", "7 days", "Tomorrow 11:15AM", "Dec 31")</seg></tuv>
+		</tu>
+		<tu tuid='display.reply.no_quote'>
+			<tuv xml:lang="en_US"><seg>Reply without quoting</seg></tuv>
+		</tu>
+		<tu tuid='display.reply.quote'>
+			<tuv xml:lang="en_US"><seg>Quote and reply</seg></tuv>
 		</tu>
 		
 		<tu tuid='display.reply.reply_banner'>
@@ -1247,7 +1306,7 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 			<tuv xml:lang="en_US"><seg>Add to Recipients</seg></tuv>
 		</tu>
 		<tu tuid='display.ui.continue_later'>
-			<tuv xml:lang="en_US"><seg>Continue Later</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Save as draft</seg></tuv>
 		</tu>
 		<tu tuid='display.ui.discard'>
 			<tuv xml:lang="en_US"><seg>Discard</seg></tuv>
@@ -1258,14 +1317,21 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		<tu tuid='display.ui.reply'>
 			<tuv xml:lang="en_US"><seg>Reply</seg></tuv>
 		</tu>
+		<tu tuid='display.ui.save_nosend'>
+			<tuv xml:lang="en_US"><seg>Save without sending</seg></tuv>
+		</tu>
 		<tu tuid='display.ui.send_message'>
-			<tuv xml:lang="en_US"><seg>Send Message</seg></tuv>
+			<tuv xml:lang="en_US"><seg>Send message</seg></tuv>
 		</tu>
 		<tu tuid='display.ui.sticky_note'>
 			<tuv xml:lang="en_US"><seg>Sticky Note</seg></tuv>
 		</tu>
 		
 		<!-- Mail -->
+		
+		<tu tuid='mail.create.on_behalf'>
+			<tuv xml:lang="en_US"><seg>#### This message was created by %s on your behalf.</seg></tuv>
+		</tu>
 		
 		<tu tuid='mail.drafts'>
 			<tuv xml:lang="en_US"><seg>Drafts</seg></tuv>
@@ -1307,6 +1373,12 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		
 		<tu tuid='mail.piles'>
 			<tuv xml:lang="en_US"><seg>Piles</seg></tuv>
+		</tu>
+		<tu tuid='mail.quick_search.comments_all'>
+			<tuv xml:lang="en_US"><seg>Comments (all words)</seg></tuv>
+		</tu>
+		<tu tuid='mail.quick_search.comments_phrase'>
+			<tuv xml:lang="en_US"><seg>Comments (phrase)</seg></tuv>
 		</tu>
 		<tu tuid='mail.quick_search.messages_all'>
 			<tuv xml:lang="en_US"><seg>Messages (all words)</seg></tuv>
@@ -1366,11 +1438,11 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		<tu tuid='mail_queue.params_json'>
 			<tuv xml:lang="en_US"><seg>Parameters</seg></tuv>
 		</tu>
+		<tu tuid='mail_queue.queue_delivery_date'>
+			<tuv xml:lang="en_US"><seg>Delivery Date</seg></tuv>
+		</tu>
 		<tu tuid='mail_queue.queue_fails'>
 			<tuv xml:lang="en_US"><seg># Fails</seg></tuv>
-		</tu>
-		<tu tuid='mail_queue.queue_priority'>
-			<tuv xml:lang="en_US"><seg>Priority</seg></tuv>
 		</tu>
 		<tu tuid='mail_queue.ticket_id'>
 			<tuv xml:lang="en_US"><seg>Ticket ID</seg></tuv>
@@ -1398,6 +1470,13 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		</tu>
 		<tu tuid='message.header.to'>
 			<tuv xml:lang="en_US"><seg>To</seg></tuv>
+		</tu>
+
+		<tu tuid='message.queued.delivery_immediate'>
+			<tuv xml:lang="en_US"><seg>scheduled for immediate delivery</seg></tuv>
+		</tu>
+		<tu tuid='message.queued.deliver_in'>
+			<tuv xml:lang="en_US"><seg>scheduled for delivery in %s</seg></tuv>
 		</tu>
 		
 		<tu tuid='message.content'>
@@ -1626,6 +1705,9 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='ticket.first_wrote'>
 			<tuv xml:lang="en_US"><seg>First Wrote</seg></tuv>
 		</tu>
+		<tu tuid='ticket.groups_of_worker'>
+			<tuv xml:lang="en_US"><seg>In Groups of Worker</seg></tuv>
+		</tu>
 		<tu tuid='ticket.interesting_words'>
 			<tuv xml:lang="en_US"><seg>Interesting Words</seg></tuv>
 		</tu>
@@ -1816,6 +1898,33 @@ For example: *receipt*</seg></tuv>
 	    </tu>
 	    <tu tuid='preferences.account.mail.readall'>
 			<tuv xml:lang="en_US"><seg>Always use 'read all' mode (expand messages and sort chronologically)</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.reply_button'>
+			<tuv xml:lang="en_US"><seg>When I click the reply button:</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.signature'>
+			<tuv xml:lang="en_US"><seg>Insert my signature:</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.signature.above'>
+			<tuv xml:lang="en_US"><seg>Above the quoted message</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.signature.below'>
+			<tuv xml:lang="en_US"><seg>Below the quoted message</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.signature.none'>
+			<tuv xml:lang="en_US"><seg>Don't automatically insert my signature</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.status.compose'>
+			<tuv xml:lang="en_US"><seg>When composing a new outgoing message, default the status to:</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.status.create'>
+			<tuv xml:lang="en_US"><seg>When opening a new ticket, default the status to:</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.status.reply'>
+			<tuv xml:lang="en_US"><seg>When replying to mail, default the status to:</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.no_discard_warning'>
+			<tuv xml:lang="en_US"><seg>Don't warn me about losing unsaved changes if I click links while composing mail</seg></tuv>
 	    </tu>
 
 	</body>

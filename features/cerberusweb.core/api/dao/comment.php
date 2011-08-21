@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class DAO_Comment extends DevblocksORMHelper {
 	const ID = 'id';
 	const CONTEXT = 'context';
@@ -168,8 +184,20 @@ class DAO_Comment extends DevblocksORMHelper {
 		// Comments
 		$db->Execute(sprintf("DELETE FROM comment WHERE id IN (%s)", $ids_list));
 		
-		// Attachments
-		DAO_AttachmentLink::removeAllByContext(CerberusContexts::CONTEXT_COMMENT, $ids);
+		// Search index
+		Search_CommentContent::delete($ids);
+		
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => CerberusContexts::CONTEXT_COMMENT,
+                	'context_ids' => $ids
+                )
+            )
+	    );
 		
 		return true;
 	}
@@ -295,9 +323,28 @@ class DAO_Comment extends DevblocksORMHelper {
 		$db = DevblocksPlatform::getDatabaseService();
 		$logger = DevblocksPlatform::getConsoleLog();
 
+		// Attachments
 		$sql = "DELETE QUICK attachment_link FROM attachment_link LEFT JOIN comment ON (attachment_link.context_id=comment.id) WHERE attachment_link.context = 'cerberusweb.contexts.comment' AND comment.id IS NULL";
 		$db->Execute($sql);
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' comment attachment_links.');
+		
+		// Search indexes
+		$sql = "DELETE QUICK fulltext_comment_content FROM fulltext_comment_content LEFT JOIN comment ON fulltext_comment_content.id = comment.id WHERE comment.id IS NULL";
+		$db->Execute($sql);
+		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' fulltext_comment_content records.');
+		
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.maint',
+                array(
+                	'context' => CerberusContexts::CONTEXT_COMMENT,
+                	'context_table' => 'comment',
+                	'context_key' => 'id',
+                )
+            )
+	    );
 	}		
 };
 
@@ -337,6 +384,101 @@ class SearchFields_Comment implements IDevblocksSearchFields {
 		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
 
 		return $columns;		
+	}
+};
+
+class Search_CommentContent {
+	const ID = 'cerberusweb.search.schema.comment_content';
+	
+	public static function index($stop_time=null) {
+		$logger = DevblocksPlatform::getConsoleLog();
+		
+		if(false == ($search = DevblocksPlatform::getSearchService())) {
+			$logger->error("[Search] The search engine is misconfigured.");
+			return;
+		}
+		
+		$ns = 'comment_content';
+		$id = DAO_DevblocksExtensionPropertyStore::get(self::ID, 'last_indexed_id', 0);
+		$done = false;
+		
+		while(!$done && time() < $stop_time) {
+			$where = sprintf("%s > %d", DAO_Comment::ID, $id);
+			$comments = DAO_Comment::getWhere($where, 'id', true, 100);
+	
+			if(empty($comments)) {
+				$done = true;
+				continue;
+			}
+			
+			$count = 0;
+			
+			if(is_array($comments))
+			foreach($comments as $comment) { /* @var $comment Model_Comment */
+				$id = $comment->id;
+				
+				$logger->info(sprintf("[Search] Indexing %s %d...", 
+					$ns,
+					$id
+				));
+				
+				if(!empty($comment->comment)) {
+					$content = $comment->comment;
+					$start = 0;
+					$chunklen = 50000;
+					$replace = true;
+					$len = mb_strlen($content);
+
+					// 25K character chunks
+					do {
+						$end = $start + $chunklen;
+						
+						// If our offset is past EOS, use the last pos
+						if($end > $len) {
+							$next_ws = $len;
+							
+						} else {
+							if(false === ($next_ws = mb_strpos($content, ' ', $end)))
+								if(false === ($next_ws = mb_strpos($content, "\n", $end)))
+									$next_ws = $end;
+							
+						}							
+							
+						$chunk = mb_substr($content, $start, $next_ws-$start);
+						
+						if(!empty($chunk)) {
+							$start += mb_strlen($chunk);
+							
+							$search->index($ns, $id, $chunk, $replace);
+							$replace = false;
+						}
+						
+					} while(0 != mb_strlen($chunk));
+				}
+
+				// Record our progress every 10th index
+				if(++$count % 10 == 0) {
+					if(!empty($id))
+						DAO_DevblocksExtensionPropertyStore::put(self::ID, 'last_indexed_id', $id);
+				}
+			}
+			
+			flush();
+			
+			// Record our index every batch
+			if(!empty($id))
+				DAO_DevblocksExtensionPropertyStore::put(self::ID, 'last_indexed_id', $id);
+		}
+	}
+	
+	public static function delete($ids) {
+		if(false == ($search = DevblocksPlatform::getSearchService())) {
+			$logger->error("[Search] The search engine is misconfigured.");
+			return;
+		}
+		
+		$ns = 'comment_content';
+		return $search->delete($ns, $ids);
 	}
 };
 
@@ -504,8 +646,8 @@ class View_Comment extends C4_AbstractView {
 	}
 		
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(0);
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 

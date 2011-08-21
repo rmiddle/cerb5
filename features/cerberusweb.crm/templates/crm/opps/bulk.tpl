@@ -24,20 +24,34 @@
 				<option value="open">{'crm.opp.status.open'|devblocks_translate}</option>
 				<option value="won">{'crm.opp.status.closed.won'|devblocks_translate}</option>
 				<option value="lost">{'crm.opp.status.closed.lost'|devblocks_translate}</option>
+				{if $active_worker->hasPriv('crm.opp.actions.delete')}
+				<option value="deleted">{'status.deleted'|devblocks_translate|capitalize}</option>
+				{/if}
 	      	</select>
+	      	<br>
 			<button type="button" onclick="this.form.status.selectedIndex = 1;">{'crm.opp.status.open'|devblocks_translate|lower}</button>
 			<button type="button" onclick="this.form.status.selectedIndex = 2;">{'crm.opp.status.closed.won'|devblocks_translate|lower}</button>
 			<button type="button" onclick="this.form.status.selectedIndex = 3;">{'crm.opp.status.closed.lost'|devblocks_translate|lower}</button>
+			{if $active_worker->hasPriv('crm.opp.actions.delete')}
+			<button type="button" onclick="this.form.status.selectedIndex = 4;">{'status.deleted'|devblocks_translate|lower}</button>
+			{/if}
 	      	</td>
 		</tr>
+		{if $active_worker->hasPriv('core.watchers.assign') || $active_worker->hasPriv('core.watchers.unassign')}
 		<tr>
 			<td width="0%" nowrap="nowrap" align="right" valign="top">{'common.watchers'|devblocks_translate|capitalize}:</td>
 			<td width="100%">
+				{if $active_worker->hasPriv('core.watchers.assign')}
 				<button type="button" class="chooser-worker add"><span class="cerb-sprite sprite-view"></span></button>
 				<br>
+				{/if}
+				
+				{if $active_worker->hasPriv('core.watchers.unassign')}
 				<button type="button" class="chooser-worker remove"><span class="cerb-sprite sprite-view"></span></button>
+				{/if}
 			</td>
 		</tr>
+		{/if}
 		<tr>
 			<td width="0%" nowrap="nowrap" align="right">{'crm.opportunity.closed_date'|devblocks_translate|capitalize}:</td>
 			<td width="100%">
@@ -54,6 +68,8 @@
 	{include file="devblocks:cerberusweb.core::internal/custom_fields/bulk/form.tpl" bulk=true}	
 </fieldset>
 {/if}
+
+{include file="devblocks:cerberusweb.core::internal/macros/behavior/bulk.tpl" macros=$macros}
 
 {if $active_worker->hasPriv('crm.opp.view.actions.broadcast')}
 <fieldset>

@@ -1,12 +1,21 @@
 {$uniq_id = uniqid()}
 <fieldset style="background-image:none;background-color:rgb(239,245,255);border:0;cursor:move;" id="{$uniq_id}" class="drag">
 {if !empty($reason)}
-	<legend style="color:rgb(74,110,158);cursor:pointer;">{$reason} &#x25be;</legend>
+	<legend style="{if empty($params.is_hidden)}color:rgb(74,110,158);{else}color:rgb(130,130,130);{/if}cursor:pointer;">{$reason}{if !empty($params.is_hidden)} ({'portal.sc.cfg.situation.hidden'|devblocks_translate|lower}){/if}</legend>
 {else}
-	<legend style="color:rgb(74,110,158);cursor:pointer;">{$translate->_('portal.sc.cfg.add_contact_situation')} &#x25be;</legend>
+	<legend style="color:rgb(74,110,158);cursor:pointer;">{$translate->_('portal.sc.cfg.add_contact_situation')}</legend>
 {/if}
 
 <div style="padding-left:20px;">
+	<b>Status:</b>
+	<select name="status[{$uniq_id}]">
+		<option value="" {if empty($params.is_hidden)}selected="selected"{/if}>{'portal.sc.cfg.situation.visible'|devblocks_translate|capitalize}</option>
+		<option value="hidden" {if !empty($params.is_hidden)}selected="selected"{/if}>{'portal.sc.cfg.situation.hidden'|devblocks_translate|capitalize}</option>
+		<option value="deleted">{'portal.sc.cfg.situation.deleted'|devblocks_translate|capitalize}</option>
+	</select>
+	<br>
+	<br>
+
 	<b>{$translate->_('portal.sc.cfg.reason_contacting')}</b> {$translate->_('portal.sc.cfg.reason_contacting_hint')}<br>
 	<input type="text" name="contact_reason[{$uniq_id}]" size="65" value="{$reason}"><br>
 	<br>

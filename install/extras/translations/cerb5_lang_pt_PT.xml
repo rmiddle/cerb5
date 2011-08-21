@@ -116,11 +116,6 @@
         <seg>[Tarefas] Pode gerir as tarefas de todos</seg>
       </tuv>
     </tu>
-    <tu tuid="acl.core.tasks.actions.update_nobody">
-      <tuv xml:lang="pt_PT">
-        <seg>[Tarefas] Pode gerir tarefas no atribuídas</seg>
-      </tuv>
-    </tu>
     <tu tuid="acl.core.tasks.view.actions.export">
       <tuv xml:lang="pt_PT">
         <seg>[Tarefas] Pode exportar listas de tarefas para CSV/XML</seg>
@@ -379,6 +374,11 @@
     <tu tuid="common.comment">
       <tuv xml:lang="pt_PT">
         <seg>comentário</seg>
+      </tuv>
+    </tu>
+    <tu tuid="common.conversation">
+      <tuv xml:lang="pt_PT">
+        <seg>Conversa</seg>
       </tuv>
     </tu>
     <tu tuid="common.copy">
@@ -1139,11 +1139,6 @@
     <tu tuid="display.tab.comments">
       <tuv xml:lang="pt_PT">
         <seg>Comentários (%s)</seg>
-      </tuv>
-    </tu>
-    <tu tuid="display.tab.conversation">
-      <tuv xml:lang="pt_PT">
-        <seg>Conversa</seg>
       </tuv>
     </tu>
     <tu tuid="display.tab.history">

@@ -1,43 +1,79 @@
+{$page_context = 'cerberusweb.contexts.feed.item'}
+{$page_context_id = $item->id}
+
 {include file="devblocks:cerberusweb.feed_reader::feeds/item/display/submenu.tpl"}
 
-<table cellspacing="0" cellpadding="0" border="0" width="100%" style="padding-bottom:5px;">
-<tr>
-	<td valign="top" style="padding-right:5px;">
-		<h1>{$item->title}</h1> 
-		<a href="{$item->url}" target="_blank">{$item->url}</a>
-		
-		<form action="{devblocks_url}{/devblocks_url}" onsubmit="return false;" style="margin-top:5px;">
-		<b>Feed:</b> ... &nbsp; 
-		<b>{'common.updated'|devblocks_translate|capitalize}:</b> <abbr title="{$item->created_date|devblocks_date}">{$item->created_date|devblocks_prettytime}</abbr> &nbsp; 
-		<b>{'dao.feed_item.is_closed'|devblocks_translate}:</b> {if $item->is_closed}{'common.yes'|devblocks_translate}{else}{'common.no'|devblocks_translate}{/if} &nbsp; 
-		<br>
-			
+<h2>{'feeds.item'|devblocks_translate|capitalize}</h2>
+
+<fieldset class="properties">
+	<legend>{$item->title}</legend>
+	
+	<form action="{devblocks_url}{/devblocks_url}" method="post" style="margin-bottom:5px;">
+
+		<div style="margin-bottom:0.25em;">
+			<b>{'common.url'|devblocks_translate}:</b>
+			<a href="{$item->url}" target="_blank">{$item->url}</a>
+		</div>
+
+		{foreach from=$properties item=v key=k name=props}
+			<div class="property">
+				{if $k == 'feed'}
+					<b>{$v.label|capitalize}:</b>
+					{$v.feed->name}
+				{else}
+					{include file="devblocks:cerberusweb.core::internal/custom_fields/profile_cell_renderer.tpl"}
+				{/if}
+			</div>
+			{if $smarty.foreach.props.iteration % 3 == 0 && !$smarty.foreach.props.last}
+				<br clear="all">
+			{/if}
+		{/foreach}
+		<br clear="all">
+
 		<!-- Toolbar -->
 		<span>
-		{$object_watchers = DAO_ContextLink::getContextLinks('cerberusweb.contexts.feed.item', array($item->id), CerberusContexts::CONTEXT_WORKER)}
-		{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" context='cerberusweb.contexts.feed.item' context_id=$item->id full=true}
+		{$object_watchers = DAO_ContextLink::getContextLinks($page_context, array($page_context_id), CerberusContexts::CONTEXT_WORKER)}
+		{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" context=$page_context context_id=$page_context_id full=true}
 		</span>		
 		
+		<!-- Macros -->
+		{devblocks_url assign=return_url full=true}c=feeds&i=item&id={$page_context_id}-{$item->title|devblocks_permalink}{/devblocks_url}
+		{include file="devblocks:cerberusweb.core::internal/macros/display/button.tpl" context="cerberusweb.contexts.feed.item" context_id=$page_context_id macros=$macros return_url=$return_url}		
+		
+		<!-- Edit -->
 		<button type="button" id="btnDisplayFeedItemEdit"><span class="cerb-sprite sprite-document_edit"></span> Edit</button>
 		
 		{$toolbar_exts = DevblocksPlatform::getExtensions('cerberusweb.feed_reader.item.toolbaritem', true)}
 		{foreach from=$toolbar_exts item=ext}
 			{$ext->render($opp)}
 		{/foreach}
-		
-		</form>
-		<br>
-	</td>
-</tr>
-</table>
+	</form>
+	
+	{if $pref_keyboard_shortcuts}
+	<small>
+		{$translate->_('common.keyboard')|lower}:
+		(<b>e</b>) {'common.edit'|devblocks_translate|lower}
+		{if !empty($macros)}(<b>m</b>) {'common.macros'|devblocks_translate|lower} {/if}
+		(<b>1-9</b>) change tab
+	</small> 
+	{/if}
+</fieldset>
+
+<div>
+{include file="devblocks:cerberusweb.core::internal/notifications/context_profile.tpl" context=$page_context context_id=$page_context_id}
+</div>
+
+<div>
+{include file="devblocks:cerberusweb.core::internal/macros/behavior/scheduled_behavior_profile.tpl" context=$page_context context_id=$page_context_id}
+</div>
 
 <div id="feedItemTabs">
 	<ul>
 		{$tabs = [activity,notes,links]}
 		
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabActivityLog&scope=target&point={$point}&context=cerberusweb.contexts.feed.item&context_id={$item->id}{/devblocks_url}">{'common.activity_log'|devblocks_translate|capitalize}</a></li>
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context=cerberusweb.contexts.feed.item&id={$item->id}{/devblocks_url}">{$translate->_('common.comments')|capitalize}</a></li>		
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.feed.item&id={$item->id}{/devblocks_url}">{$translate->_('common.links')}</a></li>		
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabActivityLog&scope=target&point={$point}&context=cerberusweb.contexts.feed.item&context_id={$page_context_id}{/devblocks_url}">{'common.activity_log'|devblocks_translate|capitalize}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context=cerberusweb.contexts.feed.item&id={$page_context_id}{/devblocks_url}">{$translate->_('common.comments')|capitalize}</a></li>		
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.feed.item&id={$page_context_id}{/devblocks_url}">{$translate->_('common.links')}</a></li>		
 
 		{foreach from=$tab_manifests item=tab_manifest}
 			{$tabs[] = $tab_manifest->params.uri}
@@ -57,12 +93,14 @@
 		var tabs = $("#feedItemTabs").tabs( { selected:{$tab_selected_idx} } );
 		
 		$('#btnDisplayFeedItemEdit').bind('click', function() {
-			$popup = genericAjaxPopup('peek','c=feeds&a=showFeedItemPopup&id={$item->id}',null,false,'550');
+			$popup = genericAjaxPopup('peek','c=feeds&a=showFeedItemPopup&id={$page_context_id}',null,false,'550');
 			$popup.one('feeditem_save', function(event) {
 				event.stopPropagation();
-				document.location.href = '{devblocks_url}c=feeds&i=item&id={$item->id}{/devblocks_url}';
+				document.location.href = '{devblocks_url}c=feeds&i=item&id={$page_context_id}{/devblocks_url}';
 			});
-		})
+		});
+		
+		{include file="devblocks:cerberusweb.core::internal/macros/display/menu_script.tpl"}
 	});
 </script>
 
@@ -75,16 +113,43 @@ $(document).keypress(function(event) {
 	if($(event.target).is(':input'))
 		return;
 
+	hotkey_activated = true;
+	
 	switch(event.which) {
-//		case 97:  // (A) E-mail Peek
-//			try {
-//				$('#btnOppAddyPeek').click();
-//			} catch(e) { } 
-//			break;
+		case 49:  // (1) tab cycle
+		case 50:  // (2) tab cycle
+		case 51:  // (3) tab cycle
+		case 52:  // (4) tab cycle
+		case 53:  // (5) tab cycle
+		case 54:  // (6) tab cycle
+		case 55:  // (7) tab cycle
+		case 56:  // (8) tab cycle
+		case 57:  // (9) tab cycle
+		case 58:  // (0) tab cycle
+			try {
+				idx = event.which-49;
+				$tabs = $("#feedItemTabs").tabs();
+				$tabs.tabs('select', idx);
+			} catch(ex) { } 
+			break;
+		case 101:  // (E) edit
+			try {
+				$('#btnDisplayFeedItemEdit').click();
+			} catch(ex) { } 
+			break;
+		case 109:  // (M) macros
+			try {
+				$('#btnDisplayMacros').click();
+			} catch(ex) { } 
+			break;
 		default:
 			// We didn't find any obvious keys, try other codes
+			hotkey_activated = false;
 			break;
 	}
+	
+	if(hotkey_activated)
+		event.preventDefault();
 });
 {/if}
 </script>

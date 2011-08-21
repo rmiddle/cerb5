@@ -7,46 +7,14 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
 | ______________________________________________________________________
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- * 
- * Sure, it would be so easy to just cheat and edit this file to use the 
- * software without paying for it.  But we trust you anyway.  In fact, we're 
- * writing this software for you! 
- * 
- * Quality software backed by a dedicated team takes money to develop.  We 
- * don't want to be out of the office bagging groceries when you call up 
- * needing a helping hand.  We'd rather spend our free time coding your 
- * feature requests than mowing the neighbors' lawns for rent money. 
- * 
- * We've never believed in hiding our source code out of paranoia over not 
- * getting paid.  We want you to have the full source code and be able to 
- * make the tweaks your organization requires to get more done -- despite 
- * having less of everything than you might need (time, people, money, 
- * energy).  We shouldn't be your bottleneck.
- * 
- * We've been building our expertise with this project since January 2002.  We 
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
- * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your inbox that you probably 
- * haven't had since spammers found you in a game of 'E-mail Battleship'. 
- * Miss. Miss. You sunk my inbox!
- * 
- * A legitimate license entitles you to support from the developers,  
- * and the warm fuzzy feeling of feeding a couple of obsessed developers 
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
+
 class DAO_Attachment extends DevblocksORMHelper {
     const ID = 'id';
     const DISPLAY_NAME = 'display_name';
@@ -654,7 +622,7 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 	}
 };
 
-class View_AttachmentLink extends C4_AbstractView {
+class View_AttachmentLink extends C4_AbstractView implements IAbstractView_Subtotals {
 	const DEFAULT_ID = 'attachment_links';
 
 	function __construct() {
@@ -672,13 +640,11 @@ class View_AttachmentLink extends C4_AbstractView {
 		);
 		$this->addColumnsHidden(array(
 			SearchFields_AttachmentLink::ID,
-//			SearchFields_AttachmentLink::LINK_CONTEXT,
 			SearchFields_AttachmentLink::LINK_CONTEXT_ID,
 		));
 		
 		$this->addParamsHidden(array(
 			SearchFields_AttachmentLink::ID,
-//			SearchFields_AttachmentLink::LINK_CONTEXT,
 			SearchFields_AttachmentLink::LINK_CONTEXT_ID,
 		));
 		
@@ -701,6 +667,76 @@ class View_AttachmentLink extends C4_AbstractView {
 		return $this->_doGetDataSample('DAO_AttachmentLink', $size);
 	}
 
+	function getSubtotalFields() {
+		$all_fields = $this->getParamsAvailable();
+		
+		$fields = array();
+
+		if(is_array($all_fields))
+		foreach($all_fields as $field_key => $field_model) {
+			$pass = false;
+			
+			switch($field_key) {
+				// Strings
+				case SearchFields_AttachmentLink::ATTACHMENT_DISPLAY_NAME:
+				case SearchFields_AttachmentLink::ATTACHMENT_MIME_TYPE:
+				case SearchFields_AttachmentLink::ATTACHMENT_STORAGE_EXTENSION:
+//				case SearchFields_AttachmentLink::ATTACHMENT_STORAGE_PROFILE_ID:
+				case SearchFields_AttachmentLink::LINK_CONTEXT:
+					$pass = true;
+					break;
+			}
+			
+			if($pass)
+				$fields[$field_key] = $field_model;
+		}
+		
+		return $fields;
+	}
+	
+	function getSubtotalCounts($column) {
+		$counts = array();
+		$fields = $this->getFields();
+
+		if(!isset($fields[$column]))
+			return array();
+		
+		switch($column) {
+			case SearchFields_AttachmentLink::ATTACHMENT_DISPLAY_NAME:
+			case SearchFields_AttachmentLink::ATTACHMENT_MIME_TYPE:
+				$counts = $this->_getSubtotalCountForStringColumn('DAO_AttachmentLink', $column);
+				break;
+
+			case SearchFields_AttachmentLink::ATTACHMENT_STORAGE_EXTENSION:
+				$label_map = array();
+				$manifests = DevblocksPlatform::getExtensions('devblocks.storage.engine', false);
+				if(is_array($manifests))
+				foreach($manifests as $k => $mft) {
+					$label_map[$k] = $mft->name;
+				}
+				
+				$counts = $this->_getSubtotalCountForStringColumn('DAO_AttachmentLink', $column, $label_map);
+				break;
+				
+			case SearchFields_AttachmentLink::LINK_CONTEXT:
+				$label_map = array();
+				$manifests = Extension_DevblocksContext::getAll(false);
+				if(is_array($manifests))
+				foreach($manifests as $k => $mft) {
+					$label_map[$k] = $mft->name;
+				}
+				
+				$counts = $this->_getSubtotalCountForStringColumn('DAO_AttachmentLink', $column, $label_map, 'in', 'contexts[]');
+				break;
+
+//			case SearchFields_AttachmentLink::ATTACHMENT_STORAGE_PROFILE_ID:
+//				$counts = $this->_getSubtotalCountForStringColumn('DAO_Attachment', $column);
+//				break;
+		}
+		
+		return $counts;
+	}	
+	
 	function render() {
 		$this->_sanitize();
 		
@@ -713,7 +749,8 @@ class View_AttachmentLink extends C4_AbstractView {
 		$tpl->assign('contexts', $contexts);
 		
 		// [TODO] Move
-		$tpl->display('devblocks:cerberusweb.core::configuration/section/storage_attachments/view.tpl');
+		$tpl->assign('view_template', 'devblocks:cerberusweb.core::configuration/section/storage_attachments/view.tpl');
+		$tpl->display('devblocks:cerberusweb.core::internal/views/subtotals_and_view.tpl');
 	}
 
 	function renderCriteria($field) {
@@ -753,6 +790,20 @@ class View_AttachmentLink extends C4_AbstractView {
 		$values = !is_array($param->value) ? array($param->value) : $param->value;
 
 		switch($field) {
+			case SearchFields_AttachmentLink::ATTACHMENT_STORAGE_EXTENSION:
+				$label_map = array();
+				$manifests = DevblocksPlatform::getExtensions('devblocks.storage.engine', false);
+
+				$strings = array();
+				foreach($values as $v) {
+					if(isset($manifests[$v]))
+						$strings[] = $manifests[$v]->name;
+				}
+				if(!empty($strings))
+					echo implode(', ', $strings);
+				
+				break;
+				
 			case SearchFields_AttachmentLink::LINK_CONTEXT:
 				$contexts = Extension_DevblocksContext::getAll();
 				$strings = array();
@@ -823,8 +874,8 @@ class View_AttachmentLink extends C4_AbstractView {
 	}
 		
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(0);
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$deleted = false;
 
@@ -859,8 +910,10 @@ class View_AttachmentLink extends C4_AbstractView {
 				true,
 				false
 			);
-			$ids = array_merge($ids, array_keys($objects));
-			 
+			
+			foreach($objects as $o)
+				$ids[] = $o[SearchFields_AttachmentLink::GUID];
+			
 		} while(!empty($objects));
 
 		$batch_total = count($ids);
@@ -870,7 +923,6 @@ class View_AttachmentLink extends C4_AbstractView {
 			if(!$deleted) { 
 				//DAO_AttachmentLink::update($batch_ids, $change_fields);
 			} else {
-				if(!empty($batch_ids))
 				foreach($batch_ids as $batch_id)
 					DAO_AttachmentLink::deleteByGUID($batch_id);
 			}
@@ -1104,7 +1156,7 @@ class DAO_AttachmentLink extends C4_ORMHelper {
 		$fields = SearchFields_AttachmentLink::getFields();
 		
 		// Sanitize
-		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy]) || !in_array($sortBy,$columns))
+		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy])) // || !in_array($sortBy,$columns)
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, array(),$fields,$sortBy);
