@@ -161,11 +161,6 @@
         <seg>[Taken] Kan de taken van iedereen beheren</seg>
       </tuv>
     </tu>
-    <tu tuid="acl.core.tasks.actions.update_nobody">
-      <tuv xml:lang="nl_NL">
-        <seg>[Taken] Kan niet toegewezen taken beheren</seg>
-      </tuv>
-    </tu>
     <tu tuid="acl.core.tasks.view.actions.export">
       <tuv xml:lang="nl_NL">
         <seg>[Taken] Kan lijsten exporteren als CVS/XML</seg>
@@ -234,11 +229,6 @@
     <tu tuid="acl.crm.opp.actions.update_all">
       <tuv xml:lang="nl_NL">
         <seg>[Opportunities] Kan de opportunities van iedereen beheren</seg>
-      </tuv>
-    </tu>
-    <tu tuid="acl.crm.opp.actions.update_nobody">
-      <tuv xml:lang="nl_NL">
-        <seg>[Opportunities] Kan niet toegewezen opportunities beheren</seg>
       </tuv>
     </tu>
     <tu tuid="acl.crm.opp.view.actions.broadcast">
@@ -784,6 +774,11 @@
     <tu tuid="common.context_id">
       <tuv xml:lang="nl_NL">
         <seg>Context ID</seg>
+      </tuv>
+    </tu>
+    <tu tuid="common.conversation">
+      <tuv xml:lang="nl_NL">
+        <seg>Conversatie</seg>
       </tuv>
     </tu>
     <tu tuid="common.copy">
@@ -1456,11 +1451,6 @@
         <seg>Open</seg>
       </tuv>
     </tu>
-    <tu tuid="crm.opp.tab.mail_history">
-      <tuv xml:lang="nl_NL">
-        <seg>E-mailgeschiedenis</seg>
-      </tuv>
-    </tu>
     <tu tuid="crm.opp.tab.properties">
       <tuv xml:lang="nl_NL">
         <seg>Eigenschappen</seg>
@@ -1899,11 +1889,6 @@
     <tu tuid="display.tab.comments">
       <tuv xml:lang="nl_NL">
         <seg>Commentaar (%s)</seg>
-      </tuv>
-    </tu>
-    <tu tuid="display.tab.conversation">
-      <tuv xml:lang="nl_NL">
-        <seg>Conversatie</seg>
       </tuv>
     </tu>
     <tu tuid="display.tab.history">
@@ -2359,11 +2344,6 @@
     <tu tuid="mail_queue.queue_fails">
       <tuv xml:lang="nl_NL">
         <seg># Mislukt</seg>
-      </tuv>
-    </tu>
-    <tu tuid="mail_queue.queue_priority">
-      <tuv xml:lang="nl_NL">
-        <seg>Prioriteit</seg>
       </tuv>
     </tu>
     <tu tuid="mail_queue.ticket_id">

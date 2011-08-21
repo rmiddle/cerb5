@@ -7,7 +7,7 @@
  |
  | This source code is released under the Devblocks Public License.
  | The latest version of this license can be found here:
- | http://www.cerberusweb.com/license.php
+ | http://cerberusweb.com/license
  |
  | By using this software, you acknowledge having read this license
  | and agree to be bound thereby.
@@ -43,8 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
@@ -146,6 +145,33 @@ class DAO_KbArticle extends C4_ORMHelper {
 		
 		// Search indexes
 		$db->Execute(sprintf("DELETE QUICK FROM fulltext_kb_article WHERE id IN (%s)", $id_string));
+		
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => CerberusContexts::CONTEXT_KB_ARTICLE,
+                	'context_ids' => $ids
+                )
+            )
+	    );
+	}
+	
+	static function maint() {
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.maint',
+                array(
+                	'context' => CerberusContexts::CONTEXT_KB_ARTICLE,
+                	'context_table' => 'kb_article',
+                	'context_key' => 'id',
+                )
+            )
+	    );
 	}
 
 	static function getCategoriesByArticleId($article_id) {
@@ -296,26 +322,7 @@ class DAO_KbArticle extends C4_ORMHelper {
 					$from_context = CerberusContexts::CONTEXT_KB_ARTICLE;
 					$from_index = 'kb.id';
 					
-					// Join and return anything
-					if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
-						$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-					} elseif(empty($param->value)) { // empty
-						// Either any watchers (1 or more); or no watchers
-						if(DevblocksSearchCriteria::OPER_NIN == $param->operator || DevblocksSearchCriteria::OPER_NEQ == $param->operator) {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NOT NULL ";
-						} else {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NULL ";
-						}
-					// Specific watchers
-					} else {
-						$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id IN (%s)) ",
-							$from_context,
-							$from_index,
-							implode(',', $param->value)
-						);
-					}
+					self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $join_sql, $where_sql);
 					break;
 			}
 		}
@@ -488,7 +495,7 @@ class Search_KbArticle {
 					$id
 				));
 				
-				$search->index($ns, $id, $article->title . ' ' . strip_tags($article->content));
+				$search->index($ns, $id, $article->title . ' ' . strip_tags($article->content), true);
 				
 				flush();
 			}
@@ -595,10 +602,12 @@ class Context_KbArticle extends Extension_DevblocksContext {
 		$article = DAO_KbArticle::get($context_id);
 		$url_writer = DevblocksPlatform::getUrlService();
 		
+		$friendly = DevblocksPlatform::strToPermalink($article->title);
+		
 		return array(
 			'id' => $article->id,
 			'name' => $article->title,
-			'permalink' => $url_writer->write(sprintf("c=kb&ar=article&id=%d-%s", $article->id, DevblocksPlatform::strToPermalink($article->title), true)),
+			'permalink' => $url_writer->writeNoProxy(sprintf("c=kb&ar=article&id=%d-%s", $article->id, $friendly, true)),
 		);
 	}
 	
@@ -626,6 +635,7 @@ class Context_KbArticle extends Extension_DevblocksContext {
 			'title' => $prefix.$translate->_('kb_article.title'),
 			'updated|date' => $prefix.$translate->_('kb_article.updated'),
 			'views' => $prefix.$translate->_('kb_article.views'),
+			'record_url' => $prefix.$translate->_('common.url.record'),
 		);
 		
 		if(is_array($fields))
@@ -656,6 +666,10 @@ class Context_KbArticle extends Extension_DevblocksContext {
 					}
 				}
 			}
+			
+			// URL
+			$url_writer = DevblocksPlatform::getUrlService();
+			$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=kb&ar=article&id=%d-%s",$article->id, DevblocksPlatform::strToPermalink($article->title)), true);
 			
 			$token_values['custom'] = array();
 			
@@ -929,20 +943,7 @@ class View_KbArticle extends C4_AbstractView implements IAbstractView_Subtotals 
 		
 		switch($key) {
 			case SearchFields_KbArticle::VIRTUAL_WATCHERS:
-				if(empty($param->value)) {
-					echo "There are no <b>watchers</b>";
-					
-				} elseif(is_array($param->value)) {
-					$workers = DAO_Worker::getAll();
-					$strings = array();
-					
-					foreach($param->value as $worker_id) {
-						if(isset($workers[$worker_id]))
-							$strings[] = '<b>'.$workers[$worker_id]->getName().'</b>';
-					}
-					
-					echo sprintf("Watcher is %s", implode(' or ', $strings));
-				}
+				$this->_renderVirtualWatchers($param);
 				break;
 		}
 	}	
@@ -1043,7 +1044,7 @@ class View_KbArticle extends C4_AbstractView implements IAbstractView_Subtotals 
 				
 			case SearchFields_KbArticle::VIRTUAL_WATCHERS:
 				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
-				$criteria = new DevblocksSearchCriteria($field,'in', $worker_ids);
+				$criteria = new DevblocksSearchCriteria($field,$oper,$worker_ids);
 				break;
 				
 			default:
@@ -1061,8 +1062,8 @@ class View_KbArticle extends C4_AbstractView implements IAbstractView_Subtotals 
 	}
 	
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(600); // [TODO] Temp!
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -1122,6 +1123,22 @@ class View_KbArticle extends C4_AbstractView implements IAbstractView_Subtotals 
 			
 			// Custom Fields
 			//self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_ADDRESS, $custom_fields, $batch_ids);
+			
+			// Scheduled behavior
+			if(isset($do['behavior']) && is_array($do['behavior'])) {
+				$behavior_id = $do['behavior']['id'];
+				@$behavior_when = strtotime($do['behavior']['when']) or time();
+				
+				if(!empty($batch_ids) && !empty($behavior_id))
+				foreach($batch_ids as $batch_id) {
+					DAO_ContextScheduledBehavior::create(array(
+						DAO_ContextScheduledBehavior::BEHAVIOR_ID => $behavior_id,
+						DAO_ContextScheduledBehavior::CONTEXT => CerberusContexts::CONTEXT_KB_ARTICLE,
+						DAO_ContextScheduledBehavior::CONTEXT_ID => $batch_id,
+						DAO_ContextScheduledBehavior::RUN_DATE => $behavior_when,
+					));
+				}
+			}
 			
 			unset($batch_ids);
 		}

@@ -7,7 +7,7 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
@@ -18,7 +18,7 @@
 if(version_compare(PHP_VERSION, "5.2", "<"))
 	die("Cerberus Helpdesk 5.x requires PHP 5.2 or later.");
 
-@set_time_limit(3600);
+@set_time_limit(3600); // 1hr
 require('../framework.config.php');
 require_once(DEVBLOCKS_PATH . 'Devblocks.class.php');
 require_once(APP_PATH . '/api/Application.class.php');

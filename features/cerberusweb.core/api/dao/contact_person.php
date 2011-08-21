@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class DAO_ContactPerson extends DevblocksORMHelper {
 	const ID = 'id';
 	const EMAIL_ID = 'email_id';
@@ -9,6 +25,9 @@ class DAO_ContactPerson extends DevblocksORMHelper {
 
 	static function create($fields) {
 		$db = DevblocksPlatform::getDatabaseService();
+		
+		if(!isset($fields[self::CREATED]))
+			$fields[self::CREATED] = time();
 		
 		$sql = "INSERT INTO contact_person () VALUES ()";
 		$db->Execute($sql);
@@ -107,7 +126,10 @@ class DAO_ContactPerson extends DevblocksORMHelper {
 			
 			// Remove shares
 			// [TODO] A listener should really be handling this
-			$db->Execute(sprintf("DELETE FROM supportcenter_address_share WHERE share_address_id IN (%s) OR with_address_id IN (%s)", $address_ids, $address_ids));
+			if(is_array($address_ids) && !empty($address_ids)) {
+				$address_ids_str = implode(',', $address_ids);
+				$db->Execute(sprintf("DELETE FROM supportcenter_address_share WHERE share_address_id IN (%s) OR with_address_id IN (%s)", $address_ids_str, $address_ids_str));
+			}
 			
 			// Release OpenIDs
 			if(class_exists('DAO_OpenIdToContactPerson', true))
@@ -119,6 +141,18 @@ class DAO_ContactPerson extends DevblocksORMHelper {
 		
 		// Remove records
 		$db->Execute(sprintf("DELETE FROM contact_person WHERE id IN (%s)", $ids_list));
+		
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => CerberusContexts::CONTEXT_CONTACT_PERSON,
+                	'context_ids' => $ids
+                )
+            )
+	    );
 		
 		return true;
 	}
@@ -182,26 +216,7 @@ class DAO_ContactPerson extends DevblocksORMHelper {
 					$from_context = CerberusContexts::CONTEXT_CONTACT_PERSON;
 					$from_index = 'contact_person.id';
 					
-					// Join and return anything
-					if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
-						$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-					} elseif(empty($param->value)) { // empty
-						// Either any watchers (1 or more); or no watchers
-						if(DevblocksSearchCriteria::OPER_NIN == $param->operator || DevblocksSearchCriteria::OPER_NEQ == $param->operator) {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NOT NULL ";
-						} else {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NULL ";
-						}
-					// Specific watchers
-					} else {
-						$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id IN (%s)) ",
-							$from_context,
-							$from_index,
-							implode(',', $param->value)
-						);
-					}
+					self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $join_sql, $where_sql);
 					break;
 			}
 		}
@@ -289,7 +304,20 @@ class DAO_ContactPerson extends DevblocksORMHelper {
 			"WHERE address.contact_person_id != 0 ".
 			"AND contact_person.id IS NULL"
 		;
-		$db->Execute($sql);		
+		$db->Execute($sql);
+
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.maint',
+                array(
+                	'context' => CerberusContexts::CONTEXT_CONTACT_PERSON,
+                	'context_table' => 'contact_person',
+                	'context_key' => 'id',
+                )
+            )
+	    );
 	}
 
 };
@@ -568,20 +596,7 @@ class View_ContactPerson extends C4_AbstractView implements IAbstractView_Subtot
 		
 		switch($key) {
 			case SearchFields_ContactPerson::VIRTUAL_WATCHERS:
-				if(empty($param->value)) {
-					echo "There are no <b>watchers</b>";
-					
-				} elseif(is_array($param->value)) {
-					$workers = DAO_Worker::getAll();
-					$strings = array();
-					
-					foreach($param->value as $worker_id) {
-						if(isset($workers[$worker_id]))
-							$strings[] = '<b>'.$workers[$worker_id]->getName().'</b>';
-					}
-					
-					echo sprintf("Watcher is %s", implode(' or ', $strings));
-				}
+				$this->_renderVirtualWatchers($param);				
 				break;
 		}
 	}	
@@ -638,7 +653,7 @@ class View_ContactPerson extends C4_AbstractView implements IAbstractView_Subtot
 				
 			case SearchFields_ContactPerson::VIRTUAL_WATCHERS:
 				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
-				$criteria = new DevblocksSearchCriteria($field,'in', $worker_ids);
+				$criteria = new DevblocksSearchCriteria($field,$oper,$worker_ids);
 				break;
 				
 			/*
@@ -658,10 +673,10 @@ class View_ContactPerson extends C4_AbstractView implements IAbstractView_Subtot
 	}
 		
 	function doBulkUpdate($filter, $do, $ids=array()) {
+		@set_time_limit(600); // 10m
+		
 		$active_worker = CerberusApplication::getActiveWorker();
 		
-		@set_time_limit(0);
-	  
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -764,10 +779,12 @@ class Context_ContactPerson extends Extension_DevblocksContext {
 		else
 			$name = $address->email;
 		
+		$friendly = DevblocksPlatform::strToPermalink($address->email);
+		
 		return array(
 			'id' => $contact->id,
 			'name' => $name,
-			'permalink' => $url_writer->write('c=contacts&tab=people&id='.$context_id, true),
+			'permalink' => $url_writer->writeNoProxy(sprintf("c=contacts&tab=people&id=%d-%s",$context_id, $friendly), true),
 		);
 	}
     
@@ -789,7 +806,10 @@ class Context_ContactPerson extends Extension_DevblocksContext {
 			
 		// Token labels
 		$token_labels = array(
+			'created' => $prefix.$translate->_('common.created'),
 			'id' => $prefix.$translate->_('common.id'),
+			'last_login' => $prefix.$translate->_('dao.contact_person.last_login'),
+			'record_url' => $prefix.$translate->_('common.url.record'),
 		);
 		
 //		if(is_array($fields))
@@ -802,40 +822,55 @@ class Context_ContactPerson extends Extension_DevblocksContext {
 		
 		// Address token values
 		if(null != $person) {
-			$token_values['id'] = $address->id;
-//			if(!empty($address->email))
-//				$token_values['address'] = $address->email;
-//			if(!empty($address->first_name))
-//				$token_values['first_name'] = $address->first_name;
-//			if(!empty($address->last_name))
-//				$token_values['last_name'] = $address->last_name;
-//			$token_values['num_spam'] = $address->num_spam;
-//			$token_values['num_nonspam'] = $address->num_nonspam;
-//			$token_values['is_banned'] = $address->is_banned;
-//			$token_values['custom'] = array();
+			$token_values['id'] = $person->id;
+			if(!empty($person->created))
+				$token_values['created'] = $person->created;
+			if(!empty($person->last_login))
+				$token_values['last_login'] = $person->last_login;
 			
-//			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ADDRESS, $address->id));
-//			if(is_array($field_values) && !empty($field_values)) {
-//				foreach($field_values as $cf_id => $cf_val) {
-//					if(!isset($fields[$cf_id]))
-//						continue;
-//					
-//					// The literal value
-//					if(null != $address)
-//						$token_values['custom'][$cf_id] = $cf_val;
-//					
-//					// Stringify
-//					if(is_array($cf_val))
-//						$cf_val = implode(', ', $cf_val);
-//						
-//					if(is_string($cf_val)) {
-//						if(null != $address)
-//							$token_values['custom_'.$cf_id] = $cf_val;
-//					}
-//				}
-//			}
+			// URL
+			$url_writer = DevblocksPlatform::getUrlService();
+			$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=contacts&tab=people&id=%d",$person->id), true);
+			
+			$token_values['custom'] = array();
+			
+			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_CONTACT_PERSON, $person->id));
+			if(is_array($field_values) && !empty($field_values)) {
+				foreach($field_values as $cf_id => $cf_val) {
+					if(!isset($fields[$cf_id]))
+						continue;
+					
+					// The literal value
+					if(null != $person)
+						$token_values['custom'][$cf_id] = $cf_val;
+					
+					// Stringify
+					if(is_array($cf_val))
+						$cf_val = implode(', ', $cf_val);
+						
+					if(is_string($cf_val)) {
+						if(null != $person)
+							$token_values['custom_'.$cf_id] = $cf_val;
+					}
+				}
+			}
 		}
 		
+		// Primary Email
+		$email_id = (null != $person && !empty($person->email_id)) ? $person->email_id : null;
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_ADDRESS, $email_id, $merge_token_labels, $merge_token_values, null, true);
+
+		CerberusContexts::merge(
+			'email_',
+			'',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);		
+
 		// Email Org
 //		$org_id = (null != $address && !empty($address->contact_org_id)) ? $address->contact_org_id : null;
 //		$merge_token_labels = array();

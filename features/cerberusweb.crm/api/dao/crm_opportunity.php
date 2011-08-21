@@ -7,46 +7,13 @@
  |
  | This source code is released under the Devblocks Public License.
  | The latest version of this license can be found here:
- | http://www.cerberusweb.com/license.php
+ | http://cerberusweb.com/license
  |
  | By using this software, you acknowledge having read this license
  | and agree to be bound thereby.
  | ______________________________________________________________________
  |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
  ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- * 
- * Sure, it would be so easy to just cheat and edit this file to use the 
- * software without paying for it.  But we trust you anyway.  In fact, we're 
- * writing this software for you! 
- * 
- * Quality software backed by a dedicated team takes money to develop.  We 
- * don't want to be out of the office bagging groceries when you call up 
- * needing a helping hand.  We'd rather spend our free time coding your 
- * feature requests than mowing the neighbors' lawns for rent money. 
- * 
- * We've never believed in hiding our source code out of paranoia over not 
- * getting paid.  We want you to have the full source code and be able to 
- * make the tweaks your organization requires to get more done -- despite 
- * having less of everything than you might need (time, people, money, 
- * energy).  We shouldn't be your bottleneck.
- * 
- * We've been building our expertise with this project since January 2002.  We 
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
- * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your inbox that you probably 
- * haven't had since spammers found you in a game of 'E-mail Battleship'. 
- * Miss. Miss. You sunk my inbox!
- * 
- * A legitimate license entitles you to support from the developers,  
- * and the warm fuzzy feeling of feeding a couple of obsessed developers 
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
 
 class DAO_CrmOpportunity extends C4_ORMHelper {
 	const ID = 'id';
@@ -209,7 +176,8 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 
 	/**
 	 * @param integer $id
-	 * @return Model_CrmOpportunity	 */
+	 * @return Model_CrmOpportunity
+	 */
 	static function get($id) {
 		$objects = self::getWhere(sprintf("%s = %d",
 			self::ID,
@@ -254,19 +222,18 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 	}
 	
 	static function maint() {
-		$db = DevblocksPlatform::getDatabaseService();
-		$logger = DevblocksPlatform::getConsoleLog();
-
-		// Context Links
-		$db->Execute(sprintf("DELETE QUICK context_link FROM context_link LEFT JOIN crm_opportunity ON context_link.from_context_id=crm_opportunity.id WHERE context_link.from_context = %s AND crm_opportunity.id IS NULL",
-			$db->qstr(CerberusContexts::CONTEXT_OPPORTUNITY)
-		));
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' opportunity context link sources.');
-		
-		$db->Execute(sprintf("DELETE QUICK context_link FROM context_link LEFT JOIN crm_opportunity ON context_link.to_context_id=crm_opportunity.id WHERE context_link.to_context = %s AND crm_opportunity.id IS NULL",
-			$db->qstr(CerberusContexts::CONTEXT_OPPORTUNITY)
-		));
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' opportunity context link targets.');
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.maint',
+                array(
+                	'context' => CerberusContexts::CONTEXT_OPPORTUNITY,
+                	'context_table' => 'crm_opportunity',
+                	'context_key' => 'id',
+                )
+            )
+	    );
 	}
 	
 	static function delete($ids) {
@@ -278,14 +245,17 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 		// Opps
 		$db->Execute(sprintf("DELETE QUICK FROM crm_opportunity WHERE id IN (%s)", $ids_list));
 
-		// Context links
-		DAO_ContextLink::delete(CerberusContexts::CONTEXT_OPPORTUNITY, $ids);
-		
-		// Custom fields
-		DAO_CustomFieldValue::deleteByContextIds(CerberusContexts::CONTEXT_OPPORTUNITY, $ids);
-		
-		// Notes
-		DAO_Comment::deleteByContext(CerberusContexts::CONTEXT_OPPORTUNITY, $ids);
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => CerberusContexts::CONTEXT_OPPORTUNITY,
+                	'context_ids' => $ids
+                )
+            )
+	    );
 		
 		return true;
 	}
@@ -340,7 +310,9 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 			"LEFT JOIN contact_org org ON (org.id = a.contact_org_id) ".
 			
 			// [JAS]: Dynamic table joins
-			(isset($tables['context_link']) ? "INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.opportunity' AND context_link.to_context_id = o.id) " : " ")
+			(isset($tables['context_link']) ? "INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.opportunity' AND context_link.to_context_id = o.id) " : " ").
+			(isset($tables['ftcc']) ? "INNER JOIN comment ON (comment.context = 'cerberusweb.contexts.opportunity' AND comment.context_id = o.id) " : " ").
+			(isset($tables['ftcc']) ? "INNER JOIN fulltext_comment_content ftcc ON (ftcc.id=comment.id) " : " ")
 			;
 			
 		$cfield_index_map = array(
@@ -373,26 +345,7 @@ class DAO_CrmOpportunity extends C4_ORMHelper {
 					$from_context = 'cerberusweb.contexts.opportunity';
 					$from_index = 'o.id';
 					
-					// Join and return anything
-					if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
-						$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-					} elseif(empty($param->value)) { // empty
-						// Either any watchers (1 or more); or no watchers
-						if(DevblocksSearchCriteria::OPER_NIN == $param->operator || DevblocksSearchCriteria::OPER_NEQ == $param->operator) {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NOT NULL ";
-						} else {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NULL ";
-						}
-					// Specific watchers
-					} else {
-						$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id IN (%s)) ",
-							$from_context,
-							$from_index,
-							implode(',', $param->value)
-						);
-					}					
+					self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $join_sql, $where_sql);
 					break;
 			}
 		}
@@ -489,9 +442,14 @@ class SearchFields_CrmOpportunity implements IDevblocksSearchFields {
 	const EMAIL_NUM_SPAM = 'a_num_spam';
 	const EMAIL_NUM_NONSPAM = 'a_num_nonspam';
 
+	// Context Links
 	const CONTEXT_LINK = 'cl_context_from';
 	const CONTEXT_LINK_ID = 'cl_context_from_id';
 	
+	// Comment Content
+	const FULLTEXT_COMMENT_CONTENT = 'ftcc_content';
+
+	// Virtuals
 	const VIRTUAL_WATCHERS = '*_workers';
 	
 	/**
@@ -526,6 +484,11 @@ class SearchFields_CrmOpportunity implements IDevblocksSearchFields {
 			
 			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers')),
 		);
+		
+		$tables = DevblocksPlatform::getDatabaseTables();
+		if(isset($tables['fulltext_comment_content'])) {
+			$columns[self::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchField(self::FULLTEXT_COMMENT_CONTENT, 'ftcc', 'content', $translate->_('comment.filters.content'));
+		}
 		
 		// Custom Fields: opp + addy + org
 		$fields = 
@@ -582,6 +545,7 @@ class View_CrmOpportunity extends C4_AbstractView implements IAbstractView_Subto
 			SearchFields_CrmOpportunity::ORG_ID,
 			SearchFields_CrmOpportunity::CONTEXT_LINK,
 			SearchFields_CrmOpportunity::CONTEXT_LINK_ID,
+			SearchFields_CrmOpportunity::FULLTEXT_COMMENT_CONTENT,
 			SearchFields_CrmOpportunity::VIRTUAL_WATCHERS
 		));
 		
@@ -723,20 +687,7 @@ class View_CrmOpportunity extends C4_AbstractView implements IAbstractView_Subto
 		
 		switch($key) {
 			case SearchFields_CrmOpportunity::VIRTUAL_WATCHERS:
-				if(empty($param->value)) {
-					echo "There are no <b>watchers</b>";
-					
-				} elseif(is_array($param->value)) {
-					$workers = DAO_Worker::getAll();
-					$strings = array();
-					
-					foreach($param->value as $worker_id) {
-						if(isset($workers[$worker_id]))
-							$strings[] = '<b>'.$workers[$worker_id]->getName().'</b>';
-					}
-					
-					echo sprintf("Watcher is %s", implode(' or ', $strings));
-				}
+				$this->_renderVirtualWatchers($param);
 				break;
 		}
 	}	
@@ -770,6 +721,10 @@ class View_CrmOpportunity extends C4_AbstractView implements IAbstractView_Subto
 			case SearchFields_CrmOpportunity::UPDATED_DATE:
 			case SearchFields_CrmOpportunity::CLOSED_DATE:
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
+				break;
+				
+			case SearchFields_CrmOpportunity::FULLTEXT_COMMENT_CONTENT:
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__fulltext.tpl');
 				break;
 				
 			case SearchFields_CrmOpportunity::VIRTUAL_WATCHERS:
@@ -845,7 +800,12 @@ class View_CrmOpportunity extends C4_AbstractView implements IAbstractView_Subto
 				
 			case SearchFields_CrmOpportunity::VIRTUAL_WATCHERS:
 				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
-				$criteria = new DevblocksSearchCriteria($field,'in', $worker_ids);
+				$criteria = new DevblocksSearchCriteria($field,$oper,$worker_ids);
+				break;
+				
+			case SearchFields_CrmOpportunity::FULLTEXT_COMMENT_CONTENT:
+				@$scope = DevblocksPlatform::importGPC($_REQUEST['scope'],'string','expert');
+				$criteria = new DevblocksSearchCriteria($field,DevblocksSearchCriteria::OPER_FULLTEXT,array($value,$scope));
 				break;
 				
 			default:
@@ -863,10 +823,13 @@ class View_CrmOpportunity extends C4_AbstractView implements IAbstractView_Subto
 	}
 	
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(600); // [TODO] Temp!
-	  
+		@set_time_limit(600); // 10m
+		
+		$active_worker = CerberusApplication::getActiveWorker();
+		
 		$change_fields = array();
 		$custom_fields = array();
+		$deleted = false;
 
 		// Make sure we have actions
 		if(empty($do))
@@ -895,6 +858,10 @@ class View_CrmOpportunity extends C4_AbstractView implements IAbstractView_Subto
 							$change_fields[DAO_CrmOpportunity::IS_CLOSED] = 1;
 							$change_fields[DAO_CrmOpportunity::IS_WON] = 0;
 							$change_fields[DAO_CrmOpportunity::CLOSED_DATE] = time();
+							break;
+						case 'deleted':
+							if($active_worker->hasPriv('crm.opp.actions.delete'))
+								$deleted = true;
 							break;
 					}
 					break;
@@ -986,20 +953,42 @@ class View_CrmOpportunity extends C4_AbstractView implements IAbstractView_Subto
 		$batch_total = count($ids);
 		for($x=0;$x<=$batch_total;$x+=100) {
 			$batch_ids = array_slice($ids,$x,100);
-			DAO_CrmOpportunity::update($batch_ids, $change_fields);
 			
-			// Custom Fields
-			self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_OPPORTUNITY, $custom_fields, $batch_ids);
-			
-			// Watchers
-			if(isset($do['watchers']) && is_array($do['watchers'])) {
-				$watcher_params = $do['watchers'];
-				foreach($batch_ids as $batch_id) {
-					if(isset($watcher_params['add']) && is_array($watcher_params['add']))
-						CerberusContexts::addWatchers(CerberusContexts::CONTEXT_OPPORTUNITY, $batch_id, $watcher_params['add']);
-					if(isset($watcher_params['remove']) && is_array($watcher_params['remove']))
-						CerberusContexts::removeWatchers(CerberusContexts::CONTEXT_OPPORTUNITY, $batch_id, $watcher_params['remove']);
+			if(!$deleted) {
+				DAO_CrmOpportunity::update($batch_ids, $change_fields);
+				
+				// Custom Fields
+				self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_OPPORTUNITY, $custom_fields, $batch_ids);
+				
+				// Scheduled behavior
+				if(isset($do['behavior']) && is_array($do['behavior'])) {
+					$behavior_id = $do['behavior']['id'];
+					@$behavior_when = strtotime($do['behavior']['when']) or time();
+					
+					if(!empty($batch_ids) && !empty($behavior_id))
+					foreach($batch_ids as $batch_id) {
+						DAO_ContextScheduledBehavior::create(array(
+							DAO_ContextScheduledBehavior::BEHAVIOR_ID => $behavior_id,
+							DAO_ContextScheduledBehavior::CONTEXT => CerberusContexts::CONTEXT_OPPORTUNITY,
+							DAO_ContextScheduledBehavior::CONTEXT_ID => $batch_id,
+							DAO_ContextScheduledBehavior::RUN_DATE => $behavior_when,
+						));
+					}
 				}
+				
+				// Watchers
+				if(isset($do['watchers']) && is_array($do['watchers'])) {
+					$watcher_params = $do['watchers'];
+					foreach($batch_ids as $batch_id) {
+						if(isset($watcher_params['add']) && is_array($watcher_params['add']))
+							CerberusContexts::addWatchers(CerberusContexts::CONTEXT_OPPORTUNITY, $batch_id, $watcher_params['add']);
+						if(isset($watcher_params['remove']) && is_array($watcher_params['remove']))
+							CerberusContexts::removeWatchers(CerberusContexts::CONTEXT_OPPORTUNITY, $batch_id, $watcher_params['remove']);
+					}
+				}
+				
+			} else {
+				DAO_CrmOpportunity::delete($batch_ids);
 			}
 			
 			unset($batch_ids);
@@ -1014,10 +1003,12 @@ class Context_Opportunity extends Extension_DevblocksContext {
 		$opp = DAO_CrmOpportunity::get($context_id);
 		$url_writer = DevblocksPlatform::getUrlService();
 		
+		$friendly = DevblocksPlatform::strToPermalink($opp->name);
+		
 		return array(
 			'id' => $opp->id,
 			'name' => $opp->name,
-			'permalink' => $url_writer->write('c=crm&tab=opps&id='.$context_id, true),
+			'permalink' => $url_writer->write(sprintf("c=crm&tab=opps&id=%d-%s",$context_id,$friendly), true),
 		);
 	}
     
@@ -1043,8 +1034,10 @@ class Context_Opportunity extends Extension_DevblocksContext {
 			'created|date' => $prefix.$translate->_('crm.opportunity.created_date'),
 			'is_closed' => $prefix.$translate->_('crm.opportunity.is_closed'),
 			'is_won' => $prefix.$translate->_('crm.opportunity.is_won'),
+			'status' => $prefix.$translate->_('common.status'),
 			'title' => $prefix.$translate->_('crm.opportunity.name'),
 			'updated|date' => $prefix.$translate->_('crm.opportunity.updated_date'),
+			'record_url' => $prefix.$translate->_('common.url.record'),
 		);
 		
 		if(is_array($fields))
@@ -1064,9 +1057,18 @@ class Context_Opportunity extends Extension_DevblocksContext {
 			$token_values['is_won'] = $opp->is_won;
 			$token_values['title'] = $opp->name;
 			$token_values['updated'] = $opp->updated_date;
-//			if(!empty($org->city))
-//				$token_values['city'] = $org->city;
-
+			
+			// Status
+			if($opp->is_closed) {
+				$token_values['status'] = ($opp->is_won) ? 'closed_won' : 'closed_lost';
+			} else {
+				$token_values['status'] = 'open';
+			}
+			
+			// URL
+			$url_writer = DevblocksPlatform::getUrlService();
+			$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=crm&tab=opps&id=%d-%s",$opp->id, DevblocksPlatform::strToPermalink($opp->name)), true);
+			
 			$token_values['custom'] = array();
 			
 			$field_values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_OPPORTUNITY, $opp->id));

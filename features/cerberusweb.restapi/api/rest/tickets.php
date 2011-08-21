@@ -20,7 +20,18 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 		
 		// Updating a single ticket ID?
 		if(is_numeric($action)) {
-			$this->putId(intval($action));
+			$id = intval($action);
+			$action = array_shift($stack);
+			
+			switch($action) {
+				case 'requester':
+					$this->putRequester(intval($id));
+					break;
+					
+				default:
+					$this->putId(intval($id));
+					break;
+			}
 			
 		} else { // actions
 			switch($action) {
@@ -56,10 +67,20 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 	
 	function deleteAction($stack) {
 		@$action = array_shift($stack);
-		
+
 		// Delete a single ID?
 		if(is_numeric($action)) {
-			$this->deleteId(intval($action));
+			$id = intval($action);
+			$action = array_shift($stack);
+			
+			switch($action) {
+				case 'requester':
+					$this->deleteRequester(intval($id));
+					break;
+				default:
+					$this->deleteId(intval($id));
+					break;
+			}
 			
 		} else { // actions
 			switch($action) {
@@ -162,6 +183,25 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 		$this->getId($id);
 	}
 	
+	public function putRequester($id) {
+		$worker = $this->getActiveWorker();
+		
+		if(null == ($ticket = DAO_Ticket::get($id)))
+			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid ticket ID %d", $id));
+			
+		// Check group memberships
+		$memberships = $worker->getMemberships();
+		if(!$worker->is_superuser && !isset($memberships[$ticket->team_id]))
+			$this->error(self::ERRNO_ACL, 'Access denied to modify tickets in this group.');
+
+		@$email = DevblocksPlatform::importGPC($_REQUEST['email'],'string','');
+			
+		if(!empty($email))
+			DAO_Ticket::createRequester($email, $id);
+		
+		$this->getId($id);
+	}
+	
 	private function deleteId($id) {
 		$worker = $this->getActiveWorker();
 		
@@ -187,6 +227,30 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 		$this->success($result);
 	}
 	
+	public function deleteRequester($id) {
+		$worker = $this->getActiveWorker();
+		
+		if(null == ($ticket = DAO_Ticket::get($id)))
+			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid ticket ID %d", $id));
+			
+		// Check group memberships
+		$memberships = $worker->getMemberships();
+		if(!$worker->is_superuser && !isset($memberships[$ticket->team_id]))
+			$this->error(self::ERRNO_ACL, 'Access denied to modify tickets in this group.');
+
+		@$email = DevblocksPlatform::importGPC($_REQUEST['email'],'string','');
+		
+		if(!empty($email)) {
+			if(null != ($email = DAO_Address::lookupAddress($email, false))) {
+				DAO_Ticket::deleteRequester($id, $email->id);
+			} else {
+				$this->error(self::ERRNO_CUSTOM, $email . ' is not a valid requester on ticket ' . $id);
+			}
+		}
+		
+		$this->getId($id);
+	}	
+	
 	function translateToken($token, $type='dao') {
 		$tokens = array();
 		
@@ -202,10 +266,13 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 			$tokens = array(
 				'content' => SearchFields_Ticket::FULLTEXT_MESSAGE_CONTENT,
 				'created' => SearchFields_Ticket::TICKET_CREATED_DATE,
+				'first_wrote' => SearchFields_Ticket::TICKET_FIRST_WROTE,
 				'id' => SearchFields_Ticket::TICKET_ID,
 				'is_closed' => SearchFields_Ticket::TICKET_CLOSED,
 				'is_deleted' => SearchFields_Ticket::TICKET_DELETED,
+				'last_wrote' => SearchFields_Ticket::TICKET_LAST_WROTE,			
 				'mask' => SearchFields_Ticket::TICKET_MASK,
+				'requester' => SearchFields_Ticket::REQUESTER_ADDRESS,			
 				'subject' => SearchFields_Ticket::TICKET_SUBJECT,
 				'updated' => SearchFields_Ticket::TICKET_UPDATED_DATE,
 			);
@@ -241,7 +308,7 @@ class ChRest_Tickets extends Extension_RestController implements IExtensionRestC
 		// Search
 		
 		list($results, $total) = DAO_Ticket::search(
-			array(),
+			!empty($sortBy) ? array($sortBy) : array(),
 			$params,
 			$limit,
 			max(0,$page-1),

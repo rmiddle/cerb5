@@ -102,23 +102,34 @@ class DAO_FeedItem extends C4_ORMHelper {
 		
 		$db->Execute(sprintf("DELETE FROM feed_item WHERE id IN (%s)", $ids_list));
 		
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => 'cerberusweb.contexts.feed.item',
+                	'context_ids' => $ids
+                )
+            )
+	    );
+		
 		return true;
 	}
 	
-	// [TODO] Listen on cron.maint
 	static function maint() {
-    	$db = DevblocksPlatform::getDatabaseService();
-    	$logger = DevblocksPlatform::getConsoleLog();
-		
-		// Purge orphaned FROM context links  
-		$sql = "DELETE QUICK context_link FROM context_link LEFT JOIN feed_item ON (context_link.from_context_id=feed_item.id) WHERE context_link.from_context = 'cerberusweb.contexts.feed.item' AND feed_item.id IS NULL";
-		$db->Execute($sql);
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' orphaned outbound feed_item context links.');
-
-		// Purge orphaned TO context links  
-		$sql = "DELETE QUICK context_link FROM context_link LEFT JOIN feed_item ON (context_link.to_context_id=feed_item.id) WHERE context_link.to_context = 'cerberusweb.contexts.feed.item' AND feed_item.id IS NULL";
-		$db->Execute($sql);
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' orphaned inbound feed_item context links.');
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.maint',
+                array(
+                	'context' => 'cerberusweb.contexts.feed.item',
+                	'context_table' => 'feed_item',
+                	'context_key' => 'id',
+                )
+            )
+	    );
 	}
 	
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
@@ -150,7 +161,9 @@ class DAO_FeedItem extends C4_ORMHelper {
 		$join_sql = "FROM feed_item ".
 		
 		// [JAS]: Dynamic table joins
-			(isset($tables['context_link']) ? "INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.feed.item' AND context_link.to_context_id = feed_item.id) " : " ")
+			(isset($tables['context_link']) ? "INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.feed.item' AND context_link.to_context_id = feed_item.id) " : " ").
+			(isset($tables['ftcc']) ? "INNER JOIN comment ON (comment.context = 'cerberusweb.contexts.feed.item' AND comment.context_id = feed_item.id) " : " ").
+			(isset($tables['ftcc']) ? "INNER JOIN fulltext_comment_content ftcc ON (ftcc.id=comment.id) " : " ")
 			;
 		
 		// Custom field joins
@@ -177,26 +190,7 @@ class DAO_FeedItem extends C4_ORMHelper {
 					$from_context = 'cerberusweb.contexts.feed.item';
 					$from_index = 'feed_item.id';
 					
-					// Join and return anything
-					if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
-						$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-					} elseif(empty($param->value)) { // empty
-						// Either any watchers (1 or more); or no watchers
-						if(DevblocksSearchCriteria::OPER_NIN == $param->operator || DevblocksSearchCriteria::OPER_NEQ == $param->operator) {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NOT NULL ";
-						} else {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NULL ";
-						}
-					// Specific watchers
-					} else {
-						$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id IN (%s)) ",
-							$from_context,
-							$from_index,
-							implode(',', $param->value)
-						);
-					}
+					self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $join_sql, $where_sql);
 					break;
 			}
 		}
@@ -285,9 +279,14 @@ class SearchFields_FeedItem implements IDevblocksSearchFields {
 	const CREATED_DATE = 'fi_created_date';
 	const IS_CLOSED = 'fi_is_closed';
 	
+	// Context links
 	const CONTEXT_LINK = 'cl_context_from';
 	const CONTEXT_LINK_ID = 'cl_context_from_id';
 	
+	// Comment Content
+	const FULLTEXT_COMMENT_CONTENT = 'ftcc_content';
+
+	// Virtuals
 	const VIRTUAL_WATCHERS = '*_workers';
 	
 	/**
@@ -310,6 +309,11 @@ class SearchFields_FeedItem implements IDevblocksSearchFields {
 			
 			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers')),
 		);
+		
+		$tables = DevblocksPlatform::getDatabaseTables();
+		if(isset($tables['fulltext_comment_content'])) {
+			$columns[self::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchField(self::FULLTEXT_COMMENT_CONTENT, 'ftcc', 'content', $translate->_('comment.filters.content'));
+		}
 		
 		// Custom Fields
 		$fields = DAO_CustomField::getByContext('cerberusweb.contexts.feed.item');
@@ -357,6 +361,7 @@ class View_FeedItem extends C4_AbstractView implements IAbstractView_Subtotals {
 		$this->addColumnsHidden(array(
 			SearchFields_FeedItem::GUID,
 			SearchFields_FeedItem::ID,
+			SearchFields_FeedItem::FULLTEXT_COMMENT_CONTENT,
 			SearchFields_FeedItem::VIRTUAL_WATCHERS,
 		));
 		
@@ -488,20 +493,7 @@ class View_FeedItem extends C4_AbstractView implements IAbstractView_Subtotals {
 		
 		switch($key) {
 			case SearchFields_FeedItem::VIRTUAL_WATCHERS:
-				if(empty($param->value)) {
-					echo "There are no <b>watchers</b>";
-					
-				} elseif(is_array($param->value)) {
-					$workers = DAO_Worker::getAll();
-					$strings = array();
-					
-					foreach($param->value as $worker_id) {
-						if(isset($workers[$worker_id]))
-							$strings[] = '<b>'.$workers[$worker_id]->getName().'</b>';
-					}
-					
-					echo sprintf("Watcher is %s", implode(' or ', $strings));
-				}
+				$this->_renderVirtualWatchers($param);
 				break;
 		}
 	}	
@@ -533,6 +525,9 @@ class View_FeedItem extends C4_AbstractView implements IAbstractView_Subtotals {
 				$feeds = DAO_Feed::getWhere();
 				$tpl->assign('feeds', $feeds);
 				$tpl->display('devblocks:cerberusweb.feed_reader::feeds/item/filter/feed.tpl');
+				break;
+			case SearchFields_FeedItem::FULLTEXT_COMMENT_CONTENT:
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__fulltext.tpl');
 				break;
 			default:
 				// Custom Fields
@@ -615,12 +610,17 @@ class View_FeedItem extends C4_AbstractView implements IAbstractView_Subtotals {
 				
 			case SearchFields_FeedItem::VIRTUAL_WATCHERS:
 				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
-				$criteria = new DevblocksSearchCriteria($field,'in', $worker_ids);
+				$criteria = new DevblocksSearchCriteria($field,$oper,$worker_ids);
 				break;
 				
 			case SearchFields_FeedItem::FEED_ID:
 				@$feed_ids = DevblocksPlatform::importGPC($_REQUEST['feed_id'],'array',array());
 				$criteria = new DevblocksSearchCriteria($field,$oper,$feed_ids);
+				break;
+				
+			case SearchFields_FeedItem::FULLTEXT_COMMENT_CONTENT:
+				@$scope = DevblocksPlatform::importGPC($_REQUEST['scope'],'string','expert');
+				$criteria = new DevblocksSearchCriteria($field,DevblocksSearchCriteria::OPER_FULLTEXT,array($value,$scope));
 				break;
 				
 			default:
@@ -638,8 +638,8 @@ class View_FeedItem extends C4_AbstractView implements IAbstractView_Subtotals {
 	}
 		
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(0);
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -693,6 +693,22 @@ class View_FeedItem extends C4_AbstractView implements IAbstractView_Subtotals {
 			// Custom Fields
 			self::_doBulkSetCustomFields('cerberusweb.contexts.feed.item', $custom_fields, $batch_ids);
 			
+			// Scheduled behavior
+			if(isset($do['behavior']) && is_array($do['behavior'])) {
+				$behavior_id = $do['behavior']['id'];
+				@$behavior_when = strtotime($do['behavior']['when']) or time();
+				
+				if(!empty($batch_ids) && !empty($behavior_id))
+				foreach($batch_ids as $batch_id) {
+					DAO_ContextScheduledBehavior::create(array(
+						DAO_ContextScheduledBehavior::BEHAVIOR_ID => $behavior_id,
+						DAO_ContextScheduledBehavior::CONTEXT => 'cerberusweb.contexts.feed.item',
+						DAO_ContextScheduledBehavior::CONTEXT_ID => $batch_id,
+						DAO_ContextScheduledBehavior::RUN_DATE => $behavior_when,
+					));
+				}
+			}
+			
 			// Watchers
 			if(isset($do['watchers']) && is_array($do['watchers'])) {
 				$watcher_params = $do['watchers'];
@@ -716,10 +732,12 @@ class Context_FeedItem extends Extension_DevblocksContext {
 		$item = DAO_FeedItem::get($context_id);
 		$url_writer = DevblocksPlatform::getUrlService();
 		
+		$friendly = DevblocksPlatform::strToPermalink($item->title);
+		
 		return array(
 			'id' => $item->id,
 			'name' => $item->title,
-			'permalink' => $url_writer->write('c=feeds&i=item&id='.$context_id, true),
+			'permalink' => $url_writer->writeNoProxy(sprintf("c=feeds&i=item&id=%d-%s",$context_id, $friendly), true),
 		);
 	}
 	
@@ -741,12 +759,12 @@ class Context_FeedItem extends Extension_DevblocksContext {
 		
 		// Token labels
 		$token_labels = array(
-//			'created|date' => $prefix.$translate->_('common.created'),
-//			'is_closed' => $prefix.$translate->_('call_entry.model.is_closed'),
-//			'is_outgoing' => $prefix.$translate->_('call_entry.model.is_outgoing'),
-//			'phone' => $prefix.$translate->_('call_entry.model.phone'),
-//			'subject' => $prefix.$translate->_('message.header.subject'),
-//			'updated|date' => $prefix.$translate->_('common.updated'),
+			'created_date|date' => $prefix.$translate->_('common.created'),
+			'guid' => $prefix.$translate->_('dao.feed_item.guid'),
+			'is_closed' => $prefix.$translate->_('dao.feed_item.is_closed'),
+			'title' => $prefix.$translate->_('common.title'),
+			'url' => $prefix.$translate->_('common.url'),
+			'record_url' => $prefix.$translate->_('common.url.record'),			
 		);
 		
 		if(is_array($fields))
@@ -757,15 +775,18 @@ class Context_FeedItem extends Extension_DevblocksContext {
 		// Token values
 		$token_values = array();
 		
-		// Call token values
+		// Feed item token values
 		if($item) {
 			$token_values['id'] = $item->id;
-//			$token_values['created'] = $item->created_date;
-//			$token_values['is_closed'] = $item->is_closed;
-//			$token_values['is_outgoing'] = $item->is_outgoing;
-//			$token_values['phone'] = $item->phone;
-//			$token_values['subject'] = $item->subject;
-//			$token_values['updated'] = $item->updated_date;
+			$token_values['created_date'] = $item->created_date;
+			$token_values['guid'] = $item->guid;
+			$token_values['is_closed'] = $item->is_closed;
+			$token_values['title'] = $item->title;
+			$token_values['url'] = $item->url;
+
+			// URL
+			$url_writer = DevblocksPlatform::getUrlService();
+			$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=feeds&i=item&id=%d-%s",$item->id, DevblocksPlatform::strToPermalink($item->title)), true);
 
 			$token_values['custom'] = array();
 			
@@ -791,22 +812,20 @@ class Context_FeedItem extends Extension_DevblocksContext {
 			}
 		}
 		
-		// [TODO] Feed
-		
-		// Person
-//		@$address_id = $item->primary_email_id;
-//		$merge_token_labels = array();
-//		$merge_token_values = array();
-//		CerberusContexts::getContext(CerberusContexts::CONTEXT_ADDRESS, $address_id, $merge_token_labels, $merge_token_values, '', true);
-//
-//		CerberusContexts::merge(
-//			'email_',
-//			'Lead:',
-//			$merge_token_labels,
-//			$merge_token_values,
-//			$token_labels,
-//			$token_values
-//		);
+		// Feed
+		@$feed_id = $item->feed_id;
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		CerberusContexts::getContext('cerberusweb.contexts.feed', $feed_id, $merge_token_labels, $merge_token_values, '', true);
+
+		CerberusContexts::merge(
+			'feed_',
+			'Feed:',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);
 
 		return true;
 	}

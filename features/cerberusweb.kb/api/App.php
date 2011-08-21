@@ -7,7 +7,7 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
@@ -43,8 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
@@ -69,10 +68,9 @@ class ChKbPage extends CerberusPageExtension {
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		
 		$visit = CerberusApplication::getVisit();
 		$translate = DevblocksPlatform::getTranslationService();
-		
+		$active_worker = CerberusApplication::getActiveWorker();
 		$response = DevblocksPlatform::getHttpResponse();
 
 		$stack = $response->path;
@@ -92,6 +90,55 @@ class ChKbPage extends CerberusPageExtension {
 					
 					$breadcrumbs = $article->getCategories();
 					$tpl->assign('breadcrumbs', $breadcrumbs);
+					
+					// Custom fields
+					
+					$custom_fields = DAO_CustomField::getAll();
+					$tpl->assign('custom_fields', $custom_fields);
+					
+					// Properties
+					
+					$properties = array();
+					
+					$properties['updated'] = array(
+						'label' => ucfirst($translate->_('common.updated')),
+						'type' => Model_CustomField::TYPE_DATE,
+						'value' => $article->updated,
+					);
+					
+					$properties['views'] = array(
+						'label' => ucfirst($translate->_('kb_article.views')),
+						'type' => Model_CustomField::TYPE_NUMBER,
+						'value' => $article->views,
+					);
+					
+					$properties['id'] = array(
+						'label' => ucfirst($translate->_('common.id')),
+						'type' => Model_CustomField::TYPE_NUMBER,
+						'value' => $article->id,
+					);
+					
+					@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_KB_ARTICLE, $article->id)) or array();
+			
+					foreach($custom_fields as $cf_id => $cfield) {
+						if(!isset($values[$cf_id]))
+							continue;
+							
+						$properties['cf_' . $cf_id] = array(
+							'label' => $cfield->name,
+							'type' => $cfield->type,
+							'value' => $values[$cf_id],
+						);
+					}
+					
+					$tpl->assign('properties', $properties);
+					
+					// Macros
+					$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.kb_article');
+					$tpl->assign('macros', $macros);
+					
+					// Template
+					
 					$tpl->display('devblocks:cerberusweb.kb::kb/display/index.tpl');
 					
 				} else {
@@ -170,7 +217,7 @@ class ChKbPage extends CerberusPageExtension {
 					'created' => time(),
 					'worker_id' => $active_worker->id,
 					'total' => $total,
-					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=kb&tab=articles', true),
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->writeNoProxy('c=kb&tab=articles', true),
 //					'toolbar_extension_id' => 'cerberusweb.explorer.toolbar.',
 				);
 				$models[] = $model; 
@@ -188,7 +235,7 @@ class ChKbPage extends CerberusPageExtension {
 				$model->pos = $pos++;
 				$model->params = array(
 					'id' => $row[SearchFields_KbArticle::ID],
-					'url' => $url_writer->write(sprintf("c=kb&tab=article&id=%d", $row[SearchFields_KbArticle::ID]), true),
+					'url' => $url_writer->writeNoProxy(sprintf("c=kb&tab=article&id=%d", $row[SearchFields_KbArticle::ID]), true),
 				);
 				$models[] = $model; 
 			}
@@ -361,7 +408,7 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 	    $path = $request->path;
 		$controller = array_shift($path); // timetracking
 
-	    @$action = DevblocksPlatform::strAlphaNumDash(array_shift($path)) . 'Action';
+	    @$action = DevblocksPlatform::strAlphaNum(array_shift($path), '\_') . 'Action';
 
 	    switch($action) {
 	        case NULL:
@@ -548,7 +595,7 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 			
 			// Search index
 			$search = DevblocksPlatform::getSearchService();
-			$search->index('kb_article', $id, $title . ' ' . strip_tags($content));
+			$search->index('kb_article', $id, $title . ' ' . strip_tags($content), true);
 			
 			// Categories
 			DAO_KbArticle::setCategories($id, $category_ids, true);
@@ -746,6 +793,8 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 		@$id_csv = DevblocksPlatform::importGPC($_REQUEST['ids']);
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
+		$active_worker = CerberusApplication::getActiveWorker();
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('view_id', $view_id);
 
@@ -764,6 +813,10 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 		// Custom Fields
 //		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_FEEDBACK);
 //		$tpl->assign('custom_fields', $custom_fields);
+
+		// Macros
+		$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.kb_article');
+		$tpl->assign('macros', $macros);
 		
 		$tpl->display('devblocks:cerberusweb.kb::kb/ajax/articles_bulk_panel.tpl');
 	}
@@ -776,6 +829,10 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 	    // View
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
 		$view = C4_AbstractViewLoader::getView($view_id);
+		
+		// Scheduled behavior
+		@$behavior_id = DevblocksPlatform::importGPC($_POST['behavior_id'],'string','');
+		@$behavior_when = DevblocksPlatform::importGPC($_POST['behavior_when'],'string','');
 		
 		$do = array();
 
@@ -801,6 +858,14 @@ class ChKbAjaxController extends DevblocksControllerExtension {
 			
 		// Do: Custom fields
 //		$do = DAO_CustomFieldValue::handleBulkPost($do);
+
+		// Do: Scheduled Behavior
+		if(0 != strlen($behavior_id)) {
+			$do['behavior'] = array(
+				'id' => $behavior_id,
+				'when' => $behavior_when,
+			);
+		}
 		
 		switch($filter) {
 			// Checked rows
@@ -1166,7 +1231,7 @@ class Context_KbCategory extends Extension_DevblocksContext {
 		return array(
 			'id' => $category->id,
 			'name' => $category->name,
-			'permalink' => $url_writer->write(sprintf("c=kb&br=browse&id=%d-%s", $category->id, DevblocksPlatform::strToPermalink($category->name), true)),
+			'permalink' => $url_writer->writeNoProxy(sprintf("c=kb&br=browse&id=%d-%s", $category->id, DevblocksPlatform::strToPermalink($category->name), true)),
 		);
 	}
 	
@@ -1295,3 +1360,18 @@ class Model_KbCategory {
 	public $name;
 };
 
+if (class_exists('DevblocksEventListenerExtension')):
+class EventListener_Kb extends DevblocksEventListenerExtension {
+	/**
+	 * @param Model_DevblocksEvent $event
+	 */
+	function handleEvent(Model_DevblocksEvent $event) {
+		switch($event->id) {
+			case 'cron.maint':
+				//DAO_KbCategory::maint();
+				DAO_KbArticle::maint();
+				break;
+		}
+	}
+};
+endif;
