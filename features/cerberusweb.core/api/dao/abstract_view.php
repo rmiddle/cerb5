@@ -7,46 +7,13 @@
  |
  | This source code is released under the Devblocks Public License.
  | The latest version of this license can be found here:
- | http://www.cerberusweb.com/license.php
+ | http://cerberusweb.com/license
  |
  | By using this software, you acknowledge having read this license
  | and agree to be bound thereby.
  | ______________________________________________________________________
  |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
  ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- * 
- * Sure, it would be so easy to just cheat and edit this file to use the 
- * software without paying for it.  But we trust you anyway.  In fact, we're 
- * writing this software for you! 
- * 
- * Quality software backed by a dedicated team takes money to develop.  We 
- * don't want to be out of the office bagging groceries when you call up 
- * needing a helping hand.  We'd rather spend our free time coding your 
- * feature requests than mowing the neighbors' lawns for rent money. 
- * 
- * We've never believed in hiding our source code out of paranoia over not 
- * getting paid.  We want you to have the full source code and be able to 
- * make the tweaks your organization requires to get more done -- despite 
- * having less of everything than you might need (time, people, money, 
- * energy).  We shouldn't be your bottleneck.
- * 
- * We've been building our expertise with this project since January 2002.  We 
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
- * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your inbox that you probably 
- * haven't had since spammers found you in a game of 'E-mail Battleship'. 
- * Miss. Miss. You sunk my inbox!
- * 
- * A legitimate license entitles you to support from the developers,  
- * and the warm fuzzy feeling of feeding a couple of obsessed developers 
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
 
 abstract class C4_AbstractView {
 	public $id = 0;
@@ -154,8 +121,14 @@ abstract class C4_AbstractView {
 	}
 	
 	function getParams() {
-		// Required should override editable
-		return array_merge($this->_paramsEditable, $this->_paramsRequired);
+		$params = $this->_paramsEditable;
+		
+		// Required should supersede editable
+		if(is_array($this->_paramsRequired))
+		foreach($this->_paramsRequired as $key => $param)
+			$params['req_'.$key] = $param;
+		
+		return $params;
 	}
 	
 	function getEditableParams() {
@@ -265,6 +238,50 @@ abstract class C4_AbstractView {
 		}
 	}
 	
+	protected function _renderVirtualWatchers($param) {
+		$workers = DAO_Worker::getAll();
+		$strings = array();
+		
+		foreach($param->value as $worker_id) {
+			if(isset($workers[$worker_id]))
+				$strings[] = '<b>'.$workers[$worker_id]->getName().'</b>';
+		}
+		
+		if(empty($param->value)) {
+			switch($param->operator) {
+				case DevblocksSearchCriteria::OPER_IN:
+				case DevblocksSearchCriteria::OPER_IN_OR_NULL:
+				case DevblocksSearchCriteria::OPER_NIN_OR_NULL:
+					$param->operator = DevblocksSearchCriteria::OPER_IS_NULL;
+					break;
+				case DevblocksSearchCriteria::OPER_NIN:
+					$param->operator = DevblocksSearchCriteria::OPER_IS_NOT_NULL;
+					break;
+			}
+		}
+		
+		switch($param->operator) {
+			case DevblocksSearchCriteria::OPER_IS_NULL:
+				echo "There are no <b>watchers</b>";
+				break;
+			case DevblocksSearchCriteria::OPER_IS_NOT_NULL:
+				echo "There are <b>watchers</b>";
+				break;
+			case DevblocksSearchCriteria::OPER_IN:
+				echo sprintf("Watcher is %s", implode(' or ', $strings));
+				break;
+			case DevblocksSearchCriteria::OPER_IN_OR_NULL:
+				echo sprintf("Watcher is blank or %s", implode(' or ', $strings));
+				break;
+			case DevblocksSearchCriteria::OPER_NIN:
+				echo sprintf("Watcher is not %s", implode(' or ', $strings));
+				break;
+			case DevblocksSearchCriteria::OPER_NIN_OR_NULL:
+				echo sprintf("Watcher is blank or not %s", implode(' or ', $strings));
+				break;
+		}		
+	}
+	
 	/**
 	 * Enter description here...
 	 *
@@ -312,6 +329,19 @@ abstract class C4_AbstractView {
 			case Model_CustomField::TYPE_WORKER:
 				@$oper = DevblocksPlatform::importGPC($_REQUEST['oper'],'string','eq');
 				@$worker_ids = DevblocksPlatform::importGPC($_POST['worker_id'],'array',array());
+				
+				if(empty($worker_ids)) {
+					switch($oper) {
+						case DevblocksSearchCriteria::OPER_IN:
+							$oper = DevblocksSearchCriteria::OPER_IS_NULL;
+							$worker_ids = null;
+							break;
+						case DevblocksSearchCriteria::OPER_NIN:
+							$oper = DevblocksSearchCriteria::OPER_IS_NOT_NULL;
+							$worker_ids = null;
+							break;
+					}
+				}
 				
 				$criteria = new DevblocksSearchCriteria($token,$oper,$worker_ids);
 				break;
@@ -397,7 +427,7 @@ abstract class C4_AbstractView {
 
 		if(!is_array($vals))
 			$vals = array($vals);
-
+		
 		// Do we need to do anything special on custom fields?
 		if('cf_'==substr($field,0,3)) {
 			$field_id = intval(substr($field,3));
@@ -545,6 +575,17 @@ abstract class C4_AbstractView {
 				$field_key => new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE),
 			);
 			$params = array_merge($new_params, $params);
+		} else {
+			switch($params[$field_key]->operator) {
+				case DevblocksSearchCriteria::OPER_EQ:
+				case DevblocksSearchCriteria::OPER_IS_NULL:
+					$params[$field_key] = new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE);
+					break;
+				case DevblocksSearchCriteria::OPER_IN:
+					if(is_array($params[$field_key]->value) && count($params[$field_key]->value) < 2)
+						$params[$field_key] = new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE);
+					break;
+			}
 		}
 		
 		if(!method_exists($dao_class,'getSearchQueryComponents'))
@@ -592,23 +633,40 @@ abstract class C4_AbstractView {
 
 			if(isset($label_map[$result['label']]))
 				$label = $label_map[$result['label']];
-				
+			
+			// Null strings
 			if(empty($label)) {
 				$label = '(none)';
+				if(!isset($counts[$label]))
+					$counts[$label] = array(
+						'hits' => $hits,
+						'label' => $label,
+						'filter' => 
+							array(
+								'field' => $field_key,
+								'oper' => DevblocksSearchCriteria::OPER_IS_NULL,
+								'values' => null,
+							),
+						'children' => array()
+					);
+				
+			// Anything else
+			} else {
+				if(!isset($counts[$label]))
+					$counts[$label] = array(
+						'hits' => $hits,
+						'label' => $label,
+						'filter' => 
+							array(
+								'field' => $field_key,
+								'oper' => $value_oper,
+								'values' => array($value_key => $result['label']),
+							),
+						'children' => array()
+					);
+				
 			}
 			
-			if(!isset($counts[$label]))
-				$counts[$label] = array(
-					'hits' => $hits,
-					'label' => $label,
-					'filter' => 
-						array(
-							'field' => $field_key,
-							'oper' => $value_oper,
-							'values' => array($value_key => $result['label']),
-						),
-					'children' => array()
-				);
 		}
 		
 		return $counts;
@@ -661,6 +719,17 @@ abstract class C4_AbstractView {
 				$field_key => new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE),
 			);
 			$params = array_merge($new_params, $params);
+		} else {
+			switch($params[$field_key]->operator) {
+				case DevblocksSearchCriteria::OPER_EQ:
+				case DevblocksSearchCriteria::OPER_IS_NULL:
+					$params[$field_key] = new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE);
+					break;
+				case DevblocksSearchCriteria::OPER_IN:
+					if(is_array($params[$field_key]->value) && count($params[$field_key]->value) < 2)
+						$params[$field_key] = new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE);
+					break;
+			}
 		}
 		
 		if(!method_exists($dao_class,'getSearchQueryComponents'))
@@ -758,6 +827,17 @@ abstract class C4_AbstractView {
 				$field_key => new DevblocksSearchCriteria($field_key,DevblocksSearchCriteria::OPER_TRUE),
 			);
 			$params = array_merge($params, $add_param); 
+		} else {
+			switch($params[$field_key]->operator) {
+				case DevblocksSearchCriteria::OPER_EQ:
+				case DevblocksSearchCriteria::OPER_IS_NULL:
+					$params[$field_key] = new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE);
+					break;
+				case DevblocksSearchCriteria::OPER_IN:
+					if(is_array($params[$field_key]->value) && count($params[$field_key]->value) < 2)
+						$params[$field_key] = new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE);
+					break;
+			}
 		}
 		
 		// ... and that the DAO object is valid
@@ -1176,6 +1256,12 @@ class C4_AbstractViewLoader {
 			
 		$inst->renderTemplate = $model->renderTemplate;
 		
+		// Enforce class restrictions
+		$parent = new $model->class_name;
+		$inst->addColumnsHidden($parent->getColumnsHidden());
+		$inst->addParamsHidden($parent->getParamsHidden());
+		$inst->addParamsRequired($parent->getParamsRequired());
+		
 		return $inst;
 	}
 };
@@ -1243,6 +1329,10 @@ class DAO_WorkerViewModel {
 			$model->paramsDefault = self::decodeParamsJson($row['params_default_json']);
 			$model->paramsHidden = json_decode($row['params_hidden_json'], true);
 			
+			// Make sure it's a well-formed view
+			if(empty($model->class_name) || !class_exists($model->class_name, true))
+				return false;
+			
 			return $model;
 		}
 			
@@ -1306,7 +1396,7 @@ class DAO_WorkerViewModel {
 			'render_limit' => intval($model->renderLimit),
 			'render_sort_by' => $db->qstr($model->renderSortBy),
 			'render_sort_asc' => !empty($model->renderSortAsc) ? 1 : 0,
-			'render_filters' => $db->qstr($model->renderFilters),
+			'render_filters' => !empty($model->renderFilters) ? 1 : 0,
 			'render_subtotals' => $db->qstr($model->renderSubtotals),
 			'render_template' => $db->qstr($model->renderTemplate),
 		);

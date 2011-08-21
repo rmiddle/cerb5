@@ -7,7 +7,7 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
@@ -43,8 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class ChUpdateController extends DevblocksControllerExtension {
@@ -52,7 +51,7 @@ class ChUpdateController extends DevblocksControllerExtension {
 	 * Request Overload
 	 */
 	function handleRequest(DevblocksHttpRequest $request) {
-	    @set_time_limit(0); // no timelimit (when possible)
+	    @set_time_limit(1200); // 20m
 
 	    $translate = DevblocksPlatform::getTranslationService();
 	    

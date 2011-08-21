@@ -7,7 +7,7 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
@@ -43,8 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
@@ -173,8 +172,17 @@ class DAO_FeedbackEntry extends C4_ORMHelper {
 		// Entries
 		$db->Execute(sprintf("DELETE FROM feedback_entry WHERE id IN (%s)", $ids_list));
 		
-		// Custom fields
-		DAO_CustomFieldValue::deleteByContextIds(CerberusContexts::CONTEXT_FEEDBACK, $ids);
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => CerberusContexts::CONTEXT_FEEDBACK,
+                	'context_ids' => $ids
+                )
+            )
+	    );
 		
 		return true;
 	}
@@ -239,26 +247,7 @@ class DAO_FeedbackEntry extends C4_ORMHelper {
 					$from_context = CerberusContexts::CONTEXT_FEEDBACK;
 					$from_index = 'f.id';
 					
-					// Join and return anything
-					if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
-						$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-					} elseif(empty($param->value)) { // empty
-						// Either any watchers (1 or more); or no watchers
-						if(DevblocksSearchCriteria::OPER_NIN == $param->operator || DevblocksSearchCriteria::OPER_NEQ == $param->operator) {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NOT NULL ";
-						} else {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NULL ";
-						}
-					// Specific watchers
-					} else {
-						$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id IN (%s)) ",
-							$from_context,
-							$from_index,
-							implode(',', $param->value)
-						);
-					}
+					self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $join_sql, $where_sql);
 					break;
 			}
 		}
@@ -423,6 +412,7 @@ class C4_FeedbackEntryView extends C4_AbstractView implements IAbstractView_Subt
 		$this->addColumnsHidden(array(
 			SearchFields_FeedbackEntry::ID,
 			SearchFields_FeedbackEntry::QUOTE_ADDRESS_ID,
+			SearchFields_FeedbackEntry::VIRTUAL_WATCHERS,
 		));
 		
 		$this->addParamsHidden(array(
@@ -592,20 +582,7 @@ class C4_FeedbackEntryView extends C4_AbstractView implements IAbstractView_Subt
 		
 		switch($key) {
 			case SearchFields_FeedbackEntry::VIRTUAL_WATCHERS:
-				if(empty($param->value)) {
-					echo "There are no <b>watchers</b>";
-					
-				} elseif(is_array($param->value)) {
-					$workers = DAO_Worker::getAll();
-					$strings = array();
-					
-					foreach($param->value as $worker_id) {
-						if(isset($workers[$worker_id]))
-							$strings[] = '<b>'.$workers[$worker_id]->getName().'</b>';
-					}
-					
-					echo sprintf("Watcher is %s", implode(' or ', $strings));
-				}
+				$this->_renderVirtualWatchers($param);
 				break;
 		}
 	}	
@@ -698,7 +675,7 @@ class C4_FeedbackEntryView extends C4_AbstractView implements IAbstractView_Subt
 				break;
 			case SearchFields_FeedbackEntry::VIRTUAL_WATCHERS:
 				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
-				$criteria = new DevblocksSearchCriteria($field,'in', $worker_ids);
+				$criteria = new DevblocksSearchCriteria($field,$oper,$worker_ids);
 				break;
 			default:
 				// Custom Fields
@@ -715,8 +692,8 @@ class C4_FeedbackEntryView extends C4_AbstractView implements IAbstractView_Subt
 	}
 	
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(0);
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -988,6 +965,8 @@ class ChFeedbackController extends DevblocksControllerExtension {
 	}
 	
 	function doBulkUpdateAction() {
+		@set_time_limit(600); // 10m
+		
 		// Filter: whole list or check
 	    @$filter = DevblocksPlatform::importGPC($_REQUEST['filter'],'string','');
 	    $ids = array();
@@ -1070,7 +1049,7 @@ class Context_Feedback extends Extension_DevblocksContext {
 		return array(
 			'id' => $feedback->id,
 			'name' => '', //$feedback->title, // [TODO]
-			'permalink' => '', //$url_writer->write('c=tasks&action=display&id='.$task->id, true),
+			'permalink' => '', //$url_writer->writeNoProxy('c=tasks&action=display&id='.$task->id, true),
 		);
 	}
     

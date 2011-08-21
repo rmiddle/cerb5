@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class DAO_ContextLink {
 	const FROM_CONTEXT = 'from_context';
 	const FROM_CONTEXT_ID = 'from_context_id';
@@ -73,7 +89,8 @@ class DAO_ContextLink {
 		
 		// Are we following something?
 		if($dst_context == CerberusContexts::CONTEXT_WORKER) {
-			if($active_worker && $active_worker->id == $dst_context_id) {
+			// If worker is actor and target, and we're not inside a Virtual Attendant
+			if($active_worker && $active_worker->id == $dst_context_id && 0 == EventListener_Triggers::getDepth()) {
 				$entry = array(
 					//{{actor}} started watching {{target_object}} {{target}}
 					'message' => 'activities.watcher.follow',

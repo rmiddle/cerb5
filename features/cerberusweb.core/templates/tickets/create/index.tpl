@@ -205,13 +205,13 @@
 					<table cellpadding="2" cellspacing="0" border="0">
 						<tr>
 							<td nowrap="nowrap" valign="top" colspan="2">
-								<label><input type="radio" name="closed" value="0" onclick="toggleDiv('ticketClosed','none');">{$translate->_('status.open')|capitalize}</label>
-								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('ticketClosed','block');" checked>{$translate->_('status.waiting')|capitalize}</label>
-								{if $active_worker->hasPriv('core.ticket.actions.close')}<label><input type="radio" name="closed" value="1" onclick="toggleDiv('ticketClosed','block');">{$translate->_('status.closed')|capitalize}</label>{/if}
+								<label><input type="radio" name="closed" value="0" onclick="toggleDiv('ticketClosed','none');" {if 'open'==$mail_status_create}checked="checked"{/if}>{$translate->_('status.open')|capitalize}</label>
+								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('ticketClosed','block');" {if 'waiting'==$mail_status_create}checked="checked"{/if}>{$translate->_('status.waiting')|capitalize}</label>
+								{if $active_worker->hasPriv('core.ticket.actions.close')}<label><input type="radio" name="closed" value="1" onclick="toggleDiv('ticketClosed','block');" {if 'closed'==$mail_status_create}checked="checked"{/if}>{$translate->_('status.closed')|capitalize}</label>{/if}
 								<br>
 								<br>
 		
-								<div id="ticketClosed" style="display:block;margin-left:10px;">
+								<div id="ticketClosed" style="display:{if 'open'==$mail_status_create}none{else}block{/if};margin-left:10px;">
 								<b>{$translate->_('display.reply.next.resume')}</b> {$translate->_('display.reply.next.resume_eg')}<br> 
 								<input type="text" name="ticket_reopen" size="55" value=""><br>
 								{$translate->_('display.reply.next.resume_blank')}<br>
@@ -236,8 +236,8 @@
 		<td>
 			<br>
 			<button type="submit" onclick="$('#btnSaveDraft').click();"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> Send Message</button>
-			<button type="button" onclick="$('#btnSaveDraft').click();document.location='{devblocks_url}c=tickets{/devblocks_url}';"><span class="cerb-sprite sprite-media_pause"></span> {$translate->_('display.ui.continue_later')|capitalize}</button>
-			<button type="button" onclick="if(confirm('Are you sure you want to discard this message?')) { if(0!==this.form.draft_id.value.length) { genericAjaxGet('', 'c=tickets&a=deleteDraft&draft_id='+escape(this.form.draft_id.value)); } document.location='{devblocks_url}c=tickets{/devblocks_url}'; } "><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('display.ui.discard')|capitalize}</button>
+			<button type="button" onclick="genericAjaxPost('frmLogTicket',null,'c=tickets&a=saveDraft&type=create',function(o) { document.location='{devblocks_url}c=tickets{/devblocks_url}'; });"><span class="cerb-sprite sprite-media_pause"></span> {$translate->_('display.ui.continue_later')|capitalize}</button>
+			<button type="button" onclick="if(confirm('Are you sure you want to discard this message?')) { genericAjaxGet('', 'c=tickets&a=deleteDraft&draft_id='+escape(this.form.draft_id.value), function(o) { document.location='{devblocks_url}c=tickets{/devblocks_url}'; } ); } "><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('display.ui.discard')|capitalize}</button>
 		</td>
 	</tr>
   </tbody>
@@ -298,17 +298,19 @@
 			if(!event.ctrlKey) //!event.altKey && !event.ctrlKey && !event.metaKey
 				return;
 			
-			event.preventDefault();
-
 			if(event.ctrlKey && event.shiftKey) {
 				switch(event.which) {
-					case 7:  // (G) Insert Signature
+					case 7:
+					case 71: // (G) Insert Signature
 						try {
+							event.preventDefault();
 							$('#btnInsertSig').click();
 						} catch(ex) { } 
 						break;
-					case 9:  // (I) Insert Snippet
+					case 9:
+					case 73: // (I) Insert Snippet
 						try {
+							event.preventDefault();
 							$(this).closest('td').find('.context-snippet').focus();
 						} catch(ex) { } 
 						break;

@@ -7,46 +7,14 @@
  |
  | This source code is released under the Devblocks Public License.
  | The latest version of this license can be found here:
- | http://www.cerberusweb.com/license.php
+ | http://cerberusweb.com/license
  |
  | By using this software, you acknowledge having read this license
  | and agree to be bound thereby.
  | ______________________________________________________________________
  |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
  ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- * 
- * Sure, it would be so easy to just cheat and edit this file to use the 
- * software without paying for it.  But we trust you anyway.  In fact, we're 
- * writing this software for you! 
- * 
- * Quality software backed by a dedicated team takes money to develop.  We 
- * don't want to be out of the office bagging groceries when you call up 
- * needing a helping hand.  We'd rather spend our free time coding your 
- * feature requests than mowing the neighbors' lawns for rent money. 
- * 
- * We've never believed in hiding our source code out of paranoia over not 
- * getting paid.  We want you to have the full source code and be able to 
- * make the tweaks your organization requires to get more done -- despite 
- * having less of everything than you might need (time, people, money, 
- * energy).  We shouldn't be your bottleneck.
- * 
- * We've been building our expertise with this project since January 2002.  We 
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
- * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your inbox that you probably 
- * haven't had since spammers found you in a game of 'E-mail Battleship'. 
- * Miss. Miss. You sunk my inbox!
- * 
- * A legitimate license entitles you to support from the developers,  
- * and the warm fuzzy feeling of feeding a couple of obsessed developers 
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
+
 class ChCoreTour extends DevblocksHttpResponseListenerExtension {
 	function run(DevblocksHttpResponse $response, Smarty $tpl) {
 		$path = $response->path;
@@ -602,6 +570,10 @@ class EventListener_Triggers extends DevblocksEventListenerExtension {
 		return self::$_depth;
 	}
 	
+	static function getTriggerStack() {
+		return self::$_trigger_stack;
+	}
+	
 	static function getTriggerLog() {
 		return self::$_trigger_log;
 	}
@@ -626,16 +598,27 @@ class EventListener_Triggers extends DevblocksEventListenerExtension {
 		$logger->info(sprintf("EVENT: %s",
 			$event->id
 		));
-		
-		$triggers = DAO_TriggerEvent::getByEvent($event->id, false);
 
+		// Are we limited to only one trigger on this event, or all of them?
+		
+		if(isset($event->params['_whisper']['_trigger_id'][0])) {
+			if(null != ($trigger = DAO_TriggerEvent::get($event->params['_whisper']['_trigger_id'][0]))) {
+				$triggers[$trigger->id] = $trigger;
+			}
+			unset($event->params['_whisper']['_trigger_id']);
+		} else {
+			$triggers = DAO_TriggerEvent::getByEvent($event->id, false);
+		}
+
+		// Allowed
+		
 		if(empty($triggers))
 			return;
 
 		// We're restricting the scope of the event
-		if(isset($event->params['_whisper']) && is_array($event->params['_whisper'])) {
+		if(isset($event->params['_whisper']) && is_array($event->params['_whisper']) && !empty($event->params['_whisper'])) {
 			foreach($triggers as $trigger_id => $trigger) { /* @var $trigger Model_TriggerEvent */
-				if(
+				if (
 					null != ($allowed_ids = @$event->params['_whisper'][$trigger->owner_context])
 					&& in_array($trigger->owner_context_id, !is_array($allowed_ids) ? array($allowed_ids) : $allowed_ids)
 					) {
@@ -737,6 +720,18 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 	function handleEvent(Model_DevblocksEvent $event) {
 		// Cerberus Helpdesk Workflow
 		switch($event->id) {
+			case 'comment.create':
+				$this->_handleCommentCreate($event);
+				break;
+				
+			case 'context.delete':
+				$this->_handleContextDelete($event);
+				break;
+				
+			case 'context.maint':
+				$this->_handleContextMaint($event);
+				break;
+				
 			case 'cron.heartbeat':
 				$this->_handleCronHeartbeat($event);
 				break;
@@ -747,17 +742,192 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 		}
 	}
 
+	private function _handleContextDelete($event) {
+		@$context = $event->params['context'];
+		@$context_ids = $event->params['context_ids'];
+		
+		// Core
+    	DAO_AttachmentLink::removeAllByContext($context, $context_ids);
+		DAO_Comment::deleteByContext($context, $context_ids);
+		DAO_ContextActivityLog::deleteByContext($context, $context_ids);
+		DAO_ContextLink::delete($context, $context_ids);
+		DAO_CustomFieldValue::deleteByContextIds($context, $context_ids);
+		DAO_Notification::deleteByContext($context, $context_ids);
+		DAO_TriggerEvent::deleteByOwner($context, $context_ids);
+	}
+	
+	private function _handleContextMaint($event) {
+		$db = DevblocksPlatform::getDatabaseService();
+		$logger = DevblocksPlatform::getConsoleLog('Maint');
+		
+		@$context = $event->params['context'];
+		@$context_table = $event->params['context_table'];
+		@$context_key = $event->params['context_key'];
+
+		$context_index = $context_table . '.' . $context_key;
+		
+		$logger->info(sprintf("Running maintenance on context: %s", $context));
+		
+		// ===========================================================================
+		// Comments
+
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM comment AS ctx ".
+			"LEFT JOIN %s ON ctx.context_id=%s ".
+			"WHERE ctx.context = %s ". 
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s comments.", $deletes, $context));
+		
+		// ===========================================================================
+		// Context Activity Log
+
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM context_activity_log AS ctx ".
+			"LEFT JOIN %s ON ctx.target_context_id=%s ".
+			"WHERE ctx.target_context = %s ". 
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s activity log entries.", $deletes, $context));
+		
+		// ===========================================================================
+		// Context Links
+		
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM context_link AS ctx ".
+			"LEFT JOIN %s ON ctx.from_context_id=%s ".
+			"WHERE ctx.from_context = %s ". 
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s context link sources.", $deletes, $context));
+		
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM context_link AS ctx ".
+			"LEFT JOIN %s ON ctx.to_context_id=%s ".
+			"WHERE ctx.to_context = %s ".
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s context link targets.", $deletes, $context));
+		
+		// ===========================================================================
+		// Custom fields
+		
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM custom_field_stringvalue AS ctx ".
+			"LEFT JOIN %s ON (%s=ctx.context_id) ".
+			"WHERE ctx.context = %s ".
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s custom field strings.", $deletes, $context));
+		
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM custom_field_numbervalue AS ctx ".
+			"LEFT JOIN %s ON (%s=ctx.context_id) ".
+			"WHERE ctx.context = %s ".
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s custom field numbers.", $deletes, $context));
+		
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM custom_field_clobvalue AS ctx ".
+			"LEFT JOIN %s ON (%s=ctx.context_id) ".
+			"WHERE ctx.context = %s ".
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s custom field clobs.", $deletes, $context));
+		
+		// ===========================================================================
+		// Notifications
+		
+		$db->Execute(sprintf("DELETE QUICK ctx ".
+			"FROM notification AS ctx ".
+			"LEFT JOIN %s ON ctx.context_id=%s ".
+			"WHERE ctx.context = %s ". 
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		if(null != ($deletes = $db->Affected_Rows()))
+			$logger->info(sprintf("Purged %d %s notifications.", $deletes, $context));
+		
+		// ===========================================================================
+		// Virtual Attendant Behavior
+		
+		$rs = $db->Execute(sprintf("SELECT ctx.id ".
+			"FROM trigger_event AS ctx ".
+			"LEFT JOIN %s ON ctx.owner_context_id=%s ".
+			"WHERE ctx.owner_context = %s ". 
+			"AND %s IS NULL",
+			$context_table,
+			$context_index,
+			$db->qstr($context),
+			$context_index
+		));
+		
+		if(is_resource($rs)) {
+			$deletes = 0;
+			
+			while($row = mysql_fetch_row($rs)) {
+				DAO_TriggerEvent::delete($row[0]);
+				$deletes++;
+			}
+			
+			if(null != ($deletes = $db->Affected_Rows()))
+				$logger->info(sprintf("Purged %d %s virtual attendant behaviors.", $deletes, $context));
+		}
+	}
+	
 	private function _handleCronMaint($event) {
 		DAO_Address::maint();
+		DAO_Bucket::maint();
 		DAO_Comment::maint();
 		DAO_ConfirmationCode::maint();
 		DAO_ExplorerSet::maint();
 		DAO_Group::maint();
+		DAO_Task::maint();
 		DAO_Ticket::maint();
 		DAO_Message::maint();
 		DAO_Worker::maint();
 		DAO_Notification::maint();
 		DAO_Snippet::maint();
+		DAO_ContactOrg::maint();
 		DAO_ContactPerson::maint();
 		DAO_OpenIdToContactPerson::maint();
 		DAO_Attachment::maint();
@@ -783,4 +953,26 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 		);
 		DAO_Ticket::updateWhere($fields, $where);
 	}
+	
+	private function _handleCommentCreate($event) { /* @var $event Model_DevblocksEvent */
+		@$fields = $event->params['fields'];
+		
+		if(!isset($fields[DAO_Comment::CONTEXT]) || !isset($fields[DAO_Comment::CONTEXT_ID]))
+			return;
+			
+		// Context-specific behavior for comments
+		switch($fields[DAO_Comment::CONTEXT]) {
+			case CerberusContexts::CONTEXT_TASK:
+				DAO_Task::update($fields[DAO_Comment::CONTEXT_ID], array(
+					DAO_Task::UPDATED_DATE => time(),
+				));
+				break;
+			case CerberusContexts::CONTEXT_TICKET:
+				DAO_Ticket::update($fields[DAO_Comment::CONTEXT_ID], array(
+					DAO_Ticket::UPDATED_DATE => time(),
+				));
+				break;
+		}
+	}
+	
 };

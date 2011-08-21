@@ -51,6 +51,7 @@ class Page_Datacenter extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$visit = CerberusApplication::getVisit();
 		$response = DevblocksPlatform::getHttpResponse();
+		$active_worker = CerberusApplication::getActiveWorker();
 
 		// Path
 		$stack = $response->path;
@@ -59,7 +60,7 @@ class Page_Datacenter extends CerberusPageExtension {
 		
 		switch($module) {
 			case 'server':
-				@$server_id = array_shift($stack); // id
+				@$server_id = intval(array_shift($stack)); // id
 				if(is_numeric($server_id) && null != ($server = DAO_Server::get($server_id)))
 					$tpl->assign('server', $server);
 
@@ -72,6 +73,40 @@ class Page_Datacenter extends CerberusPageExtension {
 				$tab_manifests = DevblocksPlatform::getExtensions(Extension_ServerTab::POINT, false);
 				uasort($tab_manifests, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
 				$tpl->assign('tab_manifests', $tab_manifests);
+				
+				// Custom fields
+				
+				$custom_fields = DAO_CustomField::getAll();
+				$tpl->assign('custom_fields', $custom_fields);
+				
+				// Properties
+				
+				$properties = array();
+				
+//				$properties['created'] = array(
+//					'label' => ucfirst($translate->_('common.created')),
+//					'type' => Model_CustomField::TYPE_DATE,
+//					'value' => $server->created,
+//				);
+				
+				@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds('cerberusweb.contexts.datacenter.server', $server->id)) or array();
+		
+				foreach($custom_fields as $cf_id => $cfield) {
+					if(!isset($values[$cf_id]))
+						continue;
+						
+					$properties['cf_' . $cf_id] = array(
+						'label' => $cfield->name,
+						'type' => $cfield->type,
+						'value' => $values[$cf_id],
+					);
+				}
+				
+				$tpl->assign('properties', $properties);
+				
+				// Macros
+				$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.server');
+				$tpl->assign('macros', $macros);
 				
 				$tpl->display('devblocks:cerberusweb.datacenter::datacenter/servers/display/index.tpl');
 				break;
@@ -148,6 +183,13 @@ class Page_Datacenter extends CerberusPageExtension {
 		        if($query && false===strpos($query,'*'))
 		            $query = $query . '*';
                 $params[SearchFields_Server::NAME] = new DevblocksSearchCriteria(SearchFields_Server::NAME,DevblocksSearchCriteria::OPER_LIKE,strtolower($query));               
+                break;
+            case "comments_all":
+            	$params[SearchFields_Server::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchCriteria(SearchFields_Server::FULLTEXT_COMMENT_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,array($query,'all'));               
+                break;
+                
+            case "comments_phrase":
+            	$params[SearchFields_Server::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchCriteria(SearchFields_Server::FULLTEXT_COMMENT_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,array($query,'phrase'));               
                 break;
         }
         
@@ -249,6 +291,8 @@ class Page_Datacenter extends CerberusPageExtension {
 		@$ids = DevblocksPlatform::importGPC($_REQUEST['ids']);
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
+		$active_worker = CerberusApplication::getActiveWorker();
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('view_id', $view_id);
 
@@ -269,6 +313,10 @@ class Page_Datacenter extends CerberusPageExtension {
 		$custom_fields = DAO_CustomField::getByContext('cerberusweb.contexts.datacenter.server');
 		$tpl->assign('custom_fields', $custom_fields);
 		
+		// Macros
+		$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.server');
+		$tpl->assign('macros', $macros);
+		
 		$tpl->display('devblocks:cerberusweb.datacenter::datacenter/servers/bulk.tpl');
 	}
 	
@@ -280,6 +328,10 @@ class Page_Datacenter extends CerberusPageExtension {
 	    // View
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
 		$view = C4_AbstractViewLoader::getView($view_id);
+		
+		// Scheduled behavior
+		@$behavior_id = DevblocksPlatform::importGPC($_POST['behavior_id'],'string','');
+		@$behavior_when = DevblocksPlatform::importGPC($_POST['behavior_when'],'string','');
 		
 		$do = array();
 		
@@ -305,6 +357,14 @@ class Page_Datacenter extends CerberusPageExtension {
 		// Do: Custom fields
 		$do = DAO_CustomFieldValue::handleBulkPost($do);
 
+		// Do: Scheduled Behavior
+		if(0 != strlen($behavior_id)) {
+			$do['behavior'] = array(
+				'id' => $behavior_id,
+				'when' => $behavior_when,
+			);
+		}
+		
 		switch($filter) {
 			// Checked rows
 			case 'checks':
@@ -364,7 +424,7 @@ class Page_Datacenter extends CerberusPageExtension {
 					'created' => time(),
 					//'worker_id' => $active_worker->id,
 					'total' => $total,
-					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=datacenter&tab=servers', true),
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->writeNoProxy('c=datacenter&tab=servers', true),
 //					'toolbar_extension_id' => 'cerberusweb.explorer.toolbar.',
 				);
 				$models[] = $model; 
@@ -382,7 +442,7 @@ class Page_Datacenter extends CerberusPageExtension {
 				$model->pos = $pos++;
 				$model->params = array(
 					'id' => $id,
-					'url' => $url_writer->write(sprintf("c=datacenter&tab=server&id=%d", $id), true),
+					'url' => $url_writer->writeNoProxy(sprintf("c=datacenter&tab=server&id=%d", $id), true),
 				);
 				$models[] = $model; 
 			}
@@ -396,3 +456,18 @@ class Page_Datacenter extends CerberusPageExtension {
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('explore',$hash,$orig_pos)));
 	}	
 };
+
+if (class_exists('DevblocksEventListenerExtension')):
+class EventListener_Datacenter extends DevblocksEventListenerExtension {
+	/**
+	 * @param Model_DevblocksEvent $event
+	 */
+	function handleEvent(Model_DevblocksEvent $event) {
+		switch($event->id) {
+			case 'cron.maint':
+				DAO_Server::maint();
+				break;
+		}
+	}
+};
+endif;
