@@ -569,7 +569,8 @@
 		<priv id="core.ticket.view.actions.export" label="acl.core.ticket.view.actions.export" />
 		<priv id="core.ticket.view.actions.merge" label="acl.core.ticket.view.actions.merge" />
 		<priv id="core.ticket.view.actions.pile_sort" label="acl.core.ticket.view.actions.pile_sort" />
-
+		<priv id="core.ticket.view.whos_online" label="acl.core.ticket.view.whos_online" />
+ 
 		<!-- Watchers -->
 		<priv id="core.watchers.assign" label="acl.core.watchers.assign" />
 		<priv id="core.watchers.unassign" label="acl.core.watchers.unassign" />

@@ -287,10 +287,12 @@ class ChTicketsPage extends CerberusPageExtension {
 		);
 		
 		// ====== Who's Online
-		$whos_online = DAO_Worker::getAllOnline();
-		if(!empty($whos_online)) {
-			$tpl->assign('whos_online', $whos_online);
-			$tpl->assign('whos_online_count', count($whos_online));
+		if($active_worker->hasPriv('core.ticket.view.whos_online')) {
+			$whos_online = DAO_Worker::getAllOnline();
+			if(!empty($whos_online)) {
+				$tpl->assign('whos_online', $whos_online);
+				$tpl->assign('whos_online_count', count($whos_online));
+			}
 		}
 		
         $tpl->display('devblocks:cerberusweb.core::tickets/workflow/index.tpl');
