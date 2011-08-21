@@ -7,7 +7,7 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
@@ -43,8 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class CerberusMail {
@@ -230,7 +229,7 @@ class CerberusMail {
 					DAO_MailQueue::BODY => $content,
 					DAO_MailQueue::PARAMS_JSON => json_encode($params),
 					DAO_MailQueue::IS_QUEUED => !empty($worker) ? 0 : 1,
-					DAO_MailQueue::QUEUE_PRIORITY => 0,
+					DAO_MailQueue::QUEUE_DELIVERY_DATE => time(),
 				);
 				DAO_MailQueue::create($fields);
 			}
@@ -372,8 +371,23 @@ class CerberusMail {
 		    $mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 			$mail = $mail_service->createMessage();
 	        
-		    // properties
 		    @$reply_message_id = $properties['message_id'];
+		    
+		    if(null == ($message = DAO_Message::get($reply_message_id)))
+				return;
+				
+			$ticket_id = $message->ticket_id;
+	        
+			if(null == ($ticket = DAO_Ticket::get($ticket_id)))
+				return;
+				
+			if(null == ($group = DAO_Group::get($ticket->team_id)))
+				return;
+		    
+		    // Changing the outgoing message through a VA
+		    Event_MailBeforeSentByGroup::trigger($properties, $message, $ticket, $group);
+		    
+		    // Re-read properties
 		    @$content = $properties['content'];
 		    @$files = $properties['files'];
 		    @$is_forward = $properties['is_forward']; 
@@ -383,19 +397,8 @@ class CerberusMail {
 		    
 		    @$is_autoreply = $properties['is_autoreply'];
 		    
-			if(null == ($message = DAO_Message::get($reply_message_id)))
-				return;
-				
 	        $message_headers = DAO_MessageHeader::getAll($reply_message_id);
 
-			$ticket_id = $message->ticket_id;
-	        
-			if(null == ($ticket = DAO_Ticket::get($ticket_id)))
-				return;
-				
-			if(null == ($group = DAO_Group::get($ticket->team_id)))
-				return;
-				
 			$from_replyto = $group->getReplyTo($ticket->category_id);
 			$from_personal = $group->getReplyPersonal($ticket->category_id, $worker_id);
 			
@@ -590,7 +593,7 @@ class CerberusMail {
 					DAO_MailQueue::BODY => $properties['content'],
 					DAO_MailQueue::PARAMS_JSON => json_encode($params),
 					DAO_MailQueue::IS_QUEUED => empty($worker_id) ? 1 : 0,
-					DAO_MailQueue::QUEUE_PRIORITY => 0,
+					DAO_MailQueue::QUEUE_DELIVERY_DATE => time(),
 				);
 				DAO_MailQueue::create($fields);
 			}
@@ -722,7 +725,10 @@ class CerberusMail {
 
 		// Events
 		if(!empty($message_id) && empty($no_events)) {
-			// Group
+			// After message sent in group
+			Event_MailAfterSentByGroup::trigger($message_id, $group->id);			
+			
+			// New message for group
 			Event_MailReceivedByGroup::trigger($message_id, $group->id);
 
 			// Watchers
@@ -751,10 +757,12 @@ class CerberusMail {
 		return true;
 	}
 	
-	static function reflect(CerberusParserMessage $message, $to) {
+	static function reflect(CerberusParserModel $model, $to) {
 		try {
+			$message = $model->getMessage(); /* @var $message CerberusParserMessage */
+			
 			$mail_service = DevblocksPlatform::getMailService();
-			$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+			$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults()); /* @var $mailer Swift_Mailer */
 			$mail = $mail_service->createMessage();
 	
 			$mail->setTo(array($to));
@@ -774,8 +782,11 @@ class CerberusMail {
 				$headers->addTextHeader('In-Reply-To', $message->headers['in-reply-to']);
 			if(isset($message->headers['references']))
 				$headers->addTextHeader('References', $message->headers['references']);
-			if(isset($message->headers['from']))
-				$mail->setFrom($message->headers['from']);
+			if(isset($message->headers['from'])) {
+				$sender_addy = $model->getSenderAddressModel(); /* @var $sender_addy Model_Address */
+				$sender_name = $sender_addy->getName();
+				$mail->setFrom($sender_addy->email, empty($sender_name) ? null : $sender_name);
+			}
 			if(isset($message->headers['return-path'])) {
 				$return_path = is_array($message->headers['return-path'])
 					? array_shift($message->headers['return-path'])

@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class DAO_ContextActivityLog extends C4_ORMHelper {
 	const ID = 'id';
 	const ACTIVITY_POINT = 'activity_point';
@@ -103,6 +119,23 @@ class DAO_ContextActivityLog extends C4_ORMHelper {
 		$ids_list = implode(',', $ids);
 		
 		$db->Execute(sprintf("DELETE FROM context_activity_log WHERE id IN (%s)", $ids_list));
+		
+		return true;
+	}
+	
+	static function deleteByContext($context, $context_ids) {
+		if(!is_array($context_ids)) 
+			$context_ids = array($context_ids);
+		
+		if(empty($context_ids))
+			return;
+			
+		$db = DevblocksPlatform::getDatabaseService();
+		
+		$db->Execute(sprintf("DELETE FROM context_activity_log WHERE target_context = %s AND target_context_id IN (%s) ", 
+			$db->qstr($context),
+			implode(',', $context_ids)
+		));
 		
 		return true;
 	}

@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class DAO_TriggerEvent extends C4_ORMHelper {
 	const CACHE_ALL = 'cerberus_cache_behavior_all';
 	
@@ -50,17 +66,26 @@ class DAO_TriggerEvent extends C4_ORMHelper {
 	 * 
 	 * @param string $context
 	 * @param integer $context_id
+	 * @param string $event_point
 	 * @return Model_TriggerEvent[]
 	 */
-	static function getByOwner($context, $context_id) {
+	static function getByOwner($context, $context_id, $event_point=null, $with_disabled=false) {
 		$behaviors = self::getAll();
 		$results = array();
 
-		foreach($behaviors as $behavior_id => $behavior) {
+		foreach($behaviors as $behavior_id => $behavior) { /* @var $behavior Model_TriggerEvent */
+			if(!$with_disabled && $behavior->is_disabled)
+				continue;
+			
 			if($behavior->owner_context == $context
-				&& $behavior->owner_context_id == $context_id)
-					$results[$behavior_id] = $behavior;
+				&& $behavior->owner_context_id == $context_id) {
+					if(is_null($event_point) || 0==strcasecmp($event_point,$behavior->event_point)) {
+						$results[$behavior_id] = $behavior;
+					}
+				}
 		}
+		
+		uasort($results, create_function('$a, $b', "return strcasecmp(\$a->title,\$b->title);\n"));
 		
 		return $results;
 	}

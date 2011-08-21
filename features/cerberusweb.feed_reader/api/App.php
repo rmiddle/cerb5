@@ -107,8 +107,9 @@ class Page_Feeds extends CerberusPageExtension {
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$visit = CerberusApplication::getVisit();
-
+		$translate = DevblocksPlatform::getTranslationService();
 		$response = DevblocksPlatform::getHttpResponse();
+		$active_worker = CerberusApplication::getActiveWorker();
 
 		// Remember the last tab/URL
 		if(null == ($selected_tab = @$response->path[1])) {
@@ -123,7 +124,7 @@ class Page_Feeds extends CerberusPageExtension {
 		
 		switch($module) {
 			case 'item':
-				@$id = array_shift($stack); // id
+				@$id = intval(array_shift($stack)); // id
 
 				if(null != ($item = DAO_FeedItem::get($id)))
 					$tpl->assign('item', $item);
@@ -131,6 +132,56 @@ class Page_Feeds extends CerberusPageExtension {
 				$tab_manifests = DevblocksPlatform::getExtensions('cerberusweb.feeds.item.tab', false);
 				uasort($tab_manifests, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
 				$tpl->assign('tab_manifests', $tab_manifests);
+				
+				// Custom fields
+				
+				$custom_fields = DAO_CustomField::getAll();
+				$tpl->assign('custom_fields', $custom_fields);
+				
+				// Properties
+				
+				$properties = array();
+
+				if(!empty($item->feed_id)) {
+					if(null != ($feed = DAO_Feed::get($item->feed_id))) {
+						$properties['feed'] = array(
+							'label' => ucfirst($translate->_('dao.feed_item.feed_id')),
+							'type' => null,
+							'feed' => $feed,
+						);
+					}
+				}
+				
+				$properties['is_closed'] = array(
+					'label' => ucfirst($translate->_('dao.feed_item.is_closed')),
+					'type' => Model_CustomField::TYPE_CHECKBOX,
+					'value' => $item->is_closed,
+				);
+				
+				$properties['created_date'] = array(
+					'label' => ucfirst($translate->_('common.created')),
+					'type' => Model_CustomField::TYPE_DATE,
+					'value' => $item->created_date,
+				);
+				
+				@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds('cerberusweb.contexts.feed.item', $item->id)) or array();
+		
+				foreach($custom_fields as $cf_id => $cfield) {
+					if(!isset($values[$cf_id]))
+						continue;
+						
+					$properties['cf_' . $cf_id] = array(
+						'label' => $cfield->name,
+						'type' => $cfield->type,
+						'value' => $values[$cf_id],
+					);
+				}
+				
+				$tpl->assign('properties', $properties);				
+				
+				// Macros
+				$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.feeditem');
+				$tpl->assign('macros', $macros);
 				
 				$tpl->display('devblocks:cerberusweb.feed_reader::feeds/item/display/index.tpl');
 				break;
@@ -246,6 +297,8 @@ class Page_Feeds extends CerberusPageExtension {
 		@$ids = DevblocksPlatform::importGPC($_REQUEST['ids']);
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
+		$active_worker = CerberusApplication::getActiveWorker();
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('view_id', $view_id);
 
@@ -257,6 +310,10 @@ class Page_Feeds extends CerberusPageExtension {
 		// Custom Fields
 		$custom_fields = DAO_CustomField::getByContext('cerberusweb.contexts.feed.item');
 		$tpl->assign('custom_fields', $custom_fields);
+		
+		// Macros
+		$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.feeditem');
+		$tpl->assign('macros', $macros);
 		
 		$tpl->display('devblocks:cerberusweb.feed_reader::feeds/item/bulk.tpl');
 	}
@@ -273,12 +330,24 @@ class Page_Feeds extends CerberusPageExtension {
 		// Call fields
 		$is_closed = trim(DevblocksPlatform::importGPC($_POST['is_closed'],'string',''));
 
+		// Scheduled behavior
+		@$behavior_id = DevblocksPlatform::importGPC($_POST['behavior_id'],'string','');
+		@$behavior_when = DevblocksPlatform::importGPC($_POST['behavior_when'],'string','');
+		
 		$do = array();
 		
 		// Do: Due
 		if(0 != strlen($is_closed))
 			$do['is_closed'] = !empty($is_closed) ? 1 : 0;
-			
+
+		// Do: Scheduled Behavior
+		if(0 != strlen($behavior_id)) {
+			$do['behavior'] = array(
+				'id' => $behavior_id,
+				'when' => $behavior_when,
+			);
+		}
+		
 		// Watchers
 		$watcher_params = array();
 		
@@ -532,3 +601,19 @@ class ExplorerToolbar_FeedReaderItem extends Extension_ExplorerToolbar {
 		$tpl->display('devblocks:cerberusweb.feed_reader::feeds/item/explorer_toolbar.tpl');
 	}
 };
+
+if (class_exists('DevblocksEventListenerExtension')):
+class EventListener_FeedReader extends DevblocksEventListenerExtension {
+	/**
+	 * @param Model_DevblocksEvent $event
+	 */
+	function handleEvent(Model_DevblocksEvent $event) {
+		switch($event->id) {
+			case 'cron.maint':
+				//DAO_Feed::maint();
+				DAO_FeedItem::maint();
+				break;
+		}
+	}
+};
+endif;

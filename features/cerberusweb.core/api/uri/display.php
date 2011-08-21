@@ -7,46 +7,14 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
 | ______________________________________________________________________
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- * 
- * Sure, it would be so easy to just cheat and edit this file to use the 
- * software without paying for it.  But we trust you anyway.  In fact, we're 
- * writing this software for you! 
- * 
- * Quality software backed by a dedicated team takes money to develop.  We 
- * don't want to be out of the office bagging groceries when you call up 
- * needing a helping hand.  We'd rather spend our free time coding your 
- * feature requests than mowing the neighbors' lawns for rent money. 
- * 
- * We've never believed in hiding our source code out of paranoia over not 
- * getting paid.  We want you to have the full source code and be able to 
- * make the tweaks your organization requires to get more done -- despite 
- * having less of everything than you might need (time, people, money, 
- * energy).  We shouldn't be your bottleneck.
- * 
- * We've been building our expertise with this project since January 2002.  We 
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
- * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your inbox that you probably 
- * haven't had since spammers found you in a game of 'E-mail Battleship'. 
- * Miss. Miss. You sunk my inbox!
- * 
- * A legitimate license entitles you to support from the developers,  
- * and the warm fuzzy feeling of feeding a couple of obsessed developers 
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
+
 class ChDisplayPage extends CerberusPageExtension {
 	function isVisible() {
 		// The current session must be a logged-in worker to use this page.
@@ -79,6 +47,56 @@ class ChDisplayPage extends CerberusPageExtension {
 			echo "<H1>".$translate->_('display.invalid_ticket')."</H1>";
 			return;
 		}
+
+		// Custom fields
+		
+		$custom_fields = DAO_CustomField::getAll();
+		$tpl->assign('custom_fields', $custom_fields);
+		
+		// Properties
+		
+		$properties = array(
+			'status' => null,
+			'mask' => null,
+			'bucket' => null,
+			'created' => array(
+				'label' => ucfirst($translate->_('common.created')),
+				'type' => Model_CustomField::TYPE_DATE,
+				'value' => $ticket->created_date,
+			),
+			'updated' => array(
+				'label' => ucfirst($translate->_('common.updated')),
+				'type' => Model_CustomField::TYPE_DATE,
+				'value' => $ticket->updated_date,
+			),
+			// [TODO] If trained or not
+			'spam_score' => array(
+				'label' => ucfirst($translate->_('ticket.spam_score')),
+				'type' => Model_CustomField::TYPE_SINGLE_LINE,
+				'value' => (100*$ticket->spam_score) . '%',
+			),
+		);
+		
+		if(!empty($ticket->owner_id))
+			$properties['owner'] = null;
+
+		@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TICKET, $ticket->id)) or array();
+
+		foreach($custom_fields as $cf_id => $cfield) {
+			if(!isset($values[$cf_id]))
+				continue;
+				
+			if(!empty($cfield->group_id) && $cfield->group_id != $ticket->team_id)
+				continue;
+				
+			$properties['cf_' . $cf_id] = array(
+				'label' => $cfield->name,
+				'type' => $cfield->type,
+				'value' => $values[$cf_id],
+			);
+		}
+		
+		$tpl->assign('properties', $properties);
 		
 		// Tabs
 		
@@ -115,6 +133,10 @@ class ChDisplayPage extends CerberusPageExtension {
 		
 		$tpl->assign('ticket', $ticket);
 
+		// Macros
+		$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.ticket');
+		$tpl->assign('macros', $macros);
+		
 		// TicketToolbarItem Extensions
 		$ticketToolbarItems = DevblocksPlatform::getExtensions('cerberusweb.ticket.toolbaritem', true);
 		if(!empty($ticketToolbarItems))
@@ -532,6 +554,7 @@ class ChDisplayPage extends CerberusPageExtension {
 	    @$ticket_mask = DevblocksPlatform::importGPC($_REQUEST['ticket_mask'],'string');
 	    @$draft_id = DevblocksPlatform::importGPC($_REQUEST['draft_id'],'integer');
 	    @$is_forward = DevblocksPlatform::importGPC($_REQUEST['is_forward'],'integer',0);
+		@$reply_mode = DevblocksPlatform::importGPC($_REQUEST['reply_mode'],'string','');
 	    
 	    $worker = CerberusApplication::getActiveWorker();
 	    
@@ -554,6 +577,9 @@ class ChDisplayPage extends CerberusPageExtension {
 		    'forward_files' => DevblocksPlatform::importGPC(@$_REQUEST['forward_files'],'array',array()),
 		);
 		
+		if('save' == $reply_mode)
+			$properties['dont_send'] = true;
+
 		if(CerberusMail::sendTicketMessage($properties)) {
 			if(!empty($draft_id))
 				DAO_MailQueue::delete($draft_id);
@@ -627,7 +653,7 @@ class ChDisplayPage extends CerberusPageExtension {
 			DAO_MailQueue::BODY => $content,
 			DAO_MailQueue::PARAMS_JSON => json_encode($params),
 			DAO_MailQueue::IS_QUEUED => 0,
-			DAO_MailQueue::QUEUE_PRIORITY => 0,
+			DAO_MailQueue::QUEUE_DELIVERY_DATE => time(),
 		);
 		
 		// Make sure the current worker is the draft author
@@ -754,7 +780,11 @@ class ChDisplayPage extends CerberusPageExtension {
 		// Thread drafts into conversation
 		if(!empty($drafts)) {
 			foreach($drafts as $draft_id => $draft) { /* @var $draft Model_MailQueue */
-				$key = $draft->updated . '_d' . $draft_id;
+				if(!empty($draft->queue_delivery_date)) {
+					$key = $draft->queue_delivery_date . '_d' . $draft_id;
+				} else {
+					$key = $draft->updated . '_d' . $draft_id;
+				}
 				$convo_timeline[$key] = array('d', $draft_id);
 			}
 		}

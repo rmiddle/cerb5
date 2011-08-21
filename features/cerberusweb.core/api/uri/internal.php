@@ -7,46 +7,14 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
 | ______________________________________________________________________
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- *
- * Sure, it would be so easy to just cheat and edit this file to use the
- * software without paying for it.  But we trust you anyway.  In fact, we're
- * writing this software for you!
- *
- * Quality software backed by a dedicated team takes money to develop.  We
- * don't want to be out of the office bagging groceries when you call up
- * needing a helping hand.  We'd rather spend our free time coding your
- * feature requests than mowing the neighbors' lawns for rent money.
- *
- * We've never believed in hiding our source code out of paranoia over not
- * getting paid.  We want you to have the full source code and be able to
- * make the tweaks your organization requires to get more done -- despite
- * having less of everything than you might need (time, people, money,
- * energy).  We shouldn't be your bottleneck.
- *
- * We've been building our expertise with this project since January 2002.  We
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to
- * let us take over your shared e-mail headache is a worthwhile investment.
- * It will give you a sense of control over your inbox that you probably
- * haven't had since spammers found you in a game of 'E-mail Battleship'.
- * Miss. Miss. You sunk my inbox!
- *
- * A legitimate license entitles you to support from the developers,
- * and the warm fuzzy feeling of feeding a couple of obsessed developers
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani.
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
+
 class ChInternalController extends DevblocksControllerExtension {
 	const ID = 'core.controller.internal';
 
@@ -542,9 +510,15 @@ class ChInternalController extends DevblocksControllerExtension {
 		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
 		$active_worker = CerberusApplication::getActiveWorker();
 
-		// [TODO] Make sure the worker is allowed to view this context+ID
-
 		if(null != ($snippet = DAO_Snippet::get($id))) {
+			// Make sure the worker is allowed to view this context+ID
+			if(!empty($snippet->context)) {
+				if(null == ($context = Extension_DevblocksContext::get($snippet->context))) /* @var $context Extension_DevblocksContext */
+					exit;
+				if(!$context->authorize($context_id, $active_worker))
+					exit;
+			}
+			
 			switch($snippet->context) {
 				case 'cerberusweb.contexts.ticket':
 					CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, $context_id, $token_labels, $token_values);
@@ -567,7 +541,7 @@ class ChInternalController extends DevblocksControllerExtension {
 		}
 
 		if(!empty($output))
-			echo rtrim($output,"\r\n"),"\n\n";
+			echo rtrim($output,"\r\n"),"\n";
 	}
 
 	function snippetTestAction() {
@@ -905,6 +879,7 @@ class ChInternalController extends DevblocksControllerExtension {
 		$list_view->num_rows = $view->renderLimit;
 		$list_view->columns = $view->view_columns;
 		$list_view->params = $view->getEditableParams();
+		$list_view->params_required = $view->getParamsRequired();
 		$list_view->sort_by = $view->renderSortBy;
 		$list_view->sort_asc = $view->renderSortAsc;
 
@@ -1437,6 +1412,171 @@ class ChInternalController extends DevblocksControllerExtension {
 	 * Triggers
 	 */
 
+	function applyMacroAction() {
+		@$macro_id = DevblocksPlatform::importGPC($_REQUEST['macro'],'integer',0);
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
+		@$run_date = DevblocksPlatform::importGPC($_REQUEST['run_date'],'string','');
+		@$return_url = DevblocksPlatform::importGPC($_REQUEST['return_url'],'string','');
+
+		$active_worker = CerberusApplication::getActiveWorker();
+
+		if(empty($return_url) && isset($_SERVER['http_referer']))
+			$return_url = $_SERVER['http_referer'];
+		
+		try {
+			if(empty($context) || empty($context_id) || empty($macro_id))
+				return;
+	
+			// Load context
+			if(null == ($context_ext = DevblocksPlatform::getExtension($context, true)))
+				throw new Exception("Invalid context.");
+	
+			// ACL: Ensure access to the context object
+			if(!$context_ext->authorize($context_id, $active_worker))
+				throw new Exception("Access denied to context.");
+			
+			// Load macro
+			if(null == ($macro = DAO_TriggerEvent::get($macro_id))) /* @var $macro Model_TriggerEvent */
+				throw new Exception("Invalid macro.");
+			
+			// ACL: Ensure the worker owns the macro
+			if(false == ($macro->owner_context == CerberusContexts::CONTEXT_WORKER && $macro->owner_context_id == $active_worker->id))
+				throw new Exception("Access denied to macro.");
+				
+			// Load event manifest
+			if(null == ($ext = DevblocksPlatform::getExtension($macro->event_point, false))) /* @var $ext DevblocksExtensionManifest */
+				throw new Exception("Invalid event.");
+
+			$run_timestamp = @strtotime($run_date) or time();
+
+			if($run_timestamp > time()) {
+				DAO_ContextScheduledBehavior::create(array(
+					DAO_ContextScheduledBehavior::BEHAVIOR_ID => $macro->id,
+					DAO_ContextScheduledBehavior::CONTEXT => $context,
+					DAO_ContextScheduledBehavior::CONTEXT_ID => $context_id,
+					DAO_ContextScheduledBehavior::RUN_DATE => $run_timestamp,
+				));
+				
+			} else {
+				// Execute now
+				call_user_func(array($ext->class, 'trigger'), $macro->id, $context_id);
+				
+			}
+			
+			
+		} catch (Exception $e) {
+			// System log error?
+		}
+		
+		// Redirect
+		DevblocksPlatform::redirectURL($return_url);
+		exit;
+	}
+	
+	function renderContextScheduledBehaviorAction() {
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		$tpl->assign('context', $context);
+		$tpl->assign('context_id', $context_id);
+		$tpl->assign('expanded', true);
+		
+		$tpl->display('devblocks:cerberusweb.core::internal/macros/behavior/scheduled_behavior_profile.tpl');
+	}
+	
+	function showMacroSchedulerPopupAction() {
+		@$job_id = DevblocksPlatform::importGPC($_REQUEST['job_id'],'integer',0);
+		@$macro_id = DevblocksPlatform::importGPC($_REQUEST['macro'],'integer',0);
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
+		@$return_url = DevblocksPlatform::importGPC($_REQUEST['return_url'],'string','');
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$active_worker = CerberusApplication::getActiveWorker();
+		
+		if(empty($job_id)) {
+			$tpl->assign('context', $context);
+			$tpl->assign('context_id', $context_id);
+			$tpl->assign('return_url', $return_url);
+			
+			try {
+				if(null == ($macro = DAO_TriggerEvent::get($macro_id)))
+					throw new Exception("Missing macro.");
+				
+				$tpl->assign('macro', $macro);
+				
+				// Verify permission
+				
+				if(null == ($ctx = DevblocksPlatform::getExtension($context, true))) /* @var $ctx Extension_DevblocksContext */
+					throw new Exception("Permission denied.");
+				
+				// Verify permission
+				if(!$ctx->authorize($context_id, $active_worker))
+					throw new Exception("Permission denied.");
+				
+				$tpl->assign('ctx', $ctx);
+				
+			} catch(Exception $e) {
+				DevblocksPlatform::redirectURL($return_url);
+				exit;
+			}
+			
+		} else { // Update
+			$job = DAO_ContextScheduledBehavior::get($job_id);
+			$tpl->assign('job', $job);
+
+			// Verify permission
+			
+			if(null == ($ctx = DevblocksPlatform::getExtension($job->context, true))) /* @var $ctx Extension_DevblocksContext */
+				return;
+			
+			// Verify permission
+			$editable = $ctx->authorize($job->context_id, $active_worker);
+			$tpl->assign('editable', $editable);
+			
+			$macro = DAO_TriggerEvent::get($job->behavior_id);
+			$tpl->assign('macro', $macro);
+			
+		}
+		
+		$tpl->display('devblocks:cerberusweb.core::internal/macros/display/scheduler_popup.tpl');
+	}
+	
+	function saveMacroSchedulerPopupAction() {
+		@$job_id = DevblocksPlatform::importGPC($_REQUEST['job_id'],'integer',0);
+		@$run_date = DevblocksPlatform::importGPC($_REQUEST['run_date'],'string','');
+		@$do_delete = DevblocksPlatform::importGPC($_REQUEST['do_delete'],'integer',0);
+		
+		$active_worker = CerberusApplication::getActiveWorker();
+		
+		if(null == ($job = DAO_ContextScheduledBehavior::get($job_id)))
+			return;
+		
+		if(null == ($ctx = DevblocksPlatform::getExtension($job->context, true))) /* @var $ctx Extension_DevblocksContext */
+			return;
+		
+		// Verify permission
+		if(!$ctx->authorize($job->context_id, $active_worker))
+			return;
+		
+		if($do_delete) {
+			DAO_ContextScheduledBehavior::delete($job->id);
+			
+		} else {
+			$run_timestamp = @strtotime($run_date) or time();
+			
+			DAO_ContextScheduledBehavior::update($job->id, array(
+				DAO_ContextScheduledBehavior::RUN_DATE => $run_timestamp, 
+			));
+			
+		}
+		
+		exit;
+	}
+	
 	function showAttendantTabAction() {
 		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
 		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
@@ -1450,7 +1590,14 @@ class ChInternalController extends DevblocksControllerExtension {
 		if(empty($context) || empty($context_id))
 			return;
 			
-		// [TODO] Secure looking at other worker tabs (check superuser, worker_id)
+		/*
+		 * Secure looking at other worker tabs (check superuser, worker_id)
+		 */
+		if(null == ($ctx = Extension_DevblocksContext::get($context)))
+			return;
+		
+		if(!$ctx->authorize($context_id, $active_worker))
+			return;
 		
 		// Remember tab
 		if(!empty($point))
@@ -1464,47 +1611,42 @@ class ChInternalController extends DevblocksControllerExtension {
 		$tpl->assign('events', $events);
 		
 		// Triggers
-		$triggers = DAO_TriggerEvent::getByOwner($context, $context_id);
+		$triggers = DAO_TriggerEvent::getByOwner($context, $context_id, null, true);
 		$tpl->assign('triggers', $triggers);
 		
 		$tpl->display('devblocks:cerberusweb.core::internal/decisions/assistant/tab.tpl');
 	}
 
-	function createAssistantTriggerJsonAction() {
-		@$event_point = DevblocksPlatform::importGPC($_REQUEST['event_point'],'string', '');
-		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
-		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer',0);
+	function reparentNodeAction() {
+		@$child_id = DevblocksPlatform::importGPC($_REQUEST['child_id'],'integer', 0);
+		@$parent_id = DevblocksPlatform::importGPC($_REQUEST['parent_id'],'integer', 0);
 		
-		$active_worker = CerberusApplication::getActiveWorker();
-
-		// [TODO] Filter event points (sanitize)
+		if(null == ($child_node = DAO_DecisionNode::get($child_id)))
+			exit;
 		
-		header("Context-Type: text/json;");
+		$nodes = DAO_DecisionNode::getByTriggerParent($child_node->trigger_id, $parent_id);
 		
-		try {
-			if(null == ($ext = DevblocksPlatform::getExtension($event_point, false)))
-				throw new Exception("Can't load behavior.");
-				
-			$fields = array(
-				DAO_TriggerEvent::TITLE => $ext->name,
-				DAO_TriggerEvent::IS_DISABLED => 0,
-				DAO_TriggerEvent::EVENT_POINT => $event_point,
-				DAO_TriggerEvent::OWNER_CONTEXT => $context,
-				DAO_TriggerEvent::OWNER_CONTEXT_ID => $context_id,
-			);
-			$id = DAO_TriggerEvent::create($fields);
-			
-			if(empty($id))
-				throw new Exception("Can't save new behavior.");
-			
-			echo json_encode(array('status'=>'success', 'id' => $id));
-			
-		} catch(Exception $e) {
-			echo json_encode(array('status'=>'error', 'message'=>$e->getMessage()));
+		// Remove current node if exists
+		unset($nodes[$child_node->id]);
+		
+		$pos = 0;
+		
+		// Insert child at top of parent
+		DAO_DecisionNode::update($child_id, array(
+			DAO_DecisionNode::PARENT_ID => $parent_id,
+			DAO_DecisionNode::POS => $pos++,
+		));
+		
+		// Renumber children
+		foreach($nodes as $node_id => $node) {
+			DAO_DecisionNode::update($node_id, array(
+				DAO_DecisionNode::PARENT_ID => $parent_id,
+				DAO_DecisionNode::POS => $pos++,
+			));
 		}
 		
 		exit;
-	}	
+	}
 	
 	function showDecisionMovePopupAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer', 0);
@@ -1626,10 +1768,24 @@ class ChInternalController extends DevblocksControllerExtension {
 		} elseif(isset($_REQUEST['trigger_id'])) { // Add child node
 			@$trigger_id = DevblocksPlatform::importGPC($_REQUEST['trigger_id'],'integer', 0);
 			
-			if(null != ($trigger = DAO_TriggerEvent::get($trigger_id))) {
-				$tpl->assign('trigger_id', $trigger_id);
-				$type = 'trigger';
+			$tpl->assign('trigger_id', $trigger_id);
+			$type = 'trigger';
+			
+			if(empty($trigger_id)) {
+				@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer', 0);
+				
+				$trigger = null;
+				$tpl->assign('context', $context);
+				$tpl->assign('context_id', $context_id);
+				
+				$events = Extension_DevblocksEvent::getByContext($context, false);
+				$tpl->assign('events', $events);
+				
+			} else {
+				if(null != ($trigger = DAO_TriggerEvent::get($trigger_id))) {
+				}
 			}
+			
 		}
 
 		if(!isset($trigger) && !empty($trigger_id))
@@ -1638,6 +1794,7 @@ class ChInternalController extends DevblocksControllerExtension {
 				
 		$tpl->assign('trigger', $trigger);
 		
+		$event = null;
 		if(!empty($trigger))
 			if(null == ($event = DevblocksPlatform::getExtension($trigger->event_point, true)))
 				return;
@@ -1668,8 +1825,10 @@ class ChInternalController extends DevblocksControllerExtension {
 				break;
 				
 			case 'trigger':
-				$ext = DevblocksPlatform::getExtension($trigger->event_point, false);
-				$tpl->assign('ext', $ext);
+				if(!empty($trigger)) {
+					$ext = DevblocksPlatform::getExtension($trigger->event_point, false);
+					$tpl->assign('ext', $ext);
+				}
 				$tpl->display('devblocks:cerberusweb.core::internal/decisions/editors/trigger.tpl');
 				break;
 		}
@@ -1727,6 +1886,27 @@ class ChInternalController extends DevblocksControllerExtension {
 		$event->renderAction($action, $trigger, null, $seq);
 	}
 
+	function showDecisionEventBehaviorAction() {
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string', '');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer', 0);
+		@$event_point = DevblocksPlatform::importGPC($_REQUEST['event_point'],'string', '');
+
+		// [TODO] Verify context
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		$events = DevblocksPlatform::getExtensions(Extension_DevblocksEvent::POINT, false);
+		$tpl->assign('events', $events);
+
+		if(empty($event_point))
+			$event_point = null;
+		
+		$triggers = DAO_TriggerEvent::getByOwner($context, $context_id, $event_point, true);
+		$tpl->assign('triggers', $triggers);
+		
+		$tpl->display('devblocks:cerberusweb.core::internal/decisions/assistant/behavior.tpl');
+	}
+	
 	function showDecisionTreeAction() {
 		@$trigger_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer', 0);
 		
@@ -1778,19 +1958,48 @@ class ChInternalController extends DevblocksControllerExtension {
 			@$trigger_id = DevblocksPlatform::importGPC($_REQUEST['trigger_id'],'integer', 0);
 			@$title = DevblocksPlatform::importGPC($_REQUEST['title'],'string', '');
 			@$is_disabled = DevblocksPlatform::importGPC($_REQUEST['is_disabled'],'integer', 0);
+			@$json = DevblocksPlatform::importGPC($_REQUEST['json'],'integer', 0);
 
-			if(null != ($trigger = DAO_TriggerEvent::get($trigger_id))) {
+			// Create trigger
+			if(empty($trigger_id)) {
+				@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string', '');
+				@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer', 0);
+				@$event_point = DevblocksPlatform::importGPC($_REQUEST['event_point'],'string', '');
+				
 				$type = 'trigger';
 				
-				if(empty($title)) {
-					if(null != ($ext = DevblocksPlatform::getExtension($trigger->event_point, false)))
-						$title = $ext->name;
-				}
-				
-				DAO_TriggerEvent::update($trigger->id, array(
+				$trigger_id = DAO_TriggerEvent::create(array(
+					DAO_TriggerEvent::OWNER_CONTEXT => $context,
+					DAO_TriggerEvent::OWNER_CONTEXT_ID => $context_id,
+					DAO_TriggerEvent::EVENT_POINT => $event_point,
 					DAO_TriggerEvent::TITLE => $title,
 					DAO_TriggerEvent::IS_DISABLED => !empty($is_disabled) ? 1 : 0,
 				));
+				
+				if($json) {
+					header("Content-Type: text/json;");
+					echo json_encode(array(
+						'trigger_id' => $trigger_id,
+						'event_point' => $event_point,
+					));
+					exit;
+				}
+				
+			// Update trigger
+			} else {
+				if(null != ($trigger = DAO_TriggerEvent::get($trigger_id))) {
+					$type = 'trigger';
+
+					if(empty($title)) {
+						if(null != ($ext = DevblocksPlatform::getExtension($trigger->event_point, false)))
+							$title = $ext->name;
+					}
+					
+					DAO_TriggerEvent::update($trigger->id, array(
+						DAO_TriggerEvent::TITLE => $title,
+						DAO_TriggerEvent::IS_DISABLED => !empty($is_disabled) ? 1 : 0,
+					));
+				}
 			}
 			
 		}

@@ -7,46 +7,13 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
 | ______________________________________________________________________
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- * 
- * Sure, it would be so easy to just cheat and edit this file to use the 
- * software without paying for it.  But we trust you anyway.  In fact, we're 
- * writing this software for you! 
- * 
- * Quality software backed by a dedicated team takes money to develop.  We 
- * don't want to be out of the office bagging groceries when you call up 
- * needing a helping hand.  We'd rather spend our free time coding your 
- * feature requests than mowing the neighbors' lawns for rent money. 
- * 
- * We've never believed in hiding our source code out of paranoia over not 
- * getting paid.  We want you to have the full source code and be able to 
- * make the tweaks your organization requires to get more done -- despite 
- * having less of everything than you might need (time, people, money, 
- * energy).  We shouldn't be your bottleneck.
- * 
- * We've been building our expertise with this project since January 2002.  We 
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
- * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your inbox that you probably 
- * haven't had since spammers found you in a game of 'E-mail Battleship'. 
- * Miss. Miss. You sunk my inbox!
- * 
- * A legitimate license entitles you to support from the developers,  
- * and the warm fuzzy feeling of feeding a couple of obsessed developers 
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
 
 abstract class Extension_CrmOpportunityToolbarItem extends DevblocksExtension {
 	function render(Model_CrmOpportunity $opp) { }
@@ -146,6 +113,7 @@ class CrmPage extends CerberusPageExtension {
 
 		$visit = CerberusApplication::getVisit();
 		$translate = DevblocksPlatform::getTranslationService();
+		$active_worker = CerberusApplication::getActiveWorker();
 		
 		$response = DevblocksPlatform::getHttpResponse();
 		$stack = $response->path;
@@ -161,19 +129,90 @@ class CrmPage extends CerberusPageExtension {
 				if(null == ($opp = DAO_CrmOpportunity::get($opp_id))) {
 					break;
 				}
-				$tpl->assign('opp', $opp);						
+				$tpl->assign('opp', $opp);	/* @var $opp Model_CrmOpportunity */					
 
 				// Remember the last tab/URL
 				if(null == (@$selected_tab = $stack[0])) {
 					$selected_tab = $visit->get(Extension_CrmOpportunityTab::POINT, '');
 				}
 				$tpl->assign('selected_tab', $selected_tab);
+
+				// Custom fields
 				
-				$address = DAO_Address::get($opp->primary_email_id);
-				$tpl->assign('address', $address);
+				$custom_fields = DAO_CustomField::getAll();
+				$tpl->assign('custom_fields', $custom_fields);
+				
+				// Properties
+				
+				$properties = array();
+				
+				$properties['status'] = array(
+					'label' => ucfirst($translate->_('common.status')),
+					'type' => null,
+					'is_closed' => $opp->is_closed,
+					'is_won' => $opp->is_won,
+				);
+				
+				if(!empty($opp->primary_email_id)) {
+					if(null != ($address = DAO_Address::get($opp->primary_email_id))) {
+						$properties['lead'] = array(
+							'label' => ucfirst($translate->_('common.email')),
+							'type' => null,
+							'address' => $address,
+						);
+					}
+				}
+				
+				if(!empty($opp->is_closed))
+					if(!empty($opp->closed_date))
+						$properties['closed_date'] = array(
+							'label' => ucfirst($translate->_('crm.opportunity.closed_date')),
+							'type' => Model_CustomField::TYPE_DATE,
+							'value' => $opp->closed_date,
+						);
+					
+				if(!empty($opp->amount))
+					$properties['amount'] = array(
+						'label' => ucfirst($translate->_('crm.opportunity.amount')),
+						'type' => Model_CustomField::TYPE_NUMBER,
+						'value' => $opp->amount,
+					);
+					
+				$properties['created_date'] = array(
+					'label' => ucfirst($translate->_('common.created')),
+					'type' => Model_CustomField::TYPE_DATE,
+					'value' => $opp->created_date,
+				);
+				
+				$properties['updated_date'] = array(
+					'label' => ucfirst($translate->_('common.updated')),
+					'type' => Model_CustomField::TYPE_DATE,
+					'value' => $opp->updated_date,
+				);
+				
+				@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_OPPORTUNITY, $opp->id)) or array();
+		
+				foreach($custom_fields as $cf_id => $cfield) {
+					if(!isset($values[$cf_id]))
+						continue;
+						
+					$properties['cf_' . $cf_id] = array(
+						'label' => $cfield->name,
+						'type' => $cfield->type,
+						'value' => $values[$cf_id],
+					);
+				}
+				
+				$tpl->assign('properties', $properties);
+
+				// Workers
 				
 				$workers = DAO_Worker::getAll();
 				$tpl->assign('workers', $workers);
+				
+				// Macros
+				$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.crm.opportunity');
+				$tpl->assign('macros', $macros);
 				
 				$tpl->display('devblocks:cerberusweb.crm::crm/opps/display/index.tpl');
 				break;
@@ -361,110 +400,12 @@ class CrmPage extends CerberusPageExtension {
 		exit;
 	}
 	
-	function showOppMailTabAction() {
-		@$opp_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer');
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-		
-		$visit = CerberusApplication::getVisit();
-		$translate = DevblocksPlatform::getTranslationService();
-		
-		// Remember the selected tab
-		$visit->set(Extension_CrmOpportunityTab::POINT, 'mail');
-		
-		// Opp
-		$opp = DAO_CrmOpportunity::get($opp_id);
-		$tpl->assign('opp', $opp);
-
-		// Recall the history scope
-		$scope = $visit->get('crm.opps.history.scope', '');
-
-		// Addy
-		$address = DAO_Address::get($opp->primary_email_id);
-		$tpl->assign('address', $address);
-
-		// Addy->Org
-		if(!empty($address->contact_org_id)) {
-			if(null != ($contact_org = DAO_ContactOrg::get($address->contact_org_id)))
-				$tpl->assign('contact_org', $contact_org);
-		}
-		
-		// View
-		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'View_Ticket';
-		$defaults->id = 'opp_tickets';
-		$defaults->name = '';
-		$defaults->renderPage = 0;
-		$defaults->view_columns = array(
-			SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
-			SearchFields_Ticket::TICKET_UPDATED_DATE,
-			SearchFields_Ticket::TICKET_TEAM_ID,
-			SearchFields_Ticket::TICKET_CATEGORY_ID,
-		);
-		
-		$view = C4_AbstractViewLoader::getView('opp_tickets', $defaults);
-
-		// Sanitize scope options
-		if('org'==$scope && empty($contact_org))
-			$scope = '';
-		if('domain'==$scope) {
-			$email_parts = explode('@', $address->email);
-			if(!is_array($email_parts) || 2 != count($email_parts))
-				$scope = '';
-		}
-
-		switch($scope) {
-			case 'org':
-				$view->addParams(array(
-					SearchFields_Ticket::TICKET_FIRST_CONTACT_ORG_ID => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_FIRST_CONTACT_ORG_ID,'=',$address->contact_org_id),
-					SearchFields_Ticket::TICKET_DELETED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_DELETED,'=',0),
-				), true);
-				$view->name = ucwords($translate->_('contact_org.name')) . ": " . $contact_org->name;
-				break;
-				
-			case 'domain':
-				$view->addParams(array(
-					SearchFields_Ticket::REQUESTER_ADDRESS => new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ADDRESS,'like','*@'.$email_parts[1]),
-					SearchFields_Ticket::TICKET_DELETED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_DELETED,'=',0),
-				), true);
-				$view->name = ucwords($translate->_('common.email')) . ": *@" . $email_parts[1];
-				break;
-				
-			default:
-			case 'email':
-				$scope = 'email';
-				$view->addParams(array(
-					SearchFields_Ticket::REQUESTER_ID => new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ID,'in',array($opp->primary_email_id)),
-					SearchFields_Ticket::TICKET_DELETED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_DELETED,'=',0),
-				), true);
-				$view->name = ucwords($translate->_('common.email')) . ": " . $address->email;
-				break;
-		}
-		
-		$tpl->assign('scope', $scope);
-		
-		$tpl->assign('view', $view);
-		
-		C4_AbstractViewLoader::setView($view->id, $view);
-		
-		$tpl->display('devblocks:cerberusweb.crm::crm/opps/display/tabs/mail.tpl');
-	}
-	
-	function doOppHistoryScopeAction() {
-		@$opp_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer');
-		@$scope = DevblocksPlatform::importGPC($_REQUEST['scope'],'string','');
-		
-		$visit = CerberusApplication::getVisit();
-
-		$visit->set('crm.opps.history.scope', $scope);
-		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('crm','opps',$opp_id,'mail')));
-	}
-	
 	function showOppBulkPanelAction() {
 		@$ids = DevblocksPlatform::importGPC($_REQUEST['ids']);
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
+		$active_worker = CerberusApplication::getActiveWorker();
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('path', dirname(__FILE__) . '/templates/');
 		$tpl->assign('view_id', $view_id);
@@ -485,6 +426,10 @@ class CrmPage extends CerberusPageExtension {
 		// Groups
 		$groups = DAO_Group::getAll();
 		$tpl->assign('groups', $groups);
+		
+		// Macros
+		$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.crm.opportunity');
+		$tpl->assign('macros', $macros);
 		
 		// Broadcast
 		CerberusContexts::getContext(CerberusContexts::CONTEXT_OPPORTUNITY, null, $token_labels, $token_values);
@@ -509,6 +454,10 @@ class CrmPage extends CerberusPageExtension {
 		@$closed_date = trim(DevblocksPlatform::importGPC($_POST['closed_date'],'string',''));
 		@$worker_id = trim(DevblocksPlatform::importGPC($_POST['worker_id'],'string',''));
 
+		// Scheduled behavior
+		@$behavior_id = DevblocksPlatform::importGPC($_POST['behavior_id'],'string','');
+		@$behavior_when = DevblocksPlatform::importGPC($_POST['behavior_when'],'string','');
+		
 		$do = array();
 		
 		// Do: Status
@@ -520,7 +469,15 @@ class CrmPage extends CerberusPageExtension {
 		// Do: Worker
 		if(0 != strlen($worker_id))
 			$do['worker_id'] = $worker_id;
-			
+
+		// Do: Scheduled Behavior
+		if(0 != strlen($behavior_id)) {
+			$do['behavior'] = array(
+				'id' => $behavior_id,
+				'when' => $behavior_when,
+			);
+		}
+		
 		// Watchers
 		$watcher_params = array();
 		
@@ -674,6 +631,14 @@ class CrmPage extends CerberusPageExtension {
 		        if($query && false===strpos($query,'*'))
 		            $query = '*' . $query . '*';
             	$params[SearchFields_CrmOpportunity::ORG_NAME] = new DevblocksSearchCriteria(SearchFields_CrmOpportunity::ORG_NAME,DevblocksSearchCriteria::OPER_LIKE,$query);      
+                break;
+                
+            case "comments_all":
+            	$params[SearchFields_CrmOpportunity::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchCriteria(SearchFields_CrmOpportunity::FULLTEXT_COMMENT_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,array($query,'all'));               
+                break;
+                
+            case "comments_phrase":
+            	$params[SearchFields_CrmOpportunity::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchCriteria(SearchFields_CrmOpportunity::FULLTEXT_COMMENT_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,array($query,'phrase'));               
                 break;
         }
         
@@ -1097,6 +1062,3 @@ class CrmTicketOppTab extends Extension_TicketTab {
 	function saveTab() {
 	}
 };
-
-
-

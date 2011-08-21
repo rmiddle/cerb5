@@ -7,46 +7,14 @@
 |
 | This source code is released under the Cerberus Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
 | ______________________________________________________________________
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- * 
- * Sure, it would be so easy to just cheat and edit this file to use the 
- * software without paying for it.  But we trust you anyway.  In fact, we're 
- * writing this software for you! 
- * 
- * Quality software backed by a dedicated team takes money to develop.  We 
- * don't want to be out of the office bagging groceries when you call up 
- * needing a helping hand.  We'd rather spend our free time coding your 
- * feature requests than mowing the neighbors' lawns for rent money. 
- * 
- * We've never believed in hiding our source code out of paranoia over not 
- * getting paid.  We want you to have the full source code and be able to 
- * make the tweaks your organization requires to get more done -- despite 
- * having less of everything than you might need (time, people, money, 
- * energy).  We shouldn't be your bottleneck.
- * 
- * We've been building our expertise with this project since January 2002.  We 
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
- * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your inbox that you probably 
- * haven't had since spammers found you in a game of 'E-mail Battleship'. 
- * Miss. Miss. You sunk my inbox!
- * 
- * A legitimate license entitles you to support from the developers,  
- * and the warm fuzzy feeling of feeding a couple of obsessed developers 
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
+
 class DAO_Ticket extends C4_ORMHelper {
 	const ID = 'id';
 	const MASK = 'mask';
@@ -205,35 +173,23 @@ class DAO_Ticket extends C4_ORMHelper {
 		$db->Execute($sql);
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' requester records.');
 		
-		// Context Links
-		// [TODO] This can be shared from DAO_ContextLink::maintByContext();
-		$db->Execute(sprintf("DELETE QUICK context_link FROM context_link LEFT JOIN ticket ON context_link.from_context_id=ticket.id WHERE context_link.from_context = %s AND ticket.id IS NULL",
-			$db->qstr(CerberusContexts::CONTEXT_TICKET)
-		));
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' ticket context link sources.');
-		
-		$db->Execute(sprintf("DELETE QUICK context_link FROM context_link LEFT JOIN ticket ON context_link.to_context_id=ticket.id WHERE context_link.to_context = %s AND ticket.id IS NULL",
-			$db->qstr(CerberusContexts::CONTEXT_TICKET)
-		));
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' ticket context link targets.');
-		
-		
 		// Recover any tickets assigned to a NULL bucket
 		$sql = "UPDATE ticket LEFT JOIN category ON ticket.category_id = category.id SET ticket.category_id = 0 WHERE ticket.category_id > 0 AND category.id IS NULL";
 		$db->Execute($sql);
 		$logger->info('[Maint] Fixed ' . $db->Affected_Rows() . ' tickets in missing buckets.');
 		
-		// ===========================================================================
-		// Ophaned ticket custom fields
-		$db->Execute(sprintf("DELETE QUICK custom_field_stringvalue FROM custom_field_stringvalue LEFT JOIN ticket ON (ticket.id=custom_field_stringvalue.context_id) WHERE custom_field_stringvalue.context = %s AND ticket.id IS NULL",
-			$db->qstr(CerberusContexts::CONTEXT_TICKET)
-		));
-		$db->Execute(sprintf("DELETE QUICK custom_field_numbervalue FROM custom_field_numbervalue LEFT JOIN ticket ON (ticket.id=custom_field_numbervalue.context_id) WHERE custom_field_numbervalue.context = %s AND ticket.id IS NULL",
-			$db->qstr(CerberusContexts::CONTEXT_TICKET)
-		));
-		$db->Execute(sprintf("DELETE QUICK custom_field_clobvalue FROM custom_field_clobvalue LEFT JOIN ticket ON (ticket.id=custom_field_clobvalue.context_id) WHERE custom_field_clobvalue.context = %s AND ticket.id IS NULL",
-			$db->qstr(CerberusContexts::CONTEXT_TICKET)
-		));
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.maint',
+                array(
+                	'context' => CerberusContexts::CONTEXT_TICKET,
+                	'context_table' => 'ticket',
+                	'context_key' => 'id',
+                )
+            )
+	    );
 	}
 	
 	static function merge($ids=array()) {
@@ -329,7 +285,17 @@ class DAO_Ticket extends C4_ORMHelper {
 				implode(',', $merge_ticket_ids)
 			));
 			
+			// Notifications
+			
+			$sql = sprintf("UPDATE notification SET context_id = %d WHERE context = %s AND context_id IN (%s)",
+				$oldest_id,
+				$db->qstr(CerberusContexts::CONTEXT_TICKET),
+				implode(',', $merge_ticket_ids)
+			);
+			$db->Execute($sql);
+			
 			// Comments
+			
 			$sql = sprintf("UPDATE comment SET context_id = %d WHERE context = %s AND context_id IN (%s)",
 				$oldest_id,
 				$db->qstr(CerberusContexts::CONTEXT_TICKET),
@@ -598,6 +564,11 @@ class DAO_Ticket extends C4_ORMHelper {
     		 */
     		if(isset($changes[DAO_Ticket::OWNER_ID])) {
 	    		@$owner_id = $changes[DAO_Ticket::OWNER_ID];
+	    		
+	    		/*
+	    		* Mail assigned in group
+	    		*/
+	    		Event_MailAssignedInGroup::trigger($object_id, $model[DAO_Ticket::TEAM_ID]);
 	    		
 				/*
 				 * Log activity (ticket.unassigned)
@@ -1103,6 +1074,8 @@ class DAO_Ticket extends C4_ORMHelper {
 			((isset($tables['r']) || isset($tables['ra'])) ? "INNER JOIN requester r ON (r.ticket_id=t.id) " : " ").
 			(isset($tables['ra']) ? "INNER JOIN address ra ON (ra.id=r.address_id) " : " ").
 			(isset($tables['msg']) || isset($tables['ftmc']) ? "INNER JOIN message msg ON (msg.ticket_id=t.id) " : " ").
+			(isset($tables['ftcc']) ? "INNER JOIN comment ON (comment.context = 'cerberusweb.contexts.ticket' AND comment.context_id = t.id) " : " ").
+			(isset($tables['ftcc']) ? "INNER JOIN fulltext_comment_content ftcc ON (ftcc.id=comment.id) " : " ").
 			(isset($tables['ftmc']) ? "INNER JOIN fulltext_message_content ftmc ON (ftmc.id=msg.id) " : " ").
 			(isset($tables['mh']) ? "INNER JOIN message_header mh ON (mh.message_id=t.first_message_id) " : " "). // [TODO] Choose between first message and all?
 			(isset($tables['context_link']) ? "INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.ticket' AND context_link.to_context_id = t.id) " : " ")
@@ -1306,6 +1279,9 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 	// Sender Org
 	const ORG_NAME = 'o_name';
 
+	// Comment Content
+	const FULLTEXT_COMMENT_CONTENT = 'ftcc_content';
+
 	// Message Content
 	const FULLTEXT_MESSAGE_CONTENT = 'ftmc_content';
 	
@@ -1376,6 +1352,9 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 		);
 
 		$tables = DevblocksPlatform::getDatabaseTables();
+		if(isset($tables['fulltext_comment_content'])) {
+			$columns[self::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchField(self::FULLTEXT_COMMENT_CONTENT, 'ftcc', 'content', $translate->_('comment.filters.content'));
+		}
 		if(isset($tables['fulltext_message_content'])) {
 			$columns[self::FULLTEXT_MESSAGE_CONTENT] = new DevblocksSearchField(self::FULLTEXT_MESSAGE_CONTENT, 'ftmc', 'content', $translate->_('message.content'));
 		}
@@ -1461,14 +1440,16 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 			SearchFields_Ticket::TICKET_OWNER_ID,
 		);
 		$this->addColumnsHidden(array(
+			SearchFields_Ticket::CONTEXT_LINK,
+			SearchFields_Ticket::CONTEXT_LINK_ID,
+			SearchFields_Ticket::FULLTEXT_COMMENT_CONTENT,
+			SearchFields_Ticket::FULLTEXT_MESSAGE_CONTENT,
 			SearchFields_Ticket::REQUESTER_ID,
 			SearchFields_Ticket::REQUESTER_ADDRESS,
 			SearchFields_Ticket::TICKET_CLOSED,
 			SearchFields_Ticket::TICKET_DELETED,
 			SearchFields_Ticket::TICKET_WAITING,
 			SearchFields_Ticket::TICKET_INTERESTING_WORDS,
-			SearchFields_Ticket::CONTEXT_LINK,
-			SearchFields_Ticket::CONTEXT_LINK_ID,
 			SearchFields_Ticket::VIRTUAL_ASSIGNABLE,
 			SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER,
 			SearchFields_Ticket::VIRTUAL_STATUS,
@@ -1951,6 +1932,7 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_worker.tpl');
 				break;
 				
+			case SearchFields_Ticket::FULLTEXT_COMMENT_CONTENT:
 			case SearchFields_Ticket::FULLTEXT_MESSAGE_CONTENT:
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__fulltext.tpl');
 				break;
@@ -2212,6 +2194,7 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 
 				break;
 				
+			case SearchFields_Ticket::FULLTEXT_COMMENT_CONTENT:
 			case SearchFields_Ticket::FULLTEXT_MESSAGE_CONTENT:
 				@$scope = DevblocksPlatform::importGPC($_REQUEST['scope'],'string','expert');
 				$criteria = new DevblocksSearchCriteria($field,DevblocksSearchCriteria::OPER_FULLTEXT,array($value,$scope));
@@ -2398,6 +2381,22 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 					} else {
 						foreach($batch_ids as $batch_id)
 							CerberusBayes::markTicketAsNotSpam($batch_id);
+					}
+				}
+				
+				// Scheduled behavior
+				if(isset($do['behavior']) && is_array($do['behavior'])) {
+					$behavior_id = $do['behavior']['id'];
+					@$behavior_when = strtotime($do['behavior']['when']) or time();
+					
+					if(!empty($batch_ids) && !empty($behavior_id))
+					foreach($batch_ids as $batch_id) {
+						DAO_ContextScheduledBehavior::create(array(
+							DAO_ContextScheduledBehavior::BEHAVIOR_ID => $behavior_id,
+							DAO_ContextScheduledBehavior::CONTEXT => CerberusContexts::CONTEXT_TICKET,
+							DAO_ContextScheduledBehavior::CONTEXT_ID => $batch_id,
+							DAO_ContextScheduledBehavior::RUN_DATE => $behavior_when,
+						));
 					}
 				}
 				
@@ -2743,15 +2742,27 @@ class Context_Ticket extends Extension_DevblocksContext {
 		$merge_token_labels = array();
 		$merge_token_values = array();
 		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $owner_id, $merge_token_labels, $merge_token_values, '', true);
+
+			// Clear dupe content
+			CerberusContexts::scrubTokensWithRegexp(
+				$merge_token_labels,
+				$merge_token_values,
+				array(
+					"#^address_first_name$#",
+					"#^address_full_name$#",
+					"#^address_last_name$#",
+					"#^address_org_#",
+				)
+			);
 		
-		CerberusContexts::merge(
-			'owner_',
-			'Owner:',
-			$merge_token_labels,
-			$merge_token_values,
-			$token_labels,
-			$token_values
-		);
+			CerberusContexts::merge(
+				'owner_',
+				'Ticket:Owner:',
+				$merge_token_labels,
+				$merge_token_values,
+				$token_labels,
+				$token_values
+			);
 		
 		// Plugin-provided tokens
 		$token_extension_mfts = DevblocksPlatform::getExtensions('cerberusweb.template.token', false);

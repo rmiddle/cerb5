@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class DAO_CallEntry extends C4_ORMHelper {
 	const ID = 'id';
 	const SUBJECT = 'subject';
@@ -82,19 +98,18 @@ class DAO_CallEntry extends C4_ORMHelper {
 	}
 
 	static function maint() {
-		$db = DevblocksPlatform::getDatabaseService();
-		$logger = DevblocksPlatform::getConsoleLog();
-
-		// Context Links
-		$db->Execute(sprintf("DELETE QUICK context_link FROM context_link LEFT JOIN call_entry ON context_link.from_context_id=call_entry.id WHERE context_link.from_context = %s AND call_entry.id IS NULL",
-			$db->qstr(CerberusContexts::CONTEXT_OPPORTUNITY)
-		));
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' call_entry context link sources.');
-		
-		$db->Execute(sprintf("DELETE QUICK context_link FROM context_link LEFT JOIN call_entry ON context_link.to_context_id=call_entry.id WHERE context_link.to_context = %s AND call_entry.id IS NULL",
-			$db->qstr(CerberusContexts::CONTEXT_OPPORTUNITY)
-		));
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' call_entry context link targets.');
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.maint',
+                array(
+                	'context' => CerberusContexts::CONTEXT_CALL,
+                	'context_table' => 'call_entry',
+                	'context_key' => 'id',
+                )
+            )
+	    );
 	}
 	
 	static function delete($ids) {
@@ -103,15 +118,19 @@ class DAO_CallEntry extends C4_ORMHelper {
 		
 		$ids_list = implode(',', $ids);
 		
-		// Context links
-		// [TODO] These can be grouped under a shared Context convenience method for deletion (to ensure coverage)
-		DAO_ContextLink::delete(CerberusContexts::CONTEXT_CALL, $ids);
-		// Custom fields
-		DAO_CustomFieldValue::deleteByContextIds(CerberusContexts::CONTEXT_CALL, $ids);
-		// Comments
-		DAO_Comment::deleteByContext(CerberusContexts::CONTEXT_CALL, $ids);
-		
 		$db->Execute(sprintf("DELETE FROM call_entry WHERE id IN (%s)", $ids_list));
+		
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => CerberusContexts::CONTEXT_CALL,
+                	'context_ids' => $ids
+                )
+            )
+	    );
 		
 		return true;
 	}
@@ -146,7 +165,9 @@ class DAO_CallEntry extends C4_ORMHelper {
 			"FROM call_entry c ".
 
 		// [JAS]: Dynamic table joins
-			(isset($tables['context_link']) ? "INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.call' AND context_link.to_context_id = c.id) " : " ")
+			(isset($tables['context_link']) ? "INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.call' AND context_link.to_context_id = c.id) " : " ").
+			(isset($tables['ftcc']) ? "INNER JOIN comment ON (comment.context = 'cerberusweb.contexts.call' AND comment.context_id = c.id) " : " ").
+			(isset($tables['ftcc']) ? "INNER JOIN fulltext_comment_content ftcc ON (ftcc.id=comment.id) " : " ")
 			;
 		
 		// Custom field joins
@@ -266,9 +287,14 @@ class SearchFields_CallEntry {
 	const IS_OUTGOING = 'c_is_outgoing';
 	const IS_CLOSED = 'c_is_closed';
 	
+	// Context Links
 	const CONTEXT_LINK = 'cl_context_from';
 	const CONTEXT_LINK_ID = 'cl_context_from_id';
 	
+	// Comment Content
+	const FULLTEXT_COMMENT_CONTENT = 'ftcc_content';
+
+	// Virtuals
 	const VIRTUAL_WATCHERS = '*_workers';
 	
 	/**
@@ -291,6 +317,11 @@ class SearchFields_CallEntry {
 			
 			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers')),
 		);
+		
+		$tables = DevblocksPlatform::getDatabaseTables();
+		if(isset($tables['fulltext_comment_content'])) {
+			$columns[self::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchField(self::FULLTEXT_COMMENT_CONTENT, 'ftcc', 'content', $translate->_('comment.filters.content'));
+		}
 		
 		// Custom Fields
 		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_CALL);
@@ -328,6 +359,7 @@ class View_CallEntry extends C4_AbstractView implements IAbstractView_Subtotals 
 			SearchFields_CallEntry::ID,
 			SearchFields_CallEntry::CONTEXT_LINK,
 			SearchFields_CallEntry::CONTEXT_LINK_ID,
+			SearchFields_CallEntry::FULLTEXT_COMMENT_CONTENT,
 			SearchFields_CallEntry::VIRTUAL_WATCHERS,
 		));
 		
@@ -470,6 +502,9 @@ class View_CallEntry extends C4_AbstractView implements IAbstractView_Subtotals 
 			case SearchFields_CallEntry::IS_OUTGOING:
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__bool.tpl');
 				break;
+			case SearchFields_CallEntry::FULLTEXT_COMMENT_CONTENT:
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__fulltext.tpl');
+				break;
 			case SearchFields_CallEntry::VIRTUAL_WATCHERS:
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_worker.tpl');
 				break;
@@ -544,6 +579,10 @@ class View_CallEntry extends C4_AbstractView implements IAbstractView_Subtotals 
 				if(empty($to)) $to = 'today';
 
 				$criteria = new DevblocksSearchCriteria($field,$oper,array($from,$to));
+				break;
+			case SearchFields_CallEntry::FULLTEXT_COMMENT_CONTENT:
+				@$scope = DevblocksPlatform::importGPC($_REQUEST['scope'],'string','expert');
+				$criteria = new DevblocksSearchCriteria($field,DevblocksSearchCriteria::OPER_FULLTEXT,array($value,$scope));
 				break;
 			case SearchFields_CallEntry::VIRTUAL_WATCHERS:
 				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
@@ -621,6 +660,22 @@ class View_CallEntry extends C4_AbstractView implements IAbstractView_Subtotals 
 			// Custom Fields
 			self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_CALL, $custom_fields, $batch_ids);
 			
+			// Scheduled behavior
+			if(isset($do['behavior']) && is_array($do['behavior'])) {
+				$behavior_id = $do['behavior']['id'];
+				@$behavior_when = strtotime($do['behavior']['when']) or time();
+				
+				if(!empty($batch_ids) && !empty($behavior_id))
+				foreach($batch_ids as $batch_id) {
+					DAO_ContextScheduledBehavior::create(array(
+						DAO_ContextScheduledBehavior::BEHAVIOR_ID => $behavior_id,
+						DAO_ContextScheduledBehavior::CONTEXT => CerberusContexts::CONTEXT_CALL,
+						DAO_ContextScheduledBehavior::CONTEXT_ID => $batch_id,
+						DAO_ContextScheduledBehavior::RUN_DATE => $behavior_when,
+					));
+				}
+			}
+			
 			// Watchers
 			if(isset($do['watchers']) && is_array($do['watchers'])) {
 				$watcher_params = $do['watchers'];
@@ -644,10 +699,12 @@ class Context_Call extends Extension_DevblocksContext {
 		$call = DAO_CallEntry::get($context_id);
 		$url_writer = DevblocksPlatform::getUrlService();
 		
+		$friendly = DevblocksPlatform::strToPermalink($call->subject);
+		
 		return array(
 			'id' => $call->id,
 			'name' => $call->subject,
-			'permalink' => $url_writer->write('c=calls&id='.$context_id, true),
+			'permalink' => $url_writer->write(sprintf("c=calls&id=%d-%s",$context_id, $friendly), true),
 		);
 	}
 	
@@ -675,6 +732,7 @@ class Context_Call extends Extension_DevblocksContext {
 			'phone' => $prefix.$translate->_('call_entry.model.phone'),
 			'subject' => $prefix.$translate->_('message.header.subject'),
 			'updated|date' => $prefix.$translate->_('common.updated'),
+			'record_url' => $prefix.$translate->_('common.url.record'),
 		);
 		
 		if(is_array($fields))
@@ -694,6 +752,10 @@ class Context_Call extends Extension_DevblocksContext {
 			$token_values['phone'] = $call->phone;
 			$token_values['subject'] = $call->subject;
 			$token_values['updated'] = $call->updated_date;
+			
+			// URL
+			$url_writer = DevblocksPlatform::getUrlService();
+			$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=calls&id=%d-%s",$call->id, DevblocksPlatform::strToPermalink($call->subject)), true);
 
 			$token_values['custom'] = array();
 			

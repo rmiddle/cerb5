@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class CallsPage extends CerberusPageExtension {
 	function isVisible() {
 		// The current session must be a logged-in worker to use this page.
@@ -9,9 +25,9 @@ class CallsPage extends CerberusPageExtension {
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-
 		$visit = CerberusApplication::getVisit();
 		$translate = DevblocksPlatform::getTranslationService();
+		$active_worker = CerberusApplication::getActiveWorker();
 		
 		$response = DevblocksPlatform::getHttpResponse();
 		$stack = $response->path;
@@ -20,8 +36,9 @@ class CallsPage extends CerberusPageExtension {
 		
 		$module = array_shift($stack); // 123
 		
-		if(is_numeric($module)) {
-			@$id = intval($module);
+		@$id = intval($module);
+		
+		if(is_numeric($id)) {
 			if(null == ($call = DAO_CallEntry::get($id))) {
 				break; // [TODO] Not found
 			}
@@ -32,6 +49,67 @@ class CallsPage extends CerberusPageExtension {
 //			}
 //			$tpl->assign('tab_selected', $tab_selected);
 
+			// Custom fields
+			
+			$custom_fields = DAO_CustomField::getAll();
+			$tpl->assign('custom_fields', $custom_fields);
+			
+			// Properties
+			
+			$properties = array();
+			
+			$properties['is_closed'] = array(
+				'label' => ucfirst($translate->_('call_entry.model.is_closed')),
+				'type' => Model_CustomField::TYPE_CHECKBOX,
+				'value' => $call->is_closed,
+			);
+			
+			$properties['is_outgoing'] = array(
+				'label' => ucfirst($translate->_('call_entry.model.is_outgoing')),
+				'type' => Model_CustomField::TYPE_CHECKBOX,
+				'value' => $call->is_outgoing,
+			);
+			
+			$properties['phone'] = array(
+				'label' => ucfirst($translate->_('call_entry.model.phone')),
+				'type' => Model_CustomField::TYPE_SINGLE_LINE,
+				'value' => $call->phone,
+			);
+			
+			$properties['created'] = array(
+				'label' => ucfirst($translate->_('common.created')),
+				'type' => Model_CustomField::TYPE_DATE,
+				'value' => $call->created_date,
+			);
+			
+			$properties['updated'] = array(
+				'label' => ucfirst($translate->_('common.updated')),
+				'type' => Model_CustomField::TYPE_DATE,
+				'value' => $call->updated_date,
+			);
+			
+			@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_CALL, $call->id)) or array();
+	
+			foreach($custom_fields as $cf_id => $cfield) {
+				if(!isset($values[$cf_id]))
+					continue;
+					
+				$properties['cf_' . $cf_id] = array(
+					'label' => $cfield->name,
+					'type' => $cfield->type,
+					'value' => $values[$cf_id],
+				);
+			}
+			
+			$tpl->assign('properties', $properties);				
+			
+			// Macros
+			
+			$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.call');
+			$tpl->assign('macros', $macros);
+			
+			// Template
+			
 			$tpl->display('devblocks:cerberusweb.calls::calls/display/index.tpl');
 			
 		} else {
@@ -54,7 +132,7 @@ class CallsPage extends CerberusPageExtension {
 	    $path = $request->path;
 		$controller = array_shift($path); // calls
 
-	    @$action = DevblocksPlatform::strAlphaNumDash(array_shift($path)) . 'Action';
+	    @$action = DevblocksPlatform::strAlphaNum(array_shift($path), '\_') . 'Action';
 
 	    switch($action) {
 	        case NULL:
@@ -172,6 +250,8 @@ class CallsPage extends CerberusPageExtension {
 		@$ids = DevblocksPlatform::importGPC($_REQUEST['ids']);
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
+		$active_worker = CerberusApplication::getActiveWorker();
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('view_id', $view_id);
 
@@ -183,6 +263,10 @@ class CallsPage extends CerberusPageExtension {
 		// Custom Fields
 		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_CALL);
 		$tpl->assign('custom_fields', $custom_fields);
+		
+		// Macros
+		$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.call');
+		$tpl->assign('macros', $macros);
 		
 		$tpl->display('devblocks:cerberusweb.calls::calls/ajax/bulk.tpl');
 	}
@@ -199,12 +283,24 @@ class CallsPage extends CerberusPageExtension {
 		// Call fields
 		$is_closed = trim(DevblocksPlatform::importGPC($_POST['is_closed'],'string',''));
 
+		// Scheduled behavior
+		@$behavior_id = DevblocksPlatform::importGPC($_POST['behavior_id'],'string','');
+		@$behavior_when = DevblocksPlatform::importGPC($_POST['behavior_when'],'string','');
+		
 		$do = array();
 		
 		// Do: Due
 		if(0 != strlen($is_closed))
 			$do['is_closed'] = !empty($is_closed) ? 1 : 0;
 			
+		// Do: Scheduled Behavior
+		if(0 != strlen($behavior_id)) {
+			$do['behavior'] = array(
+				'id' => $behavior_id,
+				'when' => $behavior_when,
+			);
+		}
+		
 		// Watchers
 		$watcher_params = array();
 		
@@ -339,6 +435,20 @@ class CallsActivityTab extends Extension_ActivityTab {
 		
 		$tpl->display('devblocks:cerberusweb.calls::activity_tab/index.tpl');		
 	}
-}
+};
 endif;
 
+if (class_exists('DevblocksEventListenerExtension')):
+class CallsEventListener extends DevblocksEventListenerExtension {
+	/**
+	 * @param Model_DevblocksEvent $event
+	 */
+	function handleEvent(Model_DevblocksEvent $event) {
+		switch($event->id) {
+			case 'cron.maint':
+				DAO_CallEntry::maint();
+				break;
+		}
+	}
+};
+endif;

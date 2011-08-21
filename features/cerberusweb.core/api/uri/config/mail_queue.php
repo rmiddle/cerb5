@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class PageSection_SetupMailQueue extends Extension_PageSection {
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
@@ -15,7 +31,7 @@ class PageSection_SetupMailQueue extends Extension_PageSection {
 			SearchFields_MailQueue::UPDATED,
 			SearchFields_MailQueue::WORKER_ID,
 			SearchFields_MailQueue::QUEUE_FAILS,
-			SearchFields_MailQueue::QUEUE_PRIORITY,
+			SearchFields_MailQueue::QUEUE_DELIVERY_DATE,
 		);
 		
 		if(null != ($view = C4_AbstractViewLoader::getView($defaults->id, $defaults))) {

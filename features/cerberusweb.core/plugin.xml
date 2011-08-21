@@ -39,6 +39,7 @@
 		<patch version="5.4.0" revision="934" file="patches/5.x/5.4.0.php" />
 		<patch version="5.4.3" revision="935" file="patches/5.x/5.4.3.php" />
 		<patch version="5.4.4" revision="936" file="patches/5.x/5.4.4.php" />
+		<patch version="5.5.0" revision="944" file="patches/5.x/5.5.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -121,6 +122,7 @@
 		<file path="api/dao/comment.php">
 			<class name="DAO_Comment" />
 			<class name="Model_Comment" />
+			<class name="Search_CommentContent" />
 			<class name="SearchFields_Comment" />
 			<class name="View_Comment" />
 		</file>
@@ -170,6 +172,13 @@
 		
 		<file path="api/dao/context_merge_history.php">
 			<class name="DAO_ContextMergeHistory" />
+		</file>
+		
+		<file path="api/dao/context_scheduled_behavior.php">
+			<class name="DAO_ContextScheduledBehavior" />
+			<class name="Model_ContextScheduledBehavior" />
+			<class name="SearchFields_ContextScheduledBehavior" />
+			<class name="View_ContextScheduledBehavior" />
 		</file>
 		
 		<file path="api/dao/custom_field.php">
@@ -229,11 +238,6 @@
 		<file path="api/dao/pop3_account.php">
 			<class name="DAO_Pop3Account" />
 			<class name="Model_Pop3Account" />
-		</file>
-		
-		<file path="api/dao/preparse_rule.php">
-			<class name="DAO_PreParseRule" />
-			<class name="Model_PreParseRule" />
 		</file>
 		
 		<file path="api/dao/snippet.php">
@@ -310,23 +314,79 @@
 			<class name="View_Workspace" />
 		</file>
 		
-		<file path="api/events/mail_closed_in_group.php">
+		<file path="api/events/abstract/abstract_event_address.php">
+			<class name="AbstractEvent_Address" />
+		</file>
+		
+		<file path="api/events/abstract/abstract_event_message.php">
+			<class name="AbstractEvent_Message" />
+		</file>
+		
+		<file path="api/events/abstract/abstract_event_org.php">
+			<class name="AbstractEvent_Org" />
+		</file>
+		
+		<file path="api/events/abstract/abstract_event_task.php">
+			<class name="AbstractEvent_Task" />
+		</file>
+		
+		<file path="api/events/abstract/abstract_event_ticket.php">
+			<class name="AbstractEvent_Ticket" />
+		</file>
+		
+		<file path="api/events/app/mail_received_by_app.php">
+			<class name="Event_MailReceivedByApp" />
+		</file>
+		
+		<file path="api/events/group/mail_assigned_in_group.php">
+			<class name="Event_MailAssignedInGroup" />
+		</file>
+		
+		<file path="api/events/group/mail_closed_in_group.php">
 			<class name="Event_MailClosedInGroup" />
 		</file>
 		
-		<file path="api/events/mail_moved_to_group.php">
+		<file path="api/events/group/mail_moved_to_group.php">
 			<class name="Event_MailMovedToGroup" />
 		</file>
 		
-		<file path="api/events/mail_received_by_group.php">
+		<file path="api/events/group/mail_received_by_group.php">
 			<class name="Event_MailReceivedByGroup" />
 		</file>
 		
-		<file path="api/events/mail_received_by_watcher.php">
+		<file path="api/events/group/mail_after_sent_by_group.php">
+			<class name="Event_MailAfterSentByGroup" />
+		</file>
+		
+		<file path="api/events/group/mail_before_sent_by_group.php">
+			<class name="Event_MailBeforeSentByGroup" />
+		</file>
+
+		<file path="api/events/macro/address_macro.php">
+			<class name="Event_AddressMacro" />
+		</file>
+		
+		<file path="api/events/macro/message_macro.php">
+			<class name="Event_MessageMacro" />
+		</file>
+		
+		<file path="api/events/macro/org_macro.php">
+			<class name="Event_OrgMacro" />
+		</file>
+		
+		<file path="api/events/macro/task_macro.php">
+			<class name="Event_TaskMacro" />
+		</file>
+		
+		<file path="api/events/macro/ticket_macro.php">
+			<class name="Event_TicketMacro" />
+		</file>
+		
+		<file path="api/events/worker/mail_received_by_watcher.php">
 			<class name="Event_MailReceivedByWatcher" />
 		</file>
 		
-		<file path="api/events/notification_received_by_worker.php">
+		<file path="api/events/worker/notification_received_by_worker.php">
 			<class name="Event_NotificationReceivedByWorker" />
 		</file>
 		
@@ -411,6 +471,15 @@
 			<name>Comment Create</name>
 			<param key="comment_id" />
 			<param key="fields" />
+		</event>
+		<event id="context.delete">
+			<name>Context Delete</name>
+			<param key="context" />
+			<param key="context_ids" />
+		</event>
+		<event id="context.maint">
+			<name>Context Maint</name>
+			<param key="context" />
 		</event>
 		<event id="context_link.set">
 			<name>Context Link Set</name>
@@ -724,32 +793,32 @@
 		<!-- Event Triggers -->
 		
 		<extension point="devblocks.event">
-			<id>event.notification.received.worker</id>
-			<name>New notification for me</name>
+			<id>event.mail.received.app</id>
+			<name>New mail received</name>
 			<class>
-				<file>api/events/notification_received_by_worker.php</file>
-				<name>Event_NotificationReceivedByWorker</name>
+				<file>api/events/app/mail_received_by_app.php</file>
+				<name>Event_MailReceivedByApp</name>
 			</class>
 			<params>
 				<param key="contexts">
 					<value>
-						<data key="cerberusweb.contexts.worker" />
+						<data key="cerberusweb.contexts.app" />
 					</value>
 				</param>
 			</params>
 		</extension>
 		
 		<extension point="devblocks.event">
-			<id>event.mail.received.watcher</id>
-			<name>New message on a watched conversation</name>
+			<id>event.mail.assigned.group</id>
+			<name>Conversation assigned in group</name>
 			<class>
-				<file>api/events/mail_received_by_watcher.php</file>
-				<name>Event_MailReceivedByWatcher</name>
+				<file>api/events/group/mail_assigned_in_group.php</file>
+				<name>Event_MailAssignedInGroup</name>
 			</class>
 			<params>
 				<param key="contexts">
 					<value>
-						<data key="cerberusweb.contexts.worker" />
+						<data key="cerberusweb.contexts.group" />
 					</value>
 				</param>
 			</params>
@@ -759,7 +828,7 @@
 			<id>event.mail.closed.group</id>
 			<name>Conversation closed in group</name>
 			<class>
-				<file>api/events/mail_closed_in_group.php</file>
+				<file>api/events/group/mail_closed_in_group.php</file>
 				<name>Event_MailClosedInGroup</name>
 			</class>
 			<params>
@@ -775,7 +844,7 @@
 			<id>event.mail.moved.group</id>
 			<name>Conversation moved in group</name>
 			<class>
-				<file>api/events/mail_moved_to_group.php</file>
+				<file>api/events/group/mail_moved_to_group.php</file>
 				<name>Event_MailMovedToGroup</name>
 			</class>
 			<params>
@@ -791,13 +860,142 @@
 			<id>event.mail.received.group</id>
 			<name>New message on a group conversation</name>
 			<class>
-				<file>api/events/mail_received_by_group.php</file>
+				<file>api/events/group/mail_received_by_group.php</file>
 				<name>Event_MailReceivedByGroup</name>
 			</class>
 			<params>
 				<param key="contexts">
 					<value>
 						<data key="cerberusweb.contexts.group" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.event">
+			<id>event.mail.after.sent.group</id>
+			<name>After sending worker message</name>
+			<class>
+				<file>api/events/group/mail_after_sent_by_group.php</file>
+				<name>Event_MailAfterSentByGroup</name>
+			</class>
+			<params>
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.group" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.event">
+			<id>event.mail.sent.group</id>
+			<name>Before sending worker message</name>
+			<class>
+				<file>api/events/group/mail_before_sent_by_group.php</file>
+				<name>Event_MailBeforeSentByGroup</name>
+			</class>
+			<params>
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.group" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.event">
+			<id>event.macro.address</id>
+			<name>Custom address behavior</name>
+			<class>
+				<file>api/events/macro/address_macro.php</file>
+				<name>Event_AddressMacro</name>
+			</class>
+			<params>
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.worker" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.event">
+			<id>event.macro.org</id>
+			<name>Custom organization behavior</name>
+			<class>
+				<file>api/events/macro/org_macro.php</file>
+				<name>Event_OrgMacro</name>
+			</class>
+			<params>
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.worker" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.event">
+			<id>event.macro.task</id>
+			<name>Custom task behavior</name>
+			<class>
+				<file>api/events/macro/task_macro.php</file>
+				<name>Event_TaskMacro</name>
+			</class>
+			<params>
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.worker" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.event">
+			<id>event.macro.ticket</id>
+			<name>Custom ticket behavior</name>
+			<class>
+				<file>api/events/macro/ticket_macro.php</file>
+				<name>Event_TicketMacro</name>
+			</class>
+			<params>
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.group" />
+						<data key="cerberusweb.contexts.worker" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.event">
+			<id>event.mail.received.watcher</id>
+			<name>New message on a watched conversation</name>
+			<class>
+				<file>api/events/worker/mail_received_by_watcher.php</file>
+				<name>Event_MailReceivedByWatcher</name>
+			</class>
+			<params>
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.worker" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.event">
+			<id>event.notification.received.worker</id>
+			<name>New notification for me</name>
+			<class>
+				<file>api/events/worker/notification_received_by_worker.php</file>
+				<name>Event_NotificationReceivedByWorker</name>
+			</class>
+			<params>
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.worker" />
 					</value>
 				</param>
 			</params>
@@ -815,9 +1013,11 @@
 			<params>
 				<param key="events">
 					<value>
+						<data key="comment.create" />
+						<data key="context.delete" />
+						<data key="context.maint" />
 						<data key="cron.heartbeat" />
 						<data key="cron.maint" />
-						<data key="comment.create" />
 					</value>
 				</param>
 			</params>
@@ -994,6 +1194,17 @@
 		</extension>
 		
 		<!-- Search Schemas -->
+		
+		<extension point="devblocks.search.schema">
+			<id>cerberusweb.search.schema.comment_content</id>
+			<name>Comment Content</name>
+			<class>
+				<file>api/dao/comment.php</file>
+				<name>Search_CommentContent</name>
+			</class>
+			<params>
+			</params>
+		</extension>
 		
 		<extension point="devblocks.search.schema">
 			<id>cerberusweb.search.schema.message_content</id>
@@ -1560,6 +1771,17 @@
 			</params>
 		</extension>
 		
+		<extension point="cerberusweb.cron">
+			<id>cron.virtual_attendant.scheduled_behavior</id>
+			<name>Virtual Attendant Scheduled Behavior</name>
+			<class>
+				<file>api/cron.classes.php</file>
+				<name>Cron_VirtualAttendantScheduledBehavior</name>
+			</class>
+			<params>
+			</params>
+		</extension>
+		
 		<!-- RSS Sources -->
 		
 		<extension point="cerberusweb.rss.source">
@@ -1590,19 +1812,6 @@
 			<class>
 				<file>api/plugin.classes.php</file>
 				<name>ChRssSource_Ticket</name>
-			</class>
-			<params>
-			</params>
-		</extension>		
-		
-		<!-- Explorer Toolbars -->
-		
-		<extension point="cerberusweb.explorer.toolbar">
-			<id>cerberusweb.explorer.toolbar.notifications</id>
-			<name>Worker Events</name>
-			<class>
-				<file>api/uri/preferences.php</file>
-				<name>ChExplorerToolbarNotifications</name>
 			</class>
 			<params>
 			</params>

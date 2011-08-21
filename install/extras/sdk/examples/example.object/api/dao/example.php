@@ -111,14 +111,17 @@ class DAO_ExampleObject extends C4_ORMHelper {
 		
 		$ids_list = implode(',', $ids);
 		
-		// Context links
-		DAO_ContextLink::delete(Context_ExampleObject::ID, $ids);
-		
-		// Custom fields
-		DAO_CustomFieldValue::deleteByContextIds(Context_ExampleObject::ID, $ids);
-
-		// Comments
-		DAO_Comment::deleteByContext(Context_ExampleObject::ID, $ids);
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => Context_ExampleObject::ID,
+                	'context_ids' => $ids
+                )
+            )
+	    );
 		
 		$db->Execute(sprintf("DELETE FROM example_object WHERE id IN (%s)", $ids_list));
 		
@@ -624,10 +627,12 @@ class Context_ExampleObject extends Extension_DevblocksContext {
 		$example = DAO_ExampleObject::get($context_id);
 		$url_writer = DevblocksPlatform::getUrlService();
 		
+		//$friendly = DevblocksPlatform::strToPermalink($example->name);
+		
 		return array(
 			'id' => $example->id,
 			'name' => $example->name,
-			'permalink' => $url_writer->writeNoProxy('c=example.objects&action=profile&id='.$context_id, true),
+			'permalink' => $url_writer->writeNoProxy(sprintf("c=example.objects&action=profile&id=%d",$context_id), true),
 		);
 	}
 	
@@ -652,6 +657,7 @@ class Context_ExampleObject extends Extension_DevblocksContext {
 			'created|date' => $prefix.$translate->_('common.created'),
 			'id' => $prefix.$translate->_('common.id'),
 			'name' => $prefix.$translate->_('common.name'),
+			//'record_url' => $prefix.$translate->_('common.url.record'),
 		);
 		
 		if(is_array($fields))
@@ -666,6 +672,10 @@ class Context_ExampleObject extends Extension_DevblocksContext {
 			$token_values['created'] = $object->created;
 			$token_values['id'] = $object->id;
 			$token_values['name'] = $object->name;
+			
+			// URL
+			$url_writer = DevblocksPlatform::getUrlService();
+			//$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=example.object&id=%d-%s",$object->id, DevblocksPlatform::strToPermalink($object->name)), true);
 			
 			$token_values['custom'] = array();
 			

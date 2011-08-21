@@ -68,8 +68,9 @@ class Page_Domains extends CerberusPageExtension {
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$visit = CerberusApplication::getVisit();
-
+		$translate = DevblocksPlatform::getTranslationService();
 		$response = DevblocksPlatform::getHttpResponse();
+		$active_worker = CerberusApplication::getActiveWorker();
 
 		// Remember the last tab/URL
 		if(null == ($selected_tab = @$response->path[1])) {
@@ -84,15 +85,57 @@ class Page_Domains extends CerberusPageExtension {
 
 		switch($module) {
 			case 'domain':
-				@$domain_id = array_shift($stack); // id
+				@$domain_id = intval(array_shift($stack)); // id
 				if(is_numeric($domain_id) && null != ($domain = DAO_Domain::get($domain_id)))
 					$tpl->assign('domain', $domain);
 				
 				$tab_manifests = DevblocksPlatform::getExtensions('cerberusweb.datacenter.domain.tab', false);
 				uasort($tab_manifests, create_function('$a, $b', "return strcasecmp(\$a->name,\$b->name);\n"));
 				$tpl->assign('tab_manifests', $tab_manifests);
+
+				// Custom fields
 				
-				// [TODO] Comments
+				$custom_fields = DAO_CustomField::getAll();
+				$tpl->assign('custom_fields', $custom_fields);
+				
+				// Properties
+				
+				$properties = array();
+
+				if(!empty($domain->server_id)) {
+					if(null != ($server = DAO_Server::get($domain->server_id))) {
+						$properties['server'] = array(
+							'label' => ucfirst($translate->_('cerberusweb.datacenter.common.server')),
+							'type' => null,
+							'server' => $server,
+						);
+					}
+				}
+				
+				$properties['created'] = array(
+					'label' => ucfirst($translate->_('common.created')),
+					'type' => Model_CustomField::TYPE_DATE,
+					'value' => $domain->created,
+				);
+				
+				@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds('cerberusweb.contexts.datacenter.domain', $domain->id)) or array();
+		
+				foreach($custom_fields as $cf_id => $cfield) {
+					if(!isset($values[$cf_id]))
+						continue;
+						
+					$properties['cf_' . $cf_id] = array(
+						'label' => $cfield->name,
+						'type' => $cfield->type,
+						'value' => $values[$cf_id],
+					);
+				}
+				
+				$tpl->assign('properties', $properties);
+				
+				// Macros
+				$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.domain');
+				$tpl->assign('macros', $macros);
 				
 				$tpl->display('devblocks:cerberusweb.datacenter.domains::domain/display/index.tpl');		
 				break;
@@ -127,6 +170,14 @@ class Page_Domains extends CerberusPageExtension {
 		        if($query && false===strpos($query,'*'))
 		            $query = $query . '*';
                 $params[SearchFields_Domain::NAME] = new DevblocksSearchCriteria(SearchFields_Domain::NAME,DevblocksSearchCriteria::OPER_LIKE,strtolower($query));               
+                break;
+                
+            case "comments_all":
+            	$params[SearchFields_Domain::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchCriteria(SearchFields_Domain::FULLTEXT_COMMENT_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,array($query,'all'));               
+                break;
+                
+            case "comments_phrase":
+            	$params[SearchFields_Domain::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchCriteria(SearchFields_Domain::FULLTEXT_COMMENT_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,array($query,'phrase'));               
                 break;
         }
         
@@ -245,6 +296,8 @@ class Page_Domains extends CerberusPageExtension {
 		@$ids = DevblocksPlatform::importGPC($_REQUEST['ids']);
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
+		$active_worker = CerberusApplication::getActiveWorker();
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('view_id', $view_id);
 
@@ -269,6 +322,10 @@ class Page_Domains extends CerberusPageExtension {
 		CerberusContexts::getContext('cerberusweb.contexts.datacenter.domain', null, $token_labels, $token_values);
 		$tpl->assign('token_labels', $token_labels);
 		
+		// Macros
+		$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.domain');
+		$tpl->assign('macros', $macros);
+		
 		$tpl->display('devblocks:cerberusweb.datacenter.domains::domain/bulk.tpl');
 	}
 	
@@ -282,6 +339,10 @@ class Page_Domains extends CerberusPageExtension {
 	    // View
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
 		$view = C4_AbstractViewLoader::getView($view_id);
+		
+		// Scheduled behavior
+		@$behavior_id = DevblocksPlatform::importGPC($_POST['behavior_id'],'string','');
+		@$behavior_when = DevblocksPlatform::importGPC($_POST['behavior_when'],'string','');
 		
 		$do = array();
 		
@@ -327,6 +388,14 @@ class Page_Domains extends CerberusPageExtension {
 		// Do: Custom fields
 		$do = DAO_CustomFieldValue::handleBulkPost($do);
 
+		// Do: Scheduled Behavior
+		if(0 != strlen($behavior_id)) {
+			$do['behavior'] = array(
+				'id' => $behavior_id,
+				'when' => $behavior_when,
+			);
+		}
+		
 		switch($filter) {
 			// Checked rows
 			case 'checks':
@@ -488,3 +557,18 @@ class Page_Domains extends CerberusPageExtension {
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('explore',$hash,$orig_pos)));
 	}	
 };
+
+if (class_exists('DevblocksEventListenerExtension')):
+class EventListener_DatacenterDomains extends DevblocksEventListenerExtension {
+	/**
+	 * @param Model_DevblocksEvent $event
+	 */
+	function handleEvent(Model_DevblocksEvent $event) {
+		switch($event->id) {
+			case 'cron.maint':
+				DAO_Domain::maint();
+				break;
+		}
+	}
+};
+endif;
