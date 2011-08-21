@@ -89,13 +89,14 @@ class DevblocksPlatform extends DevblocksEngine {
 	 * @return mixed
 	 */
 	static function importGPC($var,$cast=null,$default=null) {
-	    if(!is_null($var)) {
+		@$magic_quotes = (function_exists('get_magic_quotes_gpc') && get_magic_quotes_gpc()) ? true : false;
+
+		if(!is_null($var)) {
 	        if(is_string($var)) {
-	            $var = get_magic_quotes_gpc() ? stripslashes($var) : $var;
+	            $var = $magic_quotes ? stripslashes($var) : $var;
 	        } elseif(is_array($var)) {
-                foreach($var as $k => $v) {
-                    $var[$k] = get_magic_quotes_gpc() ? stripslashes($v) : $v;
-                }
+	        	if($magic_quotes)
+	        		array_walk_recursive($var, create_function('&$item, $key','if(!is_array($item)) $item = stripslashes($item);'));
 	        }
 	        
 	    } elseif (is_null($var) && !is_null($default)) {
@@ -150,6 +151,7 @@ class DevblocksPlatform extends DevblocksEngine {
 	}
 	
 	static function parseCrlfString($string, $keep_blanks=false) {
+		$string = str_replace("\r\n","\n",$string);
 		$parts = preg_split("/[\r\n]/", $string);
 		
 		// Remove any empty tokens
@@ -241,18 +243,27 @@ class DevblocksPlatform extends DevblocksEngine {
 		if(empty($string))
 			return $string;
 		
-	    if(is_array($string))
-	        $string = implode("", $string);
-	
-		$unpack = unpack("N*",
-            (is_null($from_encoding))
+		$len = strlen($string);
+		$out = '';
+	        
+		$string = (is_null($from_encoding))
             ? mb_convert_encoding($string, "UCS-4BE")
-            : mb_convert_encoding($string, "UCS-4BE", $from_encoding));
-	            
-	    return implode("",
-			array_map(array('DevblocksPlatform',"_strUnidecodeLookup"),
-			$unpack
-		));
+            : mb_convert_encoding($string, "UCS-4BE", $from_encoding)
+            ;		
+		
+		while(false !== ($part = mb_substr($string, 0, 25000)) && 0 !== mb_strlen($part)) {
+			$string = mb_substr($string, mb_strlen($part));
+			
+			$unpack = unpack("N*", $part);
+	        
+			foreach($unpack as $k => $v) {
+				$out .= self::_strUnidecodeLookup($v);
+			}
+			
+			unset($unpack);			
+		}
+
+		return $out;
 	}
 	
 	static function stripHTML($str) {
@@ -1964,7 +1975,7 @@ abstract class DevblocksEngine {
 			} elseif (isset($_POST['c'])) {
 				@$uri = DevblocksPlatform::importGPC($_POST['c']); // extension
 			}
-			if(!empty($uri)) $parts[] = DevblocksPlatform::strAlphaNum($uri);
+			if(!empty($uri)) $parts[] = DevblocksPlatform::strAlphaNumUnder($uri);
 
 			// Action (GET has precedence over POST)
 			if(isset($_GET['a'])) {
@@ -1972,14 +1983,14 @@ abstract class DevblocksEngine {
 			} elseif (isset($_POST['a'])) {
 				@$listener = DevblocksPlatform::importGPC($_POST['a']); // listener
 			}
-			if(!empty($listener)) $parts[] = DevblocksPlatform::strAlphaNum($listener);
+			if(!empty($listener)) $parts[] = DevblocksPlatform::strAlphaNumUnder($listener);
 		}
 		
-		// Controller XSS security (alphanum only)
+		// Controller XSS security (alphanum+under only)
 		if(isset($parts[0])) {
-			$parts[0] = DevblocksPlatform::strAlphaNum($parts[0]);
+			$parts[0] = DevblocksPlatform::strAlphaNumUnder($parts[0]);
 		}
-		
+
 		// Resource / Proxy
 	    /*
 	     * [TODO] Run this code through another audit.  Is it worth a tiny hit per resource 
@@ -2764,6 +2775,8 @@ class _DevblocksCacheManager {
 	}
 	
 	public function remove($key) {
+		if(empty($key))
+			return;
 		unset($this->_registry[$key]);
 		unset($this->_statistics[$key]);
 		self::$_cacher->remove($key);
@@ -2844,6 +2857,9 @@ class _DevblocksCacheManagerMemcached extends _DevblocksCacheManagerAbstract {
 	}
 	
 	function remove($key) {
+		if(empty($key))
+			return;
+		
 		$key = $this->_options['key_prefix'] . $key;
 		$this->_driver->delete($key);
 	}
@@ -3115,23 +3131,19 @@ class _DevblocksSearchEngineMysqlFulltext {
 	
 	public function prepareText($text) {
 		$text = DevblocksPlatform::strUnidecode($text);
-		
+
 		//$string = preg_replace("/[^\p{Greek}\p{N}]/u", ' ', $string);
 		
 		$text = mb_ereg_replace("[^[:alnum:]]", ' ', mb_convert_case($text, MB_CASE_LOWER));		
 		
 		$words = explode(' ', $text);
+		unset($text);
 
 		// Remove common words
 		$stop_words = $this->_getStopWords();
+		$words = array_diff($words, array_keys($stop_words));
 
-		// Filter
-		foreach($words as $k => $v) {
-			if(isset($stop_words[$v])) {
-				unset($words[$k]); // toss
-			}
-		}
-		
+		// Reassemble
 		$text = implode(' ', $words);
 		unset($words);
 		
@@ -3141,23 +3153,32 @@ class _DevblocksSearchEngineMysqlFulltext {
 		return $text;
 	}
 	
-	private function _index($ns, $id, $content) {
+	private function _index($ns, $id, $content, $replace=true) {
 		$content = $this->prepareText($content);
 		
-		$result = mysql_query(sprintf("REPLACE INTO fulltext_%s VALUES (%d, '%s') ",
-			$this->escapeNamespace($ns),
-			$id,
-			mysql_real_escape_string($content)
-		), $this->_db);
+		if($replace) {
+			$result = mysql_query(sprintf("REPLACE INTO fulltext_%s VALUES (%d, '%s') ",
+				$this->escapeNamespace($ns),
+				$id,
+				mysql_real_escape_string($content)
+			), $this->_db);
+			
+		} else {
+			$result = mysql_query(sprintf("UPDATE fulltext_%s SET content=CONCAT(content,' %s') WHERE id = %d",
+				$this->escapeNamespace($ns),
+				mysql_real_escape_string($content),
+				$id
+			), $this->_db);
+		}
 		
 		return (false !== $result) ? true : false;
 	}
 	
-	public function index($ns, $id, $content) {
-		if(false === ($ids = $this->_index($ns, $id, $content))) {
+	public function index($ns, $id, $content, $replace=true) {
+		if(false === ($ids = $this->_index($ns, $id, $content, $replace))) {
 			// Create the table dynamically
 			if($this->_createTable($ns)) {
-				return $this->_index($ns, $id, $content);
+				return $this->_index($ns, $id, $content, $replace);
 			}
 			return false;
 		}
@@ -4630,6 +4651,10 @@ class _DevblocksTemplateBuilder {
 			'trim_blocks' => true,
 			'autoescape' => false,
 		));
+		
+		if(class_exists('_DevblocksTwigExtensions', true)) {
+			$this->_twig->addExtension(new _DevblocksTwigExtensions());
+		}
 	}
 	
 	/**
@@ -4931,7 +4956,7 @@ class _DevblocksClassLoadManager {
 			'S3'
 		));
 		$this->registerClasses(DEVBLOCKS_PATH . 'libs/Twig/Autoloader.php', array(
-			'Twig_Autoloader'
+			'Twig_Autoloader',
 		));
 	}
 	
@@ -5088,10 +5113,18 @@ class _DevblocksUrlManager {
 		return $parts;
 	}
 	
+	function writeNoProxy($sQuery='',$full=false) {
+		return $this->write($sQuery, $full, false);
+	}
+	
 	function write($sQuery='',$full=false,$check_proxy=true) {
 		$args = $this->parseQueryString($sQuery);
 		$c = @$args['c'];
 		
+		$proxyssl = null;
+		$proxyhost = null;
+		$proxybase = null;		
+	
 		// Allow proxy override
 		if($check_proxy) {
     		@$proxyssl = $_SERVER['HTTP_DEVBLOCKSPROXYSSL'];
@@ -5311,6 +5344,45 @@ function devblocks_autoload($className) {
 // Register Devblocks class loader
 spl_autoload_register('devblocks_autoload');
 
-// Twig
-if(class_exists('Twig_Autoloader', true) && method_exists('Twig_Autoloader','register'))
+/*
+ * Twig Extensions
+ * This must come after devblocks_autoload
+ */ 
+if(class_exists('Twig_Autoloader', true) && method_exists('Twig_Autoloader','register')) {
 	Twig_Autoloader::register();
+}
+
+if(class_exists('Twig_Extension', true)):
+class _DevblocksTwigExtensions extends Twig_Extension {
+	public function getName() {
+		return 'devblocks_twig';
+	}
+	
+	public function getFilters() {
+		return array(
+			'truncate' => new Twig_Filter_Method($this, 'filter_truncate'),
+		);
+	}
+	
+	/**
+	 * https://github.com/fabpot/Twig-extensions/blob/master/lib/Twig/Extensions/Extension/Text.php
+	 *  
+	 * @param string $value
+	 * @param integer $length
+	 * @param boolean $preserve
+	 * @param string $separator
+	 * 
+	 */
+	function filter_truncate($value, $length = 30, $preserve = false, $separator = '...') {
+		if (mb_strlen($value, LANG_CHARSET_CODE) > $length) {
+			if ($preserve) {
+				if (false !== ($breakpoint = mb_strpos($value, ' ', $length, LANG_CHARSET_CODE))) {
+					$length = $breakpoint;
+				}
+			}
+			return mb_substr($value, 0, $length, LANG_CHARSET_CODE) . $separator;
+		}
+		return $value;
+	}	
+};
+endif;

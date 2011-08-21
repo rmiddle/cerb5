@@ -1279,6 +1279,8 @@ class ChInternalController extends DevblocksControllerExtension {
 			$view->renderPage = 0;
 			$view->view_columns = $list_view->columns;
 			$view->addParams($list_view->params, true);
+			if(property_exists($list_view, 'params_required'))
+				$view->addParamsRequired($list_view->params_required, true);
 			$view->renderSortBy = $list_view->sort_by;
 			$view->renderSortAsc = $list_view->sort_asc;
 			C4_AbstractViewLoader::setView($view_id, $view);
@@ -1361,11 +1363,21 @@ class ChInternalController extends DevblocksControllerExtension {
 					if(!class_exists($class, true) || null == ($view = new $class))
 						continue;
 
+					// Context-specific defaults
+					switch($context_ext->manifest->id) {
+						case CerberusContexts::CONTEXT_TICKET:
+							$view->addParamsRequired(array(
+								SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER,'=',$active_worker->id),
+							));
+							break;
+					}
+						
 					// Build the list model
 					$list = new Model_WorkspaceListView();
 					$list->title = $names[$idx];
 					$list->columns = $view->view_columns;
 					$list->params = $view->getEditableParams();
+					$list->params_required = $view->getParamsRequired();
 					$list->num_rows = 5;
 					$list->sort_by = $view->renderSortBy;
 					$list->sort_asc = $view->renderSortAsc;
@@ -1811,8 +1823,7 @@ class ChInternalController extends DevblocksControllerExtension {
 							if(!is_numeric($k))
 								continue;
 							
-							// [TODO] Sanitize
-							$condition = $_POST['condition'.$k];
+							$condition = DevblocksPlatform::importGPC($_POST['condition'.$k],'array',array());
 							$groups[$group_key]['conditions'][] = $condition;
 							break;
 					}
@@ -1841,7 +1852,7 @@ class ChInternalController extends DevblocksControllerExtension {
 		$objects = array();
 		
 		foreach($action_ids as $action_id) {
-			$objects[] = $scope['action'.$action_id];
+			$objects[] = DevblocksPlatform::importGPC($scope['action'.$action_id],'array',array());
 		}
 		
 		return $objects;
@@ -1878,11 +1889,24 @@ class ChInternalController extends DevblocksControllerExtension {
 	
 	function testDecisionEventSnippetsAction() {
 		@$prefix = DevblocksPlatform::importGPC($_REQUEST['prefix'],'string','');
-		@$field = DevblocksPlatform::importGPC($_REQUEST['field'],'string','');
 		@$trigger_id = DevblocksPlatform::importGPC($_REQUEST['trigger_id'],'integer',0);
-		
-		@$content = DevblocksPlatform::importGPC($_REQUEST[$prefix][$field],'string','');
 
+		$content = '';
+		
+		if(is_array($_REQUEST['field'])) {
+			@$fields = DevblocksPlatform::importGPC($_REQUEST['field'],'array',array());
+		
+			if(is_array($fields))
+			foreach($fields as $field) {
+				@$append = DevblocksPlatform::importGPC($_REQUEST[$prefix][$field],'string','');
+				$content .= !empty($append) ? ('[' . $field . ']: ' . PHP_EOL . $append . PHP_EOL . PHP_EOL) : '';
+			}
+			
+		} else {
+			@$field = DevblocksPlatform::importGPC($_REQUEST['field'],'string','');
+			@$content = DevblocksPlatform::importGPC($_REQUEST[$prefix][$field],'string','');
+		}
+		
 		if(null == ($trigger = DAO_TriggerEvent::get($trigger_id)))
 			return;
 			

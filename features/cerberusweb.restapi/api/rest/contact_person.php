@@ -1,5 +1,5 @@
 <?php
-class ChRest_KbArticles extends Extension_RestController implements IExtensionRestController {
+class ChRest_ContactPerson extends Extension_RestController implements IExtensionRestController {
 	function getAction($stack) {
 		@$action = array_shift($stack);
 		
@@ -9,10 +9,11 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 			
 		} else { // actions
 			switch($action) {
+				default:
+					$this->error(self::ERRNO_NOT_IMPLEMENTED);
+					break;
 			}
 		}
-		
-		$this->error(self::ERRNO_NOT_IMPLEMENTED);
 	}
 	
 	function putAction($stack) {
@@ -24,10 +25,11 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 			
 		} else { // actions
 			switch($action) {
+				default:
+					$this->error(self::ERRNO_NOT_IMPLEMENTED);
+					break;
 			}
 		}
-		
-		$this->error(self::ERRNO_NOT_IMPLEMENTED);
 	}
 	
 	function postAction($stack) {
@@ -47,15 +49,15 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 	
 	function deleteAction($stack) {
 		$worker = $this->getActiveWorker();
-		if(!$worker->hasPriv('core.kb.articles.modify'))
+		if(!$worker->hasPriv('core.addybook.person.actions.delete'))
 			$this->error(self::ERRNO_ACL);
 
 		$id = array_shift($stack);
 
-		if(null == ($kbarticle = DAO_KbArticle::get($id)))
-			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid Knowledgebase article ID %d", $id));
+		if(null == ($contact = DAO_ContactPerson::get($id)))
+			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid contact id %d", $id));
 
-		DAO_KbArticle::delete($id);
+		DAO_ContactPerson::delete($id);
 
 		$result = array('id' => $id);
 		$this->success($result);		
@@ -65,9 +67,9 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 		$worker = $this->getActiveWorker();
 		
 		// ACL
-		if(!$worker->hasPriv('plugin.cerberusweb.kb'))
+		if(!$worker->hasPriv('core.addybook'))
 			$this->error(self::ERRNO_ACL);
-
+		
 		$container = $this->search(array(
 			array('id', '=', $id),
 		));
@@ -76,7 +78,7 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 			$this->success($container['results'][$id]);
 
 		// Error
-		$this->error(self::ERRNO_CUSTOM, sprintf("Invalid article id '%d'", $id));
+		$this->error(self::ERRNO_CUSTOM, sprintf("Invalid contact id '%d'", $id));
 	}
 
 	function translateToken($token, $type='dao') {
@@ -84,22 +86,19 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 		
 		if('dao'==$type) {
 			$tokens = array(
-				'content' => DAO_KbArticle::CONTENT,
-				'id' => DAO_KbArticle::ID,
-				'format' => DAO_KbArticle::FORMAT,
-				'title' => DAO_KbArticle::TITLE,
-				'updated' => DAO_KbArticle::UPDATED,
-				'views' => DAO_KbArticle::VIEWS,
+				'auth_password' => DAO_ContactPerson::AUTH_PASSWORD,
+				'created' => DAO_ContactPerson::CREATED,
+				'email_id' => DAO_ContactPerson::EMAIL_ID,
 			);
 		} else {
 			$tokens = array(
-				'category_id' => SearchFields_KbArticle::CATEGORY_ID,
-				'content' => SearchFields_KbArticle::FULLTEXT_ARTICLE_CONTENT,
-				'id' => SearchFields_KbArticle::ID,
-				'format' => SearchFields_KbArticle::FORMAT,
-				'title' => SearchFields_KbArticle::TITLE,
-				'updated' => SearchFields_KbArticle::UPDATED,
-				'views' => SearchFields_KbArticle::VIEWS,
+				'created' => SearchFields_ContactPerson::CREATED,
+				'email_id' => SearchFields_ContactPerson::EMAIL_ID,
+				'email_address' => SearchFields_ContactPerson::ADDRESS_EMAIL,
+				'email_first_name' => SearchFields_ContactPerson::ADDRESS_FIRST_NAME,
+				'email_last_name' => SearchFields_ContactPerson::ADDRESS_LAST_NAME,
+				'id' => SearchFields_ContactPerson::ID,
+				'last_login' => SearchFields_ContactPerson::LAST_LOGIN,
 			);
 		}
 		
@@ -112,7 +111,7 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 	function getContext($id) {
 		$labels = array();
 		$values = array();
-		$context = CerberusContexts::getContext(CerberusContexts::CONTEXT_KB_ARTICLE, $id, $labels, $values, null, true);
+		$context = CerberusContexts::getContext(CerberusContexts::CONTEXT_CONTACT_PERSON, $id, $labels, $values, null, true);
 
 		return $values;
 	}
@@ -120,7 +119,7 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 	function search($filters=array(), $sortToken='id', $sortAsc=1, $page=1, $limit=10) {
 		$worker = $this->getActiveWorker();
 
-		$custom_field_params = $this->_handleSearchBuildParamsCustomFields($filters, CerberusContexts::CONTEXT_KB_ARTICLE);
+		$custom_field_params = $this->_handleSearchBuildParamsCustomFields($filters, CerberusContexts::CONTEXT_CONTACT_PERSON);
 		$params = $this->_handleSearchBuildParams($filters);
 		$params = array_merge($params, $custom_field_params);
 		
@@ -129,7 +128,7 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 		$sortAsc = !empty($sortAsc) ? true : false;
 		
 		// Search
-		list($results, $total) = DAO_KbArticle::search(
+		list($results, $total) = DAO_ContactPerson::search(
 			array($sortBy),
 			$params,
 			$limit,
@@ -156,35 +155,19 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 		return $container;		
 	}
 	
-	function postSearch() {
-		$worker = $this->getActiveWorker();
-		
-		// ACL
-		if(!$worker->hasPriv('plugin.cerberusweb.kb'))
-			$this->error(self::ERRNO_ACL);
-
-		$container = $this->_handlePostSearch();
-		
-		$this->success($container);
-	}
-	
 	function putId($id) {
 		$worker = $this->getActiveWorker();
 		
-		// Validate the ID
-		if(null == ($article = DAO_KbArticle::get($id)))
-			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid article ID '%d'", $id));
-			
 		// ACL
-		if(!($worker->hasPriv('core.kb.articles.modify')))
+		if(!$worker->hasPriv('core.addybook.addy.actions.update'))
 			$this->error(self::ERRNO_ACL);
+		
+		// Validate the ID
+		if(null == DAO_ContactPerson::get($id))
+			$this->error(self::ERRNO_CUSTOM, sprintf("Invalid contact person ID '%d'", $id));
 			
 		$putfields = array(
-			'content' => 'string',
-			'format' => 'integer',
-			'title' => 'string',
-			'updated' => 'timestamp',
-			'views' => 'integer',
+			'password' => 'string',
 		);
 
 		$fields = array();
@@ -194,6 +177,11 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 				continue;
 			
 			@$value = DevblocksPlatform::importGPC($_POST[$putfield], 'string', '');
+			switch($putfield) {
+				case 'password':
+					$putfield = 'auth_password';
+					break;
+			}
 			
 			if(null == ($field = self::translateToken($putfield, 'dao'))) {
 				$this->error(self::ERRNO_CUSTOM, sprintf("'%s' is not a valid field.", $putfield));
@@ -201,37 +189,30 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 			
 			// Sanitize
 			$value = DevblocksPlatform::importVar($value, $type);
-						
-//			switch($field) {
-//				case DAO_Worker::PASSWORD:
-//					$value = md5($value);
-//					break;
-//			}
+
+			// Overrides
+			switch($field) {
+				case 'auth_password':
+					$salt = CerberusApplication::generatePassword(8);
+					$value = md5($salt.md5($value));
+					$fields[DAO_ContactPerson::AUTH_SALT] = $salt;
+					break;
+			}
 			
 			$fields[$field] = $value;
 		}
 		
-		if(!isset($fields[DAO_KbArticle::UPDATED]))
-			$fields[DAO_KbArticle::UPDATED] = time();
-		
+		// Check required fields
+//		$reqfields = array(DAO_ContactPerson::EMAIL);
+//		$this->_handleRequiredFields($reqfields, $fields);
+
 		// Handle custom fields
 		$customfields = $this->_handleCustomFields($_POST);
 		if(is_array($customfields))
-			DAO_CustomFieldValue::formatAndSetFieldValues(CerberusContexts::CONTEXT_KB_ARTICLE, $id, $customfields, true, true, true);
-		
-		// Check required fields
-//		$reqfields = array(DAO_Address::EMAIL);
-//		$this->_handleRequiredFields($reqfields, $fields);
+			DAO_CustomFieldValue::formatAndSetFieldValues(CerberusContexts::CONTEXT_CONTACT_PERSON, $id, $customfields, true, true, true);
 
 		// Update
-		DAO_KbArticle::update($id, $fields);
-		
-		// Handle delta categories
-		if(isset($_POST['category_id'])) {
-			$category_ids = !is_array($_POST['category_id']) ? array($_POST['category_id']) : $_POST['category_id'];
-			DAO_KbArticle::setCategories($id, $category_ids, false);
-		}
-		
+		DAO_ContactPerson::update($id, $fields);
 		$this->getId($id);
 	}
 	
@@ -239,15 +220,12 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 		$worker = $this->getActiveWorker();
 		
 		// ACL
-		if(!$worker->hasPriv('core.kb.articles.modify'))
+		if(!$worker->hasPriv('core.addybook.addy.actions.update'))
 			$this->error(self::ERRNO_ACL);
 		
 		$postfields = array(
-			'content' => 'string',
-			'format' => 'integer',
-			'title' => 'string',
-			'updated' => 'timestamp',
-			'views' => 'integer',
+			'email' => 'string',
+			'password' => 'string',
 		);
 
 		$fields = array();
@@ -257,6 +235,22 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 				continue;
 				
 			@$value = DevblocksPlatform::importGPC($_POST[$postfield], 'string', '');
+			
+			switch($postfield) {
+				case 'email':
+					if(null != ($lookup = DAO_Address::lookupAddress($value, true))) {
+						unset($postfields['email']);
+						$postfield = 'email_id';
+						$value = $lookup->id;
+					}
+					break;
+				case 'password':
+					$postfield = 'auth_password';
+					break;
+				default:
+					$this->error($postfield);
+					break;
+			}
 				
 			if(null == ($field = self::translateToken($postfield, 'dao'))) {
 				$this->error(self::ERRNO_CUSTOM, sprintf("'%s' is not a valid field.", $postfield));
@@ -265,42 +259,45 @@ class ChRest_KbArticles extends Extension_RestController implements IExtensionRe
 			// Sanitize
 			$value = DevblocksPlatform::importVar($value, $type);
 			
-//			switch($field) {
-//				case DAO_Worker::PASSWORD:
-//					$value = md5($value);
-//					break;
-//			}
+			// Overrides
+			switch($field) {
+				case 'auth_password':
+					$salt = CerberusApplication::generatePassword(8);
+					$value = md5($salt.md5($value));
+					$fields[DAO_ContactPerson::AUTH_SALT] = $salt;
+					break;
+			}
 			
 			$fields[$field] = $value;
 		}
 
-		// Defaults
-		if(!isset($fields[DAO_KbArticle::UPDATED]))
-			$fields[DAO_KbArticle::UPDATED] = time();
-		if(!isset($fields[DAO_KbArticle::FORMAT]))
-			$fields[DAO_KbArticle::FORMAT] = Model_KbArticle::FORMAT_HTML;
-			
 		// Check required fields
-		$reqfields = array(
-			DAO_KbArticle::TITLE, 
-			DAO_KbArticle::CONTENT, 
-		);
+		$reqfields = array(DAO_ContactPerson::EMAIL_ID, DAO_ContactPerson::AUTH_PASSWORD);
 		$this->_handleRequiredFields($reqfields, $fields);
 		
 		// Create
-		if(false != ($id = DAO_KbArticle::create($fields))) {
+		if(false != ($id = DAO_ContactPerson::create($fields))) {
+			// update address
+			DAO_Address::update($fields['email_id'], array('contact_person_id' => $id));
+			
 			// Handle custom fields
 			$customfields = $this->_handleCustomFields($_POST);
 			if(is_array($customfields))
-				DAO_CustomFieldValue::formatAndSetFieldValues(CerberusContexts::CONTEXT_KB_ARTICLE, $id, $customfields, true, true, true);
-			
-			// Handle delta categories
-			if(isset($_POST['category_id'])) {
-				$category_ids = !is_array($_POST['category_id']) ? array($_POST['category_id']) : $_POST['category_id'];
-				DAO_KbArticle::setCategories($id, $category_ids, false);
-			}
+				DAO_CustomFieldValue::formatAndSetFieldValues(CerberusContexts::CONTEXT_CONTACT_PERSON, $id, $customfields, true, true, true);
 				
 			$this->getId($id);
 		}
-	}	
+	}
+	
+	function postSearch() {
+		$worker = $this->getActiveWorker();
+		
+		// ACL
+		if(!$worker->hasPriv('core.addybook'))
+			$this->error(self::ERRNO_ACL);
+
+		$container = $this->_handlePostSearch();
+		
+		$this->success($container);
+	}
 };

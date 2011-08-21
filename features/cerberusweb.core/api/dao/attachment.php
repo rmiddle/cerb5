@@ -672,13 +672,11 @@ class View_AttachmentLink extends C4_AbstractView implements IAbstractView_Subto
 		);
 		$this->addColumnsHidden(array(
 			SearchFields_AttachmentLink::ID,
-//			SearchFields_AttachmentLink::LINK_CONTEXT,
 			SearchFields_AttachmentLink::LINK_CONTEXT_ID,
 		));
 		
 		$this->addParamsHidden(array(
 			SearchFields_AttachmentLink::ID,
-//			SearchFields_AttachmentLink::LINK_CONTEXT,
 			SearchFields_AttachmentLink::LINK_CONTEXT_ID,
 		));
 		
@@ -908,8 +906,8 @@ class View_AttachmentLink extends C4_AbstractView implements IAbstractView_Subto
 	}
 		
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(0);
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$deleted = false;
 
@@ -944,8 +942,10 @@ class View_AttachmentLink extends C4_AbstractView implements IAbstractView_Subto
 				true,
 				false
 			);
-			$ids = array_merge($ids, array_keys($objects));
-			 
+			
+			foreach($objects as $o)
+				$ids[] = $o[SearchFields_AttachmentLink::GUID];
+			
 		} while(!empty($objects));
 
 		$batch_total = count($ids);
@@ -955,7 +955,6 @@ class View_AttachmentLink extends C4_AbstractView implements IAbstractView_Subto
 			if(!$deleted) { 
 				//DAO_AttachmentLink::update($batch_ids, $change_fields);
 			} else {
-				if(!empty($batch_ids))
 				foreach($batch_ids as $batch_id)
 					DAO_AttachmentLink::deleteByGUID($batch_id);
 			}
@@ -1189,7 +1188,7 @@ class DAO_AttachmentLink extends C4_ORMHelper {
 		$fields = SearchFields_AttachmentLink::getFields();
 		
 		// Sanitize
-		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy]) || !in_array($sortBy,$columns))
+		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy])) // || !in_array($sortBy,$columns)
 			$sortBy=null;
 
         list($tables,$wheres) = parent::_parseSearchParams($params, array(),$fields,$sortBy);

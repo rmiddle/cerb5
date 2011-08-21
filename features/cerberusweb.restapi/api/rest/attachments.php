@@ -55,7 +55,7 @@ class ChRest_Attachments extends Extension_RestController implements IExtensionR
 		));
 		
 		if(is_array($container) && isset($container['results']) && isset($container['results'][$id]))
-			$this->success($container['results'][$id]);
+			$this->success($container);
 
 		// Error
 		$this->error(self::ERRNO_CUSTOM, sprintf("Invalid attachment id '%d'", $id));
@@ -86,14 +86,14 @@ class ChRest_Attachments extends Extension_RestController implements IExtensionR
 		$file_stats = fstat($fp);
 
 		// Set headers
-		header("Expires: Mon, 26 Nov 1970 00:00:00 GMT\n");
-		header("Last-Modified: " . gmdate("D,d M YH:i:s") . " GMT\n");
-		header("Cache-control: private\n");
-		header("Pragma: no-cache\n");
-		header("Content-Type: " . $file->mime_type . "\n");
-		header("Content-disposition: attachment; filename=" . $file->display_name . "\n");
-		header("Content-Transfer-Encoding: binary\n"); 
-		header("Content-Length: " . $file_stats['size'] . "\n");
+		header("Expires: Mon, 26 Nov 1970 00:00:00 GMT");
+		header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
+		header("Accept-Ranges: bytes");
+//		header("Keep-Alive: timeout=5, max=100");
+//		header("Connection: Keep-Alive");
+		header("Content-Type: " . $file->mime_type);
+		header("Content-disposition: attachment; filename=" . $file->display_name);
+		header("Content-Length: " . $file_stats['size']);
 		
 		fpassthru($fp);
 		fclose($fp);
@@ -162,7 +162,7 @@ class ChRest_Attachments extends Extension_RestController implements IExtensionR
 		$objects = array();
 		
 		foreach($results as $id => $result) {
-			$values = $this->getContext($result);
+			$values = $this->getContext($id);
 			$objects[$id] = $values;
 		}
 		

@@ -696,6 +696,21 @@ class DevblocksEventHelper {
 		return $comment_id;
 	}
 	
+	static function renderActionSetTicketOwner() {
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('workers', DAO_Worker::getAllActive());
+		
+		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_worker.tpl');
+	}
+	
+	static function runActionSetTicketOwner($params, $values, $ticket_id) {
+		@$owner_id = intval($params['worker_id']);
+		$fields = array(
+			DAO_Ticket::OWNER_ID => $owner_id,
+		);
+		DAO_Ticket::update($ticket_id, $fields);
+	}
+	
 	static function renderActionAddWatchers() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('workers', DAO_Worker::getAll());
@@ -940,10 +955,29 @@ EOL
 	
 	// [TODO] Eventually for reuse we'll need to change this
 	function runActionRelayEmail($params, $values, $context, $context_id) {
+		$logger = DevblocksPlatform::getConsoleLog('Attendant');
+		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+
+		$mail_service = DevblocksPlatform::getMailService();
+		$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+		
 		$bucket_id = intval(@$values['ticket_bucket_id']);
-		$group = DAO_Group::get($values['group_id']);
+		
+		if(!isset($values['group_id']) || null == ($group = DAO_Group::get($values['group_id']))) {
+			$logger->error("Can't load the ticket's group. Aborting action.");
+			return;
+		}
+		
 		$replyto = $group->getReplyTo($bucket_id);
 		$relay_list = $params['to'];
+		
+		// Attachments
+		$attachment_data = array();
+		if(isset($values['id']) && !empty($values['id'])) {
+			if(isset($params['include_attachments']) && !empty($params['include_attachments'])) {
+				$attachment_data = DAO_AttachmentLink::getLinksAndAttachments(CerberusContexts::CONTEXT_MESSAGE, $values['id']);
+			}
+		}
 		
 		if(is_array($relay_list))
 		foreach($relay_list as $to) {
@@ -955,43 +989,60 @@ EOL
 				if(null == ($worker = DAO_Worker::get($worker_address->worker_id)))
 					continue;
 				
-				$mail_service = DevblocksPlatform::getMailService();
-				$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 				$mail = $mail_service->createMessage();
 				
 				$mail->setTo(array($worker_address->address));
 	
 				$headers = $mail->getHeaders(); /* @var $headers Swift_Mime_Header */
-	
-				$mail->setFrom($values['sender_address'], $values['sender_full_name']);
-				$mail->setReplyTo($replyto->email, $replyto->getReplyPersonal($worker));
-				$mail->setSubject($values['ticket_subject']);
+
+				if(isset($values['sender_full_name']) && !empty($values['sender_full_name'])) {
+					$mail->setFrom($values['sender_address'], $values['sender_full_name']);
+				} else {
+					$mail->setFrom($values['sender_address']);
+				}
+				
+				$replyto_personal = $replyto->getReplyPersonal($worker);
+				if(!empty($replyto_personal)) {
+					$mail->setReplyTo($replyto->email, $replyto_personal);
+				} else {
+					$mail->setReplyTo($replyto->email);
+				}
+				
+				if(!isset($params['subject']) || empty($params['subject'])) {
+					$mail->setSubject($values['ticket_subject']);
+				} else {
+					$subject = $tpl_builder->build($params['subject'], $values);
+					$mail->setSubject($subject);
+				}
 	
 				// Find the owner of this address and sign it.
 				$sign = substr(md5($context.$context_id.$worker->pass),8,8);
 				
 				$headers->removeAll('message-id');
-				$headers->addTextHeader('Message-Id', sprintf("<cerb5:%s:%d@%s>", $context, $context_id, $sign));
+				$headers->addTextHeader('Message-Id', sprintf("<%s_%d_%d_%s@cerb5>", $context, $context_id, time(), $sign));
 				$headers->addTextHeader('X-CerberusRedirect','1');
 	
-				$content = 
-<<< EOF
-## Relayed from ${values['ticket_url']}
-## Your reply to this message will be broadcast to the requesters. 
-## Instructions: http://wiki.cerb5.com/wiki/Email_Relay
-##
-${values['content']}
-EOF;
+				$content = $tpl_builder->build($params['content'], $values);
 				
 				$mail->setBody($content);
 				
 				// Files
-				//if(is_array($message->files))
-				//foreach($message->files as $file_name => $file) { /* @var $file ParserFile */
-				//	$mail->attach(Swift_Attachment::fromPath($file->tmpname)->setFilename($file_name));
-				//}
-			
+				if(!empty($attachment_data) && isset($attachment_data['attachments']) && !empty($attachment_data['attachments'])) {
+					foreach($attachment_data['attachments'] as $file_id => $file) { /* @var $file Model_Attachment */
+						if(false !== ($fp = DevblocksPlatform::getTempFile())) {
+							if(false !== $file->getFileContents($fp)) {
+								$attach = Swift_Attachment::fromPath(DevblocksPlatform::getTempFileInfo($fp), $file->mime_type);
+								$attach->setFilename($file->display_name);
+								$mail->attach($attach);
+								fclose($fp);
+							}
+						}
+					}
+					
+				}
+				
 				$result = $mailer->send($mail);
+				unset($mail);
 				
 				if(!$result) {
 					return false;

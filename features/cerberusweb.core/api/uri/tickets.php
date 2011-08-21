@@ -104,6 +104,9 @@ class ChTicketsPage extends CerberusPageExtension {
 				// Attachments				
 				$tpl->assign('upload_max_filesize', ini_get('upload_max_filesize'));
 
+				// Preferences
+				$tpl->assign('mail_status_compose', DAO_WorkerPref::get($active_worker->id,'mail_status_compose','waiting'));
+				
 				// Continue a draft?
 				// [TODO] We could also display "you have xxx unsent drafts, would you like to continue one?"
 				if(null != ($draft_id = @$response->path[2])) {
@@ -158,6 +161,9 @@ class ChTicketsPage extends CerberusPageExtension {
 				// Attachments
 				$tpl->assign('upload_max_filesize', ini_get('upload_max_filesize'));
 
+				// Preferences
+				$tpl->assign('mail_status_create', DAO_WorkerPref::get($active_worker->id,'mail_status_create','open'));
+				
 				// Continue a draft?
 				// [TODO] We could also display "you have xxx unsent drafts, would you like to continue one?"
 				if(null != ($draft_id = @$response->path[2])) {
@@ -284,16 +290,15 @@ class ChTicketsPage extends CerberusPageExtension {
 			SearchFields_Ticket::CONTEXT_LINK,
 			SearchFields_Ticket::CONTEXT_LINK_ID,
 			SearchFields_Ticket::VIRTUAL_ASSIGNABLE,
+			SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER,
 			SearchFields_Ticket::VIRTUAL_STATUS,
-			//SearchFields_Ticket::VIRTUAL_WATCHERS,
 		), true);
 		$workflowView->addParamsDefault(array(
 		), true);
 		$workflowView->addParamsRequired(array(
 			SearchFields_Ticket::VIRTUAL_STATUS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_STATUS,'',array('open')),
+			SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER,'=',$active_worker->id),
 			SearchFields_Ticket::VIRTUAL_ASSIGNABLE => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_ASSIGNABLE,null,true),
-			//SearchFields_Ticket::VIRTUAL_WATCHERS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_WATCHERS,null,array()),
-			'_req_group_id' => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'in',array_keys($active_worker->getMemberships())),
 		), true);
 		
 		$workflowView->renderPage = 0;
@@ -365,7 +370,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$visit = CerberusApplication::getVisit();
 		$active_worker = CerberusApplication::getActiveWorker();
-		$memberships = $active_worker->getMemberships();
 		
 		// Log activity
 		DAO_Worker::logActivity(
@@ -387,7 +391,7 @@ class ChTicketsPage extends CerberusPageExtension {
 			SearchFields_Ticket::VIRTUAL_STATUS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_STATUS,'',array('open','waiting')),
 		), true);
 		$view->addParamsRequired(array(
-			'_req_group_id' => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_TEAM_ID,'in',array_keys($memberships)), // censor
+			SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER,'=',$active_worker->id),
 		), true);
 		
 		C4_AbstractViewLoader::setView($view->id,$view);
@@ -809,7 +813,7 @@ class ChTicketsPage extends CerberusPageExtension {
 					'created' => time(),
 					'worker_id' => $active_worker->id,
 					'total' => $total,
-					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=tickets&tab=drafts', true),
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->writeNoProxy('c=tickets&tab=drafts', true),
 				);
 				$models[] = $model; 
 				
@@ -822,9 +826,9 @@ class ChTicketsPage extends CerberusPageExtension {
 					$orig_pos = $pos;
 				
 				if($row[SearchFields_MailQueue::TYPE]==Model_MailQueue::TYPE_COMPOSE) {
-					$url = $url_writer->write(sprintf("c=tickets&a=compose&id=%d", $draft_id), true);
+					$url = $url_writer->writeNoProxy(sprintf("c=tickets&a=compose&id=%d", $draft_id), true);
 				} elseif($row[SearchFields_MailQueue::TYPE]==Model_MailQueue::TYPE_TICKET_REPLY) {
-					$url = $url_writer->write(sprintf("c=display&id=%d", $row[SearchFields_MailQueue::TICKET_ID]), true) . sprintf("#draft%d", $draft_id);
+					$url = $url_writer->writeNoProxy(sprintf("c=display&id=%d", $row[SearchFields_MailQueue::TICKET_ID]), true) . sprintf("#draft%d", $draft_id);
 				}
 
 				$model = new Model_ExplorerSet();
@@ -884,7 +888,7 @@ class ChTicketsPage extends CerberusPageExtension {
 					'created' => time(),
 					'worker_id' => $active_worker->id,
 					'total' => $total,
-					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=tickets', true),
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->writeNoProxy('c=tickets', true),
 				);
 				$models[] = $model; 
 				
@@ -896,7 +900,7 @@ class ChTicketsPage extends CerberusPageExtension {
 				if($ticket_id==$explore_from)
 					$orig_pos = $pos;
 				
-				$url = $url_writer->write(sprintf("c=display&mask=%s", $row[SearchFields_Ticket::TICKET_MASK]), true);
+				$url = $url_writer->writeNoProxy(sprintf("c=display&mask=%s", $row[SearchFields_Ticket::TICKET_MASK]), true);
 
 				$model = new Model_ExplorerSet();
 				$model->hash = $hash;
@@ -955,7 +959,7 @@ class ChTicketsPage extends CerberusPageExtension {
 					'created' => time(),
 					//'worker_id' => $active_worker->id,
 					'total' => $total,
-					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=tickets&tab=messages', true),
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->writeNoProxy('c=tickets&tab=messages', true),
 //					'toolbar_extension_id' => 'cerberusweb.explorer.toolbar.',
 				);
 				$models[] = $model; 
@@ -973,7 +977,7 @@ class ChTicketsPage extends CerberusPageExtension {
 				$model->pos = $pos++;
 				$model->params = array(
 					'id' => $id,
-					'url' => $url_writer->write(sprintf("c=display&id=%s", $row[SearchFields_Message::TICKET_MASK]), true),
+					'url' => $url_writer->writeNoProxy(sprintf("c=display&id=%s", $row[SearchFields_Message::TICKET_MASK]), true),
 				);
 				$models[] = $model; 
 			}
@@ -1119,6 +1123,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		@$to = DevblocksPlatform::importGPC($_REQUEST['to'],'string','');
 	    
 		$visit = CerberusApplication::getVisit();
+		$active_worker = CerberusApplication::getActiveWorker();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
 		
@@ -1138,8 +1143,8 @@ class ChTicketsPage extends CerberusPageExtension {
 		$subject = $visit->get('compose.defaults.subject', '');
 		$tpl->assign('default_subject', $subject);
 		
-		$closed = intval($visit->get('compose.defaults.closed', ''));
-		$tpl->assign('default_closed', $closed);
+		// Preferences
+		$tpl->assign('mail_status_compose', DAO_WorkerPref::get($active_worker->id,'mail_status_compose','waiting'));
 		
 		$tpl->display('devblocks:cerberusweb.core::tickets/compose/peek.tpl');
 	}
@@ -1162,7 +1167,6 @@ class ChTicketsPage extends CerberusPageExtension {
 		// Save Defaults
 		$visit->set('compose.defaults.from', $team_id);
 		$visit->set('compose.defaults.subject', $subject);
-		$visit->set('compose.defaults.closed', $closed);
 		
 		// Send
 		$properties = array(
@@ -1286,6 +1290,9 @@ class ChTicketsPage extends CerberusPageExtension {
 		}
 		
 		// Props
+		$workers = DAO_Worker::getAllActive();
+		$tpl->assign('workers', $workers);
+		
 		$teams = DAO_Group::getAll();
 		$tpl->assign('teams', $teams);
 		
@@ -1319,7 +1326,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
 		@$subject = DevblocksPlatform::importGPC($_REQUEST['subject'],'string','');
 		@$closed = DevblocksPlatform::importGPC($_REQUEST['closed'],'integer',0);
-		@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
+		@$owner_id = DevblocksPlatform::importGPC($_REQUEST['owner_id'],'integer',0);
 		@$bucket = DevblocksPlatform::importGPC($_REQUEST['bucket_id'],'string','');
 		@$spam_training = DevblocksPlatform::importGPC($_REQUEST['spam_training'],'string','');
 		@$ticket_reopen = DevblocksPlatform::importGPC(@$_REQUEST['ticket_reopen'],'string','');
@@ -1329,6 +1336,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		$fields = array(
 			DAO_Ticket::SUBJECT => $subject,
+			DAO_Ticket::OWNER_ID => $owner_id,
 		);
 		
 		// Status
@@ -1472,6 +1480,8 @@ class ChTicketsPage extends CerberusPageExtension {
 		
 		if(!$active_worker->hasPriv('core.mail.log_ticket'))
 			return;
+			
+		$translate = DevblocksPlatform::getTranslationService();
 		
 		@$to = DevblocksPlatform::importGPC($_POST['to'],'string');
 		@$reqs = DevblocksPlatform::importGPC($_POST['reqs'],'string');
@@ -1503,12 +1513,12 @@ class ChTicketsPage extends CerberusPageExtension {
 		$from_address = $from->mailbox . '@' . $from->host;
 		$message->headers['from'] = $from_address;
 
-		$message->body = sprintf(
-				"#### This message was logged by %s on behalf of the requesters\n".
-				"\n",
-				$active_worker->getName()
-			).
-			$content;
+		$message->body =
+			vsprintf($translate->_('mail.create.on_behalf'), $active_worker->getName()). 
+			"\n".
+			"\n".
+			$content
+			;
 		
 		// Files
 		if(isset($_FILES['attachment']))
@@ -2203,6 +2213,14 @@ class ChTicketsPage extends CerberusPageExtension {
 		if(0 != strlen($is_spam)) {
 			$do['spam'] = array(
 				'is_spam' => (!$is_spam?0:1)
+			);
+		}
+		
+		// Owner
+		@$owner_id = DevblocksPlatform::importGPC($_REQUEST['do_owner'],'string',null);
+		if(0 != strlen($owner_id)) {
+			$do['owner'] = array(
+				'worker_id' => intval($owner_id),
 			);
 		}
 		

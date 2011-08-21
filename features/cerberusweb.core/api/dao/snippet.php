@@ -661,8 +661,8 @@ class View_Snippet extends C4_AbstractView implements IAbstractView_Subtotals {
 	}
 		
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(0);
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -727,7 +727,7 @@ class Context_Snippet extends Extension_DevblocksContext {
 		return array(
 			'id' => $context_id,
 			'name' => $snippet->title,
-			'permalink' => '', //$url_writer->write('c=tasks&action=display&id='.$task->id, true),
+			'permalink' => '', //$url_writer->writeNoProxy('c=tasks&action=display&id='.$task->id, true),
 		);
 	}
 	

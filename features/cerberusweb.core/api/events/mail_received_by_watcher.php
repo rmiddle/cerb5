@@ -81,7 +81,9 @@ class Event_MailReceivedByWatcher extends Extension_DevblocksEvent {
 			if(!is_null($event_model)) {
 				$values['is_first'] = ($values['id'] == $ticket_values['initial_message_id']) ? 1 : 0;
 			}
-		
+
+			@$group_id = $ticket_values['group_id'];
+			
 			// Clear dupe content
 			CerberusContexts::scrubTokensWithRegexp(
 				$ticket_labels,
@@ -89,6 +91,7 @@ class Event_MailReceivedByWatcher extends Extension_DevblocksEvent {
 				array(
 					"#^initial_message_#",
 					"#^latest_message_#",
+					"#^group_#",
 					"#^id$#",
 				)
 			);
@@ -103,6 +106,24 @@ class Event_MailReceivedByWatcher extends Extension_DevblocksEvent {
 				$values
 			);
 				
+			
+		/**
+		 * Group
+		 */
+		$group_labels = array();
+		$group_values = array();
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_GROUP, $group_id, $group_labels, $group_values, null, true);
+				
+			// Merge
+			CerberusContexts::merge(
+				'group_',
+				'',
+				$group_labels,
+				$group_values,
+				$labels,
+				$values
+			);
+			
 			
 		/**
 		 * Sender Worker
@@ -169,9 +190,10 @@ class Event_MailReceivedByWatcher extends Extension_DevblocksEvent {
 			'sender_worker_full_name' => Model_CustomField::TYPE_SINGLE_LINE,
 			'storage_size' => Model_CustomField::TYPE_NUMBER,
 		
+			'group_name' => Model_CustomField::TYPE_SINGLE_LINE,
+		
 			"ticket_bucket_name|default('Inbox')" => Model_CustomField::TYPE_SINGLE_LINE,
 			'ticket_created|date' => Model_CustomField::TYPE_DATE,
-			'ticket_group_name' => Model_CustomField::TYPE_SINGLE_LINE,
 			'ticket_mask' => Model_CustomField::TYPE_SINGLE_LINE,
 			'ticket_subject' => Model_CustomField::TYPE_SINGLE_LINE,
 			'ticket_updated|date' => Model_CustomField::TYPE_DATE,
@@ -214,7 +236,6 @@ class Event_MailReceivedByWatcher extends Extension_DevblocksEvent {
 			'add_watchers' => array('label' =>'Add watchers'),
 			//'set_spam_training' => array('label' => 'Set spam training'),
 			//'set_status' => array('label' => 'Set status'),
-			'set_subject' => array('label' => 'Set subject'),
 			'send_email' => array('label' => 'Send email'),
 			'relay_email' => array('label' => 'Relay to external email'),
 			'send_email_recipients' => array('label' => 'Reply to recipients'),
@@ -240,10 +261,6 @@ class Event_MailReceivedByWatcher extends Extension_DevblocksEvent {
 		$tpl->assign('token_labels', $labels);
 			
 		switch($token) {
-			case 'set_subject':
-				$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_string.tpl');
-				break;
-				
 			case 'send_email':
 				DevblocksEventHelper::renderActionSendEmail();
 				break;
@@ -288,12 +305,6 @@ class Event_MailReceivedByWatcher extends Extension_DevblocksEvent {
 			return;
 		
 		switch($token) {
-			case 'set_subject':
-				DAO_Ticket::update($ticket_id,array(
-					DAO_Ticket::SUBJECT => $params['value'],
-				));
-				break;
-			
 			case 'send_email':
 				DevblocksEventHelper::runActionSendEmail($params, $values);
 				break;
@@ -322,7 +333,7 @@ class Event_MailReceivedByWatcher extends Extension_DevblocksEvent {
 				
 			case 'create_notification':
 				$url_writer = DevblocksPlatform::getUrlService();
-				$url = $url_writer->write('c=display&id='.$values['ticket_mask'], true);
+				$url = $url_writer->writeNoProxy('c=display&id='.$values['ticket_mask'], true);
 				
 				DevblocksEventHelper::runActionCreateNotification($params, $values, $url);
 				break;

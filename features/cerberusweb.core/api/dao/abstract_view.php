@@ -154,8 +154,14 @@ abstract class C4_AbstractView {
 	}
 	
 	function getParams() {
-		// Required should override editable
-		return array_merge($this->_paramsEditable, $this->_paramsRequired);
+		$params = $this->_paramsEditable;
+		
+		// Required should supersede editable
+		if(is_array($this->_paramsRequired))
+		foreach($this->_paramsRequired as $key => $param)
+			$params['req_'.$key] = $param;
+		
+		return $params;
 	}
 	
 	function getEditableParams() {
@@ -265,6 +271,50 @@ abstract class C4_AbstractView {
 		}
 	}
 	
+	protected function _renderVirtualWatchers($param) {
+		$workers = DAO_Worker::getAll();
+		$strings = array();
+		
+		foreach($param->value as $worker_id) {
+			if(isset($workers[$worker_id]))
+				$strings[] = '<b>'.$workers[$worker_id]->getName().'</b>';
+		}
+		
+		if(empty($param->value)) {
+			switch($param->operator) {
+				case DevblocksSearchCriteria::OPER_IN:
+				case DevblocksSearchCriteria::OPER_IN_OR_NULL:
+				case DevblocksSearchCriteria::OPER_NIN_OR_NULL:
+					$param->operator = DevblocksSearchCriteria::OPER_IS_NULL;
+					break;
+				case DevblocksSearchCriteria::OPER_NIN:
+					$param->operator = DevblocksSearchCriteria::OPER_IS_NOT_NULL;
+					break;
+			}
+		}
+		
+		switch($param->operator) {
+			case DevblocksSearchCriteria::OPER_IS_NULL:
+				echo "There are no <b>watchers</b>";
+				break;
+			case DevblocksSearchCriteria::OPER_IS_NOT_NULL:
+				echo "There are <b>watchers</b>";
+				break;
+			case DevblocksSearchCriteria::OPER_IN:
+				echo sprintf("Watcher is %s", implode(' or ', $strings));
+				break;
+			case DevblocksSearchCriteria::OPER_IN_OR_NULL:
+				echo sprintf("Watcher is blank or %s", implode(' or ', $strings));
+				break;
+			case DevblocksSearchCriteria::OPER_NIN:
+				echo sprintf("Watcher is not %s", implode(' or ', $strings));
+				break;
+			case DevblocksSearchCriteria::OPER_NIN_OR_NULL:
+				echo sprintf("Watcher is blank or not %s", implode(' or ', $strings));
+				break;
+		}		
+	}
+	
 	/**
 	 * Enter description here...
 	 *
@@ -314,8 +364,16 @@ abstract class C4_AbstractView {
 				@$worker_ids = DevblocksPlatform::importGPC($_POST['worker_id'],'array',array());
 				
 				if(empty($worker_ids)) {
-					$oper = DevblocksSearchCriteria::OPER_IS_NULL;
-					$worker_ids = null;
+					switch($oper) {
+						case DevblocksSearchCriteria::OPER_IN:
+							$oper = DevblocksSearchCriteria::OPER_IS_NULL;
+							$worker_ids = null;
+							break;
+						case DevblocksSearchCriteria::OPER_NIN:
+							$oper = DevblocksSearchCriteria::OPER_IS_NOT_NULL;
+							$worker_ids = null;
+							break;
+					}
 				}
 				
 				$criteria = new DevblocksSearchCriteria($token,$oper,$worker_ids);
@@ -550,6 +608,17 @@ abstract class C4_AbstractView {
 				$field_key => new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE),
 			);
 			$params = array_merge($new_params, $params);
+		} else {
+			switch($params[$field_key]->operator) {
+				case DevblocksSearchCriteria::OPER_EQ:
+				case DevblocksSearchCriteria::OPER_IS_NULL:
+					$params[$field_key] = new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE);
+					break;
+				case DevblocksSearchCriteria::OPER_IN:
+					if(is_array($params[$field_key]->value) && count($params[$field_key]->value) < 2)
+						$params[$field_key] = new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE);
+					break;
+			}
 		}
 		
 		if(!method_exists($dao_class,'getSearchQueryComponents'))
@@ -666,6 +735,17 @@ abstract class C4_AbstractView {
 				$field_key => new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE),
 			);
 			$params = array_merge($new_params, $params);
+		} else {
+			switch($params[$field_key]->operator) {
+				case DevblocksSearchCriteria::OPER_EQ:
+				case DevblocksSearchCriteria::OPER_IS_NULL:
+					$params[$field_key] = new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE);
+					break;
+				case DevblocksSearchCriteria::OPER_IN:
+					if(is_array($params[$field_key]->value) && count($params[$field_key]->value) < 2)
+						$params[$field_key] = new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE);
+					break;
+			}
 		}
 		
 		if(!method_exists($dao_class,'getSearchQueryComponents'))
@@ -763,6 +843,17 @@ abstract class C4_AbstractView {
 				$field_key => new DevblocksSearchCriteria($field_key,DevblocksSearchCriteria::OPER_TRUE),
 			);
 			$params = array_merge($params, $add_param); 
+		} else {
+			switch($params[$field_key]->operator) {
+				case DevblocksSearchCriteria::OPER_EQ:
+				case DevblocksSearchCriteria::OPER_IS_NULL:
+					$params[$field_key] = new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE);
+					break;
+				case DevblocksSearchCriteria::OPER_IN:
+					if(is_array($params[$field_key]->value) && count($params[$field_key]->value) < 2)
+						$params[$field_key] = new DevblocksSearchCriteria($field_key, DevblocksSearchCriteria::OPER_TRUE);
+					break;
+			}
 		}
 		
 		// ... and that the DAO object is valid
@@ -1181,6 +1272,12 @@ class C4_AbstractViewLoader {
 			
 		$inst->renderTemplate = $model->renderTemplate;
 		
+		// Enforce class restrictions
+		$parent = new $model->class_name;
+		$inst->addColumnsHidden($parent->getColumnsHidden());
+		$inst->addParamsHidden($parent->getParamsHidden());
+		$inst->addParamsRequired($parent->getParamsRequired());
+		
 		return $inst;
 	}
 };
@@ -1249,7 +1346,7 @@ class DAO_WorkerViewModel {
 			$model->paramsHidden = json_decode($row['params_hidden_json'], true);
 			
 			// Make sure it's a well-formed view
-			if(empty($model->class_name))
+			if(empty($model->class_name) || !class_exists($model->class_name, true))
 				return false;
 			
 			return $model;
@@ -1315,7 +1412,7 @@ class DAO_WorkerViewModel {
 			'render_limit' => intval($model->renderLimit),
 			'render_sort_by' => $db->qstr($model->renderSortBy),
 			'render_sort_asc' => !empty($model->renderSortAsc) ? 1 : 0,
-			'render_filters' => $db->qstr($model->renderFilters),
+			'render_filters' => !empty($model->renderFilters) ? 1 : 0,
 			'render_subtotals' => $db->qstr($model->renderSubtotals),
 			'render_template' => $db->qstr($model->renderTemplate),
 		);

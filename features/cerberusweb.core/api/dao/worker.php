@@ -462,7 +462,7 @@ class DAO_Worker extends C4_ORMHelper {
 	 * @param integer $worker_id
 	 * @param Model_Activity $activity
 	 */
-	static function logActivity(Model_Activity $activity) {
+	static function logActivity(Model_Activity $activity, $ignore_wait=false) {
 		if(null === ($worker = CerberusApplication::getActiveWorker()))
 			return;
 			
@@ -471,7 +471,7 @@ class DAO_Worker extends C4_ORMHelper {
 			$ip = '127.0.0.1';
 
 		// Update activity once per 30 seconds
-		if($worker->last_activity_date < (time()-30)) {
+		if($ignore_wait || $worker->last_activity_date < (time()-30)) {
 		    DAO_Worker::update($worker->id,array(
 		        DAO_Worker::LAST_ACTIVITY_DATE => time(),
 		        DAO_Worker::LAST_ACTIVITY => serialize($activity),
@@ -1104,8 +1104,8 @@ class View_Worker extends C4_AbstractView implements IAbstractView_Subtotals {
 	}
 
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(600); // [TODO] Temp!
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -1249,7 +1249,7 @@ class Context_Worker extends Extension_DevblocksContext {
 		return array(
 			'id' => $worker->id,
 			'name' => $worker_name,
-			'permalink' => $url_writer->write('c=profiles&type=worker&who='.$who, true),
+			'permalink' => $url_writer->writeNoProxy('c=profiles&type=worker&who='.$who, true),
 		);
 	}
 	

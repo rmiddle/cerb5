@@ -381,26 +381,7 @@ class DAO_Address extends C4_ORMHelper {
 					$from_context = CerberusContexts::CONTEXT_ADDRESS;
 					$from_index = 'a.id';
 					
-					// Join and return anything
-					if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
-						$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-					} elseif(empty($param->value)) { // empty
-						// Either any watchers (1 or more); or no watchers
-						if(DevblocksSearchCriteria::OPER_NIN == $param->operator || DevblocksSearchCriteria::OPER_NEQ == $param->operator) {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NOT NULL ";
-						} else {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NULL ";
-						}
-					// Specific watchers
-					} else {
-						$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id IN (%s)) ",
-							$from_context,
-							$from_index,
-							implode(',', $param->value)
-						);
-					}
+					self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $join_sql, $where_sql);
 					break;
 			}
 		}
@@ -747,20 +728,7 @@ class View_Address extends C4_AbstractView implements IAbstractView_Subtotals {
 		
 		switch($key) {
 			case SearchFields_Address::VIRTUAL_WATCHERS:
-				if(empty($param->value)) {
-					echo "There are no <b>watchers</b>";
-					
-				} elseif(is_array($param->value)) {
-					$workers = DAO_Worker::getAll();
-					$strings = array();
-					
-					foreach($param->value as $worker_id) {
-						if(isset($workers[$worker_id]))
-							$strings[] = '<b>'.$workers[$worker_id]->getName().'</b>';
-					}
-					
-					echo sprintf("Watcher is %s", implode(' or ', $strings));
-				}
+				$this->_renderVirtualWatchers($param);
 				break;
 		}
 	}	
@@ -806,7 +774,7 @@ class View_Address extends C4_AbstractView implements IAbstractView_Subtotals {
 				break;
 			case SearchFields_Address::VIRTUAL_WATCHERS:
 				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
-				$criteria = new DevblocksSearchCriteria($field,'in', $worker_ids);
+				$criteria = new DevblocksSearchCriteria($field,$oper,$worker_ids);
 				break;
 			default:
 				// Custom Fields
@@ -823,8 +791,8 @@ class View_Address extends C4_AbstractView implements IAbstractView_Subtotals {
 	}
 
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(600); // [TODO] Temp!
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -974,7 +942,7 @@ class Context_Address extends Extension_DevblocksContext {
 		return array(
 			'id' => $address->id,
 			'name' => $addy_name,
-			'permalink' => $url_writer->write('c=contacts&tab=addresses&page=display&id=' . $context_id . '-' . DevblocksPlatform::strToPermalink($address->email), true),
+			'permalink' => $url_writer->writeNoProxy('c=contacts&tab=addresses&page=display&id=' . $context_id . '-' . DevblocksPlatform::strToPermalink($address->email), true),
 		);
 	}
     
@@ -1021,10 +989,8 @@ class Context_Address extends Extension_DevblocksContext {
 			$token_values['full_name'] = $address->getName();
 			if(!empty($address->email))
 				$token_values['address'] = $address->email;
-			if(!empty($address->first_name))
-				$token_values['first_name'] = $address->first_name;
-			if(!empty($address->last_name))
-				$token_values['last_name'] = $address->last_name;
+			$token_values['first_name'] = $address->first_name;
+			$token_values['last_name'] = $address->last_name;
 			$token_values['num_spam'] = $address->num_spam;
 			$token_values['num_nonspam'] = $address->num_nonspam;
 			$token_values['is_banned'] = $address->is_banned;

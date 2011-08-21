@@ -126,6 +126,9 @@ class DAO_TriggerEvent extends C4_ORMHelper {
 	static private function _getObjectsFromResult($rs) {
 		$objects = array();
 		
+		if(!is_resource($rs))
+			return $objects;
+		
 		while($row = mysql_fetch_assoc($rs)) {
 			$object = new Model_TriggerEvent();
 			$object->id = intval($row['id']);
@@ -163,7 +166,7 @@ class DAO_TriggerEvent extends C4_ORMHelper {
 	static function deleteByOwner($context, $context_id) {
 		$results = self::getWhere(sprintf("%s = %s AND %s = %d",
 			self::OWNER_CONTEXT,
-			$context,
+			C4_ORMHelper::qstr($context),
 			self::OWNER_CONTEXT_ID,
 			$context_id
 		));
@@ -542,7 +545,6 @@ class View_TriggerEvent extends C4_AbstractView {
 		$translate = DevblocksPlatform::getTranslationService();
 	
 		$this->id = self::DEFAULT_ID;
-		// [TODO] Name the worklist view
 		$this->name = $translate->_('Trigger');
 		$this->renderLimit = 25;
 		$this->renderSortBy = SearchFields_TriggerEvent::ID;
@@ -556,11 +558,9 @@ class View_TriggerEvent extends C4_AbstractView {
 			SearchFields_TriggerEvent::OWNER_CONTEXT_ID,
 			SearchFields_TriggerEvent::EVENT_POINT,
 		);
-		// [TODO] Filter fields
 		$this->addColumnsHidden(array(
 		));
 		
-		// [TODO] Filter fields
 		$this->addParamsHidden(array(
 		));
 		
@@ -706,8 +706,8 @@ class View_TriggerEvent extends C4_AbstractView {
 	}
 		
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(0);
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 

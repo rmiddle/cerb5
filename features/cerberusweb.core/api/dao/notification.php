@@ -423,7 +423,7 @@ class View_Notification extends C4_AbstractView implements IAbstractView_Subtota
 		switch($column) {
 			case SearchFields_Notification::URL:
 				$url_writer = DevblocksPlatform::getUrlService();
-				$base_url = $url_writer->write('',true);
+				$base_url = $url_writer->writeNoProxy('',true);
 				$counts = $this->_getSubtotalCountForStringColumn('DAO_Notification', $column);
 				foreach($counts as $k => $v)
 					$counts[$k]['label'] = str_replace($base_url, '', $v['label']);
@@ -559,8 +559,8 @@ class View_Notification extends C4_AbstractView implements IAbstractView_Subtota
 	}
 	
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(600); // [TODO] Temp!
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 //		$custom_fields = array();
 
@@ -657,7 +657,7 @@ class Context_Notification extends Extension_DevblocksContext {
 		return array(
 			'id' => $notification->id,
 			'name' => $notification->message,
-			'permalink' => $url_writer->write('c=preferences&action=redirectRead&id='.$context_id, true),
+			'permalink' => $url_writer->writeNoProxy('c=preferences&action=redirectRead&id='.$context_id, true),
 		);
 	}
 	
@@ -667,6 +667,7 @@ class Context_Notification extends Extension_DevblocksContext {
 		
 		$translate = DevblocksPlatform::getTranslationService();
 		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_NOTIFICATION);
+		$url_writer = DevblocksPLatform::getUrlService();
 
 		// Polymorph
 		if(is_numeric($notification)) {
@@ -685,6 +686,7 @@ class Context_Notification extends Extension_DevblocksContext {
 			'message' => $prefix.'message',
 			'is_read' => $prefix.'is read',
 			'url' => $prefix.$translate->_('common.url'),
+			'url_markread' => $prefix.'URL (Mark read)',
 		);
 		
 		if(is_array($fields))
@@ -701,6 +703,7 @@ class Context_Notification extends Extension_DevblocksContext {
 			$token_values['message'] = $notification->message;
 			$token_values['is_read'] = $notification->is_read;
 			$token_values['url'] = $notification->url;
+			$token_values['url_markread'] = $url_writer->writeNoProxy(sprintf("c=preferences&a=redirectRead&id=%d", $notification->id), true);
 			
 			$token_values['custom'] = array();
 			

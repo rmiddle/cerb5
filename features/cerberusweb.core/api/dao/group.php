@@ -965,8 +965,8 @@ class View_Group extends C4_AbstractView implements IAbstractView_Subtotals {
 	}
 
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(600); // [TODO] Temp!
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -1043,7 +1043,7 @@ class Context_Group extends Extension_DevblocksContext {
 		return array(
 			'id' => $group->id,
 			'name' => $group->name,
-			'permalink' => $url_writer->write('c=profiles&type=group&who='.$who, true),
+			'permalink' => $url_writer->writeNoProxy('c=profiles&type=group&who='.$who, true),
 		);
 	}
 	

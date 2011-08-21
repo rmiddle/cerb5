@@ -86,7 +86,7 @@ class ChCronController extends DevblocksControllerExtension {
 		array_shift($stack); // cron
 		$job_id = array_shift($stack);
 
-        @set_time_limit(0); // Unlimited (if possible)
+        @set_time_limit(0); // no limit
 		
 		$url = DevblocksPlatform::getUrlService();
         $timelimit = intval(ini_get('max_execution_time'));
@@ -124,6 +124,7 @@ class ChCronController extends DevblocksControllerExtension {
 			    if($instance->isReadyToRun($is_ignoring_wait)) {
 			        if($timelimit) {
 			            if($lastrun < $nexttime) {
+			            	// [TODO] This should run more than one thing at a time (e.g. safe_mode)
 			                $jobs[0] = $cron_manifests[$idx];
 	    		            $nexttime = $lastrun;
 			            }

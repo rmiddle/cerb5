@@ -339,7 +339,6 @@ class View_Workspace extends C4_AbstractView {
 		$translate = DevblocksPlatform::getTranslationService();
 	
 		$this->id = self::DEFAULT_ID;
-		// [TODO] Name the worklist view
 		$this->name = $translate->_('Workspace');
 		$this->renderLimit = 25;
 		$this->renderSortBy = SearchFields_Workspace::ID;
@@ -350,11 +349,9 @@ class View_Workspace extends C4_AbstractView {
 			SearchFields_Workspace::NAME,
 			SearchFields_Workspace::WORKER_ID,
 		);
-		// [TODO] Filter fields
 		$this->addColumnsHidden(array(
 		));
 		
-		// [TODO] Filter fields
 		$this->addParamsHidden(array(
 		));
 		
@@ -494,8 +491,8 @@ class View_Workspace extends C4_AbstractView {
 	}
 		
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(0);
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -674,6 +671,7 @@ class Model_WorkspaceListView {
 	public $columns = array();
 	public $num_rows = 10;
 	public $params = array();
+	public $params_required = array();
 	public $sort_by = null;
 	public $sort_asc = 1;
 };

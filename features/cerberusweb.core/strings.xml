@@ -54,6 +54,9 @@
 		<tu tuid='activities.task.status.completed'>
 			<tuv xml:lang="en_US"><seg>{{actor}} completed task {{target}}</seg></tuv>
 		</tu>
+		<tu tuid='activities.ticket.assigned'>
+			<tuv xml:lang="en_US"><seg>{{actor}} assigned ticket {{target}} to worker {{worker}}</seg></tuv>
+		</tu>
 		<tu tuid='activities.ticket.merge'>
 			<tuv xml:lang="en_US"><seg>{{actor}} merged ticket {{source}} with ticket {{target}}</seg></tuv>
 		</tu>
@@ -65,6 +68,9 @@
 		</tu>
 		<tu tuid='activities.ticket.status'>
 			<tuv xml:lang="en_US"><seg>{{actor}} changed ticket {{target}} to status {{status}}</seg></tuv>
+		</tu>
+		<tu tuid='activities.ticket.unassigned'>
+			<tuv xml:lang="en_US"><seg>{{actor}} unassigned ticket {{target}}</seg></tuv>
 		</tu>
 		<tu tuid='activities.watcher.assigned'>
 			<tuv xml:lang="en_US"><seg>{{actor}} added {{watcher}} as a watcher to {{target_object}} {{target}}</seg></tuv>
@@ -335,6 +341,9 @@
 		</tu>		
 		<tu tuid='common.order'>
 			<tuv xml:lang="en_US"><seg>order</seg></tuv>
+		</tu>		
+		<tu tuid='common.owner'>
+			<tuv xml:lang="en_US"><seg>owner</seg></tuv>
 		</tu>		
 		<tu tuid='common.languages'>
 			<tuv xml:lang="en_US"><seg>Languages</seg></tuv>
@@ -1218,6 +1227,9 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		<tu tuid='display.reply.next.move.no_thanks'>
 			<tuv xml:lang="en_US"><seg>no thanks!</seg></tuv>
 		</tu>
+		<tu tuid='display.reply.next.owner'>
+			<tuv xml:lang="en_US"><seg>Who should this be assigned to?</seg></tuv>
+		</tu>
 		<tu tuid='display.reply.next.resume'>
 			<tuv xml:lang="en_US"><seg>When would you like to resume this conversation?</seg></tuv>
 		</tu>
@@ -1226,6 +1238,12 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		</tu>
 		<tu tuid='display.reply.next.resume_eg'>
 			<tuv xml:lang="en_US"><seg>(e.g. "Friday", "7 days", "Tomorrow 11:15AM", "Dec 31")</seg></tuv>
+		</tu>
+		<tu tuid='display.reply.no_quote'>
+			<tuv xml:lang="en_US"><seg>Reply without quoting</seg></tuv>
+		</tu>
+		<tu tuid='display.reply.quote'>
+			<tuv xml:lang="en_US"><seg>Quote and reply</seg></tuv>
 		</tu>
 		
 		<tu tuid='display.reply.reply_banner'>
@@ -1280,6 +1298,10 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		</tu>
 		
 		<!-- Mail -->
+		
+		<tu tuid='mail.create.on_behalf'>
+			<tuv xml:lang="en_US"><seg>#### This message was created by %s on your behalf.</seg></tuv>
+		</tu>
 		
 		<tu tuid='mail.drafts'>
 			<tuv xml:lang="en_US"><seg>Drafts</seg></tuv>
@@ -1640,6 +1662,9 @@ For example: *receipt*</seg></tuv>
 		<tu tuid='ticket.first_wrote'>
 			<tuv xml:lang="en_US"><seg>First Wrote</seg></tuv>
 		</tu>
+		<tu tuid='ticket.groups_of_worker'>
+			<tuv xml:lang="en_US"><seg>In Groups of Worker</seg></tuv>
+		</tu>
 		<tu tuid='ticket.interesting_words'>
 			<tuv xml:lang="en_US"><seg>Interesting Words</seg></tuv>
 		</tu>
@@ -1830,6 +1855,33 @@ For example: *receipt*</seg></tuv>
 	    </tu>
 	    <tu tuid='preferences.account.mail.readall'>
 			<tuv xml:lang="en_US"><seg>Always use 'read all' mode (expand messages and sort chronologically)</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.reply_button'>
+			<tuv xml:lang="en_US"><seg>When I click the reply button:</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.signature'>
+			<tuv xml:lang="en_US"><seg>Insert my signature:</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.signature.above'>
+			<tuv xml:lang="en_US"><seg>Above the quoted message</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.signature.below'>
+			<tuv xml:lang="en_US"><seg>Below the quoted message</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.signature.none'>
+			<tuv xml:lang="en_US"><seg>Don't automatically insert my signature</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.status.compose'>
+			<tuv xml:lang="en_US"><seg>When composing a new outgoing message, default the status to:</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.status.create'>
+			<tuv xml:lang="en_US"><seg>When opening a new ticket, default the status to:</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.status.reply'>
+			<tuv xml:lang="en_US"><seg>When replying to mail, default the status to:</seg></tuv>
+	    </tu>
+	    <tu tuid='preferences.account.mail.no_discard_warning'>
+			<tuv xml:lang="en_US"><seg>Don't warn me about losing unsaved changes if I click links while composing mail</seg></tuv>
 	    </tu>
 
 	</body>

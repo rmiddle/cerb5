@@ -76,8 +76,12 @@ abbr {
 	border-bottom:dotted 1px rgb(175,175,175);
 }
 
-select, textarea {
+textarea {
 	border:1px solid rgb(150,150,150);
+}
+
+select {
+	-moz-appearance:menulist;
 }
 
 input[type=text], input[type=password] {
@@ -85,7 +89,7 @@ input[type=text], input[type=password] {
 	padding:2px;
 }
 
-input[type=text]:focus, input[type=password]:focus, select:focus, textarea:focus {
+input[type=text]:focus, input[type=password]:focus, textarea:focus {
 	border:1px solid rgb(121,183,231);
 }
 input[type=text]:focus, input[type=password]:focus {
@@ -168,6 +172,11 @@ pre.emailbody {
 	margin:0px;
 }
 
+button::-moz-focus-inner { 
+    border: 0;
+    padding: 0;
+}
+
 button {
 	background-color:rgb(230,230,230);
 	background: linear-gradient(top, rgb(240,240,240), rgb(210,210,210));
@@ -185,6 +194,9 @@ button {
 	-moz-border-radius: 5px;
 	-webkit-border-radius: 5px;
 	border-radius: 5px;
+	
+	padding:3px 5px;
+	margin:0px;
 }
 
 button:hover {
@@ -197,12 +209,6 @@ button:hover {
 	cursor:pointer;
 	
 	border:1px solid rgb(130,165,226);
-	
-	margin-right:1px;
-	vertical-align:middle;
-	-moz-border-radius: 5px;
-	-webkit-border-radius: 5px;
-	border-radius: 5px;
 }
 
 button.green {
@@ -219,13 +225,17 @@ button.green {
 }
 
 button.green:hover {
-	background-color:rgb(223,240,177);
-	background: linear-gradient(top, rgb(223,240,177), rgb(154,180,90));
-	background: -webkit-gradient(linear, left top, left bottom, from(rgb(223,240,177)), to(rgb(154,180,90)));
-	background: -moz-linear-gradient(top, rgb(223,240,177), rgb(154,180,90));
-	background: -o-linear-gradient(top, rgb(223,240,177), rgb(154,180,90));
-	background: -ms-linear-gradient(top, rgb(223,240,177), rgb(154,180,90));
-	border:1px solid rgb(16,132,19);
+	background:none;
+	color:rgb(50,50,50);
+	
+	background-color:rgb(160,198,254);
+	background: linear-gradient(top, rgb(238,242,245), rgb(160,198,254));
+	background: -webkit-gradient(linear, left top, left bottom, from(rgb(238,242,245)), to(rgb(160,198,254)));
+	background: -moz-linear-gradient(top, rgb(238,242,245), rgb(160,198,254));
+	background: -o-linear-gradient(top, rgb(238,242,245), rgb(160,198,254));
+	background: -ms-linear-gradient(top, rgb(238,242,245), rgb(160,198,254));
+	
+	border-color:rgb(130,165,226);
 }
 
 button.red {
@@ -252,13 +262,11 @@ button.red:hover {
 }
 
 button span {
-	line-height:16px;
-	vertical-align:top;
 }
 
 button.split-left {
 	margin-right:0px;
-	border-right:1px solid rgb(175,175,175);
+	border-right:0px;
 	-moz-border-radius: 5px 0px 0px 5px;
 	-webkit-border-radius: 5px 0px 0px 5px;
 	border-radius: 5px 0px 0px 5px;
@@ -266,14 +274,15 @@ button.split-left {
 
 button.split-right {
 	margin-left:0px;
-	padding-left:3px;
-	padding-right:3px;
 	-moz-border-radius: 0px 5px 5px 0px;
 	-webkit-border-radius: 0px 5px 5px 0px;
 	border-radius: 0px 5px 5px 0px;
 
+	padding:3px 2px;
+	
 	background:none;
-	border-left:0px;
+	border-color: rgb(150,150,150);
+	border-left:1px solid rgb(150,150,150);
 	background-color:rgb(175,175,175);
 	background: linear-gradient(top, rgb(180,180,180), rgb(125,125,125));
 	background: -webkit-gradient(linear, left top, left bottom, from(rgb(180,180,180)), to(rgb(125,125,125)));
@@ -882,7 +891,7 @@ DIV.cerb-menu .cerb-popupmenu {
 	background-repeat:no-repeat;
 	background-position:top left;
 	display:inline-block;
-	vertical-align:middle;
+	vertical-align:top;
 }
 button span.cerb-sprite { display:inline-block; }
 
@@ -934,7 +943,7 @@ button span.cerb-sprite { display:inline-block; }
 	background-repeat:no-repeat;
 	background-position:top left;
 	display:inline-block;
-	vertical-align:middle;
+	vertical-align:top;
 }
 button span.cerb-sprite2 { display:inline-block; }
 

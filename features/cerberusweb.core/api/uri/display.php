@@ -127,6 +127,8 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->assign('requesters', $requesters);
 		
 		// Workers
+		$tpl->assign('workers', DAO_Worker::getAll());
+		
 		$context_watchers = CerberusContexts::getWatchers(CerberusContexts::CONTEXT_TICKET, $ticket->id);
 		$tpl->assign('context_watchers', $context_watchers);
 		
@@ -145,7 +147,8 @@ class ChDisplayPage extends CerberusPageExtension {
 		    		htmlspecialchars($ticket->subject, ENT_QUOTES, LANG_CHARSET_CODE),
 		    		$ticket->mask
 		    	)
-			))
+			)),
+			true
 		);
 		
 		$tpl->display('devblocks:cerberusweb.core::display/index.tpl');
@@ -188,6 +191,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		@$hide = DevblocksPlatform::importGPC($_REQUEST['hide'],'integer',0);
 		
 		$tpl = DevblocksPlatform::getTemplateService();
+		$active_worker = CerberusApplication::getActiveWorker();
 		
 		$message = DAO_Message::get($id);
 		$tpl->assign('message', $message);
@@ -235,8 +239,10 @@ class ChDisplayPage extends CerberusPageExtension {
 		if(!empty($messageToolbarItems))
 			$tpl->assign('message_toolbaritems', $messageToolbarItems);
 		
-		// [TODO] Workers?
-		
+		// Prefs
+		$mail_reply_button = DAO_WorkerPref::get($active_worker->id, 'mail_reply_button', 0);
+		$tpl->assign('mail_reply_button', $mail_reply_button);
+			
 		$tpl->assign('expanded', (empty($hide) ? true : false));
 		
 		$tpl->display('devblocks:cerberusweb.core::display/modules/conversation/message.tpl');
@@ -249,7 +255,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		@$closed = DevblocksPlatform::importGPC($_REQUEST['closed'],'integer',0);
 		@$spam = DevblocksPlatform::importGPC($_REQUEST['spam'],'integer',0);
 		@$deleted = DevblocksPlatform::importGPC($_REQUEST['deleted'],'integer',0);
-		@$bucket = DevblocksPlatform::importGPC($_REQUEST['bucket'],'string','');		
 		
 		if(null == ($ticket = DAO_Ticket::get($id)))
 			return;
@@ -280,16 +285,6 @@ class ChDisplayPage extends CerberusPageExtension {
 				$score = CerberusBayes::calculateTicketSpamProbability($id);
 				$properties[DAO_Ticket::SPAM_SCORE] = $score['probability']; 
 				$properties[DAO_Ticket::SPAM_TRAINING] = CerberusTicketSpamTraining::BLANK;
-		}
-		
-		// Team/Category
-		if(!empty($bucket)) {
-			list($team_id, $bucket_id) = CerberusApplication::translateTeamCategoryCode($bucket);
-
-			if(!empty($team_id)) {
-			    $properties[DAO_Ticket::TEAM_ID] = $team_id;
-			    $properties[DAO_Ticket::CATEGORY_ID] = $bucket_id;
-			}
 		}
 		
 		// Don't double set the closed property (auto-close replies)
@@ -446,6 +441,7 @@ class ChDisplayPage extends CerberusPageExtension {
 	function replyAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
 		@$is_forward = DevblocksPlatform::importGPC($_REQUEST['forward'],'integer',0);
+		@$is_quoted = DevblocksPlatform::importGPC($_REQUEST['is_quoted'],'integer',1);
 
 		$settings = DevblocksPlatform::getPluginSettingsService();
 		$active_worker = CerberusApplication::getActiveWorker();  /* @var $active_worker Model_Worker */
@@ -453,6 +449,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id',$id);
 		$tpl->assign('is_forward',$is_forward);
+		$tpl->assign('is_quoted',$is_quoted);
 		
 		$message = DAO_Message::get($id);
 		$tpl->assign('message',$message);
@@ -515,8 +512,8 @@ class ChDisplayPage extends CerberusPageExtension {
 				$tpl->assign('signature', $signature);
 			}
 
-			$signature_pos = DAO_WorkerPref::get($active_worker->id, 'mail_signature_pos', 2);
-			$tpl->assign('signature_pos', $signature_pos);
+			$tpl->assign('signature_pos', DAO_WorkerPref::get($active_worker->id, 'mail_signature_pos', 2));
+			$tpl->assign('mail_status_reply', DAO_WorkerPref::get($active_worker->id,'mail_status_reply','waiting'));			
 		}
 		
 		$tpl->assign('upload_max_filesize', ini_get('upload_max_filesize'));
@@ -551,6 +548,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		    'files' => @$_FILES['attachment'],
 		    'closed' => DevblocksPlatform::importGPC(@$_REQUEST['closed'],'integer',0),
 		    'bucket_id' => DevblocksPlatform::importGPC(@$_REQUEST['bucket_id'],'string',''),
+		    'owner_id' => DevblocksPlatform::importGPC(@$_REQUEST['owner_id'],'integer',0),
 		    'ticket_reopen' => DevblocksPlatform::importGPC(@$_REQUEST['ticket_reopen'],'string',''),
 		    'agent_id' => @$worker->id,
 		    'forward_files' => DevblocksPlatform::importGPC(@$_REQUEST['forward_files'],'array',array()),
@@ -789,6 +787,10 @@ class ChDisplayPage extends CerberusPageExtension {
 		// Workers
 		$workers = DAO_Worker::getAll();
 		$tpl->assign('workers', $workers);
+		
+		// Prefs
+		$mail_reply_button = DAO_WorkerPref::get($active_worker->id, 'mail_reply_button', 0);
+		$tpl->assign('mail_reply_button', $mail_reply_button);
 		
 		$tpl->display('devblocks:cerberusweb.core::display/modules/conversation/index.tpl');
 	}

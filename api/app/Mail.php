@@ -83,7 +83,13 @@ class CerberusMail {
 		    }
 		    
 			$mail->setTo(DevblocksPlatform::parseCsvString($to));
-			$mail->setFrom(array($from_addy => $from_personal));
+			
+			if(!empty($from_personal)) {
+				$mail->setFrom($from_addy, $from_personal);
+			} else {
+				$mail->setFrom($from_addy);
+			}
+			
 			$mail->setSubject($subject);
 			$mail->generateId();
 			
@@ -353,6 +359,7 @@ class CerberusMail {
 	    'closed'
 	    'ticket_reopen'
 	    'bucket_id'
+	    'owner_id'
 	    'agent_id',
 		'is_autoreply',
 		'dont_send',
@@ -404,7 +411,12 @@ class CerberusMail {
 			} 
 				
 			// Headers
-			$mail->setFrom(array($from_replyto->email => $from_personal));
+			if(!empty($from_personal)) {
+				$mail->setFrom($from_replyto->email, $from_personal);
+			} else {
+				$mail->setFrom($from_replyto->email);
+			}
+			
 			$mail->generateId();
 			
 			$headers = $mail->getHeaders();
@@ -531,9 +543,12 @@ class CerberusMail {
 					}
 				}
 			}
+
+			// Send
+			$recipients = $mail->getTo();
 			
-			// If we're not supposed to send
-			if(isset($properties['dont_send']) && $properties['dont_send']) {
+			// If blank recipients or we're not supposed to send
+			if(empty($recipients) || (isset($properties['dont_send']) && $properties['dont_send'])) {
 				// ...do nothing
 			} else { // otherwise send
 				if(!@$mailer->send($mail)) {
@@ -555,7 +570,9 @@ class CerberusMail {
 					
 				if(isset($properties['bcc']))
 					$params['bcc'] = $properties['bcc'];
-				
+					
+				if(!empty($is_autoreply))
+					$params['is_autoreply'] = true;
 				
 				if(empty($to)) {
 					$hint_to = '(requesters)';
@@ -653,6 +670,11 @@ class CerberusMail {
 			}
 		}
 		
+		if(isset($properties['owner_id'])) {
+			if(empty($properties['owner_id']) || null != (DAO_Worker::get($properties['owner_id'])))
+				$change_fields[DAO_Ticket::OWNER_ID] = intval($properties['owner_id']);
+		}
+		
 		// Post-Reply Change Properties
 
 		if(isset($properties['closed'])) {
@@ -706,7 +728,7 @@ class CerberusMail {
 			// Watchers
 			$context_watchers = CerberusContexts::getWatchers(CerberusContexts::CONTEXT_TICKET, $ticket_id);
 			if(is_array($context_watchers))
-			foreach($context_watchers as $watcher_id) {
+			foreach($context_watchers as $watcher_id => $watcher) {
 				Event_MailReceivedByWatcher::trigger($message_id, $watcher_id);
 			}
 		}

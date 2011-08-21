@@ -700,10 +700,10 @@ class CerberusParser {
         		$proxy_worker = DAO_Worker::get($worker_address->worker_id);
         		
         		// If it's a watcher reply
-        		if(preg_match('#\<cerb5:(.*)\:(.*)@(.*)\>#', $in_reply_to, $hits)) {
+        		if(preg_match('#\<(.*)\_(\d*)\_(\d*)\_([a-f0-9]{8})\@cerb5\>#', $in_reply_to, $hits)) {
         			$context = $hits[1];
         			$context_id = $hits[2];
-        			$signed = $hits[3];
+        			$signed = $hits[4];
         			
         			$signed_compare = substr(md5($context.$context_id.$proxy_worker->pass),8,8);        			
 
@@ -739,7 +739,7 @@ class CerberusParser {
 				        				if(preg_match('/^#sig/', $line, $matches)) {
 				        					$group = DAO_Group::get($ticket->team_id);
 				        					$sig = $group->getReplySignature($ticket->category_id, $proxy_worker);
-				        					$body .= $sig . "\n";
+				        					$body .= $sig . PHP_EOL;
 				        					
 				        				} elseif(preg_match('/^#cut/', $line, $matches)) {
 				        					$is_cut = true;
@@ -787,13 +787,14 @@ class CerberusParser {
 				        					
 				        				} else {
 				        					if(!$is_cut)
-					        					$body .= $line . "\n";
+					        					$body .= $line . PHP_EOL;
 				        				}
 				        			}
 				        			
 				        			$properties['content'] = $body;
 	        						
 				        			$result = CerberusMail::sendTicketMessage($properties);
+				        			return;
 	        					}
 	        					break;
 	        			}
@@ -810,24 +811,6 @@ class CerberusParser {
         		}
         		
         	}
-		
-//					$attachment_files = array();
-//					$attachment_files['name'] = array();
-//					$attachment_files['type'] = array();
-//					$attachment_files['tmp_name'] = array();
-//					$attachment_files['size'] = array();
-//					
-//					$i=0;
-//					foreach($message->files as $filename => $file) {
-//						$attachment_files['name'][$i] = $filename;
-//						$attachment_files['type'][$i] = $file->mime_type;
-//						$attachment_files['tmp_name'][$i] = $file->tmpname;
-//						$attachment_files['size'][$i] = $file->file_size;
-//						$i++;
-//					} 				
-//        			// ... worker is a requester, treat as normal
-//        			$logger->info("[Parser] The external worker was a ticket requester, so we're not treating them as a watcher.");
-
 
 		// New Ticket
 		if($model->getIsNew()) {
@@ -870,7 +853,7 @@ class CerberusParser {
 				DAO_Ticket::IS_CLOSED => 0,
 				DAO_Ticket::FIRST_WROTE_ID => intval($model->getSenderAddressModel()->id),
 				DAO_Ticket::LAST_WROTE_ID => intval($model->getSenderAddressModel()->id),
-				DAO_Ticket::CREATED_DATE => $model->getDate(),
+				DAO_Ticket::CREATED_DATE => time(),
 				DAO_Ticket::UPDATED_DATE => time(),
 				DAO_Ticket::LAST_ACTION_CODE => CerberusTicketActionCode::TICKET_OPENED,
 			);
