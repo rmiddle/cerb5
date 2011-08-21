@@ -7,7 +7,7 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
@@ -43,8 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
@@ -71,17 +70,17 @@ require(APP_PATH . '/api/Application.class.php');
 DevblocksPlatform::init();
 DevblocksPlatform::setExtensionDelegate('C4_DevblocksExtensionDelegate');
 
-// Request
-$request = DevblocksPlatform::readRequest();
-
-// Patches (if not on the patch page)
-if(0 != strcasecmp(@$request->path[0],"update") 
-	&& !DevblocksPlatform::versionConsistencyCheck()) {
+// Do we need an update first?
+if(!DevblocksPlatform::versionConsistencyCheck()) {
+	$request = DevblocksPlatform::readRequest();
+	if(0 != strcasecmp(@$request->path[0],"update")) {
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('update','locked')));
 		exit;
+	}
 }
 
-//DevblocksPlatform::readPlugins();
+// Request
+$request = DevblocksPlatform::readRequest();
 $session = DevblocksPlatform::getSessionService();
 
 // Localization

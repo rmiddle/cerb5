@@ -27,8 +27,22 @@
 		{assign var=field value=$param->field} 
 		{$view_filters.$field->db_label|capitalize}
 		{* [TODO] Add operator labels to platform *}
-		{if $param->operator=='in'}
+		{if $param->operator=='='}
 			is
+		{elseif $param->operator=='!='}
+			is not 
+		{elseif $param->operator=='in'}
+			is    
+		{elseif $param->operator=='in or null'}
+			is blank{if !empty($param->value)} or{/if} 
+		{elseif $param->operator=='not in'}
+			is not
+		{elseif $param->operator=='not in or null'}
+			is blank{if !empty($param->value)} or not{/if}  
+		{elseif $param->operator=='is null'}
+			is {if empty($param->value)}blank{/if}
+		{elseif $param->operator=='is not null'}
+			is not {if empty($param->value)}blank{/if}
 		{else} 
 			{$param->operator}
 		{/if}

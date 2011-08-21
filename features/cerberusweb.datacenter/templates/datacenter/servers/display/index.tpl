@@ -1,68 +1,78 @@
+{$page_context = 'cerberusweb.contexts.datacenter.server'}
+{$page_context_id = $server->id}
+
 {include file="devblocks:cerberusweb.datacenter::datacenter/servers/display/submenu.tpl"}
 
-<table cellspacing="0" cellpadding="0" border="0" width="100%" style="padding-bottom:5px;">
-<tr>
-	<td valign="top" style="padding-right:5px;">
-		<h1 style="margin-bottom:5px;">{$server->name}</h1> 
-		<form action="{devblocks_url}{/devblocks_url}" onsubmit="return false;">
-		{*
-		<b>{'task.is_completed'|devblocks_translate|capitalize}:</b> {if $task->is_completed}{'common.yes'|devblocks_translate|capitalize}{else}{'common.no'|devblocks_translate|capitalize}{/if} &nbsp;
-		{if !empty($task->updated_date)}
-		<b>{'task.updated_date'|devblocks_translate|capitalize}:</b> <abbr title="{$task->updated_date|devblocks_date}">{$task->updated_date|devblocks_prettytime}</abbr> &nbsp;
-		{/if}
-		{if !empty($task->due_date)}
-		<b>{'task.due_date'|devblocks_translate|capitalize}:</b> <abbr title="{$task->due_date|devblocks_date}">{$task->due_date|devblocks_prettytime}</abbr> &nbsp;
-		{/if}
-		{assign var=task_worker_id value=$task->worker_id}
-		{if !empty($task_worker_id) && isset($workers.$task_worker_id)}
-			<b>{'common.worker'|devblocks_translate|capitalize}:</b> {$workers.$task_worker_id->getName()} &nbsp;
-		{/if}
-		<br>
-		*}
+<h2>{'cerberusweb.datacenter.common.server'|devblocks_translate|capitalize}</h2>
+
+<fieldset class="properties">
+	<legend>{$server->name|truncate:128}</legend>
+	
+	<form action="{devblocks_url}{/devblocks_url}" method="post" style="margin-bottom:5px;">
+
+		{foreach from=$properties item=v key=k name=props}
+			<div class="property">
+				{if $k == '...'}
+					<b>{$translate->_('...')|capitalize}:</b>
+					...
+				{else}
+					{include file="devblocks:cerberusweb.core::internal/custom_fields/profile_cell_renderer.tpl"}
+				{/if}
+			</div>
+			{if $smarty.foreach.props.iteration % 3 == 0 && !$smarty.foreach.props.last}
+				<br clear="all">
+			{/if}
+		{/foreach}
 		
+		{if !empty($properties)}
+		<br clear="all">
+		{/if}
+	
 		<!-- Toolbar -->
 		<span>
-		{$object_watchers = DAO_ContextLink::getContextLinks('cerberusweb.contexts.datacenter.server', array($server->id), CerberusContexts::CONTEXT_WORKER)}
-		{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" context='cerberusweb.contexts.datacenter.server' context_id=$server->id full=true}
-		</span>		
+		{$object_watchers = DAO_ContextLink::getContextLinks($page_context, array($page_context_id), CerberusContexts::CONTEXT_WORKER)}
+		{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" context=$page_context context_id=$page_context_id full=true}
+		</span>
 		
+		<!-- Macros -->
+		{devblocks_url assign=return_url full=true}c=datacenter&tab=server&id={$page_context_id}-{$server->name|devblocks_permalink}{/devblocks_url}
+		{include file="devblocks:cerberusweb.core::internal/macros/display/button.tpl" context=$page_context context_id=$page_context_id macros=$macros return_url=$return_url}		
+		
+		<!-- Edit -->
 		<button type="button" id="btnDatacenterServerEdit"><span class="cerb-sprite sprite-document_edit"></span> Edit</button>
-		{*
-		{$toolbar_extensions = DevblocksPlatform::getExtensions('cerberusweb.task.toolbaritem',true)}
-		{foreach from=$toolbar_extensions item=toolbar_extension}
-			{$toolbar_extension->render($task)}
-		{/foreach}
-		*}
-		
-		</form>
-	</td>
-	<td align="right" valign="top">
-		{*
-		<form action="{devblocks_url}{/devblocks_url}" method="post">
-		<input type="hidden" name="c" value="contacts">
-		<input type="hidden" name="a" value="doOrgQuickSearch">
-		<span><b>{$translate->_('common.quick_search')|capitalize}:</b></span> <select name="type">
-			<option value="name">{$translate->_('contact_org.name')|capitalize}</option>
-			<option value="phone">{$translate->_('contact_org.phone')|capitalize}</option>
-		</select><input type="text" name="query" class="input_search" size="24"><button type="submit">{$translate->_('common.search_go')|lower}</button>
-		</form>
-		*}
-	</td>
-</tr>
-</table>
+	
+	</form>
+	
+	{if $pref_keyboard_shortcuts}
+	<small>
+		{$translate->_('common.keyboard')|lower}:
+		(<b>e</b>) {'common.edit'|devblocks_translate|lower}
+		{if !empty($macros)}(<b>m</b>) {'common.macros'|devblocks_translate|lower} {/if}
+		(<b>1-9</b>) change tab
+	</small> 
+	{/if}
+</fieldset>
+
+<div>
+{include file="devblocks:cerberusweb.core::internal/notifications/context_profile.tpl" context=$page_context context_id=$page_context_id}
+</div>
+
+<div>
+{include file="devblocks:cerberusweb.core::internal/macros/behavior/scheduled_behavior_profile.tpl" context=$page_context context_id=$page_context_id}
+</div>
 
 <div id="datacenterServerTabs">
 	<ul>
 		{$point = Extension_ServerTab::POINT}
 		{$tabs = [activity, comments, links]}
 		
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabActivityLog&scope=target&point={$point}&context=cerberusweb.contexts.datacenter.server&context_id={$server->id}{/devblocks_url}">{'common.activity_log'|devblocks_translate|capitalize}</a></li>   
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context=cerberusweb.contexts.datacenter.server&point={$point}&id={$server->id}{/devblocks_url}">{'common.comments'|devblocks_translate|capitalize}</a></li>
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.datacenter.server&point={$point}&id={$server->id}{/devblocks_url}">{'common.links'|devblocks_translate}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabActivityLog&scope=target&point={$point}&context=cerberusweb.contexts.datacenter.server&context_id={$page_context_id}{/devblocks_url}">{'common.activity_log'|devblocks_translate|capitalize}</a></li>   
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context=cerberusweb.contexts.datacenter.server&point={$point}&id={$page_context_id}{/devblocks_url}">{'common.comments'|devblocks_translate|capitalize}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.datacenter.server&point={$point}&id={$page_context_id}{/devblocks_url}">{'common.links'|devblocks_translate}</a></li>
 		
 		{foreach from=$tab_manifests item=tab_manifest}
 			{$tabs[] = $tab_manifest->params.uri}
-			<li><a href="{devblocks_url}ajax.php?c=datacenter&a=showServerTab&ext_id={$tab_manifest->id}&point={$point}&server_id={$server->id}{/devblocks_url}"><i>{$tab_manifest->params.title|devblocks_translate}</i></a></li>
+			<li><a href="{devblocks_url}ajax.php?c=datacenter&a=showServerTab&ext_id={$tab_manifest->id}&point={$point}&server_id={$page_context_id}{/devblocks_url}"><i>{$tab_manifest->params.title|devblocks_translate}</i></a></li>
 		{/foreach}
 	</ul>
 </div> 
@@ -78,11 +88,63 @@
 		var tabs = $("#datacenterServerTabs").tabs( { selected:{$selected_tab_idx} } );
 		
 		$('#btnDatacenterServerEdit').bind('click', function() {
-			$popup = genericAjaxPopup('peek','c=datacenter&a=showServerPeek&id={$server->id}',null,false,'550');
-			$popup.one('datacenter_server', function(event) {
+			$popup = genericAjaxPopup('peek','c=datacenter&a=showServerPeek&id={$page_context_id}',null,false,'550');
+			$popup.one('datacenter_server_save', function(event) {
 				event.stopPropagation();
-				document.location.href = '{devblocks_url}c=datacenter&a=server&id={$server->id}{/devblocks_url}';
+				document.location.href = '{devblocks_url}c=datacenter&a=server&id={$page_context_id}{/devblocks_url}';
 			});
 		})
 	});
+	
+	{include file="devblocks:cerberusweb.core::internal/macros/display/menu_script.tpl"}
+</script>
+
+<script type="text/javascript">
+{if $pref_keyboard_shortcuts}
+$(document).keypress(function(event) {
+	if(event.altKey || event.ctrlKey || event.shiftKey || event.metaKey)
+		return;
+	
+	if($(event.target).is(':input'))
+		return;
+
+	hotkey_activated = true;
+	
+	switch(event.which) {
+		case 49:  // (1) tab cycle
+		case 50:  // (2) tab cycle
+		case 51:  // (3) tab cycle
+		case 52:  // (4) tab cycle
+		case 53:  // (5) tab cycle
+		case 54:  // (6) tab cycle
+		case 55:  // (7) tab cycle
+		case 56:  // (8) tab cycle
+		case 57:  // (9) tab cycle
+		case 58:  // (0) tab cycle
+			try {
+				idx = event.which-49;
+				$tabs = $("#datacenterServerTabs").tabs();
+				$tabs.tabs('select', idx);
+			} catch(ex) { } 
+			break;
+		case 101:  // (E) edit
+			try {
+				$('#btnDatacenterServerEdit').click();
+			} catch(ex) { } 
+			break;
+		case 109:  // (M) macros
+			try {
+				$('#btnDisplayMacros').click();
+			} catch(ex) { } 
+			break;
+		default:
+			// We didn't find any obvious keys, try other codes
+			hotkey_activated = false;
+			break;
+	}
+	
+	if(hotkey_activated)
+		event.preventDefault();
+});
+{/if}
 </script>

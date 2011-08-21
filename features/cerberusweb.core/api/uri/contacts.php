@@ -7,46 +7,14 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
 | ______________________________________________________________________
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- * 
- * Sure, it would be so easy to just cheat and edit this file to use the 
- * software without paying for it.  But we trust you anyway.  In fact, we're 
- * writing this software for you! 
- * 
- * Quality software backed by a dedicated team takes money to develop.  We 
- * don't want to be out of the office bagging groceries when you call up 
- * needing a helping hand.  We'd rather spend our free time coding your 
- * feature requests than mowing the neighbors' lawns for rent money. 
- * 
- * We've never believed in hiding our source code out of paranoia over not 
- * getting paid.  We want you to have the full source code and be able to 
- * make the tweaks your organization requires to get more done -- despite 
- * having less of everything than you might need (time, people, money, 
- * energy).  We shouldn't be your bottleneck.
- * 
- * We've been building our expertise with this project since January 2002.  We 
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
- * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your inbox that you probably 
- * haven't had since spammers found you in a game of 'E-mail Battleship'. 
- * Miss. Miss. You sunk my inbox!
- * 
- * A legitimate license entitles you to support from the developers,  
- * and the warm fuzzy feeling of feeding a couple of obsessed developers 
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
+
 class ChContactsPage extends CerberusPageExtension {
 	function getActivity() {
 		return new Model_Activity('activity.address_book');
@@ -61,10 +29,11 @@ class ChContactsPage extends CerberusPageExtension {
 	
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
-		
+		$translate = DevblocksPlatform::getTranslationService();
 		$visit = CerberusApplication::getVisit();		
-		
 		$response = DevblocksPlatform::getHttpResponse();
+		$active_worker = CerberusApplication::getActiveWorker();
+		
 		$stack = $response->path;
 
 		@array_shift($stack); // contacts
@@ -116,6 +85,63 @@ class ChContactsPage extends CerberusPageExtension {
 						$address = DAO_Address::get($id);
 						$tpl->assign('address', $address);
 						
+						// Custom fields
+						
+						$custom_fields = DAO_CustomField::getAll();
+						$tpl->assign('custom_fields', $custom_fields);
+						
+						// Properties
+						
+						$properties = array();
+						
+						if(!empty($address->contact_org_id)) {
+							if(null != ($org = DAO_ContactOrg::get($address->contact_org_id))) {
+								$properties['org'] = array(
+									'label' => ucfirst($translate->_('contact_org.name')),
+									'type' => null,
+									'org_id' => $address->contact_org_id,
+									'org' => $org,
+								);
+							}
+						}
+						
+						$properties['num_spam'] = array(
+							'label' => ucfirst($translate->_('address.num_spam')),
+							'type' => Model_CustomField::TYPE_NUMBER,
+							'value' => $address->num_spam,
+						);
+						
+						$properties['num_nonspam'] = array(
+							'label' => ucfirst($translate->_('address.num_nonspam')),
+							'type' => Model_CustomField::TYPE_NUMBER,
+							'value' => $address->num_nonspam,
+						);
+						
+						$properties['is_banned'] = array(
+							'label' => ucfirst($translate->_('address.is_banned')),
+							'type' => Model_CustomField::TYPE_CHECKBOX,
+							'value' => $address->is_banned,
+						);
+						
+						@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ADDRESS, $address->id)) or array();
+				
+						foreach($custom_fields as $cf_id => $cfield) {
+							if(!isset($values[$cf_id]))
+								continue;
+								
+							$properties['cf_' . $cf_id] = array(
+								'label' => $cfield->name,
+								'type' => $cfield->type,
+								'value' => $values[$cf_id],
+							);
+						}
+						
+						$tpl->assign('properties', $properties);						
+						
+						// Macros
+						$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.address');
+						$tpl->assign('macros', $macros);
+						
 						$tpl->display('devblocks:cerberusweb.core::contacts/addresses/display/index.tpl');
 						return;
 						break;
@@ -134,10 +160,93 @@ class ChContactsPage extends CerberusPageExtension {
 						$contact = DAO_ContactOrg::get($id);
 						$tpl->assign('contact', $contact);
 						
+						// Custom fields
+						
+						$custom_fields = DAO_CustomField::getAll();
+						$tpl->assign('custom_fields', $custom_fields);
+						
+						// Properties
+						
+						$properties = array();
+						
+						if(!empty($contact->street))
+							$properties['street'] = array(
+								'label' => ucfirst($translate->_('contact_org.street')),
+								'type' => Model_CustomField::TYPE_SINGLE_LINE,
+								'value' => $contact->street,
+							);
+						
+						if(!empty($contact->city))
+							$properties['city'] = array(
+								'label' => ucfirst($translate->_('contact_org.city')),
+								'type' => Model_CustomField::TYPE_SINGLE_LINE,
+								'value' => $contact->city,
+							);
+						
+						if(!empty($contact->province))
+							$properties['province'] = array(
+								'label' => ucfirst($translate->_('contact_org.province')),
+								'type' => Model_CustomField::TYPE_SINGLE_LINE,
+								'value' => $contact->province,
+							);
+						
+						if(!empty($contact->postal))
+							$properties['postal'] = array(
+								'label' => ucfirst($translate->_('contact_org.postal')),
+								'type' => Model_CustomField::TYPE_SINGLE_LINE,
+								'value' => $contact->postal,
+							);
+						
+						if(!empty($contact->country))
+							$properties['country'] = array(
+								'label' => ucfirst($translate->_('contact_org.country')),
+								'type' => Model_CustomField::TYPE_SINGLE_LINE,
+								'value' => $contact->country,
+							);
+						
+						if(!empty($contact->phone))
+							$properties['phone'] = array(
+								'label' => ucfirst($translate->_('contact_org.phone')),
+								'type' => Model_CustomField::TYPE_SINGLE_LINE,
+								'value' => $contact->phone,
+							);
+						
+						if(!empty($contact->website))
+							$properties['website'] = array(
+								'label' => ucfirst($translate->_('contact_org.website')),
+								'type' => Model_CustomField::TYPE_URL,
+								'value' => $contact->website,
+							);
+						
+						$properties['created'] = array(
+							'label' => ucfirst($translate->_('common.created')),
+							'type' => Model_CustomField::TYPE_DATE,
+							'value' => $contact->created,
+						);
+						
+						@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ORG, $contact->id)) or array();
+				
+						foreach($custom_fields as $cf_id => $cfield) {
+							if(!isset($values[$cf_id]))
+								continue;
+								
+							$properties['cf_' . $cf_id] = array(
+								'label' => $cfield->name,
+								'type' => $cfield->type,
+								'value' => $values[$cf_id],
+							);
+						}
+						
+						$tpl->assign('properties', $properties);
+						
 						// Tabs
 						
 						$people_count = DAO_Address::getCountByOrgId($contact->id);
 						$tpl->assign('people_total', $people_count);
+						
+						// Macros
+						$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.org');
+						$tpl->assign('macros', $macros);
 						
 						$tpl->display('devblocks:cerberusweb.core::contacts/orgs/display.tpl');
 						return;
@@ -152,6 +261,52 @@ class ChContactsPage extends CerberusPageExtension {
 				if(!empty($id) && is_numeric($id)) {
 					$person = DAO_ContactPerson::get($id);
 					$tpl->assign('person', $person);
+					
+					// Custom fields
+					
+					$custom_fields = DAO_CustomField::getAll();
+					$tpl->assign('custom_fields', $custom_fields);
+					
+					// Properties
+					
+					$properties = array();
+					
+					if($person->email_id) {
+						if(null != ($address = $person->getPrimaryAddress())) {
+							$properties['primary_email'] = array(
+								'label' => ucfirst($translate->_('common.email')),
+								'type' => null,
+								'address' => $address,
+							);
+						}
+					}
+					
+					$properties['created'] = array(
+						'label' => ucfirst($translate->_('common.created')),
+						'type' => Model_CustomField::TYPE_DATE,
+						'value' => $person->created,
+					);
+					
+					$properties['last_login'] = array(
+						'label' => ucfirst($translate->_('dao.contact_person.last_login')),
+						'type' => Model_CustomField::TYPE_DATE,
+						'value' => $person->last_login,
+					);
+					
+					@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_CONTACT_PERSON, $person->id)) or array();
+			
+					foreach($custom_fields as $cf_id => $cfield) {
+						if(!isset($values[$cf_id]))
+							continue;
+							
+						$properties['cf_' . $cf_id] = array(
+							'label' => $cfield->name,
+							'type' => $cfield->type,
+							'value' => $values[$cf_id],
+						);
+					}
+					
+					$tpl->assign('properties', $properties);						
 					
 					$tpl->display('devblocks:cerberusweb.core::contacts/people/display/index.tpl');
 					return;
@@ -324,6 +479,76 @@ class ChContactsPage extends CerberusPageExtension {
 		return;		
 	}
 	
+	function viewAddysExploreAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
+		
+		$active_worker = CerberusApplication::getActiveWorker();
+		$url_writer = DevblocksPlatform::getUrlService();
+		
+		// Generate hash
+		$hash = md5($view_id.$active_worker->id.time()); 
+		
+		// Loop through view and get IDs
+		$view = C4_AbstractViewLoader::getView($view_id);
+
+		// Page start
+		@$explore_from = DevblocksPlatform::importGPC($_REQUEST['explore_from'],'integer',0);
+		if(empty($explore_from)) {
+			$orig_pos = 1+($view->renderPage * $view->renderLimit);
+		} else {
+			$orig_pos = 1;
+		}
+		
+		$view->renderPage = 0;
+		$view->renderLimit = 250;
+		$pos = 0;
+		
+		do {
+			$models = array();
+			list($results, $total) = $view->getData();
+
+			// Summary row
+			if(0==$view->renderPage) {
+				$model = new Model_ExplorerSet();
+				$model->hash = $hash;
+				$model->pos = $pos++;
+				$model->params = array(
+					'title' => $view->name,
+					'created' => time(),
+					'worker_id' => $active_worker->id,
+					'total' => $total,
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->writeNoProxy('c=contacts&tab=addresses', true),
+//					'toolbar_extension_id' => '',
+				);
+				$models[] = $model; 
+				
+				$view->renderTotal = false; // speed up subsequent pages
+			}
+			
+			if(is_array($results))
+			foreach($results as $org_id => $row) {
+				if($org_id==$explore_from)
+					$orig_pos = $pos;
+				
+				$model = new Model_ExplorerSet();
+				$model->hash = $hash;
+				$model->pos = $pos++;
+				$model->params = array(
+					'id' => $row[SearchFields_Address::ID],
+					'url' => $url_writer->writeNoProxy(sprintf("c=contacts&tab=addresses&mode=display&id=%d-%s", $row[SearchFields_Address::ID], $row[SearchFields_Address::EMAIL]), true),
+				);
+				$models[] = $model; 
+			}
+			
+			DAO_ExplorerSet::createFromModels($models);
+			
+			$view->renderPage++;
+			
+		} while(!empty($results));
+		
+		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('explore',$hash,$orig_pos)));
+	}
+	
 	function viewOrgsExploreAction() {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
 		
@@ -362,7 +587,7 @@ class ChContactsPage extends CerberusPageExtension {
 					'created' => time(),
 					'worker_id' => $active_worker->id,
 					'total' => $total,
-					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=contacts&tab=orgs', true),
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->writeNoProxy('c=contacts&tab=orgs', true),
 //					'toolbar_extension_id' => '',
 				);
 				$models[] = $model; 
@@ -380,7 +605,7 @@ class ChContactsPage extends CerberusPageExtension {
 				$model->pos = $pos++;
 				$model->params = array(
 					'id' => $row[SearchFields_ContactOrg::ID],
-					'url' => $url_writer->write(sprintf("c=contacts&tab=orgs&mode=display&id=%d", $row[SearchFields_ContactOrg::ID]), true),
+					'url' => $url_writer->writeNoProxy(sprintf("c=contacts&tab=orgs&mode=display&id=%d", $row[SearchFields_ContactOrg::ID]), true),
 				);
 				$models[] = $model; 
 			}
@@ -432,7 +657,7 @@ class ChContactsPage extends CerberusPageExtension {
 					'created' => time(),
 					//'worker_id' => $active_worker->id,
 					'total' => $total,
-					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=contacts&tab=people', true),
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->writeNoProxy('c=contacts&tab=people', true),
 //					'toolbar_extension_id' => 'cerberusweb.explorer.toolbar.',
 				);
 				$models[] = $model; 
@@ -450,7 +675,7 @@ class ChContactsPage extends CerberusPageExtension {
 				$model->pos = $pos++;
 				$model->params = array(
 					'id' => $id,
-					'url' => $url_writer->write(sprintf("c=contacts&tab=people&id=%d", $id), true),
+					'url' => $url_writer->writeNoProxy(sprintf("c=contacts&tab=people&id=%d", $id), true),
 				);
 				$models[] = $model; 
 			}
@@ -737,27 +962,46 @@ class ChContactsPage extends CerberusPageExtension {
 		exit;
 	}	
 	
-	function showTabPeopleHistoryAction() {
+	function showTabMailHistoryAction() {
+		$visit = CerberusApplication::getVisit(); /* @var $visit CerberusVisit */
 		$translate = DevblocksPlatform::getTranslationService();
-		
-		@$contact_id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
+	
+		@$point = DevblocksPlatform::importGPC($_REQUEST['point'],'string','contact.history');
+		@$ephemeral = DevblocksPlatform::importGPC($_REQUEST['point'],'integer',0);
+		@$address_ids_str = DevblocksPlatform::importGPC($_REQUEST['address_ids'],'string','');
+		@$org_id = DevblocksPlatform::importGPC($_REQUEST['org_id'],'integer',0);
+	
+		$view_id = DevblocksPlatform::strAlphaNum($point, '\_');
 		
 		$tpl = DevblocksPlatform::getTemplateService();
-				
-		$person = DAO_ContactPerson::get($contact_id);
-		$tpl->assign('person', $person);
+		$view = C4_AbstractViewLoader::getView($view_id);
+		$ids = array();
 		
-		$visit = CerberusApplication::getVisit(); /* @var $visit CerberusVisit */
-
-		$view = C4_AbstractViewLoader::getView('contact_person_history');
+		// Set the active tab
 		
-		// All contact addresses
-		$contact_addresses = $person->getAddresses();
+		if(!empty($point))
+			$visit->set($point, 'mail');
+		
+		// Determine the address scope
+		
+		if(empty($ids) && !empty($address_ids_str)) {
+			$ids = DevblocksPlatform::parseCsvString($address_ids_str, false, 'integer');
+		}
+		
+		if(empty($ids) && !empty($org_id)) {
+			// All org contacts
+			$people = DAO_Address::getWhere(sprintf("%s = %d",
+				DAO_Address::CONTACT_ORG_ID,
+				$org_id
+			));
+			$ids = array_keys($people);
+		}
+		
+		// Build the view
 		
 		if(null == $view) {
 			$view = new View_Ticket();
-			$view->id = 'contact_person_history';
-			$view->name = $translate->_('addy_book.history.view_title');
+			$view->id = $view_id;
 			$view->view_columns = array(
 				SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
 				SearchFields_Ticket::TICKET_CREATED_DATE,
@@ -769,68 +1013,20 @@ class ChContactsPage extends CerberusPageExtension {
 			$view->renderSortBy = SearchFields_Ticket::TICKET_CREATED_DATE;
 			$view->renderSortAsc = false;
 		}
-
-		@$view->name = $translate->_('ticket.requesters') . ": " . intval(count($contact_addresses)) . ' address(es)';
+	
+		@$view->name = $translate->_('ticket.requesters') . ": " . intval(count($ids)) . ' contact(s)';
+		
 		$view->addParams(array(
-			SearchFields_Ticket::REQUESTER_ID => new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ID,'in',array_keys($contact_addresses)),
+			SearchFields_Ticket::REQUESTER_ID => new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ID,'in',$ids),
 			SearchFields_Ticket::TICKET_DELETED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_DELETED,DevblocksSearchCriteria::OPER_EQ,0)
 		), true);
 		$tpl->assign('view', $view);
-		
+	
 		C4_AbstractViewLoader::setView($view->id, $view);
-		
-		$tpl->display('devblocks:cerberusweb.core::contacts/people/display/history_tab.tpl');
+	
+		$tpl->display('devblocks:cerberusweb.core::contacts/tab_mail_history.tpl');
 		exit;
 	}	
-	
-	function showTabHistoryAction() {
-		$translate = DevblocksPlatform::getTranslationService();
-		
-		@$org = DevblocksPlatform::importGPC($_REQUEST['org']);
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-				
-		$contact = DAO_ContactOrg::get($org);
-		$tpl->assign('contact', $contact);
-		
-		$visit = CerberusApplication::getVisit(); /* @var $visit CerberusVisit */
-
-		$tickets_view = C4_AbstractViewLoader::getView('contact_history');
-		
-		// All org contacts
-		$people = DAO_Address::getWhere(sprintf("%s = %d",
-			DAO_Address::CONTACT_ORG_ID,
-			$contact->id
-		));
-		
-		if(null == $tickets_view) {
-			$tickets_view = new View_Ticket();
-			$tickets_view->id = 'contact_history';
-			$tickets_view->name = $translate->_('addy_book.history.view_title');
-			$tickets_view->view_columns = array(
-				SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
-				SearchFields_Ticket::TICKET_CREATED_DATE,
-				SearchFields_Ticket::TICKET_TEAM_ID,
-				SearchFields_Ticket::TICKET_CATEGORY_ID,
-			);
-			$tickets_view->renderLimit = 10;
-			$tickets_view->renderPage = 0;
-			$tickets_view->renderSortBy = SearchFields_Ticket::TICKET_CREATED_DATE;
-			$tickets_view->renderSortAsc = false;
-		}
-
-		@$tickets_view->name = $translate->_('ticket.requesters') . ": " . htmlspecialchars($contact->name) . ' - ' . intval(count($people)) . ' contact(s)';
-		$tickets_view->addParams(array(
-			SearchFields_Ticket::REQUESTER_ID => new DevblocksSearchCriteria(SearchFields_Ticket::REQUESTER_ID,'in',array_keys($people)),
-			SearchFields_Ticket::TICKET_DELETED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_DELETED,DevblocksSearchCriteria::OPER_EQ,0)
-		), true);
-		$tpl->assign('contact_history', $tickets_view);
-		
-		C4_AbstractViewLoader::setView($tickets_view->id,$tickets_view);
-		
-		$tpl->display('devblocks:cerberusweb.core::contacts/orgs/tabs/history.tpl');
-		exit;
-	}
 	
 	function showAddressPeekAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer','');
@@ -946,8 +1142,10 @@ class ChContactsPage extends CerberusPageExtension {
 		@$ids = DevblocksPlatform::importGPC($_REQUEST['ids']);
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
+		$active_worker = CerberusApplication::getActiveWorker();		
+		
 		$tpl = DevblocksPlatform::getTemplateService();
-				$tpl->assign('view_id', $view_id);
+		$tpl->assign('view_id', $view_id);
 
 	    if(!empty($ids)) {
 	        $address_ids = DevblocksPlatform::parseCsvString($ids);
@@ -966,6 +1164,10 @@ class ChContactsPage extends CerberusPageExtension {
 		CerberusContexts::getContext(CerberusContexts::CONTEXT_ADDRESS, null, $token_labels, $token_values);
 		$tpl->assign('token_labels', $token_labels);
 	    
+		// Macros
+		$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.address');
+		$tpl->assign('macros', $macros);
+		
 		$tpl->display('devblocks:cerberusweb.core::contacts/addresses/address_bulk.tpl');
 	}
 	
@@ -973,8 +1175,10 @@ class ChContactsPage extends CerberusPageExtension {
 		@$ids = DevblocksPlatform::importGPC($_REQUEST['ids']);
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
+		$active_worker = CerberusApplication::getActiveWorker();
+		
 		$tpl = DevblocksPlatform::getTemplateService();
-				$tpl->assign('view_id', $view_id);
+		$tpl->assign('view_id', $view_id);
 
 	    if(!empty($ids)) {
 	        $org_ids = DevblocksPlatform::parseCsvString($ids);
@@ -984,6 +1188,10 @@ class ChContactsPage extends CerberusPageExtension {
 		// Custom Fields
 		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ORG);
 		$tpl->assign('custom_fields', $custom_fields);
+		
+		// Macros
+		$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.org');
+		$tpl->assign('macros', $macros);
 		
 		$tpl->display('devblocks:cerberusweb.core::contacts/orgs/org_bulk.tpl');
 	}
@@ -1232,16 +1440,19 @@ class ChContactsPage extends CerberusPageExtension {
 					if(!isset($custom_field_types[$cfield_id]))
 						break;
 					
-					$is_cfield_multival = $custom_field_types[$cfield_id];
+					$is_cfield_multival = $custom_field_types[$cfield_id]->type == Model_CustomField::TYPE_MULTI_CHECKBOX;
 					
 					if(empty($v)) { // no org_id
 						// Handle aggregation of multi-value fields when blank
 						if($is_cfield_multival) {
 							foreach($orgs as $org_id => $org) {
 								if(isset($custom_field_values[$org_id][$cfield_id])) {
+									$existing_field_values = isset($custom_fields[$cfield_id]) ? $custom_fields[$cfield_id] : array();
+									$new_field_values = is_array($custom_field_values[$org_id][$cfield_id]) ? $custom_field_values[$org_id][$cfield_id] : array();
+									
 									$custom_fields[$cfield_id] = array_merge(
-										(isset($custom_fields[$cfield_id]) ? $custom_fields[$cfield_id] : array()),
-										$custom_field_values[$org_id][$cfield_id]
+										$existing_field_values,
+										$new_field_values
 									);
 								}
 							}
@@ -1513,6 +1724,10 @@ class ChContactsPage extends CerberusPageExtension {
 		@$sla = DevblocksPlatform::importGPC($_POST['sla'],'string','');
 		@$is_banned = DevblocksPlatform::importGPC($_POST['is_banned'],'integer',0);
 
+		// Scheduled behavior
+		@$behavior_id = DevblocksPlatform::importGPC($_POST['behavior_id'],'string','');
+		@$behavior_when = DevblocksPlatform::importGPC($_POST['behavior_when'],'string','');
+		
 		$do = array();
 		
 		// Do: Organization
@@ -1520,12 +1735,22 @@ class ChContactsPage extends CerberusPageExtension {
 			if(null != ($org_id = DAO_ContactOrg::lookup($org_name, true)))
 				$do['org_id'] = $org_id;
 		}
+		
 		// Do: SLA
 		if('' != $sla)
 			$do['sla'] = $sla;
+		
 		// Do: Banned
 		if(0 != strlen($is_banned))
 			$do['banned'] = $is_banned;
+		
+		// Do: Scheduled Behavior
+		if(0 != strlen($behavior_id)) {
+			$do['behavior'] = array(
+				'id' => $behavior_id,
+				'when' => $behavior_when,
+			);
+		}
 		
 		// Broadcast: Compose
 		if($active_worker->hasPriv('core.addybook.addy.view.actions.broadcast')) {
@@ -1643,12 +1868,24 @@ class ChContactsPage extends CerberusPageExtension {
 		// Org fields
 		@$country = trim(DevblocksPlatform::importGPC($_POST['country'],'string',''));
 
+		// Scheduled behavior
+		@$behavior_id = DevblocksPlatform::importGPC($_POST['behavior_id'],'string','');
+		@$behavior_when = DevblocksPlatform::importGPC($_POST['behavior_when'],'string','');
+		
 		$do = array();
 		
 		// Do: Country
 		if(0 != strlen($country))
 			$do['country'] = $country;
 			
+		// Do: Scheduled Behavior
+		if(0 != strlen($behavior_id)) {
+			$do['behavior'] = array(
+				'id' => $behavior_id,
+				'when' => $behavior_when,
+			);
+		}
+		
 		// Watchers
 		$watcher_params = array();
 		
@@ -1711,6 +1948,14 @@ class ChContactsPage extends CerberusPageExtension {
             case "org":
                 $params[SearchFields_Address::ORG_NAME] = new DevblocksSearchCriteria(SearchFields_Address::ORG_NAME,DevblocksSearchCriteria::OPER_LIKE,strtolower($query));               
                 break;
+                
+            case "comments_all":
+            	$params[SearchFields_Address::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchCriteria(SearchFields_Address::FULLTEXT_COMMENT_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,array($query,'all'));               
+                break;
+                
+            case "comments_phrase":
+            	$params[SearchFields_Address::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchCriteria(SearchFields_Address::FULLTEXT_COMMENT_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,array($query,'phrase'));               
+                break;
         }
         
         $view->addParams($params, true);
@@ -1743,8 +1988,17 @@ class ChContactsPage extends CerberusPageExtension {
             case "name":
                 $params[SearchFields_ContactOrg::NAME] = new DevblocksSearchCriteria(SearchFields_ContactOrg::NAME,DevblocksSearchCriteria::OPER_LIKE,strtolower($query));               
                 break;
+                
             case "phone":
                 $params[SearchFields_ContactOrg::PHONE] = new DevblocksSearchCriteria(SearchFields_ContactOrg::PHONE,DevblocksSearchCriteria::OPER_LIKE,strtolower($query));               
+                break;
+                
+            case "comments_all":
+            	$params[SearchFields_ContactOrg::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchCriteria(SearchFields_ContactOrg::FULLTEXT_COMMENT_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,array($query,'all'));               
+                break;
+                
+            case "comments_phrase":
+            	$params[SearchFields_ContactOrg::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchCriteria(SearchFields_ContactOrg::FULLTEXT_COMMENT_CONTENT,DevblocksSearchCriteria::OPER_FULLTEXT,array($query,'phrase'));               
                 break;
         }
         

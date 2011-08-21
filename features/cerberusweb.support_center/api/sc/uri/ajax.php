@@ -147,18 +147,6 @@ class UmScAjaxController extends Extension_UmScController {
 		$umsession = ChPortalHelper::getSession();
 		$stack = $request->path;
 		
-        if(null == ($active_contact = $umsession->getProperty('sc_login',null)))
-			return;
-
-		// [TODO] API/model ::getAddresses()
-		$addresses = array();
-		if(!empty($active_contact) && !empty($active_contact->id)) {
-			$addresses = DAO_Address::getWhere(sprintf("%s = %d",
-				DAO_Address::CONTACT_PERSON_ID,
-				$active_contact->id
-			));
-		}
-			
 		// Attachment ID + display name
 		@$guid = array_shift($stack);
 		@$display_name = array_shift($stack);
@@ -172,6 +160,18 @@ class UmScAjaxController extends Extension_UmScController {
 
 		switch($link->context) {
 			case CerberusContexts::CONTEXT_MESSAGE:
+		        if(null == ($active_contact = $umsession->getProperty('sc_login',null)))
+					return;
+		
+				// [TODO] API/model ::getAddresses()
+				$addresses = array();
+				if(!empty($active_contact) && !empty($active_contact->id)) {
+					$addresses = DAO_Address::getWhere(sprintf("%s = %d",
+						DAO_Address::CONTACT_PERSON_ID,
+						$active_contact->id
+					));
+				}
+				
 				// Message
 				if(null == ($message = DAO_Message::get($link->context_id)))
 					return;
@@ -200,13 +200,13 @@ class UmScAjaxController extends Extension_UmScController {
 		$contents = $attachment->getFileContents();
 			
 		// Set headers
-		header("Expires: Mon, 26 Nov 1962 00:00:00 GMT\n");
-		header("Last-Modified: " . gmdate("D,d M YH:i:s") . " GMT\n");
-		header("Cache-control: private\n");
-		header("Pragma: no-cache\n");
-		header("Content-Type: " . $attachment->mime_type . "\n");
-		header("Content-transfer-encoding: binary\n"); 
-		header("Content-Length: " . strlen($contents) . "\n");
+		header("Expires: Mon, 26 Nov 1962 00:00:00 GMT");
+		header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
+		header("Accept-Ranges: bytes");
+//		header("Keep-Alive: timeout=5, max=100");
+//		header("Connection: Keep-Alive");
+		header("Content-Type: " . $attachment->mime_type);
+		header("Content-Length: " . strlen($contents));
 		
 		// Dump contents
 		echo $contents;

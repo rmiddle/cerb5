@@ -275,11 +275,9 @@ class View_OpenIDToWorker extends C4_AbstractView {
 			SearchFields_OpenIDToWorker::OPENID_CLAIMED_ID,
 			SearchFields_OpenIDToWorker::WORKER_ID,
 		);
-		// [TODO] Filter fields
 		$this->addColumnsHidden(array(
 		));
 		
-		// [TODO] Filter fields
 		$this->addParamsHidden(array(
 		));
 		
@@ -417,8 +415,8 @@ class View_OpenIDToWorker extends C4_AbstractView {
 	}
 		
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(0);
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 

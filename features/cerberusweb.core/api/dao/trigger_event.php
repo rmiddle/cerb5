@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class DAO_TriggerEvent extends C4_ORMHelper {
 	const CACHE_ALL = 'cerberus_cache_behavior_all';
 	
@@ -50,17 +66,26 @@ class DAO_TriggerEvent extends C4_ORMHelper {
 	 * 
 	 * @param string $context
 	 * @param integer $context_id
+	 * @param string $event_point
 	 * @return Model_TriggerEvent[]
 	 */
-	static function getByOwner($context, $context_id) {
+	static function getByOwner($context, $context_id, $event_point=null, $with_disabled=false) {
 		$behaviors = self::getAll();
 		$results = array();
 
-		foreach($behaviors as $behavior_id => $behavior) {
+		foreach($behaviors as $behavior_id => $behavior) { /* @var $behavior Model_TriggerEvent */
+			if(!$with_disabled && $behavior->is_disabled)
+				continue;
+			
 			if($behavior->owner_context == $context
-				&& $behavior->owner_context_id == $context_id)
-					$results[$behavior_id] = $behavior;
+				&& $behavior->owner_context_id == $context_id) {
+					if(is_null($event_point) || 0==strcasecmp($event_point,$behavior->event_point)) {
+						$results[$behavior_id] = $behavior;
+					}
+				}
 		}
+		
+		uasort($results, create_function('$a, $b', "return strcasecmp(\$a->title,\$b->title);\n"));
 		
 		return $results;
 	}
@@ -126,6 +151,9 @@ class DAO_TriggerEvent extends C4_ORMHelper {
 	static private function _getObjectsFromResult($rs) {
 		$objects = array();
 		
+		if(!is_resource($rs))
+			return $objects;
+		
 		while($row = mysql_fetch_assoc($rs)) {
 			$object = new Model_TriggerEvent();
 			$object->id = intval($row['id']);
@@ -163,7 +191,7 @@ class DAO_TriggerEvent extends C4_ORMHelper {
 	static function deleteByOwner($context, $context_id) {
 		$results = self::getWhere(sprintf("%s = %s AND %s = %d",
 			self::OWNER_CONTEXT,
-			$context,
+			C4_ORMHelper::qstr($context),
 			self::OWNER_CONTEXT_ID,
 			$context_id
 		));
@@ -542,7 +570,6 @@ class View_TriggerEvent extends C4_AbstractView {
 		$translate = DevblocksPlatform::getTranslationService();
 	
 		$this->id = self::DEFAULT_ID;
-		// [TODO] Name the worklist view
 		$this->name = $translate->_('Trigger');
 		$this->renderLimit = 25;
 		$this->renderSortBy = SearchFields_TriggerEvent::ID;
@@ -556,11 +583,9 @@ class View_TriggerEvent extends C4_AbstractView {
 			SearchFields_TriggerEvent::OWNER_CONTEXT_ID,
 			SearchFields_TriggerEvent::EVENT_POINT,
 		);
-		// [TODO] Filter fields
 		$this->addColumnsHidden(array(
 		));
 		
-		// [TODO] Filter fields
 		$this->addParamsHidden(array(
 		));
 		
@@ -706,8 +731,8 @@ class View_TriggerEvent extends C4_AbstractView {
 	}
 		
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(0);
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 

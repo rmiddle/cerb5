@@ -1,9 +1,22 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class PageSection_SetupStorageAttachments extends Extension_PageSection {
 	function render() {
-		if(ONDEMAND_MODE)
-			return;
-		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$visit = CerberusApplication::getVisit();
 		
@@ -21,9 +34,6 @@ class PageSection_SetupStorageAttachments extends Extension_PageSection {
 	}
 	
 	function showAttachmentsBulkPanelAction() {
-		if(ONDEMAND_MODE)
-			return;
-		
 		@$id_csv = DevblocksPlatform::importGPC($_REQUEST['ids']);
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
@@ -47,9 +57,6 @@ class PageSection_SetupStorageAttachments extends Extension_PageSection {
 	}
 	
 	function doAttachmentsBulkUpdateAction() {
-		if(ONDEMAND_MODE)
-			return;
-		
 		// Filter: whole list or check
 	    @$filter = DevblocksPlatform::importGPC($_REQUEST['filter'],'string','');
 	    $ids = array();

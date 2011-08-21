@@ -7,7 +7,7 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
@@ -43,8 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
@@ -402,7 +401,7 @@ abstract class Extension_RestController extends DevblocksExtension {
 		@$page = DevblocksPlatform::importGPC($_REQUEST['page'],'integer',1);
 		@$limit = DevblocksPlatform::importGPC($_REQUEST['limit'],'integer',10);
 		
-		@$sortToken = DevblocksPlatform::importGPC($_REQUEST['sortBy'],'string','updated');
+		@$sortToken = DevblocksPlatform::importGPC($_REQUEST['sortBy'],'string',null);
 		@$sortAsc = DevblocksPlatform::importGPC($_REQUEST['sortAsc'],'integer',1);
 
 		if(count($criteria) != count($opers) || count($criteria) != count($values))

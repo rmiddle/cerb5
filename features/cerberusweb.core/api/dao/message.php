@@ -7,46 +7,14 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
 | ______________________________________________________________________
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- * 
- * Sure, it would be so easy to just cheat and edit this file to use the 
- * software without paying for it.  But we trust you anyway.  In fact, we're 
- * writing this software for you! 
- * 
- * Quality software backed by a dedicated team takes money to develop.  We 
- * don't want to be out of the office bagging groceries when you call up 
- * needing a helping hand.  We'd rather spend our free time coding your 
- * feature requests than mowing the neighbors' lawns for rent money. 
- * 
- * We've never believed in hiding our source code out of paranoia over not 
- * getting paid.  We want you to have the full source code and be able to 
- * make the tweaks your organization requires to get more done -- despite 
- * having less of everything than you might need (time, people, money, 
- * energy).  We shouldn't be your bottleneck.
- * 
- * We've been building our expertise with this project since January 2002.  We 
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
- * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your inbox that you probably 
- * haven't had since spammers found you in a game of 'E-mail Battleship'. 
- * Miss. Miss. You sunk my inbox!
- * 
- * A legitimate license entitles you to support from the developers,  
- * and the warm fuzzy feeling of feeding a couple of obsessed developers 
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
+
 class DAO_Message extends DevblocksORMHelper {
     const ID = 'id';
     const TICKET_ID = 'ticket_id';
@@ -146,10 +114,14 @@ class DAO_Message extends DevblocksORMHelper {
 	 * @return Model_Message[]
 	 */
 	static function getMessagesByTicket($ticket_id) {
-		return self::getWhere(sprintf("%s = %d",
-			self::TICKET_ID,
-			$ticket_id
-		));
+		return self::getWhere(
+			sprintf("%s = %d",
+				self::TICKET_ID,
+				$ticket_id
+			),
+			DAO_Message::CREATED_DATE,
+			true
+		);
 	}
 
 	static function delete($ids) {
@@ -177,12 +149,6 @@ class DAO_Message extends DevblocksORMHelper {
     	// Search indexes
     	Search_MessageContent::delete($ids);
     	
-    	// Attachments
-    	DAO_AttachmentLink::removeAllByContext(CerberusContexts::CONTEXT_MESSAGE, $ids);
-    	
-    	// Context links
-    	DAO_ContextLink::delete(CerberusContexts::CONTEXT_MESSAGE, $ids);
-
     	// Messages
     	$sql = sprintf("DELETE FROM message WHERE id IN (%s)",
     		$ids_list
@@ -193,6 +159,18 @@ class DAO_Message extends DevblocksORMHelper {
     	foreach($messages as $message_id => $message) {
     		DAO_Ticket::rebuild($message->ticket_id);
     	}
+    	
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => CerberusContexts::CONTEXT_MESSAGE,
+                	'context_ids' => $ids
+                )
+            )
+	    );
 	}
 	
     static function maint() {
@@ -244,6 +222,19 @@ class DAO_Message extends DevblocksORMHelper {
 		$sql = "DELETE QUICK fulltext_message_content FROM fulltext_message_content LEFT JOIN message ON fulltext_message_content.id = message.id WHERE message.id IS NULL";
 		$db->Execute($sql);
 		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' fulltext_message_content records.');
+		
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.maint',
+                array(
+                	'context' => CerberusContexts::CONTEXT_MESSAGE,
+                	'context_table' => 'message',
+                	'context_key' => 'id',
+                )
+            )
+	    );
     }
     
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
@@ -466,6 +457,11 @@ class Model_Message {
 		return DAO_MessageHeader::getAll($this->id);
 	}
 
+	/**
+	 * 
+	 * Enter description here ...
+	 * @return Model_Address
+	 */
 	function getSender() {
 		// Lazy load + cache
 		if(null == $this->_sender_object) {
@@ -513,23 +509,63 @@ class Search_MessageContent {
 				continue;
 			}
 			
+			$count = 0;
+			
+			if(is_array($messages))
 			foreach($messages as $message) { /* @var $message Model_Message */
 				$id = $message->id;
+				
 				$logger->info(sprintf("[Search] Indexing %s %d...", 
 					$ns,
 					$id
 				));
 				
 				if(false !== ($content = Storage_MessageContent::get($message))) {
-					$search->index($ns, $id, $content);
+					$start = 0;
+					$chunklen = 50000; //[TODO] Configurable?
+					$replace = true;
+					$len = mb_strlen($content);
+
+					// 25K character chunks
+					do {
+						$end = $start + $chunklen;
+						
+						// If our offset is past EOS, use the last pos
+						if($end > $len) {
+							$next_ws = $len;
+							
+						} else {
+							if(false === ($next_ws = mb_strpos($content, ' ', $end)))
+								if(false === ($next_ws = mb_strpos($content, "\n", $end)))
+									$next_ws = $end;
+							
+						}							
+							
+						$chunk = mb_substr($content, $start, $next_ws-$start);
+						
+						if(!empty($chunk)) {
+							$start += mb_strlen($chunk);
+							
+							$search->index($ns, $id, $chunk, $replace);
+							$replace = false;
+						}
+						
+					} while(0 != mb_strlen($chunk));
 				}
-				
-				flush();
+
+				// Record our progress every 10th index
+				if(++$count % 10 == 0) {
+					if(!empty($id))
+						DAO_DevblocksExtensionPropertyStore::put(self::ID, 'last_indexed_id', $id);
+				}
 			}
+			
+			flush();
+			
+			// Record our index every batch
+			if(!empty($id))
+				DAO_DevblocksExtensionPropertyStore::put(self::ID, 'last_indexed_id', $id);
 		}
-		
-		if(!empty($id))
-			DAO_DevblocksExtensionPropertyStore::put(self::ID, 'last_indexed_id', $id);
 	}
 	
 	public static function delete($ids) {
@@ -1269,8 +1305,8 @@ class View_Message extends C4_AbstractView implements IAbstractView_Subtotals {
 	}
 
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(600); // [TODO] Temp!
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -1355,13 +1391,18 @@ class Context_Message extends Extension_DevblocksContext {
 	}
 	
 	function getMeta($context_id) {
-		$message = DAO_Message::get($context_id);
 		$url_writer = DevblocksPlatform::getUrlService();
-		
+
+		if(null == ($message = DAO_Message::get($context_id)))
+			return FALSE;
+			
+		if(null == ($ticket = DAO_Ticket::get($message->ticket_id)))
+			return FALSE;
+			
 		return array(
-			'id' => $message->id,
-			'name' => '', //$message->title,
-			'permalink' => '', // [TODO]
+			'id' => $context_id,
+			'name' => sprintf("[%s] %s", $ticket->mask, $ticket->subject),
+			'permalink' => $url_writer->writeNoProxy('c=display&mask='.$ticket->mask, true),
 		);
 	}
 	

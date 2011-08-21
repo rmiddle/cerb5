@@ -139,6 +139,20 @@ foreach($fields as $field_name => $field_type) {
 		
 		$db->Execute(sprintf("DELETE FROM <?php echo $table_name; ?> WHERE id IN (%s)", $ids_list));
 		
+		// Fire event
+		/*
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => 'cerberusweb.contexts.',
+                	'context_ids' => $ids
+                )
+            )
+	    );
+	    */
+		
 		return true;
 	}
 	
@@ -508,8 +522,8 @@ foreach($fields as $field_name => $field_type) {
 	}
 		
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(0);
-	  
+		@set_time_limit(600); // 10m
+	
 		$change_fields = array();
 		$custom_fields = array();
 
