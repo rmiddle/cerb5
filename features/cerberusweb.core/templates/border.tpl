@@ -13,19 +13,16 @@
 		<td align="left" valign="bottom">
 			{assign var=logo_url value=$settings->get('cerberusweb.core','helpdesk_logo_url','')}
 			{if empty($logo_url)}
-			<img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/wgm/cerb5_logo.png{/devblocks_url}?v={$smarty.const.APP_BUILD}">
+			<a href="{devblocks_url}{/devblocks_url}"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/wgm/cerb5_logo.png{/devblocks_url}?v={$smarty.const.APP_BUILD}" border="0"></a>
 			{else}
-			<img src="{$logo_url}">
+			<a href="{devblocks_url}{/devblocks_url}"><img src="{$logo_url}" border="0"></a>
 			{/if}
 		</td>
 		<td align="right" valign="bottom" style="line-height:150%;">
 		{if empty($visit)}
 			{$translate->_('header.not_signed_in')} <a href="{devblocks_url}c=login{/devblocks_url}">{$translate->_('header.signon')|lower}</a>
 		{elseif !empty($active_worker)}
-			{if $active_worker_notify_count}
-			{*<span style="padding:3px 5px 3px 5px;background-color:rgb(200,0,0);"><a href="{devblocks_url}c=profiles&k=worker&id=me&tab=notifications{/devblocks_url}" style="color:rgb(255,255,255);text-decoration:none;font-weight:bold;">{'header.notifications.unread'|devblocks_translate:$active_worker_notify_count}</a></span>*}
-			<span style="padding:3px 5px 3px 5px;background-color:rgb(200,0,0);"><a href="{devblocks_url}c=preferences&k=viewNotificationsExplore{/devblocks_url}?view_id=my_notifications" style="color:rgb(255,255,255);text-decoration:none;font-weight:bold;">{'header.notifications.unread'|devblocks_translate:$active_worker_notify_count}</a></span>
-			{/if}
+			<span id="badgeNotifications" style="display:none;padding:3px 5px 3px 5px;background-color:rgb(200,0,0);"><a href="{devblocks_url}c=profiles&w=worker&me=me&tab=notifications{/devblocks_url}" style="color:rgb(255,255,255);text-decoration:underline;font-weight:bold;"></a></span>
 			
 			{$worker_name =''|cat:'<b><a href="javascript:;" id="lnkSignedIn">'|cat:$active_worker->getName()|cat:' &#x25be;</a></b>'}
 			{'header.signed_in'|devblocks_translate:$worker_name nofilter}

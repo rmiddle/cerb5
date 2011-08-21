@@ -101,15 +101,35 @@
 		</tr>
 		{/if}
 		
-		{if $active_worker->hasPriv('core.ticket.actions.assign')}
+		{if 1}
+		<tr>
+			<td width="0%" nowrap="nowrap" valign="top">{'common.owner'|devblocks_translate|capitalize}:</td>
+			<td width="100%"><select name="do_owner">
+				<option value=""></option>
+				<option value="0">{'common.nobody'|devblocks_translate|lower}</option>
+				{foreach from=$workers item=owner key=owner_id}
+				<option value="{$owner_id}">{$owner->getName()}</option>
+				{/foreach}
+			</select>
+			<button type="button" onclick="$(this).prev('select[name=do_owner]').val('{$active_worker->id}');">me</button>
+			<button type="button" onclick="$(this).prevAll('select[name=do_owner]').val('0');">nobody</button>
+			</td>
+		</tr>
+		{/if}
+		
+		{if $active_worker->hasPriv('core.watchers.assign') || $active_worker->hasPriv('core.watchers.unassign')}
 		<tr>
 			<td width="0%" nowrap="nowrap" valign="top">{'common.watchers'|devblocks_translate|capitalize}:</td>
 			<td width="100%">
+				{if $active_worker->hasPriv('core.watchers.assign')}
 				<button type="button" class="chooser-worker add"><span class="cerb-sprite sprite-view"></span></button>
 				<ul class="bubbles chooser-container" style="display:block;"></ul>
+				{/if}
 
+				{if $active_worker->hasPriv('core.watchers.unassign')}
 				<button type="button" class="chooser-worker remove"><span class="cerb-sprite sprite-view"></span></button>
 				<ul class="bubbles chooser-container" style="display:block;"></ul>
+				{/if}
 			</td>
 		</tr>
 		{/if}
@@ -122,6 +142,8 @@
 	{include file="devblocks:cerberusweb.core::internal/custom_fields/bulk/form.tpl" bulk=true}	
 </fieldset>
 {/if}
+
+{include file="devblocks:cerberusweb.core::internal/macros/behavior/bulk.tpl" macros=$macros}
 
 {if $active_worker->hasPriv('core.ticket.view.actions.broadcast_reply')}
 <fieldset>

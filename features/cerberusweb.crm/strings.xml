@@ -8,6 +8,12 @@
 			<tuv xml:lang="en_US"><seg>Opportunities</seg></tuv>
 		</tu>
 		
+		<!-- Common -->
+		
+		<tu tuid='crm.common.opportunity'>
+			<tuv xml:lang="en_US"><seg>Opportunity</seg></tuv>
+		</tu>
+		
 		<!-- ACL -->
 		
 		<tu tuid='acl.crm.opp.actions.create'>
@@ -17,10 +23,10 @@
 			<tuv xml:lang="en_US"><seg>[Opportunities] Can import opportunities from CSV files</seg></tuv>
 		</tu>
 		<tu tuid='acl.crm.opp.actions.update_all'>
-			<tuv xml:lang="en_US"><seg>[Opportunities] Can manage everyone's opportunities</seg></tuv>
+			<tuv xml:lang="en_US"><seg>[Opportunities] Can edit opportunities</seg></tuv>
 		</tu>
-		<tu tuid='acl.crm.opp.actions.update_nobody'>
-			<tuv xml:lang="en_US"><seg>[Opportunities] Can manage unassigned opportunities</seg></tuv>
+		<tu tuid='acl.crm.opp.actions.delete'>
+			<tuv xml:lang="en_US"><seg>[Opportunities] Can delete opportunities</seg></tuv>
 		</tu>
 		<tu tuid='acl.crm.opp.view.actions.broadcast'>
 			<tuv xml:lang="en_US"><seg>[Opportunities] Can broadcast e-mail to opportunity lists</seg></tuv>
@@ -76,9 +82,6 @@
 			<tuv xml:lang="en_US"><seg>Open</seg></tuv>
 		</tu>
 
-		<tu tuid='crm.opp.tab.mail_history'>
-			<tuv xml:lang="en_US"><seg>Mail History</seg></tuv>
-		</tu>
 		<tu tuid='crm.opp.tab.properties'>
 			<tuv xml:lang="en_US"><seg>Properties</seg></tuv>
 		</tu>

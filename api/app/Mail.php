@@ -7,7 +7,7 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
@@ -43,8 +43,7 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 class CerberusMail {
@@ -83,7 +82,13 @@ class CerberusMail {
 		    }
 		    
 			$mail->setTo(DevblocksPlatform::parseCsvString($to));
-			$mail->setFrom(array($from_addy => $from_personal));
+			
+			if(!empty($from_personal)) {
+				$mail->setFrom($from_addy, $from_personal);
+			} else {
+				$mail->setFrom($from_addy);
+			}
+			
 			$mail->setSubject($subject);
 			$mail->generateId();
 			
@@ -224,7 +229,7 @@ class CerberusMail {
 					DAO_MailQueue::BODY => $content,
 					DAO_MailQueue::PARAMS_JSON => json_encode($params),
 					DAO_MailQueue::IS_QUEUED => !empty($worker) ? 0 : 1,
-					DAO_MailQueue::QUEUE_PRIORITY => 0,
+					DAO_MailQueue::QUEUE_DELIVERY_DATE => time(),
 				);
 				DAO_MailQueue::create($fields);
 			}
@@ -353,6 +358,7 @@ class CerberusMail {
 	    'closed'
 	    'ticket_reopen'
 	    'bucket_id'
+	    'owner_id'
 	    'agent_id',
 		'is_autoreply',
 		'dont_send',
@@ -365,8 +371,23 @@ class CerberusMail {
 		    $mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 			$mail = $mail_service->createMessage();
 	        
-		    // properties
 		    @$reply_message_id = $properties['message_id'];
+		    
+		    if(null == ($message = DAO_Message::get($reply_message_id)))
+				return;
+				
+			$ticket_id = $message->ticket_id;
+	        
+			if(null == ($ticket = DAO_Ticket::get($ticket_id)))
+				return;
+				
+			if(null == ($group = DAO_Group::get($ticket->team_id)))
+				return;
+		    
+		    // Changing the outgoing message through a VA
+		    Event_MailBeforeSentByGroup::trigger($properties, $message, $ticket, $group);
+		    
+		    // Re-read properties
 		    @$content = $properties['content'];
 		    @$files = $properties['files'];
 		    @$is_forward = $properties['is_forward']; 
@@ -376,19 +397,8 @@ class CerberusMail {
 		    
 		    @$is_autoreply = $properties['is_autoreply'];
 		    
-			if(null == ($message = DAO_Message::get($reply_message_id)))
-				return;
-				
 	        $message_headers = DAO_MessageHeader::getAll($reply_message_id);
 
-			$ticket_id = $message->ticket_id;
-	        
-			if(null == ($ticket = DAO_Ticket::get($ticket_id)))
-				return;
-				
-			if(null == ($group = DAO_Group::get($ticket->team_id)))
-				return;
-				
 			$from_replyto = $group->getReplyTo($ticket->category_id);
 			$from_personal = $group->getReplyPersonal($ticket->category_id, $worker_id);
 			
@@ -404,7 +414,12 @@ class CerberusMail {
 			} 
 				
 			// Headers
-			$mail->setFrom(array($from_replyto->email => $from_personal));
+			if(!empty($from_personal)) {
+				$mail->setFrom($from_replyto->email, $from_personal);
+			} else {
+				$mail->setFrom($from_replyto->email);
+			}
+			
 			$mail->generateId();
 			
 			$headers = $mail->getHeaders();
@@ -531,9 +546,12 @@ class CerberusMail {
 					}
 				}
 			}
+
+			// Send
+			$recipients = $mail->getTo();
 			
-			// If we're not supposed to send
-			if(isset($properties['dont_send']) && $properties['dont_send']) {
+			// If blank recipients or we're not supposed to send
+			if(empty($recipients) || (isset($properties['dont_send']) && $properties['dont_send'])) {
 				// ...do nothing
 			} else { // otherwise send
 				if(!@$mailer->send($mail)) {
@@ -555,7 +573,9 @@ class CerberusMail {
 					
 				if(isset($properties['bcc']))
 					$params['bcc'] = $properties['bcc'];
-				
+					
+				if(!empty($is_autoreply))
+					$params['is_autoreply'] = true;
 				
 				if(empty($to)) {
 					$hint_to = '(requesters)';
@@ -573,7 +593,7 @@ class CerberusMail {
 					DAO_MailQueue::BODY => $properties['content'],
 					DAO_MailQueue::PARAMS_JSON => json_encode($params),
 					DAO_MailQueue::IS_QUEUED => empty($worker_id) ? 1 : 0,
-					DAO_MailQueue::QUEUE_PRIORITY => 0,
+					DAO_MailQueue::QUEUE_DELIVERY_DATE => time(),
 				);
 				DAO_MailQueue::create($fields);
 			}
@@ -653,6 +673,11 @@ class CerberusMail {
 			}
 		}
 		
+		if(isset($properties['owner_id'])) {
+			if(empty($properties['owner_id']) || null != (DAO_Worker::get($properties['owner_id'])))
+				$change_fields[DAO_Ticket::OWNER_ID] = intval($properties['owner_id']);
+		}
+		
 		// Post-Reply Change Properties
 
 		if(isset($properties['closed'])) {
@@ -700,13 +725,16 @@ class CerberusMail {
 
 		// Events
 		if(!empty($message_id) && empty($no_events)) {
-			// Group
+			// After message sent in group
+			Event_MailAfterSentByGroup::trigger($message_id, $group->id);			
+			
+			// New message for group
 			Event_MailReceivedByGroup::trigger($message_id, $group->id);
 
 			// Watchers
 			$context_watchers = CerberusContexts::getWatchers(CerberusContexts::CONTEXT_TICKET, $ticket_id);
 			if(is_array($context_watchers))
-			foreach($context_watchers as $watcher_id) {
+			foreach($context_watchers as $watcher_id => $watcher) {
 				Event_MailReceivedByWatcher::trigger($message_id, $watcher_id);
 			}
 		}
@@ -729,10 +757,12 @@ class CerberusMail {
 		return true;
 	}
 	
-	static function reflect(CerberusParserMessage $message, $to) {
+	static function reflect(CerberusParserModel $model, $to) {
 		try {
+			$message = $model->getMessage(); /* @var $message CerberusParserMessage */
+			
 			$mail_service = DevblocksPlatform::getMailService();
-			$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
+			$mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults()); /* @var $mailer Swift_Mailer */
 			$mail = $mail_service->createMessage();
 	
 			$mail->setTo(array($to));
@@ -752,8 +782,11 @@ class CerberusMail {
 				$headers->addTextHeader('In-Reply-To', $message->headers['in-reply-to']);
 			if(isset($message->headers['references']))
 				$headers->addTextHeader('References', $message->headers['references']);
-			if(isset($message->headers['from']))
-				$mail->setFrom($message->headers['from']);
+			if(isset($message->headers['from'])) {
+				$sender_addy = $model->getSenderAddressModel(); /* @var $sender_addy Model_Address */
+				$sender_name = $sender_addy->getName();
+				$mail->setFrom($sender_addy->email, empty($sender_name) ? null : $sender_name);
+			}
 			if(isset($message->headers['return-path'])) {
 				$return_path = is_array($message->headers['return-path'])
 					? array_shift($message->headers['return-path'])

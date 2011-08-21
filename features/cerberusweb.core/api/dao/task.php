@@ -7,46 +7,14 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
 | ______________________________________________________________________
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- * 
- * Sure, it would be so easy to just cheat and edit this file to use the 
- * software without paying for it.  But we trust you anyway.  In fact, we're 
- * writing this software for you! 
- * 
- * Quality software backed by a dedicated team takes money to develop.  We 
- * don't want to be out of the office bagging groceries when you call up 
- * needing a helping hand.  We'd rather spend our free time coding your 
- * feature requests than mowing the neighbors' lawns for rent money. 
- * 
- * We've never believed in hiding our source code out of paranoia over not 
- * getting paid.  We want you to have the full source code and be able to 
- * make the tweaks your organization requires to get more done -- despite 
- * having less of everything than you might need (time, people, money, 
- * energy).  We shouldn't be your bottleneck.
- * 
- * We've been building our expertise with this project since January 2002.  We 
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
- * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your inbox that you probably 
- * haven't had since spammers found you in a game of 'E-mail Battleship'. 
- * Miss. Miss. You sunk my inbox!
- * 
- * A legitimate license entitles you to support from the developers,  
- * and the warm fuzzy feeling of feeding a couple of obsessed developers 
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
+
 class DAO_Task extends C4_ORMHelper {
 	const ID = 'id';
 	const TITLE = 'title';
@@ -244,17 +212,35 @@ class DAO_Task extends C4_ORMHelper {
 		
 		// Tasks
 		$db->Execute(sprintf("DELETE QUICK FROM task WHERE id IN (%s)", $ids_list));
-		
-		// Context links
-		DAO_ContextLink::delete(CerberusContexts::CONTEXT_TASK, $ids);
-		
-		// Custom fields
-		DAO_CustomFieldValue::deleteByContextIds(CerberusContexts::CONTEXT_TASK, $ids);
-		
-		// Notes
-		DAO_Comment::deleteByContext(CerberusContexts::CONTEXT_TASK, $ids);
+
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => CerberusContexts::CONTEXT_TASK,
+                	'context_ids' => $ids
+                )
+            )
+	    );
 		
 		return true;
+	}
+	
+	public static function maint() {
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.maint',
+                array(
+                	'context' => CerberusContexts::CONTEXT_TASK,
+                	'context_table' => 'task',
+                	'context_key' => 'id',
+                )
+            )
+	    );
 	}
 	
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
@@ -286,7 +272,9 @@ class DAO_Task extends C4_ORMHelper {
 			"FROM task t ".
 
 			// [JAS]: Dynamic table joins
-			(isset($tables['context_link']) ? "INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.task' AND context_link.to_context_id = t.id) " : " ")
+			(isset($tables['context_link']) ? "INNER JOIN context_link ON (context_link.to_context = 'cerberusweb.contexts.task' AND context_link.to_context_id = t.id) " : " ").
+			(isset($tables['ftcc']) ? "INNER JOIN comment ON (comment.context = 'cerberusweb.contexts.task' AND comment.context_id = t.id) " : " ").
+			(isset($tables['ftcc']) ? "INNER JOIN fulltext_comment_content ftcc ON (ftcc.id=comment.id) " : " ")
 			;
 
 		// Custom field joins
@@ -313,26 +301,7 @@ class DAO_Task extends C4_ORMHelper {
 					$from_context = CerberusContexts::CONTEXT_TASK;
 					$from_index = 't.id';
 					
-					// Join and return anything
-					if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
-						$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-					} elseif(empty($param->value)) { // empty
-						// Either any watchers (1 or more); or no watchers
-						if(DevblocksSearchCriteria::OPER_NIN == $param->operator || DevblocksSearchCriteria::OPER_NEQ == $param->operator) {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NOT NULL ";
-						} else {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NULL ";
-						}
-					// Specific watchers
-					} else {
-						$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id IN (%s)) ",
-							$from_context,
-							$from_index,
-							implode(',', $param->value)
-						);
-					}
+					self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $join_sql, $where_sql);
 					break;
 			}
 		}
@@ -424,6 +393,9 @@ class SearchFields_Task implements IDevblocksSearchFields {
 	const CONTEXT_LINK = 'cl_context_from';
 	const CONTEXT_LINK_ID = 'cl_context_from_id';
 	
+	// Comment Content
+	const FULLTEXT_COMMENT_CONTENT = 'ftcc_content';
+	
 	/**
 	 * @return DevblocksSearchField[]
 	 */
@@ -444,6 +416,11 @@ class SearchFields_Task implements IDevblocksSearchFields {
 			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
 		);
 		
+		$tables = DevblocksPlatform::getDatabaseTables();
+		if(isset($tables['fulltext_comment_content'])) {
+			$columns[self::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchField(self::FULLTEXT_COMMENT_CONTENT, 'ftcc', 'content', $translate->_('comment.filters.content'));
+		}
+		
 		// Custom Fields
 		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TASK);
 		if(is_array($fields))
@@ -462,7 +439,6 @@ class SearchFields_Task implements IDevblocksSearchFields {
 class Model_Task {
 	public $id;
 	public $title;
-	public $created;
 	public $due_date;
 	public $is_completed;
 	public $completed_date;
@@ -488,6 +464,7 @@ class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 			SearchFields_Task::ID,
 			SearchFields_Task::CONTEXT_LINK,
 			SearchFields_Task::CONTEXT_LINK_ID,
+			SearchFields_Task::FULLTEXT_COMMENT_CONTENT,
 			SearchFields_Task::VIRTUAL_WATCHERS,
 		));
 		
@@ -640,6 +617,10 @@ class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__date.tpl');
 				break;
 				
+			case SearchFields_Task::FULLTEXT_COMMENT_CONTENT:
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__fulltext.tpl');
+				break;
+				
 			case SearchFields_Task::VIRTUAL_WATCHERS:
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_worker.tpl');
 				break;
@@ -660,20 +641,7 @@ class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 		
 		switch($key) {
 			case SearchFields_Task::VIRTUAL_WATCHERS:
-				if(empty($param->value)) {
-					echo "There are no <b>watchers</b>";
-					
-				} elseif(is_array($param->value)) {
-					$workers = DAO_Worker::getAll();
-					$strings = array();
-					
-					foreach($param->value as $worker_id) {
-						if(isset($workers[$worker_id]))
-							$strings[] = '<b>'.$workers[$worker_id]->getName().'</b>';
-					}
-					
-					echo sprintf("Watcher is %s", implode(' or ', $strings));
-				}
+				$this->_renderVirtualWatchers($param);
 				break;
 		}
 	}
@@ -726,7 +694,12 @@ class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 				
 			case SearchFields_Task::VIRTUAL_WATCHERS:
 				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
-				$criteria = new DevblocksSearchCriteria($field,'in', $worker_ids);
+				$criteria = new DevblocksSearchCriteria($field,$oper,$worker_ids);
+				break;
+				
+			case SearchFields_Task::FULLTEXT_COMMENT_CONTENT:
+				@$scope = DevblocksPlatform::importGPC($_REQUEST['scope'],'string','expert');
+				$criteria = new DevblocksSearchCriteria($field,DevblocksSearchCriteria::OPER_FULLTEXT,array($value,$scope));
 				break;
 				
 			default:
@@ -744,8 +717,8 @@ class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 	}
 	
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(600); // [TODO] Temp!
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -807,6 +780,22 @@ class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 			// Custom Fields
 			self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_TASK, $custom_fields, $batch_ids);
 			
+			// Scheduled behavior
+			if(isset($do['behavior']) && is_array($do['behavior'])) {
+				$behavior_id = $do['behavior']['id'];
+				@$behavior_when = strtotime($do['behavior']['when']) or time();
+				
+				if(!empty($batch_ids) && !empty($behavior_id))
+				foreach($batch_ids as $batch_id) {
+					DAO_ContextScheduledBehavior::create(array(
+						DAO_ContextScheduledBehavior::BEHAVIOR_ID => $behavior_id,
+						DAO_ContextScheduledBehavior::CONTEXT => CerberusContexts::CONTEXT_TASK,
+						DAO_ContextScheduledBehavior::CONTEXT_ID => $batch_id,
+						DAO_ContextScheduledBehavior::RUN_DATE => $behavior_when,
+					));
+				}
+			}
+			
 			// Watchers
 			if(isset($do['watchers']) && is_array($do['watchers'])) {
 				$watcher_params = $do['watchers'];
@@ -830,10 +819,12 @@ class Context_Task extends Extension_DevblocksContext {
 		$task = DAO_Task::get($context_id);
 		$url_writer = DevblocksPlatform::getUrlService();
 		
+		$friendly = DevblocksPlatform::strToPermalink($task->title);
+		
 		return array(
 			'id' => $task->id,
 			'name' => $task->title,
-			'permalink' => $url_writer->write('c=tasks&action=display&id='.$task->id, true),
+			'permalink' => $url_writer->writeNoProxy(sprintf("c=tasks&action=display&id=%d-%s",$task->id, $friendly), true),
 		);
 	}
 	
@@ -859,8 +850,10 @@ class Context_Task extends Extension_DevblocksContext {
 			'due|date' => $prefix.$translate->_('task.due_date'),
 			'id' => $prefix.$translate->_('common.id'),
 			'is_completed' => $prefix.$translate->_('task.is_completed'),
+			'status' => $prefix.$translate->_('common.status'),
 			'title' => $prefix.$translate->_('common.title'),
 			'updated|date' => $prefix.$translate->_('task.updated_date'),
+			'record_url' => $prefix.$translate->_('common.url.record'),
 		);
 		
 		if(is_array($fields))
@@ -878,6 +871,17 @@ class Context_Task extends Extension_DevblocksContext {
 			$token_values['is_completed'] = $task->is_completed;
 			$token_values['title'] = $task->title;
 			$token_values['updated'] = $task->updated_date;
+			
+			// Status
+			if($task->is_completed) {
+				$token_values['status'] = 'completed';
+			} else {
+				$token_values['status'] = 'active';
+			}
+			
+			// URL
+			$url_writer = DevblocksPlatform::getUrlService();
+			$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=tasks&action=display&id=%d-%s",$task->id, DevblocksPlatform::strToPermalink($task->title)), true);
 			
 			$token_values['custom'] = array();
 			
@@ -903,21 +907,6 @@ class Context_Task extends Extension_DevblocksContext {
 			}
 		}
 
-		// Assignee
-//		@$assignee_id = $task->worker_id;
-//		$merge_token_labels = array();
-//		$merge_token_values = array();
-//		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $assignee_id, $merge_token_labels, $merge_token_values, '', true);
-//
-//		CerberusContexts::merge(
-//			'assignee_',
-//			'Assignee:',
-//			$merge_token_labels,
-//			$merge_token_values,
-//			$token_labels,
-//			$token_values
-//		);			
-		
 		return true;
 	}
 

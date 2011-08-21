@@ -36,6 +36,7 @@
 						<input type="text" size="45" name="bcc" value="{$draft->params.bcc}" style="width:100%;border:1px solid rgb(180,180,180);padding:2px;">					
 					</td>
 				</tr>
+				
 				<tr>
 					<td width="1%" nowrap="nowrap">{$translate->_('message.header.subject')|capitalize}: </td>
 					<td width="99%" align="left">
@@ -89,6 +90,7 @@
 <input type="hidden" name="ticket_id" value="{$ticket->id}">
 <input type="hidden" name="ticket_mask" value="{$ticket->mask}">
 <input type="hidden" name="draft_id" value="{$draft->id}">
+<input type="hidden" name="reply_mode" value="">
 {if $is_forward}<input type="hidden" name="is_forward" value="1">{/if}
 
 <!-- {* Copy these dynamically so a plugin dev doesn't need to conflict with the reply <form> *} -->
@@ -100,7 +102,11 @@
 {if $is_forward}
 <textarea name="content" rows="20" cols="80" id="reply_{$message->id}" class="reply" style="width:98%;border:1px solid rgb(180,180,180);padding:5px;">
 {if !empty($draft)}{$draft->body}{else}
-{if !empty($signature)}{$signature}{/if}
+{if !empty($signature)}
+
+
+{$signature}
+{/if}
 
 {$translate->_('display.reply.forward.banner')}
 {if isset($headers.subject)}{$translate->_('message.header.subject')|capitalize}: {$headers.subject|cat:"\n"}{/if}
@@ -116,13 +122,18 @@
 {if !empty($draft)}{$draft->body}{else}
 {if !empty($signature) && 1==$signature_pos}
 
-{$signature}{*Sig above*}
 
-{/if}{$quote_sender=$message->getSender()}{$quote_sender_personal=$quote_sender->getName()}{if !empty($quote_sender_personal)}{$reply_personal=$quote_sender_personal}{else}{$reply_personal=$quote_sender->email}{/if}{$reply_date=$message->created_date|devblocks_date:'D, d M Y'}{'display.reply.reply_banner'|devblocks_translate:$reply_date:$reply_personal}
-{$message->getContent()|trim|indent:1:'> '}
+{$signature}{if $is_quoted}{*Sig above*}
 
-{if !empty($signature) && 2==$signature_pos}{$signature}{/if}{*Sig below*}
+
 {/if}
+{/if}{if $is_quoted}{$quote_sender=$message->getSender()}{$quote_sender_personal=$quote_sender->getName()}{if !empty($quote_sender_personal)}{$reply_personal=$quote_sender_personal}{else}{$reply_personal=$quote_sender->email}{/if}{$reply_date=$message->created_date|devblocks_date:'D, d M Y'}{'display.reply.reply_banner'|devblocks_translate:$reply_date:$reply_personal}
+{/if}{if $is_quoted}{$message->getContent()|trim|indent:1:'> '}
+{/if}{if !empty($signature) && 2==$signature_pos}
+
+
+{$signature}
+{/if}{*Sig below*}{/if}
 </textarea>
 {/if}
 		</td>
@@ -180,13 +191,13 @@
 									{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" object_watchers=$object_watchers context=CerberusContexts::CONTEXT_TICKET context_id=$ticket->id full=true}
 								</div>
 
-								<label><input type="radio" name="closed" value="0" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','none');">{$translate->_('status.open')|capitalize}</label>
-								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','block');" {if !$ticket->is_closed}checked{/if}>{$translate->_('status.waiting')|capitalize}</label>
-								{if $active_worker->hasPriv('core.ticket.actions.close') || ($ticket->is_closed && !$ticket->is_deleted)}<label><input type="radio" name="closed" value="1" onclick="toggleDiv('replyOpen{$message->id}','none');toggleDiv('replyClosed{$message->id}','block');" {if $ticket->is_closed}checked{/if}>{$translate->_('status.closed')|capitalize}</label>{/if}
+								<label><input type="radio" name="closed" value="0" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','none');" {if 'open'==$mail_status_reply}checked="checked"{/if}>{$translate->_('status.open')|capitalize}</label>
+								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('replyOpen{$message->id}','block');toggleDiv('replyClosed{$message->id}','block');" {if 'waiting'==$mail_status_reply}checked="checked"{/if}>{$translate->_('status.waiting')|capitalize}</label>
+								{if $active_worker->hasPriv('core.ticket.actions.close') || ($ticket->is_closed && !$ticket->is_deleted)}<label><input type="radio" name="closed" value="1" onclick="toggleDiv('replyOpen{$message->id}','none');toggleDiv('replyClosed{$message->id}','block');" {if 'closed'==$mail_status_reply}checked="checked"{/if}>{$translate->_('status.closed')|capitalize}</label>{/if}
 								<br>
 								<br>
 								
-						      	<div id="replyClosed{$message->id}" style="display:block;margin-left:10px;margin-bottom:10px;">
+						      	<div id="replyClosed{$message->id}" style="display:{if 'open'==$mail_status_reply}none{else}block{/if};margin-left:10px;margin-bottom:10px;">
 						      	<b>{$translate->_('display.reply.next.resume')}</b> {$translate->_('display.reply.next.resume_eg')}<br> 
 						      	<input type="text" name="ticket_reopen" size="55" value="{if !empty($ticket->due_date)}{$ticket->due_date|devblocks_date}{/if}"><br>
 						      	{$translate->_('display.reply.next.resume_blank')}<br>
@@ -216,9 +227,17 @@
 						      	<br>
 						      	{/if}
 						      	
-								<div id="replyOpen{$message->id}" style="display:{if $ticket->is_closed}none{else}block{/if};">
-						      	</div>
-		
+						      	<b>{'display.reply.next.owner'|devblocks_translate}</b><br>
+						      	<select name="owner_id">
+						      		<option value="">-- {'common.nobody'|devblocks_translate|lower} --</option>
+						      		{foreach from=$workers item=owner key=owner_id}
+						      		<option value="{$owner_id}" {if $ticket->owner_id==$owner_id}selected="selected"{/if}>{$owner->getName()}</option>
+						      		{/foreach}
+						      	</select>
+						      	<button type="button" onclick="$(this).prev('select[name=owner_id]').val('{$active_worker->id}');">{'common.me'|devblocks_translate|lower}</button>
+						      	<button type="button" onclick="$(this).prevAll('select[name=owner_id]').first().val('');">{'common.nobody'|devblocks_translate|lower}</button>
+						      	<br>
+						      	<br>
 							</td>
 						</tr>
 					</table>
@@ -230,9 +249,14 @@
 	</tr>
 	<tr>
 		<td>
-			<button type="button" onclick="window.onbeforeunload=null;if($('#reply{$message->id}_part1').validate().form()) { genericAjaxPost('reply{$message->id}_part2',null,'c=display&a=saveDraftReply&is_ajax=1',function(json) { $('#reply{$message->id}_part2').submit(); } ); } "><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {if $is_forward}{$translate->_('display.ui.forward')|capitalize}{else}{$translate->_('display.ui.send_message')}{/if}</button>
-			<button type="button" onclick="window.onbeforeunload=null;if($('#reply{$message->id}_part1').validate().form()) { this.form.a.value='saveDraftReply'; this.form.submit(); } "><span class="cerb-sprite sprite-media_pause"></span> {$translate->_('display.ui.continue_later')|capitalize}</button>
-			<button type="button" onclick="window.onbeforeunload=null;if(confirm('Are you sure you want to discard this reply?')) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } if(0!==this.form.draft_id.value.length) { genericAjaxGet('', 'c=tickets&a=deleteDraft&draft_id='+escape(this.form.draft_id.value)); $('#draft'+escape(this.form.draft_id.value)).remove(); } $('#reply{$message->id}').html(''); } "><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('display.ui.discard')|capitalize}</button>
+			<button type="button" class="send split-left" onclick="$(this).closest('td').find('ul li:first a').click();"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {if $is_forward}{$translate->_('display.ui.forward')|capitalize}{else}{$translate->_('display.ui.send_message')}{/if}</button><!--
+      		--><button type="button" class="split-right" onclick="$(this).next('ul').toggle();"><span class="cerb-sprite sprite-arrow-down-white"></span></button>
+      		<ul class="cerb-popupmenu cerb-float" style="margin-top:-5px;">
+      			<li><a href="javascript:;" class="send" onclick="if($('#reply{$message->id}_part1').validate().form()) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } $frm = $(this).closest('form'); $frm.find('input:hidden[name=reply_mode]').val(''); $frm.submit(); }">{if $is_forward}{$translate->_('display.ui.forward')}{else}{$translate->_('display.ui.send_message')}{/if}</a></li>
+      			<li><a href="javascript:;" class="save" onclick="if($('#reply{$message->id}_part1').validate().form()) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } $frm = $(this).closest('form'); $frm.find('input:hidden[name=reply_mode]').val('save'); $frm.submit(); }">{'display.ui.save_nosend'|devblocks_translate}</a></li>
+      			<li><a href="javascript:;" class="draft" onclick="if($('#reply{$message->id}_part1').validate().form()) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } $frm = $(this).closest('form'); $frm.find('input:hidden[name=a]').val('saveDraftReply'); $frm.submit(); } ">{$translate->_('display.ui.continue_later')}</a></li>
+      		</ul>
+			<button type="button" class="discard" onclick="window.onbeforeunload=null;if(confirm('Are you sure you want to discard this reply?')) { if(null != draftAutoSaveInterval) { clearTimeout(draftAutoSaveInterval); draftAutoSaveInterval = null; } $frm = $(this).closest('form'); genericAjaxGet('', 'c=tickets&a=deleteDraft&draft_id='+escape($frm.find('input:hidden[name=draft_id]').val()), function(o) { $frm = $('#reply{$message->id}_part2'); $('#draft'+escape($frm.find('input:hidden[name=draft_id]').val())).remove(); $('#reply{$message->id}').html('');  } ); }"><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('display.ui.discard')|capitalize}</button>
 		</td>
 	</tr>
 </table>
@@ -245,10 +269,6 @@
 		var draftAutoSaveInterval = null;
 	
 	$(function() {
-		window.onbeforeunload = function() {
-			return "You are currently composing an email message.  Are you sure you want to abandon it?";
-		}
-		
 		// Autocompletes
 		ajax.emailAutoComplete('#reply{$message->id}_part1 input[name=to]', { multiple: true } );
 		ajax.emailAutoComplete('#reply{$message->id}_part1 input[name=cc]', { multiple: true } );
@@ -301,6 +321,27 @@
 			}
 		});
 
+		// Menu
+		$('#reply{$message->id}_part2 button.send')
+			.siblings('ul.cerb-popupmenu')
+			.hover(
+				function(e) { }, 
+				function(e) { $(this).hide(); }
+			)
+			.find('> li')
+			.click(function(e) {
+				$(this).closest('ul.cerb-popupmenu').hide();
+
+				e.stopPropagation();
+				if(!$(e.target).is('li'))
+				return;
+
+				$(this).find('a').trigger('click');
+			})
+		;
+
+		// Shortcuts
+		
 		{if $pref_keyboard_shortcuts}
 		
 		// Reply textbox
@@ -310,18 +351,20 @@
 			
 			if(!event.ctrlKey) //!event.altKey && !event.ctrlKey && !event.metaKey
 				return;
-			
-			event.preventDefault();
 
 			if(event.ctrlKey && event.shiftKey) {
 				switch(event.which) {
-					case 7:  // (G) Insert Signature
+					case 7:  
+					case 71: // (G) Insert Signature
 						try {
+							event.preventDefault();
 							$('#btnInsertReplySig{$message->id}').click();
 						} catch(ex) { } 
 						break;
-					case 9:  // (I) Insert Snippet
+					case 9:  
+					case 73: // (I) Insert Snippet
 						try {
+							event.preventDefault();
 							$('#reply{$message->id}_part1').find('.context-snippet').focus();
 						} catch(ex) { } 
 						break;

@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class PageSection_SetupPortal extends Extension_PageSection {
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
@@ -400,7 +416,7 @@ class PageSection_SetupPortal extends Extension_PageSection {
 			
         // Install
         $url_writer = DevblocksPlatform::getUrlService();
-        $url = $url_writer->write('c=portal&a='.$tool->code,true);
+        $url = $url_writer->writeNoProxy('c=portal&a='.$tool->code,true);
         $url_parts = parse_url($url);
         
         $host = $url_parts['host'];

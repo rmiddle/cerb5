@@ -7,46 +7,14 @@
  |
  | This source code is released under the Devblocks Public License.
  | The latest version of this license can be found here:
- | http://www.cerberusweb.com/license.php
+ | http://cerberusweb.com/license
  |
  | By using this software, you acknowledge having read this license
  | and agree to be bound thereby.
  | ______________________________________________________________________
  |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
  ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- * 
- * Sure, it would be so easy to just cheat and edit this file to use the 
- * software without paying for it.  But we trust you anyway.  In fact, we're 
- * writing this software for you! 
- * 
- * Quality software backed by a dedicated team takes money to develop.  We 
- * don't want to be out of the office bagging groceries when you call up 
- * needing a helping hand.  We'd rather spend our free time coding your 
- * feature requests than mowing the neighbors' lawns for rent money. 
- * 
- * We've never believed in hiding our source code out of paranoia over not 
- * getting paid.  We want you to have the full source code and be able to 
- * make the tweaks your organization requires to get more done -- despite 
- * having less of everything than you might need (time, people, money, 
- * energy).  We shouldn't be your bottleneck.
- * 
- * We've been building our expertise with this project since January 2002.  We 
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
- * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your inbox that you probably 
- * haven't had since spammers found you in a game of 'E-mail Battleship'. 
- * Miss. Miss. You sunk my inbox!
- * 
- * A legitimate license entitles you to support from the developers,  
- * and the warm fuzzy feeling of feeding a couple of obsessed developers 
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
+
 /*
  * PARAMS (overloads):
  * parse_max=n (max tickets to parse)
@@ -279,7 +247,7 @@ class ImportCron extends CerberusCronPageExtension {
 		
 		$logger->info("[Importer] Starting Import Task");
 		
-		@set_time_limit(0); // Unlimited (if possible)
+		@set_time_limit(1200); // 20m
 		 
 		$importNewDir = APP_STORAGE_PATH . '/import/new/';
 		$importFailDir = APP_STORAGE_PATH . '/import/fail/';
@@ -1016,7 +984,7 @@ class Pop3Cron extends CerberusCronPageExtension {
 			return false;
 		}
 		
-		@set_time_limit(0); // Unlimited (if possible)
+		@set_time_limit(1200); // 20m
 
 		$accounts = DAO_Pop3Account::getPop3Accounts(); /* @var $accounts Model_Pop3Account[] */
 
@@ -1220,16 +1188,18 @@ class MailQueueCron extends CerberusCronPageExtension {
 		
 		do {
 			$messages = DAO_MailQueue::getWhere(
-				sprintf("%s = %d AND %s > %d AND %s < %d",
+				sprintf("%s = %d AND %s <= %d AND %s > %d AND %s < %d",
 					DAO_MailQueue::IS_QUEUED,
 					1,
+					DAO_MailQueue::QUEUE_DELIVERY_DATE,
+					time(),
 					DAO_MailQueue::ID,
 					$last_id,
 					DAO_MailQueue::QUEUE_FAILS,
 					10
 				),
-				array(DAO_MailQueue::QUEUE_PRIORITY, DAO_MailQueue::UPDATED),
-				array(false, true),
+				array(DAO_MailQueue::QUEUE_DELIVERY_DATE, DAO_MailQueue::UPDATED),
+				array(true, true),
 				25
 			);
 	
@@ -1241,6 +1211,7 @@ class MailQueueCron extends CerberusCronPageExtension {
 						$logger->error(sprintf("[Mail Queue] Failed sending message %d", $message->id));
 						DAO_MailQueue::update($message->id, array(
 							DAO_MailQueue::QUEUE_FAILS => min($message->queue_fails+1,255),
+							DAO_MailQueue::QUEUE_DELIVERY_DATE => time() + 900, // retry in 15 min
 						));
 					} else {
 						$logger->info(sprintf("[Mail Queue] Sent message %d", $message->id));
@@ -1253,9 +1224,78 @@ class MailQueueCron extends CerberusCronPageExtension {
 	}
 
 	function configure($instance) {
-		$tpl = DevblocksPlatform::getTemplateService();
+		//$tpl = DevblocksPlatform::getTemplateService();
+		//$tpl->display('devblocks:cerberusweb.core::cron/mail_queue/config.tpl');
+	}
+};
 
-		$tpl->display('devblocks:cerberusweb.core::cron/mail_queue/config.tpl');
+class Cron_VirtualAttendantScheduledBehavior extends CerberusCronPageExtension {
+	function run() {
+		$logger = DevblocksPlatform::getConsoleLog('Virtual Attendant Scheduler');
+		$runtime = microtime(true);
+
+		$stop_time = time() + 20; // [TODO] Make configurable
+
+		$logger->info("Starting...");
+
+		do {
+			$behaviors = DAO_ContextScheduledBehavior::getWhere(
+				sprintf("%s < %d",
+					DAO_ContextScheduledBehavior::RUN_DATE,
+					time()
+				),
+				array(DAO_ContextScheduledBehavior::RUN_DATE),
+				array(true),
+				25
+			);
+
+			if(!empty($behaviors)) {
+				foreach($behaviors as $behavior) {
+					/* @var $behavior Model_ContextScheduledBehavior */
+					try {
+						if(empty($behavior->context) || empty($behavior->context_id) || empty($behavior->behavior_id))
+							throw new Exception("Incomplete macro.");
+					
+						// Load context
+						if(null == ($context_ext = DevblocksPlatform::getExtension($behavior->context, true)))
+							throw new Exception("Invalid context.");
+					
+						// ACL: Ensure access to the context object
+						//if(!$context_ext->authorize($context_id, $active_worker))
+						//	throw new Exception("Access denied to context.");
+							
+						// Load macro
+						if(null == ($macro = DAO_TriggerEvent::get($behavior->behavior_id))) /* @var $macro Model_TriggerEvent */
+							throw new Exception("Invalid macro.");
+							
+						// ACL: Ensure the worker owns the macro
+						//if(false == ($macro->owner_context == CerberusContexts::CONTEXT_WORKER && $macro->owner_context_id == $active_worker->id))
+						//	 new Exception("Access denied to macro.");
+					
+						// Load event manifest
+						if(null == ($ext = DevblocksPlatform::getExtension($macro->event_point, false))) /* @var $ext DevblocksExtensionManifest */
+							throw new Exception("Invalid event.");
+					
+						// Execute
+						call_user_func(array($ext->class, 'trigger'), $macro->id, $behavior->context_id);
+							
+						$logger->info(sprintf("Executed behavior %d", $behavior->id));
+						
+					} catch (Exception $e) {
+						$logger->error(sprintf("Failed executing behavior %d: %s", $behavior->id, $e->getMessage()));
+					}
+
+					DAO_ContextScheduledBehavior::delete($behavior->id);
+				}
+			}
+		} while(!empty($behaviors) && $stop_time > time());
+
+		$logger->info("Total Runtime: ".number_format((microtime(true)-$runtime)*1000,2)." ms");
+	}
+
+	function configure($instance) {
+		//$tpl = DevblocksPlatform::getTemplateService();
+		//$tpl->display('devblocks:cerberusweb.core::cron/scheduled_behavior/config.tpl');
 	}
 };
 

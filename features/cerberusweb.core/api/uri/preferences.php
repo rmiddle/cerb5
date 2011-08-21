@@ -7,46 +7,14 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
 | ______________________________________________________________________
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- *
- * Sure, it would be so easy to just cheat and edit this file to use the
- * software without paying for it.  But we trust you anyway.  In fact, we're
- * writing this software for you!
- *
- * Quality software backed by a dedicated team takes money to develop.  We
- * don't want to be out of the office bagging groceries when you call up
- * needing a helping hand.  We'd rather spend our free time coding your
- * feature requests than mowing the neighbors' lawns for rent money.
- *
- * We've never believed in hiding our source code out of paranoia over not
- * getting paid.  We want you to have the full source code and be able to
- * make the tweaks your organization requires to get more done -- despite
- * having less of everything than you might need (time, people, money,
- * energy).  We shouldn't be your bottleneck.
- *
- * We've been building our expertise with this project since January 2002.  We
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to
- * let us take over your shared e-mail headache is a worthwhile investment.
- * It will give you a sense of control over your inbox that you probably
- * haven't had since spammers found you in a game of 'E-mail Battleship'.
- * Miss. Miss. You sunk my inbox!
- *
- * A legitimate license entitles you to support from the developers,
- * and the warm fuzzy feeling of feeding a couple of obsessed developers
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani.
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
+
 class ChPreferencesPage extends CerberusPageExtension {
 	function isVisible() {
 		// The current session must be a logged-in worker to use this page.
@@ -300,6 +268,42 @@ class ChPreferencesPage extends CerberusPageExtension {
 		return;
 	}
 
+	function viewNotificationsMarkReadAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
+		@$row_ids = DevblocksPlatform::importGPC($_REQUEST['row_id'],'array',array());
+
+		$active_worker = CerberusApplication::getActiveWorker();
+		
+
+		try {
+			if(is_array($row_ids))
+			foreach($row_ids as $row_id) {
+				$row_id = intval($row_id);
+				
+				// Only close notifications if the current worker owns them
+				if(null != ($notification = DAO_Notification::get($row_id))) {
+					if($notification->worker_id == $active_worker->id) {
+						
+						DAO_Notification::update($notification->id, array(
+							DAO_Notification::IS_READ => 1,
+						));
+					}
+				}
+				
+			}
+			
+			DAO_Notification::clearCountCache($active_worker->id);
+			
+		} catch (Exception $e) {
+			//
+		}
+		
+		$view = C4_AbstractViewLoader::getView($view_id);
+		$view->render();
+		
+		exit;
+	}	
+	
 	function viewNotificationsExploreAction() {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
 
@@ -323,74 +327,99 @@ class ChPreferencesPage extends CerberusPageExtension {
 		$view->renderPage = 0;
 		$view->renderLimit = 250;
 		$pos = 0;
-
+		$keys = array();
+		$contexts = array();
+		
+		$view->renderTotal = false;
+		
 		do {
 			$models = array();
 			list($results, $total) = $view->getData();
-
-			// Summary row
-			if(0==$view->renderPage) {
-				$model = new Model_ExplorerSet();
-				$model->hash = $hash;
-				$model->pos = $pos++;
-				$model->params = array(
-					'title' => $view->name,
-					'created' => time(),
-					'worker_id' => $active_worker->id,
-					'total' => $total,
-					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=profiles&k=worker&id=me&tab=notifications', true),
-					'toolbar_extension_id' => 'cerberusweb.explorer.toolbar.notifications',
-				);
-				$models[] = $model;
-
-				$view->renderTotal = false; // speed up subsequent pages
-			}
 
 			if(is_array($results))
 			foreach($results as $event_id => $row) {
 				if($event_id==$explore_from)
 					$orig_pos = $pos;
 
+				$content = $row[SearchFields_Notification::MESSAGE];
+				$context = $row[SearchFields_Notification::CONTEXT];
+				$context_id = $row[SearchFields_Notification::CONTEXT_ID];
+				$url = $row[SearchFields_Notification::URL];
+				
+				// Composite key
+				$key = $row[SearchFields_Notification::WORKER_ID]
+					. '_' . $context
+					. '_' . $context_id
+					;
+
+				if(empty($url) && !empty($context)) {
+					if(!isset($contexts[$context])) {
+						if(null != ($ctx = DevblocksPlatform::getExtension($context, true, false))) {
+						 	$contexts[$context] = $ctx;
+						}
+					}
+					
+					@$ctx = $contexts[$context]; /* @var $ctx Extension_DevblocksContext */
+					
+					if(!empty($ctx) && null != ($meta = $ctx->getMeta($context_id))) {
+						if(isset($meta['name']) && !empty($meta['name']))
+							$content = $meta['name'];
+						if(isset($meta['permalink']))
+							$url = $meta['permalink'];
+					}
+					
+				} else {
+					$url = $url_writer->write(sprintf("c=preferences&a=redirectRead&id=%d", $row[SearchFields_Notification::ID]));
+					
+				}
+				
+				if(empty($url))
+					continue;				
+				
+				if(!empty($context) && !empty($context_id)) {
+					// Is this a dupe?
+					if(isset($keys[$key])) {
+						continue;
+					} else {
+						$keys[$key] = ++$pos;
+					}
+				} else {
+					++$pos;
+				}
+				
 				$model = new Model_ExplorerSet();
 				$model->hash = $hash;
-				$model->pos = $pos++;
+				$model->pos = $pos;
 				$model->params = array(
 					'id' => $row[SearchFields_Notification::ID],
-					'content' => $row[SearchFields_Notification::MESSAGE],
-					'url' => $row[SearchFields_Notification::URL],
+					'content' => $content,
+					'url' => $url,
 				);
 				$models[] = $model;
 			}
-
+			
 			DAO_ExplorerSet::createFromModels($models);
 
 			$view->renderPage++;
 
 		} while(!empty($results));
 
+		// Add the manifest row
+		
+		DAO_ExplorerSet::set(
+			$hash,
+			array(
+				'title' => $view->name,
+				'created' => time(),
+				'worker_id' => $active_worker->id,
+				'total' => $pos,
+				'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->writeNoProxy('c=profiles&k=worker&id=me&tab=notifications', true),
+				//'toolbar_extension_id' => '',
+			),
+			0
+		);
+		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('explore',$hash,$orig_pos)));
-	}
-
-	function explorerEventMarkReadAction() {
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id'], 'integer', 0);
-
-		$worker = CerberusApplication::getActiveWorker();
-
-		if(!empty($id)) {
-			DAO_Notification::updateWhere(
-				array(
-					DAO_Notification::IS_READ => 1,
-				),
-				sprintf("%s = %d AND %s = %d",
-					DAO_Notification::WORKER_ID,
-					$worker->id,
-					DAO_Notification::ID,
-					$id
-				)
-			);
-
-			DAO_Notification::clearCountCache($worker->id);
-		}
 	}
 
 	/**
@@ -408,16 +437,18 @@ class ChPreferencesPage extends CerberusPageExtension {
 		array_shift($stack); // redirectReadAction
 		@$id = array_shift($stack); // id
 
-		if(null != ($event = DAO_Notification::get($id))) {
-			// Mark as read before we redirect
-			DAO_Notification::update($id, array(
-				DAO_Notification::IS_READ => 1
-			));
-
-			DAO_Notification::clearCountCache($worker->id);
+		if(null != ($notification = DAO_Notification::get($id))) {
+			if(empty($notification->context)) {
+				// Mark as read before we redirect
+				DAO_Notification::update($id, array(
+					DAO_Notification::IS_READ => 1
+				));
+				
+				DAO_Notification::clearCountCache($worker->id);
+			}
 
 			session_write_close();
-			header("Location: " . $event->url);
+			header("Location: " . $notification->getURL());
 		}
 		exit;
 	}
@@ -483,21 +514,22 @@ class ChPreferencesPage extends CerberusPageExtension {
 		$worker = CerberusApplication::getActiveWorker();
 		$tpl->assign('worker', $worker);
 
-		$tour_enabled = intval(DAO_WorkerPref::get($worker->id, 'assist_mode', 1));
-		$tpl->assign('assist_mode', $tour_enabled);
-
-		$keyboard_shortcuts = intval(DAO_WorkerPref::get($worker->id, 'keyboard_shortcuts', 1));
-		$tpl->assign('keyboard_shortcuts', $keyboard_shortcuts);
-
-		$mail_always_show_all = DAO_WorkerPref::get($worker->id,'mail_always_show_all',0);
-		$tpl->assign('mail_always_show_all', $mail_always_show_all);
-
-		$mail_signature_pos = DAO_WorkerPref::get($worker->id,'mail_signature_pos',2);
-		$tpl->assign('mail_signature_pos', $mail_signature_pos);
-
+		// [TODO] WorkerPrefs_*?
+		$prefs = array();
+		$prefs['assist_mode'] = intval(DAO_WorkerPref::get($worker->id, 'assist_mode', 1)); 
+		$prefs['keyboard_shortcuts'] = intval(DAO_WorkerPref::get($worker->id, 'keyboard_shortcuts', 1)); 
+		$prefs['mail_always_show_all'] = DAO_WorkerPref::get($worker->id,'mail_always_show_all',0);
+		$prefs['mail_reply_button'] = DAO_WorkerPref::get($worker->id,'mail_reply_button',0);
+		$prefs['mail_status_compose'] = DAO_WorkerPref::get($worker->id,'mail_status_compose','waiting');
+		$prefs['mail_status_create'] = DAO_WorkerPref::get($worker->id,'mail_status_create','open');
+		$prefs['mail_status_reply'] = DAO_WorkerPref::get($worker->id,'mail_status_reply','waiting');
+		$prefs['mail_signature_pos'] = DAO_WorkerPref::get($worker->id,'mail_signature_pos',2);
+		$tpl->assign('prefs', $prefs);
+		
+		// Alternate addresses
 		$addresses = DAO_AddressToWorker::getByWorker($worker->id);
 		$tpl->assign('addresses', $addresses);
-
+		
 		// Timezones
 		$tpl->assign('timezones', $date_service->getTimezones());
 		@$server_timezone = date_default_timezone_get();
@@ -564,10 +596,22 @@ class ChPreferencesPage extends CerberusPageExtension {
 
 		@$mail_always_show_all = DevblocksPlatform::importGPC($_REQUEST['mail_always_show_all'],'integer',0);
 		DAO_WorkerPref::set($worker->id, 'mail_always_show_all', $mail_always_show_all);
+
+		@$mail_reply_button = DevblocksPlatform::importGPC($_REQUEST['mail_reply_button'],'integer',0);
+		DAO_WorkerPref::set($worker->id, 'mail_reply_button', $mail_reply_button);
 		
 		@$mail_signature_pos = DevblocksPlatform::importGPC($_REQUEST['mail_signature_pos'],'integer',0);
 		DAO_WorkerPref::set($worker->id, 'mail_signature_pos', $mail_signature_pos);
 
+		@$mail_status_compose = DevblocksPlatform::importGPC($_REQUEST['mail_status_compose'],'string','waiting');
+		DAO_WorkerPref::set($worker->id, 'mail_status_compose', $mail_status_compose);
+		
+		@$mail_status_create = DevblocksPlatform::importGPC($_REQUEST['mail_status_create'],'string','waiting');
+		DAO_WorkerPref::set($worker->id, 'mail_status_create', $mail_status_create);
+
+		@$mail_status_reply = DevblocksPlatform::importGPC($_REQUEST['mail_status_reply'],'string','waiting');
+		DAO_WorkerPref::set($worker->id, 'mail_status_reply', $mail_status_reply);
+		
 		// Alternate Email Addresses
 		@$new_email = DevblocksPlatform::importGPC($_REQUEST['new_email'],'string','');
 		@$worker_emails = DevblocksPlatform::importGPC($_REQUEST['worker_emails'],'array',array());
@@ -636,7 +680,7 @@ class ChPreferencesPage extends CerberusPageExtension {
 			vsprintf($translate->_('prefs.address.confirm.mail.body'),
 				array(
 					$worker->getName(),
-					$url_writer->write('c=preferences&a=confirm_email&code='.$code,true)
+					$url_writer->writeNoProxy('c=preferences&a=confirm_email&code='.$code,true)
 				)
 			)
 		);
@@ -655,15 +699,5 @@ class ChPreferencesPage extends CerberusPageExtension {
 		}
 
 		DevblocksPlatform::setHttpResponse(new DevblocksHttpResponse(array('preferences','rss')));
-	}
-};
-
-class ChExplorerToolbarNotifications extends Extension_ExplorerToolbar {
-	function render(Model_ExplorerSet $item) {
-		$tpl = DevblocksPlatform::getTemplateService();
-
-		$tpl->assign('item', $item);
-
-		$tpl->display('devblocks:cerberusweb.core::preferences/renderer/explorer_toolbar.tpl');
 	}
 };

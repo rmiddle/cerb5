@@ -1,4 +1,20 @@
 <?php
+/***********************************************************************
+| Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
+|-----------------------------------------------------------------------
+| All source code & content (c) Copyright 2011, WebGroup Media LLC
+|   unless specifically noted otherwise.
+|
+| This source code is released under the Devblocks Public License.
+| The latest version of this license can be found here:
+| http://cerberusweb.com/license
+|
+| By using this software, you acknowledge having read this license
+| and agree to be bound thereby.
+| ______________________________________________________________________
+|	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
+***********************************************************************/
+
 class PageSection_SetupWorkers extends Extension_PageSection {
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
@@ -82,6 +98,7 @@ class PageSection_SetupWorkers extends Extension_PageSection {
 				// Creating new worker.  If password is empty, email it to them
 			    if(empty($password)) {
 			    	$replyto_default = DAO_AddressOutgoing::getDefault();
+					$replyto_personal = $replyto_default->getReplyPersonal();
 					$url = DevblocksPlatform::getUrlService();
 					$password = CerberusApplication::generatePassword(8);
 			    	
@@ -89,10 +106,16 @@ class PageSection_SetupWorkers extends Extension_PageSection {
 				        $mail_service = DevblocksPlatform::getMailService();
 				        $mailer = $mail_service->getMailer(CerberusMail::getMailerDefaults());
 				        $mail = $mail_service->createMessage();
-				        
+						
 						$mail->setTo(array($email => $first_name . ' ' . $last_name));
-						$mail->setFrom(array($replyto_default->email => $replyto_default->getReplyPersonal()));
-				        $mail->setSubject('Your new helpdesk login information!');
+						
+						if(!empty($replyto_personal)) {
+							$mail->setFrom($replyto_default->email, $replyto_personal);
+						} else {
+							$mail->setFrom($replyto_default->email);
+						}
+				        
+						$mail->setSubject('Your new helpdesk login information!');
 				        $mail->generateId();
 						
 						$headers = $mail->getHeaders();
