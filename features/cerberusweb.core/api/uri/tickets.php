@@ -98,6 +98,14 @@ class ChTicketsPage extends CerberusPageExtension {
 					$visit->set('compose.last_ticket',null); // clear
 				}
 				
+				// Groups (for custom fields)
+				$groups = DAO_Group::getAll();
+				$tpl->assign('groups', $groups);
+
+				// Custom fields
+				$ticket_fields = DAO_CustomField::getBySource(ChCustomFieldSource_Ticket::ID);
+				$tpl->assign('ticket_fields', $ticket_fields);
+
 				$tpl->display('devblocks:cerberusweb.core::tickets/compose/index.tpl');
 				break;
 				
@@ -155,6 +163,14 @@ class ChTicketsPage extends CerberusPageExtension {
 					$visit->set('compose.last_ticket',null); // clear
 				}
 				
+				// Groups (for custom fields)
+				$groups = DAO_Group::getAll();
+				$tpl->assign('groups', $groups);
+
+				// Custom fields
+				$fields = DAO_CustomField::getBySource(ChCustomFieldSource_Ticket::ID);
+				$tpl->assign('ticket_fields', $fields);
+
 				$tpl->display('devblocks:cerberusweb.core::tickets/create/index.tpl');
 				break;
 				
@@ -1433,6 +1449,10 @@ class ChTicketsPage extends CerberusPageExtension {
 			'ticket_reopen' => $ticket_reopen,
 		);
 		$ticket_id = CerberusMail::compose($properties);
+
+		// Custom field saves
+		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
+		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
 		
 		if(!empty($ticket_id)) {
 			if(!empty($draft_id))
@@ -1527,8 +1547,13 @@ class ChTicketsPage extends CerberusPageExtension {
 			$host = empty($requester->host) ? 'localhost' : $requester->host;
 			DAO_Ticket::createRequester($requester->mailbox . '@' . $host, $ticket_id);
 		}
-		
+
 		$fields = array();
+		
+		// Custom field saves
+		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
+		DAO_CustomFieldValue::handleFormPost(ChCustomFieldSource_Ticket::ID, $ticket_id, $field_ids);
+ 		
 
 		// Status
 		if(!empty($closed)) {
