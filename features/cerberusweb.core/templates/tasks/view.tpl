@@ -71,7 +71,7 @@
 				{if $result.t_is_completed}
 					<span class="cerb-sprite2 sprite-tick-circle-frame-gray" title="{$result.t_completed_date|devblocks_date}"></span>
 				{/if}
-				<a href="{devblocks_url}c=tasks&d=display&id={$result.t_id}{/devblocks_url}" class="subject">{if !empty($result.t_title)}{$result.t_title}{else}New Task{/if}</a> 
+				<a href="{devblocks_url}c=tasks&d=display&id={$result.t_id}-{$result.t_title|devblocks_permalink}{/devblocks_url}" class="subject">{if !empty($result.t_title)}{$result.t_title}{else}New Task{/if}</a> 
 				
 				<button type="button" class="peek" style="visibility:hidden;padding:1px;margin:0px 5px;" onclick="genericAjaxPopup('peek','c=tasks&a=showTaskPeek&id={$result.t_id}&view_id={$view->id}',null,false,'550');"><span class="cerb-sprite2 sprite-document-search-result" style="margin-left:2px" title="{$translate->_('views.peek')}"></span></button>
 			</td>
@@ -121,6 +121,7 @@
 		<td colspan="2" valign="top">
 			<button id="btnExplore{$view->id}" type="button" onclick="this.form.explore_from.value=$(this).closest('form').find('tbody input:checkbox:checked:first').val();this.form.a.value='viewTasksExplore';this.form.submit();"><span class="cerb-sprite sprite-media_play_green"></span> {'common.explore'|devblocks_translate|lower}</button>
 			{if $active_worker->hasPriv('core.tasks.actions.update_all')}<button type="button" onclick="genericAjaxPopup('peek','c=tasks&a=showTaskBulkPanel&view_id={$view->id}&ids=' + Devblocks.getFormEnabledCheckboxValues('viewForm{$view->id}','row_id[]'),null,false,'500');"><span class="cerb-sprite2 sprite-folder-gear"></span> {'common.bulk_update'|devblocks_translate|lower}</button>{/if}
+			<button type="button" id="btn{$view->id}Close" onclick="genericAjaxPost($(this).closest('form'),'view{$view->id}','c=tasks&a=viewMarkCompleted');"><span class="cerb-sprite2 sprite-folder-tick-circle"></span> {$translate->_('task.is_completed')|lower}</button>
 		</td>
 	</tr>
 	{/if}

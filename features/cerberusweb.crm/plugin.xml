@@ -36,13 +36,16 @@
 			<class name="SearchFields_CrmOpportunity" />
 			<class name="View_CrmOpportunity" />
 		</file>
+		<file path="api/events/crm_opportunity_macro.php">
+			<class name="Event_CrmOpportunityMacro" />
+		</file>
 	</class_loader>
 	
 	<acl>
 		<priv id="crm.opp.actions.create" label="acl.crm.opp.actions.create" />
 		<priv id="crm.opp.actions.import" label="acl.crm.opp.actions.import" />
-		<priv id="crm.opp.actions.update_nobody" label="acl.crm.opp.actions.update_nobody" />
 		<priv id="crm.opp.actions.update_all" label="acl.crm.opp.actions.update_all" />
+		<priv id="crm.opp.actions.delete" label="acl.crm.opp.actions.delete" />
 		<priv id="crm.opp.view.actions.broadcast" label="acl.crm.opp.view.actions.broadcast" />
 		<priv id="crm.opp.view.actions.export" label="acl.crm.opp.view.actions.export" />
 	</acl>
@@ -124,6 +127,24 @@
 			<params>
 				<param key="uri" value="opps" />
 				<param key="title" value="crm.tab.title" />
+			</params>
+		</extension>
+		
+		<!-- Event Triggers -->
+		
+		<extension point="devblocks.event">
+			<id>event.macro.crm.opportunity</id>
+			<name>Custom opportunity behavior</name>
+			<class>
+				<file>api/events/crm_opportunity_macro.php</file>
+				<name>Event_CrmOpportunityMacro</name>
+			</class>
+			<params>
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.worker" />
+					</value>
+				</param>
 			</params>
 		</extension>
 		

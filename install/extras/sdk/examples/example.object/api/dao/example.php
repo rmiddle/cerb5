@@ -111,14 +111,17 @@ class DAO_ExampleObject extends C4_ORMHelper {
 		
 		$ids_list = implode(',', $ids);
 		
-		// Context links
-		DAO_ContextLink::delete(Context_ExampleObject::ID, $ids);
-		
-		// Custom fields
-		DAO_CustomFieldValue::deleteByContextIds(Context_ExampleObject::ID, $ids);
-
-		// Comments
-		DAO_Comment::deleteByContext(Context_ExampleObject::ID, $ids);
+		// Fire event
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    $eventMgr->trigger(
+	        new Model_DevblocksEvent(
+	            'context.delete',
+                array(
+                	'context' => Context_ExampleObject::ID,
+                	'context_ids' => $ids
+                )
+            )
+	    );
 		
 		$db->Execute(sprintf("DELETE FROM example_object WHERE id IN (%s)", $ids_list));
 		
@@ -173,26 +176,7 @@ class DAO_ExampleObject extends C4_ORMHelper {
 					$from_context = Context_ExampleObject::ID; // [TODO]
 					$from_index = 'example_object.id'; // [TODO]
 					
-					// Join and return anything
-					if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
-						$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-					} elseif(empty($param->value)) { // empty
-						// Either any watchers (1 or more); or no watchers
-						if(DevblocksSearchCriteria::OPER_NIN == $param->operator || DevblocksSearchCriteria::OPER_NEQ == $param->operator) {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NOT NULL ";
-						} else {
-							$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-							$where_sql .= "AND context_watcher.to_context_id IS NULL ";
-						}
-					// Specific watchers
-					} else {
-						$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id IN (%s)) ",
-							$from_context,
-							$from_index,
-							implode(',', $param->value)
-						);
-					}					
+					self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $join_sql, $where_sql);
 					break;
 			}
 		}		
@@ -457,20 +441,7 @@ class View_ExampleObject extends C4_AbstractView implements IAbstractView_Subtot
 		
 		switch($key) {
 			case SearchFields_ExampleObject::VIRTUAL_WATCHERS:
-				if(empty($param->value)) {
-					echo "There are no <b>watchers</b>";
-					
-				} elseif(is_array($param->value)) {
-					$workers = DAO_Worker::getAll();
-					$strings = array();
-					
-					foreach($param->value as $worker_id) {
-						if(isset($workers[$worker_id]))
-							$strings[] = '<b>'.$workers[$worker_id]->getName().'</b>';
-					}
-					
-					echo sprintf("Watcher is %s", implode(' or ', $strings));
-				}
+				$this->_renderVirtualWatchers($param);
 				break;
 		}
 	}	
@@ -556,7 +527,7 @@ class View_ExampleObject extends C4_AbstractView implements IAbstractView_Subtot
 				
 			case SearchFields_ExampleObject::VIRTUAL_WATCHERS:
 				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
-				$criteria = new DevblocksSearchCriteria($field,'in', $worker_ids);
+				$criteria = new DevblocksSearchCriteria($field,$oper,$worker_ids);
 				break;
 				
 			default:
@@ -574,8 +545,8 @@ class View_ExampleObject extends C4_AbstractView implements IAbstractView_Subtot
 	}
 		
 	function doBulkUpdate($filter, $do, $ids=array()) {
-		@set_time_limit(0);
-	  
+		@set_time_limit(600); // 10m
+		
 		$change_fields = array();
 		$custom_fields = array();
 
@@ -656,10 +627,12 @@ class Context_ExampleObject extends Extension_DevblocksContext {
 		$example = DAO_ExampleObject::get($context_id);
 		$url_writer = DevblocksPlatform::getUrlService();
 		
+		//$friendly = DevblocksPlatform::strToPermalink($example->name);
+		
 		return array(
 			'id' => $example->id,
 			'name' => $example->name,
-			'permalink' => $url_writer->write('c=example.objects&action=profile&id='.$context_id, true),
+			'permalink' => $url_writer->writeNoProxy(sprintf("c=example.objects&action=profile&id=%d",$context_id), true),
 		);
 	}
 	
@@ -684,6 +657,7 @@ class Context_ExampleObject extends Extension_DevblocksContext {
 			'created|date' => $prefix.$translate->_('common.created'),
 			'id' => $prefix.$translate->_('common.id'),
 			'name' => $prefix.$translate->_('common.name'),
+			//'record_url' => $prefix.$translate->_('common.url.record'),
 		);
 		
 		if(is_array($fields))
@@ -698,6 +672,10 @@ class Context_ExampleObject extends Extension_DevblocksContext {
 			$token_values['created'] = $object->created;
 			$token_values['id'] = $object->id;
 			$token_values['name'] = $object->name;
+			
+			// URL
+			$url_writer = DevblocksPlatform::getUrlService();
+			//$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=example.object&id=%d-%s",$object->id, DevblocksPlatform::strToPermalink($object->name)), true);
 			
 			$token_values['custom'] = array();
 			

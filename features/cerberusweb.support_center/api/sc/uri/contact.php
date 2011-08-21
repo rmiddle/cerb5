@@ -54,6 +54,14 @@ class UmScContactController extends Extension_UmScController {
 				
    				$sDispatch = DAO_CommunityToolProperty::get(ChPortalHelper::getCode(),self::PARAM_SITUATIONS, '');
     			$dispatch = !empty($sDispatch) ? unserialize($sDispatch) : array();
+    			
+    			// Remove hidden contact situations
+    			if(is_array($dispatch))
+    			foreach($dispatch as $k => $params) {
+    				if(isset($params['is_hidden']) && !empty($params['is_hidden']))
+    					unset($dispatch[$k]);
+    			}
+    			
 		        $tpl->assign('dispatch', $dispatch);
 		        
 		        switch($section) {
@@ -137,6 +145,7 @@ class UmScContactController extends Extension_UmScController {
 		// Situations
     	@$aReason = DevblocksPlatform::importGPC($_POST['contact_reason'],'array',array());
         @$aTo = DevblocksPlatform::importGPC($_POST['contact_to'],'array',array());
+        @$aStatus = DevblocksPlatform::importGPC($_POST['status'],'array',array());
         @$aFollowup = DevblocksPlatform::importGPC($_POST['contact_followup'],'array',array());
         @$aFollowupField = DevblocksPlatform::importGPC($_POST['contact_followup_fields'],'array',array());
         
@@ -149,18 +158,16 @@ class UmScContactController extends Extension_UmScController {
         	@$to = $aTo[$key];
         	@$followups = $aFollowup[$key];
         	@$followup_fields = $aFollowupField[$key];
+        	@$status = $aStatus[$key];
+
+        	if('deleted' == $status)
+        		continue;
         	
         	$part = array(
         		'to' => !empty($to) ? $to : $replyto_default->email,
+        		'is_hidden' => ('hidden' == $status) ? true : false,
         		'followups' => array()
         	);
-        	
-        	// Process follow-up fields
-        	if(is_array($followup_fields))
-        	foreach($followup_fields as $followup_fkey => $followup_field) {
-        		if(empty($followup_field)) // clear blanks
-        			unset($followup_fields[$followup_fkey]);
-        	}
 
         	// Process followups
         	if(is_array($followups))

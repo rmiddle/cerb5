@@ -7,46 +7,14 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
 | ______________________________________________________________________
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
-/*
- * IMPORTANT LICENSING NOTE from your friends on the Cerberus Helpdesk Team
- * 
- * Sure, it would be so easy to just cheat and edit this file to use the 
- * software without paying for it.  But we trust you anyway.  In fact, we're 
- * writing this software for you! 
- * 
- * Quality software backed by a dedicated team takes money to develop.  We 
- * don't want to be out of the office bagging groceries when you call up 
- * needing a helping hand.  We'd rather spend our free time coding your 
- * feature requests than mowing the neighbors' lawns for rent money. 
- * 
- * We've never believed in hiding our source code out of paranoia over not 
- * getting paid.  We want you to have the full source code and be able to 
- * make the tweaks your organization requires to get more done -- despite 
- * having less of everything than you might need (time, people, money, 
- * energy).  We shouldn't be your bottleneck.
- * 
- * We've been building our expertise with this project since January 2002.  We 
- * promise spending a couple bucks [Euro, Yuan, Rupees, Galactic Credits] to 
- * let us take over your shared e-mail headache is a worthwhile investment.  
- * It will give you a sense of control over your inbox that you probably 
- * haven't had since spammers found you in a game of 'E-mail Battleship'. 
- * Miss. Miss. You sunk my inbox!
- * 
- * A legitimate license entitles you to support from the developers,  
- * and the warm fuzzy feeling of feeding a couple of obsessed developers 
- * who want to help you get more done.
- *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
- *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
- */
+
 if (class_exists('Extension_ActivityTab')):
 class ChTasksActivityTab extends Extension_ActivityTab {
 	const VIEW_ACTIVITY_TASKS = 'activity_tasks';
@@ -81,6 +49,7 @@ class ChTasksPage extends CerberusPageExtension {
 
 		$visit = CerberusApplication::getVisit();
 		$translate = DevblocksPlatform::getTranslationService();
+		$active_worker = CerberusApplication::getActiveWorker();
 		
 		$response = DevblocksPlatform::getHttpResponse();
 		$stack = $response->path;
@@ -103,8 +72,62 @@ class ChTasksPage extends CerberusPageExtension {
 				}
 				$tpl->assign('tab_selected', $tab_selected);
 
+				// Custom fields
+				
+				$custom_fields = DAO_CustomField::getAll();
+				$tpl->assign('custom_fields', $custom_fields);
+				
+				// Properties
+				
+				$properties = array();
+				
+				$properties['is_completed'] = array(
+					'label' => ucfirst($translate->_('task.is_completed')),
+					'type' => Model_CustomField::TYPE_CHECKBOX,
+					'value' => $task->is_completed,
+				);
+				
+				if(!$task->is_completed) {
+					$properties['due_date'] = array(
+						'label' => ucfirst($translate->_('task.due_date')),
+						'type' => Model_CustomField::TYPE_DATE,
+						'value' => $task->due_date,
+					);
+				} else {
+					$properties['completed_date'] = array(
+						'label' => ucfirst($translate->_('task.completed_date')),
+						'type' => Model_CustomField::TYPE_DATE,
+						'value' => $task->completed_date,
+					);
+				}
+				
+				$properties['updated_date'] = array(
+					'label' => ucfirst($translate->_('common.updated')),
+					'type' => Model_CustomField::TYPE_DATE,
+					'value' => $task->updated_date,
+				);
+				
+				@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TASK, $task->id)) or array();
+		
+				foreach($custom_fields as $cf_id => $cfield) {
+					if(!isset($values[$cf_id]))
+						continue;
+						
+					$properties['cf_' . $cf_id] = array(
+						'label' => $cfield->name,
+						'type' => $cfield->type,
+						'value' => $values[$cf_id],
+					);
+				}
+				
+				$tpl->assign('properties', $properties);				
+				
 				$workers = DAO_Worker::getAll();
 				$tpl->assign('workers', $workers);
+				
+				// Macros
+				$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.task');
+				$tpl->assign('macros', $macros);
 				
 				$tpl->display('devblocks:cerberusweb.core::tasks/display/index.tpl');
 				break;
@@ -169,11 +192,8 @@ class ChTasksPage extends CerberusPageExtension {
 			$task = DAO_Task::get($id);
 
 			// Check privs
-			// [TODO] Workers on task
-			if(($active_worker->hasPriv('core.tasks.actions.create') /*&& $active_worker->id==$task->worker_id*/)
-				|| ($active_worker->hasPriv('core.tasks.actions.update_nobody') /*&& empty($task->worker_id)*/) 
-				|| $active_worker->hasPriv('core.tasks.actions.update_all'))
-					DAO_Task::delete($id);
+			if($active_worker->hasPriv('core.tasks.actions.delete'))
+				DAO_Task::delete($id);
 			
 		} else { // create|update
 			$fields = array();
@@ -252,6 +272,8 @@ class ChTasksPage extends CerberusPageExtension {
 		@$ids = DevblocksPlatform::importGPC($_REQUEST['ids']);
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id']);
 
+		$active_worker = CerberusApplication::getActiveWorker();
+		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('view_id', $view_id);
 
@@ -267,6 +289,10 @@ class ChTasksPage extends CerberusPageExtension {
 		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TASK);
 		$tpl->assign('custom_fields', $custom_fields);
 		
+		// Macros
+		$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.task');
+		$tpl->assign('macros', $macros);
+		
 		$tpl->display('devblocks:cerberusweb.core::tasks/rpc/bulk.tpl');
 	}
 	
@@ -280,9 +306,13 @@ class ChTasksPage extends CerberusPageExtension {
 		$view = C4_AbstractViewLoader::getView($view_id);
 		
 		// Task fields
-		$due = trim(DevblocksPlatform::importGPC($_POST['due'],'string',''));
-		$status = trim(DevblocksPlatform::importGPC($_POST['status'],'string',''));
+		@$due = trim(DevblocksPlatform::importGPC($_POST['due'],'string',''));
+		@$status = trim(DevblocksPlatform::importGPC($_POST['status'],'string',''));
 
+		// Scheduled behavior
+		@$behavior_id = DevblocksPlatform::importGPC($_POST['behavior_id'],'string','');
+		@$behavior_when = DevblocksPlatform::importGPC($_POST['behavior_when'],'string','');
+		
 		$do = array();
 		
 		// Do: Due
@@ -293,6 +323,14 @@ class ChTasksPage extends CerberusPageExtension {
 		if(0 != strlen($status))
 			$do['status'] = $status;
 			
+		// Do: Scheduled Behavior
+		if(0 != strlen($behavior_id)) {
+			$do['behavior'] = array(
+				'id' => $behavior_id,
+				'when' => $behavior_when,
+			);
+		}
+		
 		// Watchers
 		$watcher_params = array();
 		
@@ -329,6 +367,31 @@ class ChTasksPage extends CerberusPageExtension {
 		
 		$view->render();
 		return;
+	}
+	
+	function viewMarkCompletedAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
+		@$row_ids = DevblocksPlatform::importGPC($_REQUEST['row_id'],'array',array());
+
+		try {
+			if(is_array($row_ids))
+			foreach($row_ids as $row_id) {
+				$row_id = intval($row_id);
+				
+				if(!empty($row_id))
+					DAO_Task::update($row_id, array(
+						DAO_Task::IS_COMPLETED => 1,
+						DAO_Task::COMPLETED_DATE => time(),
+					));
+			}
+		} catch (Exception $e) {
+			//
+		}
+		
+		$view = C4_AbstractViewLoader::getView($view_id);
+		$view->render();
+		
+		exit;
 	}
 	
 	function viewTasksExploreAction() {
@@ -369,7 +432,7 @@ class ChTasksPage extends CerberusPageExtension {
 					'created' => time(),
 					//'worker_id' => $active_worker->id,
 					'total' => $total,
-					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->write('c=activity&tab=tasks', true),
+					'return_url' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $url_writer->writeNoProxy('c=activity&tab=tasks', true),
 //					'toolbar_extension_id' => 'cerberusweb.explorer.toolbar.',
 				);
 				$models[] = $model; 
@@ -387,7 +450,7 @@ class ChTasksPage extends CerberusPageExtension {
 				$model->pos = $pos++;
 				$model->params = array(
 					'id' => $row[SearchFields_Task::ID],
-					'url' => $url_writer->write(sprintf("c=tasks&tab=display&id=%d", $row[SearchFields_Task::ID]), true),
+					'url' => $url_writer->writeNoProxy(sprintf("c=tasks&tab=display&id=%d", $row[SearchFields_Task::ID]), true),
 				);
 				$models[] = $model; 
 			}
@@ -399,19 +462,5 @@ class ChTasksPage extends CerberusPageExtension {
 		} while(!empty($results));
 		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('explore',$hash,$orig_pos)));
-	}
-
-	function doDisplayTaskCompleteAction() {
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
-		
-		if(empty($id))
-			return;
-			
-		DAO_Task::update($id, array(
-			DAO_Task::IS_COMPLETED => 1,
-			DAO_Task::COMPLETED_DATE => time(),
-		));
-		
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('tasks','display',$id)));
 	}
 };

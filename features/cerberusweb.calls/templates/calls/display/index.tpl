@@ -1,35 +1,42 @@
+{$page_context = CerberusContexts::CONTEXT_CALL}
+{$page_context_id = $call->id}
+
 {include file="devblocks:cerberusweb.calls::calls/submenu.tpl"}
 
-<table cellspacing="0" cellpadding="0" border="0" width="100%" style="padding-bottom:5px;">
-<tr>
-	<td valign="top" style="padding-right:5px;">
-		<h1>{$call->subject}</h1> 
-		<form action="{devblocks_url}{/devblocks_url}" onsubmit="return false;">
+<h2>{'calls.common.call'|devblocks_translate|capitalize}</h2> 
 
-		<b>{'common.updated'|devblocks_translate|capitalize}:</b> <abbr title="{$call->updated_date|devblocks_date}">{$call->updated_date|devblocks_prettytime}</abbr> &nbsp;
-		<b>{'call_entry.model.phone'|devblocks_translate}:</b> {$call->phone} &nbsp; 
-		<b>{'call_entry.model.is_closed'|devblocks_translate}:</b> {if $call->is_closed}{'common.yes'|devblocks_translate}{else}{'common.no'|devblocks_translate}{/if} &nbsp; 
-		<b>{'call_entry.model.is_outgoing'|devblocks_translate}:</b> {if $call->is_outgoing}{'common.yes'|devblocks_translate}{else}{'common.no'|devblocks_translate}{/if} &nbsp; 
-		<br>
-			
-		{*
-		{assign var=opp_worker_id value=$opp->worker_id}
-		<b>{'common.status'|devblocks_translate|capitalize}:</b> {if $opp->is_closed}{if $opp->is_won}{'crm.opp.status.closed.won'|devblocks_translate|capitalize}{else}{'crm.opp.status.closed.lost'|devblocks_translate|capitalize}{/if}{else}{'crm.opp.status.open'|devblocks_translate|capitalize}{/if} &nbsp;
-		<b>{'common.email'|devblocks_translate|capitalize}:</b> {$address->first_name} {$address->last_name} &lt;<a href="javascript:;" onclick="$('#btnOppAddyPeek').click();">{$address->email}</a>&gt; &nbsp;
-		<b>{'crm.opportunity.created_date'|devblocks_translate|capitalize}:</b> <abbr title="{$opp->created_date|devblocks_date}">{$opp->created_date|devblocks_prettytime}</abbr> &nbsp;
-		{if !empty($opp_worker_id) && isset($workers.$opp_worker_id)}
-			<b>{'common.worker'|devblocks_translate|capitalize}:</b> {$workers.$opp_worker_id->getName()} &nbsp;
-		{/if}
-		<br>
-		*}
+<fieldset class="properties">
+	<legend>{$call->subject|truncate:128}</legend>
+	
+	<form action="{devblocks_url}{/devblocks_url}" onsubmit="return false;" style="margin-bottom:5px;">
+
+		{foreach from=$properties item=v key=k name=props}
+			<div class="property">
+				{if $k == '...'}
+					<b>{$translate->_('...')|capitalize}:</b>
+					...
+				{else}
+					{include file="devblocks:cerberusweb.core::internal/custom_fields/profile_cell_renderer.tpl"}
+				{/if}
+			</div>
+			{if $smarty.foreach.props.iteration % 3 == 0 && !$smarty.foreach.props.last}
+				<br clear="all">
+			{/if}
+		{/foreach}
+		<br clear="all">
 		
 		<!-- Toolbar -->
 		
 		<span>
-		{$object_watchers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_CALL, array($call->id), CerberusContexts::CONTEXT_WORKER)}
-		{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" context=CerberusContexts::CONTEXT_CALL context_id=$call->id full=true}
+		{$object_watchers = DAO_ContextLink::getContextLinks($page_context, array($page_context_id), CerberusContexts::CONTEXT_WORKER)}
+		{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" context=$page_context context_id=$page_context_id full=true}
 		</span>		
 		
+		<!-- Macros -->
+		{devblocks_url assign=return_url full=true}c=calls&id={$page_context_id}-{$call->subject|devblocks_permalink}{/devblocks_url}
+		{include file="devblocks:cerberusweb.core::internal/macros/display/button.tpl" context=$page_context context_id=$page_context_id macros=$macros return_url=$return_url}		
+		
+		<!-- Edit -->		
 		<button type="button" id="btnDisplayCallEdit"><span class="cerb-sprite sprite-document_edit"></span> Edit</button>
 		
 		{$toolbar_exts = DevblocksPlatform::getExtensions('cerberusweb.calls.call.toolbaritem', true)}
@@ -37,19 +44,33 @@
 			{$ext->render($opp)}
 		{/foreach}
 		
-		</form>
-		<br>
-	</td>
-</tr>
-</table>
+	</form>
+	
+	{if $pref_keyboard_shortcuts}
+	<small>
+		{$translate->_('common.keyboard')|lower}:
+		(<b>e</b>) {'common.edit'|devblocks_translate|lower}
+		{if !empty($macros)}(<b>m</b>) {'common.macros'|devblocks_translate|lower} {/if}
+		(<b>1-9</b>) change tab
+	</small> 
+	{/if}
+</fieldset>
+
+<div>
+{include file="devblocks:cerberusweb.core::internal/notifications/context_profile.tpl" context=$page_context context_id=$page_context_id}
+</div>
+
+<div>
+{include file="devblocks:cerberusweb.core::internal/macros/behavior/scheduled_behavior_profile.tpl" context=$page_context context_id=$page_context_id}
+</div>
 
 <div id="callTabs">
 	<ul>
 		{$tabs = [activity,notes,links]}
 
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabActivityLog&scope=target&point={$point}&context={CerberusContexts::CONTEXT_CALL}&context_id={$call->id}{/devblocks_url}">{'common.activity_log'|devblocks_translate|capitalize}</a></li>
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context=cerberusweb.contexts.call&id={$call->id}{/devblocks_url}">{$translate->_('common.comments')|capitalize}</a></li>		
-		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.call&id={$call->id}{/devblocks_url}">{$translate->_('common.links')}</a></li>		
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabActivityLog&scope=target&point={$point}&context={$page_context}&context_id={$page_context_id}{/devblocks_url}">{'common.activity_log'|devblocks_translate|capitalize}</a></li>
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextComments&context=cerberusweb.contexts.call&id={$page_context_id}{/devblocks_url}">{$translate->_('common.comments')|capitalize}</a></li>		
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.call&id={$page_context_id}{/devblocks_url}">{$translate->_('common.links')}</a></li>		
 
 		{foreach from=$tab_manifests item=tab_manifest}
 			{$tabs[] = $tab_manifest->params.uri}
@@ -74,7 +95,10 @@
 				event.stopPropagation();
 				document.location.reload();
 			});
-		})
+		});
+
+		{include file="devblocks:cerberusweb.core::internal/macros/display/menu_script.tpl"}
+		
 	});
 </script>
 
@@ -87,16 +111,43 @@ $(document).keypress(function(event) {
 	if($(event.target).is(':input'))
 		return;
 
+	hotkey_activated = true;
+	
 	switch(event.which) {
-//		case 97:  // (A) E-mail Peek
-//			try {
-//				$('#btnOppAddyPeek').click();
-//			} catch(e) { } 
-//			break;
+		case 49:  // (1) tab cycle
+		case 50:  // (2) tab cycle
+		case 51:  // (3) tab cycle
+		case 52:  // (4) tab cycle
+		case 53:  // (5) tab cycle
+		case 54:  // (6) tab cycle
+		case 55:  // (7) tab cycle
+		case 56:  // (8) tab cycle
+		case 57:  // (9) tab cycle
+		case 58:  // (0) tab cycle
+			try {
+				idx = event.which-49;
+				$tabs = $("#callTabs").tabs();
+				$tabs.tabs('select', idx);
+			} catch(ex) { } 
+			break;
+		case 101:  // (E) edit
+			try {
+				$('#btnDisplayCallEdit').click();
+			} catch(ex) { } 
+			break;
+		case 109:  // (M) macros
+			try {
+				$('#btnDisplayMacros').click();
+			} catch(ex) { } 
+			break;
 		default:
 			// We didn't find any obvious keys, try other codes
+			hotkey_activated = false;
 			break;
 	}
+	
+	if(hotkey_activated)
+		event.preventDefault();
 });
 {/if}
 </script>

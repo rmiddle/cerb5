@@ -7,7 +7,7 @@
 |
 | This source code is released under the Devblocks Public License.
 | The latest version of this license can be found here:
-| http://www.cerberusweb.com/license.php
+| http://cerberusweb.com/license
 |
 | By using this software, you acknowledge having read this license
 | and agree to be bound thereby.
@@ -43,12 +43,11 @@
  * and the warm fuzzy feeling of feeding a couple of obsessed developers 
  * who want to help you get more done.
  *
- * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther,
- * 		and Jerry Kanoholani. 
+ * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011050601);
-define("APP_VERSION", '5.4.0-rc3');
+define("APP_BUILD", 2011080801);
+define("APP_VERSION", '5.5.0');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
@@ -332,12 +331,12 @@ class CerberusApplication extends DevblocksApplication {
 		 */
 		foreach($core_patches as $patch) { /* @var $patch DevblocksPatch */
 			if(!file_exists($patch->getFilename()))
-				throw new Exception("Missing application patch: ".$path);
+				throw new Exception("Missing application patch: ".$patch->getFilename());
 			
 			$version = $patch->getVersion();
 			
 			if(!$patch->run())
-				throw new Exception("Application patch failed to apply: ".$path);
+				throw new Exception("Application patch failed to apply: ".$patch->getFilename());
 			
 			// Patch this version and then patch plugins up to this version
 			foreach($plugin_patches as $plugin_id => $patches) {
@@ -377,49 +376,122 @@ class CerberusApplication extends DevblocksApplication {
 	 *
 	 * @return a unique ticket mask as a string
 	 */
-	static function generateTicketMask($pattern = "LLL-NNNNN-NNN") {
+	static function generateTicketMask($pattern = null) {
+		if(empty($pattern))
+			$pattern = DevblocksPlatform::getPluginSetting('cerberusweb.core', CerberusSettings::TICKET_MASK_FORMAT);
+		if(empty($pattern))
+			$pattern = CerberusSettingsDefaults::TICKET_MASK_FORMAT; 
+
 		$letters = "ABCDEFGHIJKLMNPQRSTUVWXYZ";
 		$numbers = "123456789";
 
 		do {		
 			$mask = "";
 			$bytes = preg_split('//', $pattern, -1, PREG_SPLIT_NO_EMPTY);
+			$literal = false;
 			
 			if(is_array($bytes))
 			foreach($bytes as $byte) {
+				$append = '';
+				
 				switch(strtoupper($byte)) {
+					case '{':
+						$literal = true;
+						$byte = '';
+						break;
+					case '}':
+						$literal = false;
+						$append = '';
+						break;
 					case 'L':
-						$mask .= substr($letters,mt_rand(0,strlen($letters)-1),1);
+						$append .= substr($letters,mt_rand(0,strlen($letters)-1),1);
 						break;
 					case 'N':
-						$mask .= substr($numbers,mt_rand(0,strlen($numbers)-1),1);
+						$append .= substr($numbers,mt_rand(0,strlen($numbers)-1),1);
 						break;
 					case 'C': // L or N
 						if(mt_rand(0,100) >= 50) { // L
-							$mask .= substr($letters,mt_rand(0,strlen($letters)-1),1);	
+							$append .= substr($letters,mt_rand(0,strlen($letters)-1),1);	
 						} else { // N
-							$mask .= substr($numbers,mt_rand(0,strlen($numbers)-1),1);	
+							$append .= substr($numbers,mt_rand(0,strlen($numbers)-1),1);	
 						}
 						break;
 					case 'Y':
-						$mask .= date('Y');
+						$append .= date('Y');
 						break;
 					case 'M':
-						$mask .= date('m');
+						$append .= date('m');
 						break;
 					case 'D':
-						$mask .= date('d');
+						$append .= date('d');
 						break;
 					default:
-						$mask .= $byte;
+						$append .= $byte;
 						break;
 				}
+				
+				if($literal) {
+					$mask .= $byte;
+				} else {
+					$mask .= $append;
+				}
+				
+				$mask = strtoupper(DevblocksPlatform::strAlphaNum($mask,'\-'));
 			}
 		} while(null != DAO_Ticket::getTicketIdByMask($mask));
 		
 //		echo "Generated unique mask: ",$mask,"<BR>";
 		
 		return $mask;
+	}
+	
+	static function generateTicketMaskCardinality($pattern = null) {
+		if(empty($pattern))
+			$pattern = DevblocksPlatform::getPluginSetting('cerberusweb.core', CerberusSettings::TICKET_MASK_FORMAT);
+		if(empty($pattern))
+			$pattern = CerberusSettingsDefaults::TICKET_MASK_FORMAT; 
+		
+		$combinations = 1;
+		$bytes = preg_split('//', $pattern, -1, PREG_SPLIT_NO_EMPTY);
+		$literal = false;
+		
+		if(is_array($bytes))
+		foreach($bytes as $byte) {
+			$mul = 1;
+			switch(strtoupper($byte)) {
+				case '{':
+					$literal = true;
+					break;
+				case '}':
+					$literal = false;
+					break;
+				case 'L':
+					$mul *= 25;
+					break;
+				case 'N':
+					$mul *= 9;
+					break;
+				case 'C': // L or N
+					$mul *= 34;
+					break;
+				case 'Y':
+					$mul *= 1;
+					break;
+				case 'M':
+					$mul *= 12;
+					break;
+				case 'D':
+					$mul *= 30;
+					break;
+				default:
+					break;
+			}
+			
+			if(!$literal)
+				$combinations = round($combinations*$mul,0);
+		}
+		
+		return $combinations;
 	}
 	
 	/**
@@ -789,7 +861,7 @@ class CerberusContexts {
 				if(isset($entry['urls']))
 				foreach($entry['urls'] as $token => $url) {
 					if(0 != strcasecmp('http',substr($url,0,4)))
-						$url = $url_writer->write($url, true);
+						$url = $url_writer->writeNoProxy($url, true);
 					
 					$vars[$token] = '<a href="'.$url.'" style="font-weight:bold;">'.$vars[$token].'</a>';
 				}
@@ -799,7 +871,7 @@ class CerberusContexts {
 				if(isset($entry['urls']))
 				foreach($entry['urls'] as $token => $url) {
 					if(0 != strcasecmp('http',substr($url,0,4)))
-						$url = $url_writer->write($url, true);
+						$url = $url_writer->writeNoProxy($url, true);
 					
 					$vars[$token] = '['.$vars[$token].']('.$url.')';
 				}
@@ -812,7 +884,7 @@ class CerberusContexts {
 					break;
 					
 				if(0 != strcasecmp('http',substr($url,0,4)))
-					$url = $url_writer->write($url, true);
+					$url = $url_writer->writeNoProxy($url, true);
 					
 				$entry['message'] .= ' <' . $url . '>'; 
 				break;
@@ -838,6 +910,14 @@ class CerberusContexts {
 	}
 	
 	static public function logActivity($activity_point, $target_context, $target_context_id, $entry_array, $actor_context=null, $actor_context_id=null, $also_notify_worker_ids=array()) {
+		// Target meta
+		if(!isset($target_meta)) {
+			if(null != ($target_ctx = DevblocksPlatform::getExtension($target_context, true))
+				&& $target_ctx instanceof Extension_DevblocksContext) {
+					$target_meta = $target_ctx->getMeta($target_context_id);
+			}
+		}
+		
 		// Forced actor
 		if(!empty($actor_context) && !empty($actor_context_id)) {
 			if(null != ($ctx = DevblocksPlatform::getExtension($actor_context, true))
@@ -857,9 +937,9 @@ class CerberusContexts {
 			
 			// See if we're inside of an attendant's running decision tree
 			if(EventListener_Triggers::getDepth() > 0
-				&& null != ($trigger_id = end(EventListener_Triggers::getTriggerLog())) 
-				&& !empty($trigger_id) 
-				&& null != ($trigger = DAO_TriggerEvent::get($trigger_id)) 
+				&& null != ($trigger_id = end(EventListener_Triggers::getTriggerStack())) 
+				&& !empty($trigger_id)
+				&& null != ($trigger = DAO_TriggerEvent::get($trigger_id))
 			) {
 				/* @var $trigger Model_TriggerEvent */
 				
@@ -930,6 +1010,14 @@ class CerberusContexts {
 		
 		$watchers = array();
 		
+		// Merge in the record owner if defined
+		if(isset($target_meta) && isset($target_meta['owner_id']) && !empty($target_meta['owner_id'])) {
+			$watchers = array_merge(
+				$watchers,
+				array($target_meta['owner_id'])
+			);
+		}
+		
 		// Merge in watchers of the actor (if not a worker)
 		if(CerberusContexts::CONTEXT_WORKER != $actor_context) {
 			$watchers = array_merge(
@@ -963,13 +1051,20 @@ class CerberusContexts {
 			@$url = reset($entry_array['urls']); 
 			
 			if(0 != strcasecmp('http',substr($url,0,4)))
-				$url = $url_writer->write($url, true);
+				$url = $url_writer->writeNoProxy($url, true);
 			
 			foreach($watcher_ids as $watcher_id) {
-				// Skip a watcher if they are the actor
-				if($actor_context == CerberusContexts::CONTEXT_WORKER
-					&& $actor_context_id == $watcher_id)
-						continue;
+				// If not inside a VA
+				if(0 == EventListener_Triggers::getDepth()) {
+					// Skip a watcher if they are the actor
+					if($actor_context == CerberusContexts::CONTEXT_WORKER
+						&& $actor_context_id == $watcher_id) {
+							// If they explicitly added themselves to the notify, allow it.
+							// Otherwise, don't tell them what they just did.
+							if(!in_array($watcher_id, $also_notify_worker_ids))
+								continue;
+					}
+				}
 				
 				// Does the worker want this kind of notification?
 				$dont_notify_on_activities = WorkerPrefs::getDontNotifyOnActivities($watcher_id);
@@ -978,6 +1073,8 @@ class CerberusContexts {
 					
 				// If yes, send it						
 				DAO_Notification::create(array(
+					DAO_Notification::CONTEXT => $target_context,
+					DAO_Notification::CONTEXT_ID => $target_context_id,
 					DAO_Notification::CREATED_DATE => time(),
 					DAO_Notification::IS_READ => 0,
 					DAO_Notification::WORKER_ID => $watcher_id,
@@ -1151,7 +1248,7 @@ class CerberusLicense {
 	}
 	
 	public static function getReleases() {
-		/**																																																																																																																														*/return array('5.0.0'=>1271894400,'5.1.0'=>1281830400,'5.2.0'=>1288569600,'5.3.0'=>1295049600,'5.4.0'=>1303862400);/*
+		/*																																																																																																																														*/return array('5.0.0'=>1271894400,'5.1.0'=>1281830400,'5.2.0'=>1288569600,'5.3.0'=>1295049600,'5.4.0'=>1303862400,'5.5.0'=>1312416000);/*
 		 * Major releases by date in GMT
 		 */
 		return array(
@@ -1160,6 +1257,7 @@ class CerberusLicense {
 			'5.2.0' => gmmktime(0,0,0,11,1,2010),
 			'5.3.0' => gmmktime(0,0,0,1,15,2011),
 			'5.4.0' => gmmktime(0,0,0,4,27,2011),
+			'5.5.0' => gmmktime(0,0,0,8,4,2011),
 		);
 	}
 	
@@ -1189,6 +1287,7 @@ class CerberusSettings {
 	const ATTACHMENTS_MAX_SIZE = 'attachments_max_size'; 
 	const PARSER_AUTO_REQ = 'parser_autoreq'; 
 	const PARSER_AUTO_REQ_EXCLUDE = 'parser_autoreq_exclude'; 
+	const TICKET_MASK_FORMAT = 'ticket_mask_format';
 	const AUTHORIZED_IPS = 'authorized_ips';
 	const LICENSE = 'license_json';
 	const ACL_ENABLED = 'acl_enabled';
@@ -1208,6 +1307,7 @@ class CerberusSettingsDefaults {
 	const ATTACHMENTS_MAX_SIZE = 10; 
 	const PARSER_AUTO_REQ = 0; 
 	const PARSER_AUTO_REQ_EXCLUDE = ''; 
+	const TICKET_MASK_FORMAT = 'LLL-NNNNN-NNN';
 	const AUTHORIZED_IPS = "127.0.0.1\n::1\n";
 	const ACL_ENABLED = 0;
 };
@@ -1271,6 +1371,15 @@ class C4_ORMHelper extends DevblocksORMHelper {
 		return $db->qstr($str);	
 	}
 	
+	static protected function paramExistsInSet($key, $params) {
+		foreach($params as $k => $param) {
+			if(0==strcasecmp($param->field,$key))
+				return true;
+		}
+		
+		return false;
+	}
+	
 	static protected function _appendSelectJoinSqlForCustomFieldTables($tables, $params, $key, $select_sql, $join_sql) {
 		$custom_fields = DAO_CustomField::getAll();
 		$field_ids = array();
@@ -1326,7 +1435,7 @@ class C4_ORMHelper extends DevblocksORMHelper {
 			}
 			
 			// If we have multiple values but we don't need to WHERE the JOIN, be efficient and don't GROUP BY
-			if(!isset($params['cf_'.$field_id])) {
+			if(!C4_ORMHelper::paramExistsInSet('cf_'.$field_id, $params)) {
 				$select_sql .= sprintf(",(SELECT field_value FROM %s WHERE %s=context_id AND field_id=%d LIMIT 0,1) AS %s ",
 					$value_table,
 					$field_key,
@@ -1356,5 +1465,58 @@ class C4_ORMHelper extends DevblocksORMHelper {
 		}
 		
 		return array($select_sql, $join_sql, $return_multiple_values);
+	}
+	
+	static function _searchComponentsVirtualWatchers(&$param, $from_context, $from_index, &$join_sql, &$where_sql) {
+		// Join and return anything
+		if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
+			$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+		} else {
+			if(empty($param->value)) {
+				switch($param->operator) {
+					case DevblocksSearchCriteria::OPER_IN:
+						$param->operator = DevblocksSearchCriteria::OPER_IS_NULL;
+						break;
+					case DevblocksSearchCriteria::OPER_NIN:
+						$param->operator = DevblocksSearchCriteria::OPER_IS_NOT_NULL;
+						break;
+				}
+			}
+			
+			switch($param->operator) {
+				case DevblocksSearchCriteria::OPER_IN:
+					$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id IN (%s)) ",
+						$from_context,
+						$from_index,
+						implode(',', $param->value)
+					);
+					break;
+				case DevblocksSearchCriteria::OPER_IN_OR_NULL:
+				case DevblocksSearchCriteria::OPER_IS_NULL:
+					$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+					$where_sql .= sprintf("AND (context_watcher.to_context_id IS NULL %s) ",
+						(!empty($param->value) ? sprintf("OR context_watcher.to_context_id IN (%s)", implode(',',$param->value)) : '')
+					);
+					break;
+				case DevblocksSearchCriteria::OPER_NIN:
+					$join_sql .= sprintf("INNER JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker' AND context_watcher.to_context_id NOT IN (%s)) ",
+						$from_context,
+						$from_index,
+						implode(',', $param->value)
+					);
+					break;
+				case DevblocksSearchCriteria::OPER_IS_NOT_NULL:
+					$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+					$where_sql .= sprintf("AND (context_watcher.to_context_id IS NOT NULL) "); //,%s
+						//(!empty($param->value) ? sprintf("OR context_watcher.to_context_id IN (%s)", implode(',',$param->value)) : '')
+					break;
+				case DevblocksSearchCriteria::OPER_NIN_OR_NULL:
+					$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
+					$where_sql .= sprintf("AND (context_watcher.to_context_id IS NULL %s) ",
+						(!empty($param->value) ? sprintf("OR context_watcher.to_context_id NOT IN (%s)", implode(',',$param->value)) : '')
+					);
+					break;
+			}
+		}
 	}
 };
