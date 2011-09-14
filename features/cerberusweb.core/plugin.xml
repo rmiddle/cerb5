@@ -40,7 +40,7 @@
 		<patch version="5.4.3" revision="935" file="patches/5.x/5.4.3.php" />
 		<patch version="5.4.4" revision="936" file="patches/5.x/5.4.4.php" />
 		<patch version="5.5.0" revision="944" file="patches/5.x/5.5.0.php" />
-		<patch version="5.6.0" revision="951" file="patches/5.x/5.6.0.php" />
+		<patch version="5.6.0" revision="952" file="patches/5.x/5.6.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -294,6 +294,7 @@
 		</file>
 		
 		<file path="api/dao/worker_role.php">
+			<class name="Context_WorkerRole" />
 			<class name="DAO_WorkerRole" />
 			<class name="Model_WorkerRole" />
 		</file>
@@ -796,6 +797,25 @@
 						<!--<data key="find" />-->
 						<data key="snippets" />
 						<data key="workspace" />
+					</value>
+				</param>
+			</params>
+		</extension>
+
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.role</id>
+			<name>Role</name>
+			<class>
+				<file>api/dao/worker_role.php</file>
+				<name>Context_WorkerRole</name>
+			</class>
+			<params>
+				<param key="view_class" value="View_WorkerRole" />
+				<param key="options">
+					<value>
+						<!--<data key="find" />-->
+						<!--<data key="snippets" />-->
+						<!--<data key="workspace" />-->
 					</value>
 				</param>
 			</params>

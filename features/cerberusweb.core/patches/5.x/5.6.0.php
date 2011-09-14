@@ -120,4 +120,57 @@ if(isset($columns['has_priv'])) {
 	$db->Execute("ALTER TABLE worker_role_acl DROP COLUMN has_priv");
 }
 
+// ===========================================================================
+// Workspace ownership refactor
+
+if(!isset($tables['workspace'])) {
+ 	$logger->error("The 'workspace' table does not exist.");
+ 	return FALSE;
+}
+
+list($columns, $indexes) = $db->metaTable('workspace');
+
+if(!isset($columns['owner_context'])) {
+	$db->Execute("ALTER TABLE workspace ADD COLUMN owner_context VARCHAR(255) DEFAULT '' NOT NULL, ADD INDEX owner_context (owner_context)");
+}
+
+if(!isset($columns['owner_context_id'])) {
+	$db->Execute("ALTER TABLE workspace ADD COLUMN owner_context_id INT UNSIGNED DEFAULT 0 NOT NULL, ADD INDEX owner_context_id (owner_context_id)");
+}
+
+if(isset($columns['worker_id'])) {
+	$db->Execute("UPDATE workspace SET owner_context = 'cerberusweb.contexts.worker', owner_context_id = worker_id WHERE owner_context = '' AND owner_context_id = 0");
+	$db->Execute("ALTER TABLE workspace DROP COLUMN worker_id");
+}
+
+// ===========================================================================
+// Workspace endpoint refactor
+
+if(!isset($tables['workspace_to_endpoint'])) {
+ 	$logger->error("The 'workspace_to_endpoint' table does not exist.");
+ 	return FALSE;
+}
+
+list($columns, $indexes) = $db->metaTable('workspace_to_endpoint');
+
+if(!isset($columns['worker_id'])) {
+	$db->Execute("ALTER TABLE workspace_to_endpoint ADD COLUMN worker_id INT UNSIGNED DEFAULT 0 NOT NULL, ADD INDEX worker_id (worker_id)");
+	$db->Execute("UPDATE workspace_to_endpoint INNER JOIN workspace ON (workspace_to_endpoint.workspace_id=workspace.id) SET workspace_to_endpoint.worker_id=workspace.owner_context_id WHERE workspace.owner_context = 'cerberusweb.contexts.worker' AND workspace_to_endpoint.worker_id=0");
+	$db->Execute("DELETE FROM workspace_to_endpoint WHERE worker_id = 0");
+}
+
+// ===========================================================================
+// Workspace list refactor
+
+if(!isset($tables['workspace_list'])) {
+ 	$logger->error("The 'workspace_list' table does not exist.");
+ 	return FALSE;
+}
+
+list($columns, $indexes) = $db->metaTable('workspace_list');
+
+if(isset($columns['worker_id'])) {
+	$db->Execute("ALTER TABLE workspace_list DROP COLUMN worker_id");
+}
+
 return TRUE;
