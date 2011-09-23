@@ -96,11 +96,6 @@
         <seg>[Почта] Может использовать автообновление страницы Почта</seg>
       </tuv>
     </tu>
-    <tu tuid="acl.core.mail.log_ticket">
-      <tuv xml:lang="ru_RU">
-        <seg>[Почта] Может открывать заявки от имени пользователей</seg>
-      </tuv>
-    </tu>
     <tu tuid="acl.core.mail.overview">
       <tuv xml:lang="ru_RU">
         <seg>[Почта] Может использовать вкладку Обзор на странице Почта</seg>
@@ -1361,11 +1356,6 @@
         <seg>Изменить панель</seg>
       </tuv>
     </tu>
-    <tu tuid="dashboard.no_teams">
-      <tuv xml:lang="ru_RU">
-        <seg>Нет видимых групп.</seg>
-      </tuv>
-    </tu>
     <tu tuid="dashboard.num_rows">
       <tuv xml:lang="ru_RU">
         <seg>Строк на странице</seg>
@@ -1384,11 +1374,6 @@
     <tu tuid="dashboard.switch">
       <tuv xml:lang="ru_RU">
         <seg>Переключить</seg>
-      </tuv>
-    </tu>
-    <tu tuid="dashboard.teamwork">
-      <tuv xml:lang="ru_RU">
-        <seg>Групповая работа</seg>
       </tuv>
     </tu>
     <tu tuid="display.button.read_all">
@@ -3356,26 +3341,6 @@ login &lt;ftp&#13;
     <tu tuid="tasks.ticket.tab.view">
       <tuv xml:lang="ru_RU">
         <seg>Задачи заявки</seg>
-      </tuv>
-    </tu>
-    <tu tuid="teamwork.assign_work">
-      <tuv xml:lang="ru_RU">
-        <seg>Взять заявки</seg>
-      </tuv>
-    </tu>
-    <tu tuid="teamwork.categories">
-      <tuv xml:lang="ru_RU">
-        <seg>Team Categories</seg>
-      </tuv>
-    </tu>
-    <tu tuid="teamwork.group_management">
-      <tuv xml:lang="ru_RU">
-        <seg>Панель Управления</seg>
-      </tuv>
-    </tu>
-    <tu tuid="teamwork.my_team_loads">
-      <tuv xml:lang="ru_RU">
-        <seg>Загрузка моей команды</seg>
       </tuv>
     </tu>
     <tu tuid="ticket.created">
@@ -5376,11 +5341,6 @@ remote control of your helpdesk.</seg>
       </tuv>
     </tu>
     <tu tuid="preferences.account.mail.status.compose">
-      <tuv xml:lang="ru_RU">
-        <seg></seg>
-      </tuv>
-    </tu>
-    <tu tuid="preferences.account.mail.status.create">
       <tuv xml:lang="ru_RU">
         <seg></seg>
       </tuv>

@@ -355,7 +355,7 @@ class ChInternalController extends DevblocksControllerExtension {
 					),
 					25,
 					0,
-					DAO_Group::TEAM_NAME,
+					DAO_Group::NAME,
 					true,
 					false
 				);
@@ -1252,7 +1252,7 @@ class ChInternalController extends DevblocksControllerExtension {
 
 				// Do we have permission to see it?
 				if(!empty($field->group_id)
-					&& !$active_worker->isTeamMember($field->group_id)) {
+					&& !$active_worker->isGroupMember($field->group_id)) {
 						unset($columns[$idx]);
 						continue;
 				}
@@ -1556,7 +1556,7 @@ class ChInternalController extends DevblocksControllerExtension {
 		} else { // Create
 			$groups = DAO_Group::getAll(); 
 			foreach($groups as $k => $v) {
-				if(!$active_worker->is_superuser && !$active_worker->isTeamManager($k))
+				if(!$active_worker->is_superuser && !$active_worker->isGroupManager($k))
 					unset($groups[$k]);
 			}
 			
@@ -2451,21 +2451,6 @@ class ChInternalController extends DevblocksControllerExtension {
 	}
 	
 	// Utils
-
-	function startAutoRefreshAction() {
-		$url = DevblocksPlatform::importGPC($_REQUEST['url'],'string', '');
-		$secs = DevblocksPlatform::importGPC($_REQUEST['secs'],'integer', 300);
-
-		$_SESSION['autorefresh'] = array(
-			'url' => $url,
-			'started' => time(),
-			'secs' => $secs,
-		);
-	}
-
-	function stopAutoRefreshAction() {
-		unset($_SESSION['autorefresh']);
-	}
 
 	function transformMarkupToHTMLAction() {
 		$format = DevblocksPlatform::importGPC($_REQUEST['format'],'string', '');

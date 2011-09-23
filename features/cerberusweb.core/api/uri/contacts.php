@@ -550,6 +550,41 @@ class ChContactsPage extends CerberusPageExtension {
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('explore',$hash,$orig_pos)));
 	}
 	
+	function getTopContactsByOrgJsonAction() {
+		@$org_name = DevblocksPlatform::importGPC($_REQUEST['org_name'],'string');
+		
+		header('Content-type: text/json');
+		
+		if(empty($org_name) || null == ($org_id = DAO_ContactOrg::lookup($org_name, false))) {
+			echo json_encode(array());
+			exit;
+		}
+		
+		$results = DAO_Address::getWhere(
+			sprintf("%s = %d",
+				DAO_Address::CONTACT_ORG_ID,
+				$org_id
+			),
+			DAO_Address::NUM_NONSPAM,
+			true,
+			25
+		);
+		
+		$list = array();
+		
+		foreach($results as $result) { /* @var $result Model_Address */
+			$list[] = array(
+				'id' => $result->id,
+				'email' => $result->email,
+				'name' => htmlentities($result->getName()),
+			);
+		}
+		
+		echo json_encode($list);
+		
+		exit;
+	}
+	
 	function viewOrgsExploreAction() {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
 		
@@ -1006,8 +1041,8 @@ class ChContactsPage extends CerberusPageExtension {
 			$view->view_columns = array(
 				SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
 				SearchFields_Ticket::TICKET_CREATED_DATE,
-				SearchFields_Ticket::TICKET_TEAM_ID,
-				SearchFields_Ticket::TICKET_CATEGORY_ID,
+				SearchFields_Ticket::TICKET_GROUP_ID,
+				SearchFields_Ticket::TICKET_BUCKET_ID,
 			);
 			$view->renderLimit = 10;
 			$view->renderPage = 0;

@@ -8,41 +8,66 @@
 	<tr>
 		<td width="100%">
 			<table cellpadding="1" cellspacing="0" border="0" width="100%">
-				{if isset($teams.{$ticket->team_id})}
+				{if isset($groups.{$ticket->group_id})}
 				<tr>
-					<td width="1%" nowrap="nowrap">{$translate->_('message.header.from')|capitalize}: </td>
+					<td width="1%" nowrap="nowrap" valign="top">{$translate->_('message.header.from')|capitalize}: </td>
 					<td width="99%" align="left">
-						{$teams.{$ticket->team_id}->name}
+						{$groups.{$ticket->group_id}->name}
 					</td>
 				</tr>
 				{/if}
 				
 				<tr>
-					<td width="1%" nowrap="nowrap"><b>{$translate->_('message.header.to')|capitalize}:</b> </td>
+					<td width="1%" nowrap="nowrap" valign="top"><b>{$translate->_('message.header.to')|capitalize}:</b> </td>
 					<td width="99%" align="left">
-						<input type="text" size="45" name="to" value="{if !empty($draft)}{$draft->params.to}{else}{if $is_forward}{else}{foreach from=$ticket->getRequesters() item=req_addy name=reqs}{$req_addy->email}{if !$smarty.foreach.reqs.last}, {/if}{/foreach}{/if}{/if}" {if $is_forward}class="required"{/if} style="width:100%;border:1px solid rgb(180,180,180);padding:2px;">
+						<input type="text" size="45" name="to" value="{if !empty($draft)}{$draft->params.to}{else}{if $is_forward}{else}{foreach from=$requesters item=req_addy name=reqs}{$fullname=$req_addy->getName()}{if !empty($fullname)}{$fullname} &lt;{$req_addy->email}&gt;{else}{$req_addy->email}{/if}{if !$smarty.foreach.reqs.last}, {/if}{/foreach}{/if}{/if}" {if $is_forward}class="required"{/if} style="width:100%;border:1px solid rgb(180,180,180);padding:2px;">
+						<div class="instructions" style="display:none;">
+							These recipients will automatically be included in all future correspondence
+						</div>
+						
+						{if !$is_forward}
+							{if !empty($suggested_recipients)}
+								<div id="reply{$message->id}_suggested">
+									<a href="javascript:;" onclick="$(this).closest('div').remove();">x</a>
+									<b>Consider adding these recipients:</b>
+									<ul class="bubbles">
+									{foreach from=$suggested_recipients item=sug name=sugs}
+										<li><a href="javascript:;" class="suggested">{$sug.full_email}</a></li>
+									{/foreach}
+									</ul> 
+								</div>
+							{/if}
+						{/if}
 					</td>
 				</tr>
 				
 				<tr>
-					<td width="1%" nowrap="nowrap">{$translate->_('message.header.cc')|capitalize}: </td>
+					<td width="1%" nowrap="nowrap" valign="top">{$translate->_('message.header.cc')|capitalize}: </td>
 					<td width="99%" align="left">
-						<input type="text" size="45" name="cc" value="{$draft->params.cc}" style="width:100%;border:1px solid rgb(180,180,180);padding:2px;">					
+						<input type="text" size="45" name="cc" value="{$draft->params.cc}" style="width:100%;border:1px solid rgb(180,180,180);padding:2px;">
+						<div class="instructions" style="display:none;">
+							These recipients will publicly receive a copy of this message	
+						</div>
 					</td>
 				</tr>
+
 				<tr>
-					<td width="1%" nowrap="nowrap">{$translate->_('message.header.bcc')|capitalize}: </td>
+					<td width="1%" nowrap="nowrap" valign="top">{$translate->_('message.header.bcc')|capitalize}: </td>
 					<td width="99%" align="left">
 						<input type="text" size="45" name="bcc" value="{$draft->params.bcc}" style="width:100%;border:1px solid rgb(180,180,180);padding:2px;">					
+						<div class="instructions" style="display:none;">
+							These recipients will secretly receive a copy of this message			
+						</div>
 					</td>
 				</tr>
 				
 				<tr>
-					<td width="1%" nowrap="nowrap">{$translate->_('message.header.subject')|capitalize}: </td>
+					<td width="1%" nowrap="nowrap" valign="top">{$translate->_('message.header.subject')|capitalize}: </td>
 					<td width="99%" align="left">
 						<input type="text" size="45" name="subject" value="{if !empty($draft)}{$draft->subject}{else}{if $is_forward}Fwd: {/if}{$ticket->subject}{/if}" style="width:100%;border:1px solid rgb(180,180,180);padding:2px;" class="required">					
 					</td>
 				</tr>
+				
 			</table>
 
 			<div id="divDraftStatus{$message->id}"></div>
@@ -52,7 +77,7 @@
 					<legend>Actions</legend>
 					{assign var=headers value=$message->getHeaders()}
 					<button name="saveDraft" type="button" onclick="if($(this).attr('disabled'))return;$(this).attr('disabled','disabled');genericAjaxPost('reply{$message->id}_part2',null,'c=display&a=saveDraftReply&is_ajax=1',function(json, ui) { var obj = $.parseJSON(json); $('#divDraftStatus{$message->id}').html(obj.html); $('#reply{$message->id}_part2 input[name=draft_id]').val(obj.draft_id); $('#reply{$message->id}_part1 button[name=saveDraft]').removeAttr('disabled'); } );"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> Save Draft</button>
-					<button id="btnInsertReplySig{$message->id}" type="button" title="(Ctrl+Shift+G)" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id={$ticket->team_id}&bucket_id={$ticket->category_id}',function(txt) { $('#reply_{$message->id}').insertAtCursor(txt); } );"><span class="cerb-sprite sprite-document_edit"></span> {$translate->_('display.reply.insert_sig')|capitalize}</button>
+					<button id="btnInsertReplySig{$message->id}" type="button" title="(Ctrl+Shift+G)" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id={$ticket->group_id}&bucket_id={$ticket->bucket_id}',function(txt) { $('#reply_{$message->id}').insertAtCursor(txt); } );"><span class="cerb-sprite sprite-document_edit"></span> {$translate->_('display.reply.insert_sig')|capitalize}</button>
 					{* Plugin Toolbar *}
 					{if !empty($reply_toolbaritems)}
 						{foreach from=$reply_toolbaritems item=renderer}
@@ -94,7 +119,7 @@
 {if $is_forward}<input type="hidden" name="is_forward" value="1">{/if}
 
 <!-- {* Copy these dynamically so a plugin dev doesn't need to conflict with the reply <form> *} -->
-<input type="hidden" name="to" value="{if !empty($draft)}{$draft->params.to}{else}{if $is_forward}{else}{foreach from=$ticket->getRequesters() item=req_addy name=reqs}{$req_addy->email}{if !$smarty.foreach.reqs.last}, {/if}{/foreach}{/if}{/if}">
+<input type="hidden" name="to" value="{if !empty($draft)}{$draft->params.to}{else}{if $is_forward}{else}{foreach from=$requesters item=req_addy name=reqs}{$req_addy->email}{if !$smarty.foreach.reqs.last}, {/if}{/foreach}{/if}{/if}">
 <input type="hidden" name="cc" value="{$draft->params.cc}">
 <input type="hidden" name="bcc" value="{$draft->params.bcc}">
 <input type="hidden" name="subject" value="{if !empty($draft)}{$draft->subject}{else}{if $is_forward}Fwd: {/if}{$ticket->subject}{/if}">
@@ -207,18 +232,18 @@
 								<b>{$translate->_('display.reply.next.move')}</b><br>  
 						      	<select name="bucket_id">
 						      		<option value="">-- {$translate->_('display.reply.next.move.no_thanks')|lower} --</option>
-						      		{if empty($ticket->category_id)}{assign var=t_or_c value="t"}{else}{assign var=t_or_c value="c"}{/if}
+						      		{if empty($ticket->bucket_id)}{assign var=t_or_c value="t"}{else}{assign var=t_or_c value="c"}{/if}
 						      		<optgroup label="{$translate->_('common.inboxes')|capitalize}">
-						      		{foreach from=$teams item=team}
-						      			<option value="t{$team->id}">{$team->name}{if $t_or_c=='t' && $ticket->team_id==$team->id} {$translate->_('display.reply.next.move.current')}{/if}</option>
+						      		{foreach from=$groups item=group}
+						      			<option value="t{$group->id}">{$group->name}{if $t_or_c=='t' && $ticket->group_id==$group->id} {$translate->_('display.reply.next.move.current')}{/if}</option>
 						      		{/foreach}
 						      		</optgroup>
-						      		{foreach from=$team_categories item=categories key=teamId}
-						      			{assign var=team value=$teams.$teamId}
-						      			{if !empty($active_worker_memberships.$teamId)}
-							      			<optgroup label="-- {$team->name} --">
-							      			{foreach from=$categories item=category}
-							    				<option value="c{$category->id}">{$category->name}{if $t_or_c=='c' && $ticket->category_id==$category->id} {$translate->_('display.reply.next.move.current')}{/if}</option>
+						      		{foreach from=$group_buckets item=buckets key=groupId}
+						      			{assign var=group value=$groups.$groupId}
+						      			{if !empty($active_worker_memberships.$groupId)}
+							      			<optgroup label="-- {$group->name} --">
+							      			{foreach from=$buckets item=bucket}
+							    				<option value="c{$bucket->id}">{$bucket->name}{if $t_or_c=='c' && $ticket->bucket_id==$bucket->id} {$translate->_('display.reply.next.move.current')}{/if}</option>
 							    			{/foreach}
 							    			</optgroup>
 							    		{/if}
@@ -241,6 +266,19 @@
 							</td>
 						</tr>
 					</table>
+					
+					{if !empty($custom_fields) || !empty($group_fields)}
+					<b>{'common.custom_fields'|devblocks_translate|capitalize}:</b>
+					<div id="compose_cfields" style="margin:5px 0px 0px 10px;">
+						<div class="global">
+							{include file="devblocks:cerberusweb.core::internal/custom_fields/bulk/form.tpl" bulk=false}
+						</div>
+						<div class="group">
+							{include file="devblocks:cerberusweb.core::internal/custom_fields/bulk/form.tpl" custom_fields=$group_fields bulk=false}
+						</div>
+					</div>
+					{/if}
+					
 				</td>
 			</tr>
 			</table>
@@ -274,10 +312,45 @@
 		ajax.emailAutoComplete('#reply{$message->id}_part1 input[name=cc]', { multiple: true } );
 		ajax.emailAutoComplete('#reply{$message->id}_part1 input[name=bcc]', { multiple: true } );
 		
+		$('#reply{$message->id}_part1 input:text').focus(function(event) {
+			$(this).nextAll('div.instructions').fadeIn();
+		});
+		
 		$('#reply{$message->id}_part1 input:text').blur(function(event) {
+			$(this).nextAll('div.instructions').fadeOut();
 			name = event.target.name;
 			$('#reply{$message->id}_part2 input:hidden[name='+name+']').val(event.target.value);
 		} );
+		
+		$('#reply{$message->id}_part1 input:text[name=to], #reply{$message->id}_part1 input:text[name=cc], #reply{$message->id}_part1 input:text[name=bcc]').focus(function(event) {
+			$('#reply{$message->id}_suggested').appendTo($(this).closest('td'));
+		});
+		
+		// Insert suggested on click
+		$('#reply{$message->id}_suggested').find('a.suggested').click(function(e) {
+			$this = $(this);
+			$sug = $this.text();
+			
+			$to=$this.closest('td').find('input:text:first');
+			$val=$to.val();
+			$len=$val.length;
+			
+			$last = null;
+			if($len>0)
+				$last=$val.substring($len-1);
+			
+			if(0==$len || $last==' ')
+				$to.val($val+$sug);
+			else if($last==',')
+				$to.val($val + ' '+$sug);
+			else $to.val($val + ', '+$sug);
+				$to.focus();
+			
+			$ul=$this.closest('ul');
+			$this.closest('li').remove();
+			if(0==$ul.find('li').length)
+				$ul.closest('div').remove();
+		});
 		
 		$('#reply{$message->id}_part1').validate();
 		

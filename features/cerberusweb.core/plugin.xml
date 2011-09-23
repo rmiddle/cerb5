@@ -40,7 +40,7 @@
 		<patch version="5.4.3" revision="935" file="patches/5.x/5.4.3.php" />
 		<patch version="5.4.4" revision="936" file="patches/5.x/5.4.4.php" />
 		<patch version="5.5.0" revision="944" file="patches/5.x/5.5.0.php" />
-		<patch version="5.6.0" revision="952" file="patches/5.x/5.6.0.php" />
+		<patch version="5.6.0" revision="953" file="patches/5.x/5.6.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -206,7 +206,7 @@
 			<class name="Model_Group" />
 			<class name="SearchFields_Group" />
 			<class name="View_Group" />
-			<class name="Model_TeamMember" />
+			<class name="Model_GroupMember" />
 		</file>
 		
 		<file path="api/dao/mail_queue.php">
@@ -548,7 +548,6 @@
 		<!-- Mail page -->
 		<priv id="core.mail" label="acl.core.mail" />
 		<priv id="core.mail.actions.auto_refresh" label="acl.core.mail.actions.auto_refresh" />
-		<priv id="core.mail.log_ticket" label="acl.core.mail.log_ticket" />
 		<priv id="core.mail.search" label="acl.core.mail.search" />
 		<priv id="core.mail.send" label="acl.core.mail.send" />
 
