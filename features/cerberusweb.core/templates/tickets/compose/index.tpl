@@ -12,7 +12,7 @@
 {/if}
 
 <div class="block">
-<h2>Outgoing Message</h2>
+<h2>{'mail.send_mail'|devblocks_translate|capitalize}</h2>
 <form id="frmCompose" name="compose" enctype="multipart/form-data" method="POST" action="{devblocks_url}{/devblocks_url}">
 <input type="hidden" name="c" value="tickets">
 <input type="hidden" name="a" value="composeMail">
@@ -24,35 +24,62 @@
 		<td>
 			<table cellpadding="1" cellspacing="0" border="0" width="100%">
 				<tr>
-					<td width="0%" nowrap="nowrap" valign="middle" align="right"><b>From:</b>&nbsp;</td>
+					<td width="0%" nowrap="nowrap" valign="top" align="right"><b>From:</b>&nbsp;</td>
 					<td width="100%">
-						<select name="team_id" id="team_id" class="required" style="border:1px solid rgb(180,180,180);padding:2px;">
+						<select name="group_id" id="group_id" class="required" style="border:1px solid rgb(180,180,180);padding:2px;">
 							{foreach from=$active_worker_memberships item=membership key=group_id}
-							<option value="{$group_id}" {if $group_id==$draft->params.group_id}selected{/if}>{$teams.$group_id->name}</option>
+							<option value="{$group_id}" {if $group_id==$draft->params.group_id}selected{/if}>{$groups.$group_id->name}</option>
 							{/foreach}
 						</select>
 					</td>
 				</tr>
 				<tr>
-					<td width="0%" nowrap="nowrap" valign="middle" align="right"><b>To:</b>&nbsp;</td>
+					<td width="0%" nowrap="nowrap" valign="top" align="right"><b>{'contact_org.name'|devblocks_translate}:</b>&nbsp;</td>
+					<td width="100%">
+						<input type="text" name="org_name" value="{$draft->params.org_name}" style="border:1px solid rgb(180,180,180);padding:2px;width:98%;">
+						<div class="instructions" style="display:none;">
+						(optional) Link this ticket to an organization and automatically suggest recipients
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td width="0%" nowrap="nowrap" valign="top" align="right"><b>To:</b>&nbsp;</td>
 					<td width="100%">
 						<input type="text" name="to" value="{if !empty($draft)}{$draft->params.to}{else}{$defaults_to}{/if}" class="required" style="border:1px solid rgb(180,180,180);padding:2px;width:98%;">
+						
+						<div class="instructions" style="display:none;">
+							These recipients will automatically be included in all future correspondence
+						</div>
+						
+						<div id="compose_suggested" style="display:none;">
+							<a href="javascript:;" onclick="$(this).closest('div').hide();">x</a>
+							<b>Consider adding these recipients:</b>
+							<ul class="bubbles"></ul> 
+						</div>
 					</td>
 				</tr>
 				<tr>
-					<td width="0%" nowrap="nowrap" valign="middle" align="right">Cc:&nbsp;</td>
+					<td width="0%" nowrap="nowrap" valign="top" align="right">Cc:&nbsp;</td>
 					<td width="100%">
 						<input type="text" size="100" name="cc" value="{$draft->params.cc}" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;">
+						
+						<div class="instructions" style="display:none;">
+							These recipients will publicly receive a copy of this message	
+						</div>
 					</td>
 				</tr>
 				<tr>
-					<td width="0%" nowrap="nowrap" valign="middle" align="right">Bcc:&nbsp;</td>
+					<td width="0%" nowrap="nowrap" valign="top" align="right">Bcc:&nbsp;</td>
 					<td width="100%">
 						<input type="text" size="100" name="bcc" value="{$draft->params.bcc}" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;">
+						
+						<div class="instructions" style="display:none;">
+							These recipients will privately receive a copy of this message	
+						</div>
 					</td>
 				</tr>
 				<tr>
-					<td width="0%" nowrap="nowrap" valign="middle" align="right"><b>Subject:</b>&nbsp;</td>
+					<td width="0%" nowrap="nowrap" valign="top" align="right"><b>Subject:</b>&nbsp;</td>
 					<td width="100%"><input type="text" size="100" name="subject" value="{$draft->subject}" class="required" style="width:98%;border:1px solid rgb(180,180,180);padding:2px;"></td>
 				</tr>
 
@@ -66,7 +93,7 @@
 				<fieldset style="display:inline-block;">
 					<legend>Actions</legend>
 					<button id="btnSaveDraft" type="button" onclick="genericAjaxPost('frmCompose',null,'c=tickets&a=saveDraft&type=compose',function(json) { var obj = $.parseJSON(json); if(!obj || !obj.html || !obj.draft_id) return; $('#divDraftStatus').html(obj.html); $('#frmCompose input[name=draft_id]').val(obj.draft_id); } );"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> Save Draft</button>
-					<button type="button" id="btnInsertSig" title="(Ctrl+Shift+G)" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id='+selectValue(this.form.team_id),function(text) { insertAtCursor(document.getElementById('content'),text); } );"><span class="cerb-sprite sprite-document_edit"></span> Insert Signature</button>
+					<button type="button" id="btnInsertSig" title="(Ctrl+Shift+G)" onclick="genericAjaxGet('','c=tickets&a=getComposeSignature&group_id='+selectValue(this.form.group_id),function(text) { insertAtCursor(document.getElementById('content'),text); } );"><span class="cerb-sprite sprite-document_edit"></span> Insert Signature</button>
 					{* Plugin Toolbar *}
 					{if !empty($sendmail_toolbaritems)}
 						{foreach from=$sendmail_toolbaritems item=renderer}
@@ -80,8 +107,8 @@
 					<div>
 						Insert: 
 						<input type="text" size="25" class="context-snippet autocomplete">
-						<button type="button" onclick="openSnippetsChooser(this);"><span class="cerb-sprite sprite-view"></span></button>
-						<button type="button" onclick="genericAjaxPopup('peek','c=tickets&a=showSnippetsPeek&id=0&context=cerberusweb.contexts.worker&context_id={$active_worker->id}',null,false,'550');"><span class="cerb-sprite2 sprite-plus-circle-frame"></span></button>
+						<button type="button" onclick="ajax.chooserSnippet('snippets',$('#content'), { '{CerberusContexts::CONTEXT_WORKER}':'{$active_worker->id}' });"><span class="cerb-sprite sprite-view"></span></button>
+						<button type="button" onclick="genericAjaxPopup('peek','c=internal&a=showSnippetsPeek&id=0&owner_context=cerberusweb.contexts.worker&owner_context_id={$active_worker->id}',null,false,'550');"><span class="cerb-sprite2 sprite-plus-circle-frame"></span></button>
 					</div>
 				</fieldset>
 			</div>
@@ -224,8 +251,15 @@
 									<input type="checkbox" name="add_me_as_watcher" value="1"> 
 									{'common.watchers.add_me'|devblocks_translate}
 									</label>
+									<br>
+									
+									<label>
+									<input type="checkbox" name="options_dont_send" value="1"> 
+									Start a new conversation without sending a copy of this message to the recipients
+									</label>
+									<br>
 								</div>
-							
+								
 								<label><input type="radio" name="closed" value="0" onclick="toggleDiv('ticketClosed','none');" {if 'open'==$mail_status_compose}checked="checked"{/if}>{$translate->_('status.open')|capitalize}</label>
 								<label><input type="radio" name="closed" value="2" onclick="toggleDiv('ticketClosed','block');" {if 'waiting'==$mail_status_compose}checked="checked"{/if}>{$translate->_('status.waiting')|capitalize}</label>
 								{if $active_worker->hasPriv('core.ticket.actions.close')}<label><input type="radio" name="closed" value="1" onclick="toggleDiv('ticketClosed','block');" {if 'closed'==$mail_status_compose}checked="checked"{/if}>{$translate->_('status.closed')|capitalize}</label>{/if}
@@ -239,31 +273,43 @@
 								</div>
 		
 								{if $active_worker->hasPriv('core.ticket.actions.move')}
-								<b>{$translate->_('display.reply.next.move')}</b><br>  
-						      	<select name="bucket_id">
-						      		<option value="">-- {$translate->_('display.reply.next.move.no_thanks')|lower} --</option>
-						      		<optgroup label="{$translate->_('common.inboxes')|capitalize}">
-						      		{foreach from=$teams item=team}
-						      			<option value="t{$team->id}">{$team->name}</option>
-						      		{/foreach}
-						      		</optgroup>
-						      		{foreach from=$team_categories item=categories key=teamId}
-										{if !empty($active_worker_memberships.$teamId)}
-							      			{assign var=team value=$teams.$teamId}
-							      			<optgroup label="-- {$team->name} --">
-							      			{foreach from=$categories item=category}
-							    				<option value="c{$category->id}">{$category->name}</option>
-							    			{/foreach}
-							    			</optgroup>
-										{/if}
-						     		{/foreach}
-						      	</select><br>
+								<b>{$translate->_('display.reply.next.move')}</b>
+								<div style="margin-left:10px;">
+							      	<select name="bucket_id">
+							      		<option value="">-- {$translate->_('display.reply.next.move.no_thanks')|lower} --</option>
+							      		<optgroup label="{$translate->_('common.inboxes')|capitalize}">
+							      		{foreach from=$groups item=group}
+							      			<option value="t{$group->id}">{$group->name}</option>
+							      		{/foreach}
+							      		</optgroup>
+							      		{foreach from=$group_buckets item=buckets key=groupId}
+											{if !empty($active_worker_memberships.$groupId)}
+								      			{assign var=group value=$groups.$groupId}
+								      			<optgroup label="-- {$group->name} --">
+								      			{foreach from=$buckets item=bucket}
+								    				<option value="c{$bucket->id}">{$bucket->name}</option>
+								    			{/foreach}
+								    			</optgroup>
+											{/if}
+							     		{/foreach}
+							      	</select>
+							    </div>
 						      	<br>
 								{/if}
-						      	
 							</td>
 						</tr>
 					</table>
+					
+					<b>{'common.custom_fields'|devblocks_translate|capitalize}:</b>
+					<div id="compose_cfields" style="margin:5px 0px 0px 10px;">
+						<div class="global">
+							{include file="devblocks:cerberusweb.core::internal/custom_fields/bulk/form.tpl" bulk=false}
+						</div>
+						<div class="group">
+							{include file="devblocks:cerberusweb.core::internal/custom_fields/bulk/form.tpl" custom_fields=$group_fields bulk=false}
+						</div>
+					</div>
+					
 				</td>
 			</tr>
 		</table>
@@ -289,7 +335,84 @@
 		ajax.emailAutoComplete('#frmCompose input[name=cc]', { multiple: true } );
 		ajax.emailAutoComplete('#frmCompose input[name=bcc]', { multiple: true } );
 		
-		$('#frmCompose').validate();
+		$frm = $('#frmCompose');
+		
+		$frm.validate();
+		
+		$frm.find('input:text').focus(function(event) {
+			$(this).nextAll('div.instructions').fadeIn();
+		});
+		
+		$frm.find('input:text').blur(function(event) {
+			$(this).nextAll('div.instructions').fadeOut();
+		});
+
+		ajax.orgAutoComplete('#frmCompose input:text[name=org_name]');
+		
+		$frm.find('select[name=group_id]').change(function(e) {
+			$div = $('#compose_cfields');
+			$div.find('td.group').html('');
+			genericAjaxGet($div, 'c=tickets&a=getCustomFieldEntry&group_id=' + $(this).val(), function(html) {
+				$('#compose_cfields').find('div.group').html(html);
+			});
+		});
+		
+		$frm.find('input:text[name=to], input:text[name=cc], input:text[name=bcc]').focus(function(event) {
+			$('#compose_suggested').appendTo($(this).closest('td'));
+		});
+		
+		$frm.find('input:text[name=org_name]').bind('autocompletechange',function(event, ui) {
+			genericAjaxGet('', 'c=contacts&a=getTopContactsByOrgJson&org_name=' + $(this).val(), function(json) {
+				$sug = $('#compose_suggested');
+				
+				$sug.find('ul.bubbles li').remove();
+				
+				if(0 == json.length) {
+					$sug.hide();
+					return;
+				}
+				
+				for(i in json) {
+					label = '';
+					if(json[i].name.length > 0) {
+						label += json[i].name + " ";
+						label += "&lt;" + json[i].email + '&gt;';
+					} else {
+						label += json[i].email;
+					}
+					
+					$sug.find('ul.bubbles').append($("<li><a href=\"javascript:;\" class=\"suggested\">" + label + "</a></li>"));
+				}
+				
+				// Insert suggested on click
+				$sug.find('a.suggested').click(function(e) {
+					$this = $(this);
+					$sug = $this.text();
+					
+					$to=$this.closest('td').find('input:text:first');
+					$val=$to.val();
+					$len=$val.length;
+					
+					$last = null;
+					if($len>0)
+						$last=$val.substring($len-1);
+					
+					if(0==$len || $last==' ')
+						$to.val($val+$sug);
+					else if($last==',')
+						$to.val($val + ' '+$sug);
+					else $to.val($val + ', '+$sug);
+						$to.focus();
+					
+					$ul=$this.closest('ul');
+					$this.closest('li').remove();
+					if(0==$ul.find('li').length)
+						$ul.closest('div').remove();
+				});
+				
+				$sug.show();
+			});
+		});		
 		
 		setInterval("$('#btnSaveDraft').click();", 30000);
 
@@ -357,34 +480,4 @@
 		{/if}
 		
 	});
-	
-	function openSnippetsChooser(button) {
-		$chooser=genericAjaxPopup('chooser','c=internal&a=chooserOpen&context=cerberusweb.contexts.snippet&contexts[]=cerberusweb.contexts.worker',null,true,'750');
-		$chooser.one('chooser_save', function(event) {
-			event.stopPropagation();
-			$button = $(button);
-			$textarea = $('#content');
-			
-			for(idx in event.labels) {
-				value = event.values[idx];
-				valueParts = value.split('::');
-				
-				if(null == valueParts || null == valueParts[0] || null == valueParts[1])
-					continue;
-				
-				// Now we need to read in each snippet as either 'raw' or 'parsed' via Ajax
-				url = 'c=internal&a=snippetPaste&id='+valueParts[0];
-				
-				// Context-dependent arguments
-				if ('cerberusweb.contexts.worker'==valueParts[1]) {
-					url += "&context_id={$active_worker->id}";
-				}
-				
-				// Ajax the content (synchronously)
-				genericAjaxGet('',url,function(txt) {
-					$textarea.insertAtCursor(txt);
-				}, { async: false });
-			}
-		});
-	}	
 </script>

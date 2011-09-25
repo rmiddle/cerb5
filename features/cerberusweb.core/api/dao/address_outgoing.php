@@ -129,7 +129,7 @@ class DAO_AddressOutgoing extends DevblocksORMHelper {
 	static function isLocalAddress($address) {
 		$helpdesk_froms = DAO_AddressOutgoing::getAll();
 		foreach($helpdesk_froms as $from) {
-			if(0 == strcasecmp($from,$address))
+			if(0 == strcasecmp($from->email, $address))
 				return true;	
 		}
 		
@@ -161,10 +161,10 @@ class DAO_AddressOutgoing extends DevblocksORMHelper {
 		$db->Execute(sprintf("DELETE FROM address_outgoing WHERE address_id IN (%s)", $ids_list));
 		
 		// Reset groups
-		$db->Execute(sprintf("UPDATE team SET reply_address_id=0 WHERE reply_address_id IN (%s)", $ids_list));
+		$db->Execute(sprintf("UPDATE worker_group SET reply_address_id=0 WHERE reply_address_id IN (%s)", $ids_list));
 		
 		// Reset buckets
-		$db->Execute(sprintf("UPDATE category SET reply_address_id=0 WHERE reply_address_id IN (%s)", $ids_list));
+		$db->Execute(sprintf("UPDATE bucket SET reply_address_id=0 WHERE reply_address_id IN (%s)", $ids_list));
 		
 		self::clearCache();
 		

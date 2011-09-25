@@ -453,57 +453,6 @@ class ChPreferencesPage extends CerberusPageExtension {
 		exit;
 	}
 
-//	function showWorkspacesIntroTabAction() {
-//		$translate = DevblocksPlatform::getTranslationService();
-//		$active_worker = CerberusApplication::getActiveWorker();
-//
-//		$tpl = DevblocksPlatform::getTemplateService();
-//
-//		$tpl->display('devblocks:cerberusweb.core::home/tabs/workspaces_intro/index.tpl');
-//	}
-
-//	function doWorkspaceInitAction() {
-//		$active_worker = CerberusApplication::getActiveWorker();
-//		$visit = CerberusApplication::getVisit();
-//
-//		$fields = array(
-//			DAO_Workspace::NAME => 'My First Workspace',
-//			DAO_Workspace::WORKER_ID => $active_worker->id,
-//		);
-//		$workspace_id = DAO_Workspace::create($fields);
-//
-//		DAO_Workspace::setEndpointWorkspaces(Extension_PreferencesTab::POINT, $active_worker->id, $workspace_id);
-//		$visit->set(Extension_PreferencesTab::POINT, 'w_'.$workspace_id);
-//
-//		// My Tickets
-//
-//		$list = new Model_WorkspaceListView();
-//		$list->title = 'My Mail';
-//		$list->columns = array(
-//			SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
-//			SearchFields_Ticket::TICKET_UPDATED_DATE,
-//			SearchFields_Ticket::TICKET_TEAM_ID,
-//			SearchFields_Ticket::TICKET_CATEGORY_ID,
-//		);
-//		$list->params = array(
-//			SearchFields_Ticket::TICKET_CLOSED => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_CLOSED,'=',0),
-//			SearchFields_Ticket::TICKET_WAITING => new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_WAITING,'=',0),
-//			SearchFields_Ticket::VIRTUAL_WATCHERS => new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_WATCHERS,null,array($active_worker->id))
-//		);
-//		$list->num_rows = 5;
-//
-//		$fields = array(
-//			DAO_WorkspaceList::WORKER_ID => $active_worker->id,
-//			DAO_WorkspaceList::WORKSPACE_ID => $workspace_id,
-//			DAO_WorkspaceList::LIST_POS => 1,
-//			DAO_WorkspaceList::LIST_VIEW => serialize($list),
-//			DAO_WorkspaceList::CONTEXT => CerberusContexts::CONTEXT_TICKET,
-//		);
-//		DAO_WorkspaceList::create($fields);
-//
-//		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('preferences')));
-//	}
-
 	function showGeneralTabAction() {
 		$date_service = DevblocksPlatform::getDateService();
 		$tpl = DevblocksPlatform::getTemplateService();
@@ -521,7 +470,6 @@ class ChPreferencesPage extends CerberusPageExtension {
 		$prefs['mail_always_show_all'] = DAO_WorkerPref::get($worker->id,'mail_always_show_all',0);
 		$prefs['mail_reply_button'] = DAO_WorkerPref::get($worker->id,'mail_reply_button',0);
 		$prefs['mail_status_compose'] = DAO_WorkerPref::get($worker->id,'mail_status_compose','waiting');
-		$prefs['mail_status_create'] = DAO_WorkerPref::get($worker->id,'mail_status_create','open');
 		$prefs['mail_status_reply'] = DAO_WorkerPref::get($worker->id,'mail_status_reply','waiting');
 		$prefs['mail_signature_pos'] = DAO_WorkerPref::get($worker->id,'mail_signature_pos',2);
 		$tpl->assign('prefs', $prefs);
@@ -606,9 +554,6 @@ class ChPreferencesPage extends CerberusPageExtension {
 		@$mail_status_compose = DevblocksPlatform::importGPC($_REQUEST['mail_status_compose'],'string','waiting');
 		DAO_WorkerPref::set($worker->id, 'mail_status_compose', $mail_status_compose);
 		
-		@$mail_status_create = DevblocksPlatform::importGPC($_REQUEST['mail_status_create'],'string','waiting');
-		DAO_WorkerPref::set($worker->id, 'mail_status_create', $mail_status_create);
-
 		@$mail_status_reply = DevblocksPlatform::importGPC($_REQUEST['mail_status_reply'],'string','waiting');
 		DAO_WorkerPref::set($worker->id, 'mail_status_reply', $mail_status_reply);
 		

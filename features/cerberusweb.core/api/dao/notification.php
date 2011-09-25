@@ -232,6 +232,10 @@ class DAO_Notification extends DevblocksORMHelper {
 		$cache->remove(self::CACHE_COUNT_PREFIX.$worker_id);
 	}
 
+	public static function random() {
+		return self::_getRandom('notification');
+	}
+	
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_Notification::getFields();
 		
@@ -260,10 +264,7 @@ class DAO_Notification extends DevblocksORMHelper {
 			    SearchFields_Notification::URL
 		);
 			
-		$join_sql = "FROM notification we "
-//			"INNER JOIN team tm ON (tm.id = t.team_id) ".
-//			(isset($tables['ra']) ? "INNER JOIN requester r ON (r.ticket_id=t.id)" : " ").
-		;
+		$join_sql = "FROM notification we ";
 			
 		$where_sql = "".
 			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
@@ -717,6 +718,10 @@ class Context_Notification extends Extension_DevblocksContext {
 		}
 		
 		return FALSE;
+	}
+	
+	function getRandom() {
+		return DAO_Notification::random();
 	}
 	
 	function getMeta($context_id) {

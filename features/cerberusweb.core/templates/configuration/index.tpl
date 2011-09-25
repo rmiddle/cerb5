@@ -23,7 +23,7 @@
 				<a href="javascript:;" class="menu">{'common.workers'|devblocks_translate|capitalize} &amp; {'common.groups'|devblocks_translate|capitalize} <span>&#x25be;</span></a>
 				<ul class="cerb-popupmenu cerb-float">
 					<li><a href="{devblocks_url}c=config&a=groups{/devblocks_url}">{'common.groups'|devblocks_translate|capitalize}</a></li>
-					<li><a href="{devblocks_url}c=config&a=acl{/devblocks_url}">Permissions</a></li>
+					<li><a href="{devblocks_url}c=config&a=acl{/devblocks_url}">{'common.roles'|devblocks_translate|capitalize}</a></li>
 					<li><a href="{devblocks_url}c=config&a=workers{/devblocks_url}">{'common.workers'|devblocks_translate|capitalize}</a></li>
 					
 					{$exts = Extension_PageMenuItem::getExtensions(true, 'core.page.configuration','core.setup.menu.workers')}
@@ -145,7 +145,7 @@
 
 {*
 	{if $active_worker->hasPriv('core.home.workspaces')}
-		{$enabled_workspaces = DAO_Workspace::getByEndpoint($point, $active_worker->id)}
+		{$enabled_workspaces = DAO_Workspace::getByEndpoint($point, $active_worker)}
 		{foreach from=$enabled_workspaces item=enabled_workspace}
 			{$tabs[] = 'w_'|cat:$enabled_workspace->id}
 			<li><a href="{devblocks_url}ajax.php?c=internal&a=showWorkspaceTab&point={$point}&id={$enabled_workspace->id}&request={$response_uri|escape:'url'}{/devblocks_url}"><i>{$enabled_workspace->name}</i></a></li>

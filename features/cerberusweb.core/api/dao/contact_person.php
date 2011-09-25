@@ -157,6 +157,10 @@ class DAO_ContactPerson extends C4_ORMHelper {
 		return true;
 	}
 	
+	public static function random() {
+		return self::_getRandom('contact_person');
+	}
+	
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_ContactPerson::getFields();
 		
@@ -208,6 +212,9 @@ class DAO_ContactPerson extends C4_ORMHelper {
 	
 		// Virtuals
 		foreach($params as $param) {
+			if(!is_a($param, 'DevblocksSearchCriteria'))
+				continue;
+			
 			$param_key = $param->field;
 			settype($param_key, 'string');
 			switch($param_key) {
@@ -764,6 +771,10 @@ class Context_ContactPerson extends Extension_DevblocksContext {
     	);
     	
     	return $results;
+    }
+    
+    function getRandom() {
+    	return DAO_ContactPerson::random();
     }
     
 	function getMeta($context_id) {

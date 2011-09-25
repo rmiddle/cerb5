@@ -25,6 +25,7 @@
 	</div>
 	{if $active_worker->is_superuser}
 	<div style="float:right;">
+		{if $worker->id != $active_worker->id}<button type="button" id="btnProfileWorkerPossess"><span class="cerb-sprite2 sprite-user-silhouette"></span> Impersonate</button>{/if}
 		<button type="button" id="btnProfileWorkerEdit"><span class="cerb-sprite sprite-document_edit"></span> {'common.edit'|devblocks_translate|capitalize}</button>
 	</div>
 	{/if}
@@ -52,6 +53,11 @@
 		{$tabs[] = 'links'}
 		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabContextLinks&context=cerberusweb.contexts.worker&point={$point}&id={$worker->id}{/devblocks_url}">Watchlist ({$watching_total})</a></li>
 		
+		{if $active_worker->is_superuser || $worker->id == $active_worker->id}
+		{$tabs[] = 'snippets'}
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showTabSnippets&point={$point}&context={CerberusContexts::CONTEXT_WORKER}&context_id={$worker->id}{/devblocks_url}">{$translate->_('common.snippets')|capitalize}</a></li>
+		{/if}
+		
 		{*
 		{foreach from=$tab_manifests item=tab_manifest}
 			{$tabs[] = $tab_manifest->params.uri}
@@ -61,7 +67,7 @@
 		
 		{if $worker->id == $active_worker->id}
 		{if $active_worker->hasPriv('core.home.workspaces')}
-			{$enabled_workspaces = DAO_Workspace::getByEndpoint($point, $active_worker->id)}
+			{$enabled_workspaces = DAO_Workspace::getByEndpoint($point, $active_worker)}
 			{foreach from=$enabled_workspaces item=enabled_workspace}
 				{$tabs[] = 'w_'|cat:$enabled_workspace->id}
 				<li><a href="{devblocks_url}ajax.php?c=internal&a=showWorkspaceTab&id={$enabled_workspace->id}&point={$point}&request={$response_uri|escape:'url'}{/devblocks_url}"><i>{$enabled_workspace->name}</i></a></li>
@@ -89,7 +95,12 @@
 			$popup = genericAjaxPopup('peek','c=config&a=handleSectionAction&section=workers&action=showWorkerPeek&id={$worker->id}',null,false,'550');
 			$popup.one('worker_save', function(event) {
 				event.stopPropagation();
-				document.location.href = '{devblocks_url}c=profiles&k=worker&id={$worker->id}-{$worker->getName()|devblocks_permalink}{/devblocks_url}';
+				window.location.reload();
+			});
+		});
+		$('#btnProfileWorkerPossess').bind('click', function() {
+			genericAjaxGet('','c=internal&a=su&worker_id={$worker->id}',function(o) {
+				window.location.reload();
 			});
 		});
 		{/if}

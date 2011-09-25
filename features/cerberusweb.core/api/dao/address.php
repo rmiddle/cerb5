@@ -287,6 +287,10 @@ class DAO_Address extends C4_ORMHelper {
 		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
 	}
 	
+	public static function random() {
+		return self::_getRandom('address');
+	}
+	
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_Address::getFields();
 		
@@ -352,6 +356,9 @@ class DAO_Address extends C4_ORMHelper {
 		
 		// Virtuals
 		foreach($params as $param) {
+			if(!is_a($param, 'DevblocksSearchCriteria'))
+				continue;
+			
 			$param_key = $param->field;
 			settype($param_key, 'string');
 			switch($param_key) {
@@ -939,6 +946,10 @@ class Context_Address extends Extension_DevblocksContext {
     	);
     	
     	return $results;
+    }
+    
+    function getRandom() {
+    	return DAO_Address::random();
     }
     
 	function getMeta($context_id) {

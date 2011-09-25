@@ -46,8 +46,8 @@
  * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2011083001);
-define("APP_VERSION", '5.5.2');
+define("APP_BUILD", 2011092501);
+define("APP_VERSION", '5.6.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
@@ -508,24 +508,20 @@ class CerberusApplication extends DevblocksApplication {
 	 * 
 	 * @todo This needs a better name and home
 	 */
-	static function translateTeamCategoryCode($code) {
+	static function translateGroupBucketCode($code) {
 		$t_or_c = substr($code,0,1);
 		$t_or_c_id = intval(substr($code,1));
 		
 		if($t_or_c=='c') {
-			$categories = DAO_Bucket::getAll();
-			$team_id = $categories[$t_or_c_id]->team_id;
-			$category_id = $t_or_c_id; 
+			$buckets = DAO_Bucket::getAll();
+			$group_id = $buckets[$t_or_c_id]->group_id;
+			$bucket_id = $t_or_c_id; 
 		} else {
-			$team_id = $t_or_c_id;
-            if($t_or_c=='a') {
-                $category_id = -1;
-            } else {
-                $category_id = 0;
-            }
+			$group_id = $t_or_c_id;
+			$bucket_id = 0;
 		}
 		
-		return array($team_id, $category_id);
+		return array($group_id, $bucket_id);
 	}
 	
 	/**
@@ -624,6 +620,7 @@ class CerberusContexts {
 	const CONTEXT_CALL = 'cerberusweb.contexts.call';
 	const CONTEXT_COMMENT = 'cerberusweb.contexts.comment';
 	const CONTEXT_CONTACT_PERSON = 'cerberusweb.contexts.contact_person';
+	const CONTEXT_DOMAIN = 'cerberusweb.contexts.datacenter.domain';
 	const CONTEXT_FEEDBACK = 'cerberusweb.contexts.feedback';
 	const CONTEXT_GROUP = 'cerberusweb.contexts.group';
 	const CONTEXT_KB_ARTICLE = 'cerberusweb.contexts.kb_article';
@@ -633,6 +630,8 @@ class CerberusContexts {
 	const CONTEXT_OPPORTUNITY = 'cerberusweb.contexts.opportunity';
 	const CONTEXT_ORG = 'cerberusweb.contexts.org';
 	const CONTEXT_PORTAL = 'cerberusweb.contexts.portal';
+	const CONTEXT_ROLE = 'cerberusweb.contexts.role';
+	const CONTEXT_SERVER = 'cerberusweb.contexts.datacenter.server';
 	const CONTEXT_SNIPPET = 'cerberusweb.contexts.snippet';
 	const CONTEXT_TASK = 'cerberusweb.contexts.task';
 	const CONTEXT_TICKET = 'cerberusweb.contexts.ticket';
@@ -1294,11 +1293,10 @@ class CerberusSettings {
 	const TICKET_MASK_FORMAT = 'ticket_mask_format';
 	const AUTHORIZED_IPS = 'authorized_ips';
 	const LICENSE = 'license_json';
-	const ACL_ENABLED = 'acl_enabled';
 };
 
 class CerberusSettingsDefaults {
-	const HELPDESK_TITLE = 'Cerberus Helpdesk :: Team-based E-mail Management'; 
+	const HELPDESK_TITLE = 'Cerberus Helpdesk :: Group-based Email Management'; // [TODO] Change 
 	const SMTP_HOST = 'localhost'; 
 	const SMTP_AUTH_ENABLED = 0; 
 	const SMTP_AUTH_USER = ''; 
@@ -1313,12 +1311,11 @@ class CerberusSettingsDefaults {
 	const PARSER_AUTO_REQ_EXCLUDE = ''; 
 	const TICKET_MASK_FORMAT = 'LLL-NNNNN-NNN';
 	const AUTHORIZED_IPS = "127.0.0.1\n::1\n";
-	const ACL_ENABLED = 0;
 };
 
-// [TODO] This gets called a lot when it happens after the registry cache
 class C4_DevblocksExtensionDelegate implements DevblocksExtensionDelegate {
 	static $_worker = null;
+	static $_plugin_cache = array();
 	
 	static function shouldLoadExtension(DevblocksExtensionManifest $extension_manifest) {
 		// Always allow core
@@ -1335,12 +1332,23 @@ class C4_DevblocksExtensionDelegate implements DevblocksExtensionDelegate {
 				return true;
 		}
 		
-		return self::$_worker->hasPriv('plugin.'.$extension_manifest->plugin_id);
+		// Use plugin cache if exists
+		if(isset(self::$_plugin_cache[$extension_manifest->plugin_id]))
+			return self::$_plugin_cache[$extension_manifest->plugin_id];
+		
+		// ... Otherwise, check it
+		$has_priv = self::$_worker->hasPriv('plugin.'.$extension_manifest->plugin_id);
+		
+		// ... Then cache it
+		self::$_plugin_cache[$extension_manifest->plugin_id] = $has_priv;
+		
+		return $has_priv;
 	}
 };
 
 class CerberusVisit extends DevblocksVisit {
 	private $worker_id;
+	private $imposter_id;
 
 	const KEY_VIEW_LAST_ACTION = 'view_last_action';
 	const KEY_MY_WORKSPACE = 'view_my_workspace';
@@ -1348,6 +1356,7 @@ class CerberusVisit extends DevblocksVisit {
 
 	public function __construct() {
 		$this->worker_id = null;
+		$this->imposter_id = null;
 	}
 
 	/**
@@ -1367,6 +1376,30 @@ class CerberusVisit extends DevblocksVisit {
 			$this->worker_id = $worker->id;
 		}
 	}
+	
+	public function isImposter() {
+		return !empty($this->imposter_id);
+	}
+	
+	/**
+	 * @return Model_Worker
+	 */
+	public function getImposter() {
+		if(empty($this->imposter_id))
+			return null;
+			
+		return DAO_Worker::get($this->imposter_id);
+	}
+	
+	public function setImposter(Model_Worker $worker=null) {
+		if(is_null($worker)) {
+			$this->imposter_id = null;
+		} else {
+			$this->imposter_id = $worker->id;
+		}
+	}
+	
+	
 };
 
 class C4_ORMHelper extends DevblocksORMHelper {
@@ -1382,6 +1415,12 @@ class C4_ORMHelper extends DevblocksORMHelper {
 		}
 		
 		return false;
+	}
+	
+	static protected function _getRandom($table) {
+		$db = DevblocksPlatform::getDatabaseService();
+		$offset = $db->GetOne(sprintf("SELECT ROUND(RAND()*(SELECT COUNT(*)-1 FROM %s))", $table));
+		return $db->GetOne(sprintf("SELECT id FROM %s LIMIT %d,1", $table, $offset));
 	}
 	
 	static protected function _appendSelectJoinSqlForCustomFieldTables($tables, $params, $key, $select_sql, $join_sql) {

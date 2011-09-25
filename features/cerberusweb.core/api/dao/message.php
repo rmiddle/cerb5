@@ -15,7 +15,7 @@
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
 
-class DAO_Message extends DevblocksORMHelper {
+class DAO_Message extends C4_ORMHelper {
     const ID = 'id';
     const TICKET_ID = 'ticket_id';
     const CREATED_DATE = 'created_date';
@@ -237,6 +237,10 @@ class DAO_Message extends DevblocksORMHelper {
 	    );
     }
     
+	public static function random() {
+		return self::_getRandom('message');
+	}
+    
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_Message::getFields();
 		
@@ -257,7 +261,7 @@ class DAO_Message extends DevblocksORMHelper {
 			"m.storage_key as %s, ".
 			"m.storage_profile_id as %s, ".
 			"m.storage_size as %s, ".
-			"t.team_id as %s, ".
+			"t.group_id as %s, ".
 			"t.mask as %s, ".
 			"t.subject as %s, ".
 			"a.email as %s ",
@@ -413,7 +417,7 @@ class SearchFields_Message implements IDevblocksSearchFields {
 			
 			SearchFields_Message::ADDRESS_EMAIL => new DevblocksSearchField(SearchFields_Message::ADDRESS_EMAIL, 'a', 'email', $translate->_('common.email')),
 			
-			SearchFields_Message::TICKET_GROUP_ID => new DevblocksSearchField(SearchFields_Message::TICKET_GROUP_ID, 't', 'team_id', $translate->_('common.group')),
+			SearchFields_Message::TICKET_GROUP_ID => new DevblocksSearchField(SearchFields_Message::TICKET_GROUP_ID, 't', 'group_id', $translate->_('common.group')),
 			SearchFields_Message::TICKET_MASK => new DevblocksSearchField(SearchFields_Message::TICKET_MASK, 't', 'mask', $translate->_('ticket.mask')),
 			SearchFields_Message::TICKET_SUBJECT => new DevblocksSearchField(SearchFields_Message::TICKET_SUBJECT, 't', 'subject', $translate->_('ticket.subject')),
 		);
@@ -1209,14 +1213,14 @@ class View_Message extends C4_AbstractView implements IAbstractView_Subtotals {
 
 		switch($field) {
 			case SearchFields_Message::TICKET_GROUP_ID:
-				$teams = DAO_Group::getAll();
+				$groups = DAO_Group::getAll();
 				$strings = array();
 
 				foreach($values as $val) {
-					if(!isset($teams[$val]))
+					if(!isset($groups[$val]))
 					continue;
 
-					$strings[] = $teams[$val]->name;
+					$strings[] = $groups[$val]->name;
 				}
 				echo implode(" or ", $strings);
 				break;
@@ -1381,13 +1385,17 @@ class Context_Message extends Extension_DevblocksContext {
 			if(null == ($ticket = DAO_Ticket::get($message->ticket_id)))
 				throw new Exception();
 			
-			return $worker->isTeamMember($ticket->team_id);
+			return $worker->isGroupMember($ticket->group_id);
 				
 		} catch (Exception $e) {
 			// Fail
 		}
 		
 		return FALSE;
+	}
+	
+	function getRandom() {
+		return DAO_Message::random();
 	}
 	
 	function getMeta($context_id) {
