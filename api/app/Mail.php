@@ -70,8 +70,8 @@ class CerberusMail {
 		
 		if(is_array($parsed))
 		foreach($parsed as $parsed_addy) {
-			@$mailbox = $parsed_addy->mailbox;
-			@$host = $parsed_addy->host;
+			@$mailbox = strtolower($parsed_addy->mailbox);
+			@$host = strtolower($parsed_addy->host);
 			@$personal = isset($parsed_addy->personal) ? $parsed_addy->personal : null;
 			
 			if(empty($mailbox) || empty($host))
@@ -139,7 +139,17 @@ class CerberusMail {
 	}
 
 	static function compose($properties) {
+		$worker = CerberusApplication::getActiveWorker();
+		
 		@$group_id = $properties['group_id'];
+		$properties['worker_id'] = $worker->id;
+	
+		if(null == ($group = DAO_Group::get($group_id)))
+			return;
+		
+	    // Changing the outgoing message through a VA
+	    Event_MailBeforeSentByGroup::trigger($properties, null, null, $group);
+		
 		@$org_id = $properties['org_id'];
 		@$toStr = $properties['to'];
 		@$cc = $properties['cc'];
@@ -154,9 +164,6 @@ class CerberusMail {
 		
 		@$dont_send = $properties['dont_send'];
 		
-		$worker = CerberusApplication::getActiveWorker();
-		$group = DAO_Group::get($group_id);
-
 		$from_replyto = $group->getReplyTo();
 		$personal = $group->getReplyPersonal(0, $worker);
 		
@@ -250,7 +257,7 @@ class CerberusMail {
 			foreach($email->getHeaders()->getAll() as $hdr) {
 				if(null != ($hdr_val = $hdr->getFieldBody())) {
 					if(!empty($hdr_val))
-						$mail_headers[$hdr->getFieldName()] = $hdr_val;
+						$mail_headers[$hdr->getFieldName()] = CerberusParser::fixQuotePrintableString($hdr_val, LANG_CHARSET_CODE);
 				}
 			}
 			
@@ -336,8 +343,8 @@ class CerberusMail {
 		}
 		
 		// Headers
-		foreach($mail_headers as $hdr => $hdr_val) {
-			DAO_MessageHeader::create($message_id, $hdr, CerberusParser::fixQuotePrintableString($hdr_val, LANG_CHARSET_CODE));
+		foreach($mail_headers as $hdr_key => $hdr_val) {
+			DAO_MessageHeader::create($message_id, $hdr_key, $hdr_val);
 		}
 		
 		// add files to ticket
@@ -392,6 +399,10 @@ class CerberusMail {
 		
         // Events
         if(!empty($message_id) && !empty($group_id)) {
+			// After message sent in group
+			Event_MailAfterSentByGroup::trigger($message_id, $group_id);			
+
+			// Mail received by group
         	Event_MailReceivedByGroup::trigger($message_id, $group_id);
         }
         
@@ -624,6 +635,15 @@ class CerberusMail {
 
 			// Send
 			$recipients = $mail->getTo();
+			$send_headers = array();
+			
+		    // Save headers before sending
+			foreach($headers->getAll() as $hdr) {
+				if(null != ($hdr_val = $hdr->getFieldBody())) {
+					if(!empty($hdr_val))
+						$send_headers[$hdr->getFieldName()] = CerberusParser::fixQuotePrintableString($hdr_val, LANG_CHARSET_CODE);
+				}
+			}
 			
 			// If blank recipients or we're not supposed to send
 			if(empty($recipients) || (isset($properties['dont_send']) && $properties['dont_send'])) {
@@ -710,15 +730,12 @@ class CerberusMail {
 			
 			// Content
 			Storage_MessageContent::put($message_id, $content);
-		    
-			$headers = $mail->getHeaders();
-			
-		    // Headers
-			foreach($headers->getAll() as $hdr) {
-				if(null != ($hdr_val = $hdr->getFieldBody())) {
-					if(!empty($hdr_val))
-		    			DAO_MessageHeader::create($message_id, $hdr->getFieldName(), CerberusParser::fixQuotePrintableString($hdr_val, LANG_CHARSET_CODE));
-				}
+
+			// Save cached headers
+			foreach($send_headers as $hdr_key => $hdr_val) {
+				if(empty($hdr_key) || empty($hdr_val))
+					continue;
+    			DAO_MessageHeader::create($message_id, $hdr_key, $hdr_val);
 			}
 		    
 			// Attachments
