@@ -516,9 +516,13 @@ class CerberusApplication extends DevblocksApplication {
 			$buckets = DAO_Bucket::getAll();
 			$group_id = $buckets[$t_or_c_id]->group_id;
 			$bucket_id = $t_or_c_id; 
-		} else {
+        } else {
+            if($t_or_c=='a') {
+                $bucket_id = -1;
+            } else {
+                $bucket_id = 0;
+            }
 			$group_id = $t_or_c_id;
-			$bucket_id = 0;
 		}
 		
 		return array($group_id, $bucket_id);
