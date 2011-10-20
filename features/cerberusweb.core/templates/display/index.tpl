@@ -16,7 +16,11 @@
 {assign var=ticket_bucket value=$ticket_group_bucket_set.$ticket_bucket_id}
 
 <fieldset class="properties">
-	<legend>{$ticket->subject|truncate:128}</legend>
+	<legend>{$ticket->subject|truncate:128}
+        {if DevblocksPlatform::isPluginEnabled('cerberusweb.timetracking')}
+            Total Ticket Time Worked: {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp;
+        {/if}
+    </legend>
 
 	{foreach from=$properties item=v key=k name=props}
 		<div class="property">
@@ -72,12 +76,7 @@
 	<br clear="all">
 	
 	<a style="color:black;font-weight:bold;" href="javascript:;" id="aRecipients" onclick="genericAjaxPopup('peek','c=display&a=showRequestersPanel&ticket_id={$ticket->id}',null,true,'500');">{'ticket.requesters'|devblocks_translate|capitalize}</a>:
-                        {if DevblocksPlatform::isPluginEnabled('cerberusweb.timetracking')}
-                            <div>
-                            <label>Total Ticket Time Worked:</label> {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp;
-                            </div> 
-                        {/if}
-                        
+        
 	<span id="displayTicketRequesterBubbles">
 		{include file="devblocks:cerberusweb.core::display/rpc/requester_list.tpl" ticket_id=$ticket->id}
 	</span>
