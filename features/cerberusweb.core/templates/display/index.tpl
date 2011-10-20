@@ -18,7 +18,7 @@
 <fieldset class="properties">
 	<legend>{$ticket->subject|truncate:128}
         {if DevblocksPlatform::isPluginEnabled('cerberusweb.timetracking')}
-            Total Ticket Time Worked: {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp;
+            - Total Ticket Time Worked: {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp;
         {/if}
     </legend>
 
