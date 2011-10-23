@@ -9,7 +9,11 @@
 		<h2>Task</h2>
 		 
 		<fieldset class="properties">
-			<legend>{$task->title|truncate:128}</legend>
+			<legend>{$task->title|truncate:128}</legend> - 
+       		{if isset($total_time_minutes)}
+                <b>Total Ticket Time Worked: </b> {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp; 
+            {/if}
+    
 			
 			<form action="{devblocks_url}{/devblocks_url}" method="post" style="margin-bottom:5px;">
 				<input type="hidden" name="c" value="tasks">
@@ -33,9 +37,6 @@
 					{/if}
 				{/foreach}
 				<br clear="all">
-		{if isset($total_time_minutes)}
-			<b>Total Ticket Time Worked: </b> {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp; 
-		{/if}
 				
 				<!-- Toolbar -->
 		
