@@ -1082,7 +1082,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		$tpl->assign('object_watchers', $object_watchers);
 		
 		// Custom fields
-		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET, $ticket->group_id);
 		$tpl->assign('custom_fields', $custom_fields);
 		
 		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TICKET, $ticket->id);
@@ -1427,7 +1427,19 @@ class ChTicketsPage extends CerberusPageExtension {
 	                }
 	                break;
 	                
-				// Worker
+				// Owners
+	            case 'o':
+            		$w_id = intval(substr($moveto,1));
+            		
+            		if(!empty($w_id))
+	            	$doActions = array(
+	            		'owner' => array(
+	            			'worker_id' => $w_id,
+	            		),
+	            	);
+	                break;
+	                
+				// Watchers
 	            case 'w':
             		$w_id = intval(substr($moveto,1));
             		
@@ -1871,7 +1883,7 @@ class ChTicketsPage extends CerberusPageExtension {
 	}
 	
 	// Ajax
-	function doBatchUpdateAction() {
+	function doBulkUpdateAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
 		
 		@$ticket_id_str = DevblocksPlatform::importGPC($_REQUEST['ticket_ids'],'string');
@@ -2018,7 +2030,7 @@ class ChTicketsPage extends CerberusPageExtension {
 		return;
 	}
 
-	function doBatchUpdateBroadcastTestAction() {
+	function doBulkUpdateBroadcastTestAction() {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');
 		
 		$active_worker = CerberusApplication::getActiveWorker();
