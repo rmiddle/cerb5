@@ -1,5 +1,5 @@
 <fieldset style="margin-bottom:10px;border-radius:5px;padding-left:7px;{if $trigger->is_disabled}opacity:0.5;{/if}">
-	<legend style="font-size:120%;color:rgb(60,60,60);">{$trigger->title}{if $trigger->is_disabled}<span title="{'common.disabled'|devblocks_translate|capitalize}">*</span>{/if}</legend>
+	<legend style="font-size:120%;color:rgb(60,60,60);cursor:move;">{$trigger->title}{if $trigger->is_disabled}<span title="{'common.disabled'|devblocks_translate|capitalize}">*</span>{/if}</legend>
 	
 	{* [TODO] Use cache!! *}
 	{$tree_data = $trigger->getDecisionTreeData()}
@@ -27,6 +27,7 @@ $('#decisionTree{$trigger->id} DIV.node').draggable({
 	revert:"invalid",
 	revertDuration:250,
 	cursor:'pointer',
+	handle:'> div.badge',
 	distance:15,
 	opacity:0.50,
 	cursorAt: { 
