@@ -26,24 +26,7 @@ abstract class AbstractEvent_Task extends Extension_DevblocksEvent {
 	function generateSampleEventModel($task_id=null) {
 		
 		if(empty($task_id)) {
-			// Pull the latest record
-			list($results) = DAO_Task::search(
-				array(),
-				array(
-					//new DevblocksSearchCriteria(SearchFields_Task::IS_CLOSED,'=',0),
-				),
-				10,
-				0,
-				SearchFields_Task::ID,
-				false,
-				false
-			);
-			
-			shuffle($results);
-			
-			$result = array_shift($results);
-			
-			$task_id = $result[SearchFields_Task::ID];
+			$task_id = DAO_Task::random();
 		}
 		
 		return new Model_DevblocksEvent(
@@ -88,6 +71,8 @@ abstract class AbstractEvent_Task extends Extension_DevblocksEvent {
 	function getConditionExtensions() {
 		$labels = $this->getLabels();
 		
+		$labels['task_link'] = 'Task is linked';
+		
 		$types = array(
 			'task_is_completed' => Model_CustomField::TYPE_CHECKBOX,
 			'task_completed|date' => Model_CustomField::TYPE_DATE,
@@ -95,6 +80,8 @@ abstract class AbstractEvent_Task extends Extension_DevblocksEvent {
 			'task_updated|date' => Model_CustomField::TYPE_DATE,
 			'task_status' => Model_CustomField::TYPE_SINGLE_LINE,
 			'task_title' => Model_CustomField::TYPE_SINGLE_LINE,
+			
+			'task_link' => null,
 		);
 
 		$conditions = $this->_importLabelsTypesAsConditions($labels, $types);
@@ -110,6 +97,11 @@ abstract class AbstractEvent_Task extends Extension_DevblocksEvent {
 			$tpl->assign('namePrefix','condition'.$seq);
 		
 		switch($token) {
+			case 'task_link':
+				$contexts = Extension_DevblocksContext::getAll(false);
+				$tpl->assign('contexts', $contexts);
+				$tpl->display('devblocks:cerberusweb.core::events/condition_link.tpl');
+				break;
 		}
 
 		$tpl->clearAssign('namePrefix');
@@ -120,6 +112,49 @@ abstract class AbstractEvent_Task extends Extension_DevblocksEvent {
 		$pass = true;
 		
 		switch($token) {
+			case 'task_link':
+				$not = (substr($params['oper'],0,1) == '!');
+				$oper = ltrim($params['oper'],'!');
+				
+				$from_context = null;
+				$from_context_id = null;
+				
+				switch($token) {
+					case 'task_link':
+						$from_context = CerberusContexts::CONTEXT_TASK;
+						@$from_context_id = $values['task_id'];
+						break;
+					default:
+						$pass = false;
+				}
+				
+				// Get links by context+id
+
+				if(!empty($from_context) && !empty($from_context_id)) {
+					@$context_strings = $params['context_objects'];
+					$links = DAO_ContextLink::intersect($from_context, $from_context_id, $context_strings);
+					
+					// OPER: any, !any, all
+	
+					switch($oper) {
+						case 'in':
+							$pass = (is_array($links) && !empty($links));
+							break;
+						case 'all':
+							$pass = (is_array($links) && count($links) == count($context_strings));
+							break;
+						default:
+							$pass = false;
+							break;
+					}
+					
+					$pass = ($not) ? !$pass : $pass;
+					
+				} else {
+					$pass = false;
+				}
+				break;
+							
 			default:
 				$pass = false;
 				break;
@@ -140,6 +175,7 @@ abstract class AbstractEvent_Task extends Extension_DevblocksEvent {
 				'send_email' => array('label' => 'Send email'),
 				'set_due_date' => array('label' => 'Set due date'),
 				'set_status' => array('label' => 'Set status'),
+				'set_task_links' => array('label' => 'Set links on task'),
 				'unschedule_behavior' => array('label' => 'Unschedule behavior'),
 			)
 			+ DevblocksEventHelper::getActionCustomFields(CerberusContexts::CONTEXT_TASK)
@@ -205,6 +241,12 @@ abstract class AbstractEvent_Task extends Extension_DevblocksEvent {
 				
 			case 'set_status':
 				$tpl->display('devblocks:cerberusweb.core::events/model/task/action_set_status.tpl');
+				break;
+				
+			case 'set_task_links':
+				$contexts = Extension_DevblocksContext::getAll(false);
+				$tpl->assign('contexts', $contexts);
+				$tpl->display('devblocks:cerberusweb.core::events/action_set_links.tpl');
 				break;
 				
 			default:
@@ -298,7 +340,35 @@ abstract class AbstractEvent_Task extends Extension_DevblocksEvent {
 					$values['task_status'] = $to_status;
 					DAO_Task::update($task_id, $fields);
 				}
+				break;
 				
+			case 'set_task_links':
+				@$to_context_strings = $params['context_objects'];
+
+				if(!is_array($to_context_strings) || empty($to_context_strings))
+					break;
+
+				$from_context = null;
+				$from_context_id = null;
+				
+				switch($token) {
+					case 'set_task_links':
+						$from_context = CerberusContexts::CONTEXT_TASK;
+						@$from_context_id = $values['task_id'];
+						break;
+				}
+				
+				if(empty($from_context) || empty($from_context_id))
+					break;
+				
+				foreach($to_context_strings as $to_context_string) {
+					@list($to_context, $to_context_id) = explode(':', $to_context_string);
+					
+					if(empty($to_context) || empty($to_context_id))
+						continue;
+					
+					DAO_ContextLink::setLink($from_context, $from_context_id, $to_context, $to_context_id);
+				}				
 				break;
 				
 			default:

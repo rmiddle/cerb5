@@ -161,6 +161,14 @@ class CrmPage extends CerberusPageExtension {
 							'address' => $address,
 						);
 					}
+					
+					if(!empty($address->contact_org_id) && null != ($org = DAO_ContactOrg::get($address->contact_org_id))) {
+						$properties['org'] = array(
+							'label' => ucfirst($translate->_('contact_org.name')),
+							'type' => null,
+							'org' => $org,
+						);
+					}
 				}
 				
 				if(!empty($opp->is_closed))
@@ -350,6 +358,10 @@ class CrmPage extends CerberusPageExtension {
 			
 		} else {
 			if(empty($opp_id))
+				return;
+			
+			// Check privs
+			if(!$active_worker->hasPriv('crm.opp.actions.update_all'))
 				return;
 			
 			if(null == ($address = DAO_Address::lookupAddress($email, true)))

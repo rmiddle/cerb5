@@ -1,6 +1,6 @@
 <form action="#" method="POST" id="formAddressPeek" name="formAddressPeek" onsubmit="return false;">
 <input type="hidden" name="c" value="contacts">
-<input type="hidden" name="a" value="saveContact">
+<input type="hidden" name="a" value="saveAddress">
 <input type="hidden" name="id" value="{$address.a_id}">
 {if empty($id) && !empty($context)}
 <input type="hidden" name="context" value="{$context}">
@@ -47,7 +47,7 @@
 			<td width="100%" valign="top">
 				{if !empty($address.a_contact_org_id)}
 					<b>{if !empty($address.o_name)}{$address.o_name}{else if !empty({$org_name})}{$org_name}{/if}</b>
-					<a href="javascript:;" onclick="genericAjaxPopup('peek','c=contacts&a=showOrgPeek&id={if !empty($address.a_contact_org_id)}{$address.a_contact_org_id}{else}{$org_id}{/if}&view_id={$view->id}',null,false,'500');">{$translate->_('views.peek')}</a>
+					<a href="javascript:;" onclick="genericAjaxPopup('peek','c=contacts&a=showOrgPeek&id={if !empty($address.a_contact_org_id)}{$address.a_contact_org_id}{else}{$org_id}{/if}&view_id={$view->id}',null,false,'600');">{$translate->_('views.peek')}</a>
 					<a href="javascript:;" onclick="toggleDiv('divAddressOrg');">({$translate->_('common.edit')|lower})</a>
 					<br>
 				{/if}
@@ -91,7 +91,7 @@
 {/if}
 
 {if $active_worker->hasPriv('core.addybook.addy.actions.update')}
-	<button type="button" onclick="if($('#formAddressPeek').validate().form()) { genericAjaxPopupPostCloseReloadView('peek','formAddressPeek', '{$view_id}', false, 'address_save'); } "><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')}</button>
+	<button type="button" onclick="if($('#formAddressPeek').validate().form()) { genericAjaxPopupPostCloseReloadView(null,'formAddressPeek', '{$view_id}', false, 'address_save'); } "><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')}</button>
 {else}
 	<div class="error">{$translate->_('error.core.no_acl.edit')}</div>	
 {/if}
@@ -108,7 +108,7 @@
 </form>
 
 <script type="text/javascript">
-	$popup = genericAjaxPopupFetch('peek');
+	$popup = genericAjaxPopupFind('#formAddressPeek');
 	$popup.one('popup_open',function(event,ui) {
 		// Title
 		$(this).dialog('option','title', '{'addy_book.peek.title'|devblocks_translate}');

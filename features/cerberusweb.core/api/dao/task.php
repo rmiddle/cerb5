@@ -243,6 +243,10 @@ class DAO_Task extends C4_ORMHelper {
 	    );
 	}
 	
+	public static function random() {
+		return self::_getRandom('task');
+	}
+	
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_Task::getFields();
 		
@@ -293,6 +297,9 @@ class DAO_Task extends C4_ORMHelper {
 		
 		// Virtuals
 		foreach($params as $param) {
+			if(!is_a($param, 'DevblocksSearchCriteria'))
+				continue;
+			
 			$param_key = $param->field;
 			settype($param_key, 'string');
 			switch($param_key) {
@@ -721,6 +728,7 @@ class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 		
 		$change_fields = array();
 		$custom_fields = array();
+		$deleted = false;
 
 		// Make sure we have actions
 		if(empty($do))
@@ -733,17 +741,23 @@ class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 		if(is_array($do))
 		foreach($do as $k => $v) {
 			switch($k) {
+				case 'delete':
+					$deleted = true;
+					break;
 				case 'due':
 					@$date = strtotime($v);
 					$change_fields[DAO_Task::DUE_DATE] = intval($date);
 					break;
 				case 'status':
-					if(1==intval($v)) { // completed
-						$change_fields[DAO_Task::IS_COMPLETED] = 1;
-						$change_fields[DAO_Task::COMPLETED_DATE] = time();
-					} else { // active
-						$change_fields[DAO_Task::IS_COMPLETED] = 0;
-						$change_fields[DAO_Task::COMPLETED_DATE] = 0;
+					switch($v) {
+						case 1: // completed
+							$change_fields[DAO_Task::IS_COMPLETED] = 1;
+							$change_fields[DAO_Task::COMPLETED_DATE] = time();
+							break;
+						default: // active
+							$change_fields[DAO_Task::IS_COMPLETED] = 0;
+							$change_fields[DAO_Task::COMPLETED_DATE] = 0;
+							break;
 					}
 					break;
 				default:
@@ -775,37 +789,43 @@ class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 		$batch_total = count($ids);
 		for($x=0;$x<=$batch_total;$x+=100) {
 			$batch_ids = array_slice($ids,$x,100);
-			DAO_Task::update($batch_ids, $change_fields);
 			
-			// Custom Fields
-			self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_TASK, $custom_fields, $batch_ids);
-			
-			// Scheduled behavior
-			if(isset($do['behavior']) && is_array($do['behavior'])) {
-				$behavior_id = $do['behavior']['id'];
-				@$behavior_when = strtotime($do['behavior']['when']) or time();
+			if($deleted) {
+				DAO_Task::delete($batch_ids);
 				
-				if(!empty($batch_ids) && !empty($behavior_id))
-				foreach($batch_ids as $batch_id) {
-					DAO_ContextScheduledBehavior::create(array(
-						DAO_ContextScheduledBehavior::BEHAVIOR_ID => $behavior_id,
-						DAO_ContextScheduledBehavior::CONTEXT => CerberusContexts::CONTEXT_TASK,
-						DAO_ContextScheduledBehavior::CONTEXT_ID => $batch_id,
-						DAO_ContextScheduledBehavior::RUN_DATE => $behavior_when,
-					));
+			} else {
+				DAO_Task::update($batch_ids, $change_fields);
+				
+				// Custom Fields
+				self::_doBulkSetCustomFields(CerberusContexts::CONTEXT_TASK, $custom_fields, $batch_ids);
+				
+				// Scheduled behavior
+				if(isset($do['behavior']) && is_array($do['behavior'])) {
+					$behavior_id = $do['behavior']['id'];
+					@$behavior_when = strtotime($do['behavior']['when']) or time();
+					
+					if(!empty($batch_ids) && !empty($behavior_id))
+					foreach($batch_ids as $batch_id) {
+						DAO_ContextScheduledBehavior::create(array(
+							DAO_ContextScheduledBehavior::BEHAVIOR_ID => $behavior_id,
+							DAO_ContextScheduledBehavior::CONTEXT => CerberusContexts::CONTEXT_TASK,
+							DAO_ContextScheduledBehavior::CONTEXT_ID => $batch_id,
+							DAO_ContextScheduledBehavior::RUN_DATE => $behavior_when,
+						));
+					}
 				}
-			}
-			
-			// Watchers
-			if(isset($do['watchers']) && is_array($do['watchers'])) {
-				$watcher_params = $do['watchers'];
-				foreach($batch_ids as $batch_id) {
-					if(isset($watcher_params['add']) && is_array($watcher_params['add']))
-						CerberusContexts::addWatchers(CerberusContexts::CONTEXT_TASK, $batch_id, $watcher_params['add']);
-					if(isset($watcher_params['remove']) && is_array($watcher_params['remove']))
-						CerberusContexts::removeWatchers(CerberusContexts::CONTEXT_TASK, $batch_id, $watcher_params['remove']);
+				
+				// Watchers
+				if(isset($do['watchers']) && is_array($do['watchers'])) {
+					$watcher_params = $do['watchers'];
+					foreach($batch_ids as $batch_id) {
+						if(isset($watcher_params['add']) && is_array($watcher_params['add']))
+							CerberusContexts::addWatchers(CerberusContexts::CONTEXT_TASK, $batch_id, $watcher_params['add']);
+						if(isset($watcher_params['remove']) && is_array($watcher_params['remove']))
+							CerberusContexts::removeWatchers(CerberusContexts::CONTEXT_TASK, $batch_id, $watcher_params['remove']);
+					}
 				}
-			}
+			}		
 			
 			unset($batch_ids);
 		}
@@ -826,6 +846,10 @@ class Context_Task extends Extension_DevblocksContext {
 			'name' => $task->title,
 			'permalink' => $url_writer->writeNoProxy(sprintf("c=tasks&action=display&id=%d-%s",$task->id, $friendly), true),
 		);
+	}
+	
+	function getRandom() {
+		return DAO_Task::random();
 	}
 	
 	function getContext($task, &$token_labels, &$token_values, $prefix=null) {

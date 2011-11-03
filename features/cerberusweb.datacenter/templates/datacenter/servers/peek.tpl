@@ -53,14 +53,21 @@
 	</div>
 </fieldset>
 
-<button type="button" onclick="genericAjaxPopupPostCloseReloadView('peek','frmServer','{$view_id}', false, 'datacenter_server_save');"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')|capitalize}</button>
-{if $model->id && $active_worker->is_superuser}<button type="button" onclick="if(confirm('Permanently delete this server?')) { this.form.do_delete.value='1';genericAjaxPopupPostCloseReloadView('peek','frmServer','{$view_id}'); } "><span class="cerb-sprite2 sprite-minus-circle-frame"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
+<button type="button" onclick="genericAjaxPopupPostCloseReloadView(null,'frmServer','{$view_id}', false, 'datacenter_server_save');"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')|capitalize}</button>
+{if $model->id && $active_worker->is_superuser}<button type="button" onclick="if(confirm('Permanently delete this server?')) { this.form.do_delete.value='1';genericAjaxPopupPostCloseReloadView(null,'frmServer','{$view_id}'); } "><span class="cerb-sprite2 sprite-minus-circle-frame"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
+
+{if !empty($model->id)}
+<div style="float:right;">
+	<a href="{devblocks_url}c=datacenter&a=server&id={$model->id}-{$model->name|devblocks_permalink}{/devblocks_url}">view full record</a>
+</div>
+<br clear="all">
+{/if}
 </form>
 
 <script type="text/javascript">
 	$popup = genericAjaxPopupFetch('peek');
 	$popup.one('popup_open', function(event,ui) {
-		$(this).dialog('option','title',"{'Server'}");
+		$(this).dialog('option','title',"{'cerberusweb.datacenter.common.server'|devblocks_translate|capitalize}");
 		$(this).find('textarea[name=comment]').keyup(function() {
 			if($(this).val().length > 0) {
 				$(this).next('DIV.notify').show();
@@ -71,5 +78,7 @@
 		$('#frmServer button.chooser_notify_worker').each(function() {
 			ajax.chooser(this,'cerberusweb.contexts.worker','notify_worker_ids', { autocomplete:true });
 		});
+		
+		$(this).find('input:text:first').focus();
 	} );
 </script>

@@ -101,11 +101,6 @@
         <seg>[Toon ticket] Kan berichten in tickets permanent verwijderen</seg>
       </tuv>
     </tu>
-    <tu tuid="acl.core.home.auto_refresh">
-      <tuv xml:lang="nl_NL">
-        <seg>[Home] Kan auto-refresh op de homepage gebruiken</seg>
-      </tuv>
-    </tu>
     <tu tuid="acl.core.home.workspaces">
       <tuv xml:lang="nl_NL">
         <seg>[Home] Kan privé werkbladen en lijsten maken</seg>
@@ -124,16 +119,6 @@
     <tu tuid="acl.core.kb.topics.modify">
       <tuv xml:lang="nl_NL">
         <seg>[Kennisdatabase] Kan top-level onderwerpen beheren</seg>
-      </tuv>
-    </tu>
-    <tu tuid="acl.core.mail.actions.auto_refresh">
-      <tuv xml:lang="nl_NL">
-        <seg>[Mail] Kan auto-refresh op de Mail pagina gebruiken</seg>
-      </tuv>
-    </tu>
-    <tu tuid="acl.core.mail.log_ticket">
-      <tuv xml:lang="nl_NL">
-        <seg>[Mail] Kan tickets in naam van klanten openen</seg>
       </tuv>
     </tu>
     <tu tuid="acl.core.mail.search">
@@ -1111,11 +1096,6 @@
         <seg>ververs</seg>
       </tuv>
     </tu>
-    <tu tuid="common.refresh.auto">
-      <tuv xml:lang="nl_NL">
-        <seg>Automatisch Verversen</seg>
-      </tuv>
-    </tu>
     <tu tuid="common.remove">
       <tuv xml:lang="nl_NL">
         <seg>verwijder</seg>
@@ -1586,26 +1566,6 @@
         <seg>Is gesloten</seg>
       </tuv>
     </tu>
-    <tu tuid="dao.snippet.created_by">
-      <tuv xml:lang="nl_NL">
-        <seg>Aangemaakt door</seg>
-      </tuv>
-    </tu>
-    <tu tuid="dao.snippet.is_private">
-      <tuv xml:lang="nl_NL">
-        <seg>Is privé</seg>
-      </tuv>
-    </tu>
-    <tu tuid="dao.snippet.last_updated">
-      <tuv xml:lang="nl_NL">
-        <seg>Bijgewerkt</seg>
-      </tuv>
-    </tu>
-    <tu tuid="dao.snippet.last_updated_by">
-      <tuv xml:lang="nl_NL">
-        <seg>Bijgewerkt door</seg>
-      </tuv>
-    </tu>
     <tu tuid="dao.snippet_usage.hits">
       <tuv xml:lang="nl_NL">
         <seg>Hits</seg>
@@ -1686,11 +1646,6 @@
         <seg>Dashboard aanpassen</seg>
       </tuv>
     </tu>
-    <tu tuid="dashboard.no_teams">
-      <tuv xml:lang="nl_NL">
-        <seg>Geen teams zichtbaar.</seg>
-      </tuv>
-    </tu>
     <tu tuid="dashboard.num_rows">
       <tuv xml:lang="nl_NL">
         <seg>Rijen per pagina</seg>
@@ -1704,11 +1659,6 @@
     <tu tuid="dashboard.switch">
       <tuv xml:lang="nl_NL">
         <seg>Ander dashboard</seg>
-      </tuv>
-    </tu>
-    <tu tuid="dashboard.teamwork">
-      <tuv xml:lang="nl_NL">
-        <seg>Teamwork</seg>
       </tuv>
     </tu>
     <tu tuid="display.button.read_all">
@@ -3455,26 +3405,6 @@
     <tu tuid="tasks.ticket.tab.view">
       <tuv xml:lang="nl_NL">
         <seg>Ticket taken</seg>
-      </tuv>
-    </tu>
-    <tu tuid="teamwork.assign_work">
-      <tuv xml:lang="nl_NL">
-        <seg>Tickets ophalen</seg>
-      </tuv>
-    </tu>
-    <tu tuid="teamwork.categories">
-      <tuv xml:lang="nl_NL">
-        <seg>Team categorieën</seg>
-      </tuv>
-    </tu>
-    <tu tuid="teamwork.group_management">
-      <tuv xml:lang="nl_NL">
-        <seg>Configuratiescherm</seg>
-      </tuv>
-    </tu>
-    <tu tuid="teamwork.my_team_loads">
-      <tuv xml:lang="nl_NL">
-        <seg>Werkdruk van mijn team</seg>
       </tuv>
     </tu>
     <tu tuid="ticket.assignable">

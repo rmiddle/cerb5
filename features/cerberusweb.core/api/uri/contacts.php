@@ -24,7 +24,8 @@ class ChContactsPage extends CerberusPageExtension {
 		// The current session must be a logged-in worker to use this page.
 		if(null == ($worker = CerberusApplication::getActiveWorker()))
 			return false;
-		return true;
+		
+		return $worker->hasPriv('core.addybook');
 	}
 	
 	function render() {
@@ -337,6 +338,24 @@ class ChContactsPage extends CerberusPageExtension {
 		}
 	}
 	
+	/*
+	 * Proxy any func requests to be handled by the tab directly, 
+	 * instead of forcing tabs to implement controllers.  This should check 
+	 * for the *Action() functions just as a handleRequest would
+	 */
+	// [TODO] Do this everywhere that showTab() exists
+	function handleTabActionAction() {
+		@$tab = DevblocksPlatform::importGPC($_REQUEST['tab'],'string','');
+		@$action = DevblocksPlatform::importGPC($_REQUEST['action'],'string','');
+
+		if(null != ($inst = DevblocksPlatform::getExtension($tab, true)) 
+			&& $inst instanceof Extension_AddressBookTab) {
+				if(method_exists($inst,$action.'Action')) {
+					call_user_func(array(&$inst, $action.'Action'));
+				}
+		}
+	}	
+	
 	function showOrgsTabAction() {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$visit = CerberusApplication::getVisit();
@@ -547,6 +566,41 @@ class ChContactsPage extends CerberusPageExtension {
 		} while(!empty($results));
 		
 		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('explore',$hash,$orig_pos)));
+	}
+	
+	function getTopContactsByOrgJsonAction() {
+		@$org_name = DevblocksPlatform::importGPC($_REQUEST['org_name'],'string');
+		
+		header('Content-type: text/json');
+		
+		if(empty($org_name) || null == ($org_id = DAO_ContactOrg::lookup($org_name, false))) {
+			echo json_encode(array());
+			exit;
+		}
+		
+		$results = DAO_Address::getWhere(
+			sprintf("%s = %d",
+				DAO_Address::CONTACT_ORG_ID,
+				$org_id
+			),
+			DAO_Address::NUM_NONSPAM,
+			true,
+			25
+		);
+		
+		$list = array();
+		
+		foreach($results as $result) { /* @var $result Model_Address */
+			$list[] = array(
+				'id' => $result->id,
+				'email' => $result->email,
+				'name' => htmlentities($result->getName()),
+			);
+		}
+		
+		echo json_encode($list);
+		
+		exit;
 	}
 	
 	function viewOrgsExploreAction() {
@@ -1005,8 +1059,8 @@ class ChContactsPage extends CerberusPageExtension {
 			$view->view_columns = array(
 				SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
 				SearchFields_Ticket::TICKET_CREATED_DATE,
-				SearchFields_Ticket::TICKET_TEAM_ID,
-				SearchFields_Ticket::TICKET_CATEGORY_ID,
+				SearchFields_Ticket::TICKET_GROUP_ID,
+				SearchFields_Ticket::TICKET_BUCKET_ID,
 			);
 			$view->renderLimit = 10;
 			$view->renderPage = 0;
@@ -1524,7 +1578,12 @@ class ChContactsPage extends CerberusPageExtension {
 	    // Nuke the source orgs
 	    DAO_ContactOrg::delete($org_ids);
 		
-	    // [TODO] Redirect
+	    if(!empty($view_id)) {
+	    	if(null != ($view = C4_AbstractViewLoader::getView($view_id)))
+	    		$view->render();	
+	    }
+	    
+	    exit;
 	}
 	
 	function showOrgPeekAction() {
@@ -1559,13 +1618,20 @@ class ChContactsPage extends CerberusPageExtension {
 		unset($comments);
 		$tpl->assign('last_comment', $last_comment);
 		
+		// Counts
+		$counts = array(
+			'people' => DAO_Address::getCountByOrgId($id),
+			//'links' => DAO_ContextLink::getContextLinkCounts(CerberusContexts::CONTEXT_ORG, $id),
+		);
+		$tpl->assign('counts', $counts);
+		
 		// View
 		$tpl->assign('view_id', $view_id);
 		
 		$tpl->display('devblocks:cerberusweb.core::contacts/orgs/org_peek.tpl');
 	}
 	
-	function saveContactAction() {
+	function saveAddressAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
 		$db = DevblocksPlatform::getDatabaseService();
 		
@@ -2149,4 +2215,109 @@ class ChContactsPage extends CerberusPageExtension {
 		);
 		exit;
 	}
+	
+	function showContactPeekAction() {
+		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer','');
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+				
+		// Handle context links ([TODO] as an optional array)
+		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer','');
+		$tpl->assign('context', $context);
+		$tpl->assign('context_id', $context_id);
+		
+		$contact = DAO_ContactPerson::get($id);
+		$tpl->assign('contact', $contact);
+
+		// Custom fields
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_CONTACT_PERSON); 
+		$tpl->assign('custom_fields', $custom_fields);
+
+		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_CONTACT_PERSON, $id);
+		if(isset($custom_field_values[$id]))
+			$tpl->assign('custom_field_values', $custom_field_values[$id]);
+		
+		$types = Model_CustomField::getTypes();
+		$tpl->assign('types', $types);
+				
+		// Comments
+		$comments = DAO_Comment::getByContext(CerberusContexts::CONTEXT_CONTACT_PERSON, $id);
+		$last_comment = array_shift($comments);
+		unset($comments);
+		$tpl->assign('last_comment', $last_comment);
+		
+		// View
+		$tpl->assign('view_id', $view_id);
+		
+		$tpl->display('devblocks:cerberusweb.core::contacts/people/peek.tpl');
+	}
+
+	function saveContactPeekAction() {
+		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer', 0);
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
+		@$password = DevblocksPlatform::importGPC($_REQUEST['password'],'string','');
+		//@$comment = DevblocksPlatform::importGPC($_REQUEST['comment'],'string','');
+		@$delete = DevblocksPlatform::importGPC($_REQUEST['do_delete'],'integer',0);
+		
+		$active_worker = CerberusApplication::getActiveWorker();
+
+		if(!empty($id) && !empty($delete)) { // delete
+			if($active_worker->hasPriv('core.addybook.person.actions.delete'))
+				DAO_ContactPerson::delete($id);
+			
+		} else { // create/edit
+			if($active_worker->hasPriv('core.addybook.person.actions.update')) {
+				$fields = array();
+				
+				if(!empty($password)) {
+					$auth_salt = CerberusApplication::generatePassword(8);
+					$auth_pass = md5($auth_salt.md5($password));
+					
+					$fields[DAO_ContactPerson::AUTH_SALT] = $auth_salt;
+					$fields[DAO_ContactPerson::AUTH_PASSWORD] = $auth_pass;
+				}
+				
+				if($id==0) {
+					$id = DAO_ContactPerson::create($fields);
+					
+					@$is_watcher = DevblocksPlatform::importGPC($_REQUEST['is_watcher'],'integer',0);
+					if($is_watcher)
+						CerberusContexts::addWatchers(CerberusContexts::CONTEXT_CONTACT_PERSON, $id, $active_worker->id);
+					
+					// Context Link (if given)
+					@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
+					@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer','');
+					if(!empty($id) && !empty($context) && !empty($context_id)) {
+						DAO_ContextLink::setLink(CerberusContexts::CONTEXT_CONTACT_PERSON, $id, $context, $context_id);
+					}
+				}
+				else {
+					if(!empty($fields))
+						DAO_ContactPerson::update($id, $fields);	
+				}
+				
+				// Custom field saves
+				@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
+				DAO_CustomFieldValue::handleFormPost(CerberusContexts::CONTEXT_CONTACT_PERSON, $id, $field_ids);
+				
+				if(!empty($comment)) {
+					@$also_notify_worker_ids = DevblocksPlatform::importGPC($_REQUEST['notify_worker_ids'],'array',array());
+					
+					$fields = array(
+						DAO_Comment::CREATED => time(),
+						DAO_Comment::CONTEXT => CerberusContexts::CONTEXT_CONTACT_PERSON,
+						DAO_Comment::CONTEXT_ID => $id,
+						DAO_Comment::COMMENT => $comment,
+						DAO_Comment::ADDRESS_ID => $active_worker->getAddress()->id,
+					);
+					$comment_id = DAO_Comment::create($fields, $also_notify_worker_ids);
+				}				
+			}
+		}
+		
+		$view = C4_AbstractViewLoader::getView($view_id);
+		$view->render();		
+	}	
 };

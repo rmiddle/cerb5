@@ -408,9 +408,6 @@
 		<tu tuid='common.refresh'>
 			<tuv xml:lang="en_US"><seg>refresh</seg></tuv>
 		</tu>
-		<tu tuid='common.refresh.auto'>
-			<tuv xml:lang="en_US"><seg>Auto-Refresh</seg></tuv>
-		</tu>
 		<tu tuid='common.remove'>
 			<tuv xml:lang="en_US"><seg>remove</seg></tuv>
 		</tu>
@@ -419,6 +416,12 @@
 		</tu>
 		<tu tuid='common.reset'>
 			<tuv xml:lang="en_US"><seg>reset</seg></tuv>
+		</tu>
+		<tu tuid='common.roles'>
+			<tuv xml:lang="en_US"><seg>roles</seg></tuv>
+		</tu>
+		<tu tuid='common.role'>
+			<tuv xml:lang="en_US"><seg>role</seg></tuv>
 		</tu>
 		<tu tuid='common.save'>
 			<tuv xml:lang="en_US"><seg>Save</seg></tuv>
@@ -557,19 +560,6 @@
 		
 		<!-- Snippets -->
 
-		<tu tuid='dao.snippet.created_by'>
-			<tuv xml:lang="en_US"><seg>Created By</seg></tuv>
-		</tu>
-		<tu tuid='dao.snippet.is_private'>
-			<tuv xml:lang="en_US"><seg>Is Private</seg></tuv>
-		</tu>
-		<tu tuid='dao.snippet.last_updated'>
-			<tuv xml:lang="en_US"><seg>Updated</seg></tuv>
-		</tu>
-		<tu tuid='dao.snippet.last_updated_by'>
-			<tuv xml:lang="en_US"><seg>Updated By</seg></tuv>
-		</tu>
-		
 		<tu tuid='dao.snippet_usage.hits'>
 			<tuv xml:lang="en_US"><seg>Hits</seg></tuv>
 		</tu>
@@ -593,6 +583,11 @@
 		</tu>
 
 		<!-- ACL -->
+		
+			<!-- Activity -->
+		<tu tuid='acl.core.activity'>
+			<tuv xml:lang="en_US"><seg>[Activity] Can view activity page</seg></tuv>
+		</tu>
 		
 			<!-- Address Book -->
 		<tu tuid='acl.core.addybook'>
@@ -625,6 +620,9 @@
 		<tu tuid='acl.core.addybook.person.actions.delete'>
 			<tuv xml:lang="en_US"><seg>[Address Book] Can delete registered contacts</seg></tuv>
 		</tu>
+		<tu tuid='acl.core.addybook.person.actions.update'>
+			<tuv xml:lang="en_US"><seg>[Address Book] Can modify registered contacts</seg></tuv>
+		</tu>
 
 			<!-- Display Ticket -->
 		<tu tuid='acl.core.display.actions.attachments.download'>
@@ -656,14 +654,11 @@
 		</tu>
 
 			<!-- Mail page -->
-		<tu tuid='acl.core.mail.actions.auto_refresh'>
-			<tuv xml:lang="en_US"><seg>[Mail] Can auto-refresh the Mail page</seg></tuv>
-		</tu>
-		<tu tuid='acl.core.mail.log_ticket'>
-			<tuv xml:lang="en_US"><seg>[Mail] Can open tickets on behalf of customers</seg></tuv>
+		<tu tuid='acl.core.mail'>
+			<tuv xml:lang="en_US"><seg>[Mail] Can view the mail page</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.mail.search'>
-			<tuv xml:lang="en_US"><seg>[Mail] Can use the Search tab on the Mail page</seg></tuv>
+			<tuv xml:lang="en_US"><seg>[Mail] Can use the Search tab on the mail page</seg></tuv>
 		</tu>
 		<tu tuid='acl.core.mail.send'>
 			<tuv xml:lang="en_US"><seg>[Mail] Can compose new messages from the helpdesk</seg></tuv>
@@ -677,9 +672,6 @@
 			<!-- Snippets -->
 		<tu tuid='acl.core.snippets.actions.create'>
 			<tuv xml:lang="en_US"><seg>[Snippets] Can create snippets</seg></tuv>
-		</tu>
-		<tu tuid='acl.core.snippets.actions.update_all'>
-			<tuv xml:lang="en_US"><seg>[Snippets] Can modify any snippet</seg></tuv>
 		</tu>
 
 			<!-- Tasks -->
@@ -1141,9 +1133,6 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		<tu tuid='dashboard.modify'>
 			<tuv xml:lang="en_US"><seg>Modify Dashboard</seg></tuv>
 		</tu>
-		<tu tuid='dashboard.no_teams'>
-			<tuv xml:lang="en_US"><seg>No visible teams.</seg></tuv>
-		</tu>
 		<tu tuid='dashboard.num_rows'>
 			<tuv xml:lang="en_US"><seg>Rows per page</seg></tuv>
 		</tu>
@@ -1152,9 +1141,6 @@ For example: http://www.cerberusweb.com/support/</seg></tuv>
 		</tu>
 		<tu tuid='dashboard.switch'>
 			<tuv xml:lang="en_US"><seg>Switch</seg></tuv>
-		</tu>
-		<tu tuid='dashboard.teamwork'>
-			<tuv xml:lang="en_US"><seg>Teamwork</seg></tuv>
 		</tu>
 
 		<!-- Home -->
@@ -1673,24 +1659,6 @@ For example: *receipt*</seg></tuv>
 			<tuv xml:lang="en_US"><seg>Completed</seg></tuv>
 		</tu>
 
-		<!-- Teamwork -->
-
-		<tu tuid='teamwork.assign_work'>
-			<tuv xml:lang="en_US"><seg>Get Tickets</seg></tuv>
-		</tu>
-
-		<tu tuid='teamwork.my_team_loads'>
-			<tuv xml:lang="en_US"><seg>My Team Loads</seg></tuv>
-		</tu>
-
-		<tu tuid='teamwork.categories'>
-			<tuv xml:lang="en_US"><seg>Team Categories</seg></tuv>
-		</tu>
-
-		<tu tuid='teamwork.group_management'>
-			<tuv xml:lang="en_US"><seg>Control Panel</seg></tuv>
-		</tu>
-
 		<!-- Tickets -->
 
 		<tu tuid='ticket.assignable'>
@@ -1919,9 +1887,6 @@ For example: *receipt*</seg></tuv>
 	    </tu>
 	    <tu tuid='preferences.account.mail.status.compose'>
 			<tuv xml:lang="en_US"><seg>When composing a new outgoing message, default the status to:</seg></tuv>
-	    </tu>
-	    <tu tuid='preferences.account.mail.status.create'>
-			<tuv xml:lang="en_US"><seg>When opening a new ticket, default the status to:</seg></tuv>
 	    </tu>
 	    <tu tuid='preferences.account.mail.status.reply'>
 			<tuv xml:lang="en_US"><seg>When replying to mail, default the status to:</seg></tuv>

@@ -54,7 +54,7 @@ class Event_MailReceivedByApp extends Extension_DevblocksEvent {
 			'ticket_reopen' => "+2 hours",
 			'closed' => 2,
 			'content' => "This is the message body\r\nOn more than one line.\r\n",
-			'agent_id' => $active_worker->id,
+			'worker_id' => $active_worker->id,
 		);
 		
 		$values['content'] =& $parser_message['content'];
@@ -64,7 +64,7 @@ class Event_MailReceivedByApp extends Extension_DevblocksEvent {
 		$values['subject'] =& $parser_message['subject'];
 		$values['waiting_until'] =& $parser_message['ticket_reopen'];
 		$values['closed'] =& $parser_message['closed'];
-		$values['worker_id'] =& $parser_message['agent_id'];
+		$values['worker_id'] =& $parser_message['worker_id'];
 		
 		return new Model_DevblocksEvent(
 			self::ID,
@@ -446,8 +446,18 @@ class Event_MailReceivedByApp extends Extension_DevblocksEvent {
 				
 			case 'replace_content':
 				$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+				$replace = $tpl_builder->build($params['replace'], $values);
 				$with = $tpl_builder->build($params['with'], $values);
-				$values['body'] = str_replace($params['replace'], $with, $values['body']);
+				
+				if(isset($params['is_regexp']) && !empty($params['is_regexp'])) {
+					@$value = preg_replace($replace, $with, $values['body']);
+				} else {
+					$value = str_replace($replace, $with, $values['body']);
+				}
+				
+				if(!empty($value)) {
+					$values['body'] = trim($value,"\r\n");
+				}
 				break;
 				
 			case 'reject':

@@ -494,8 +494,8 @@ class ImportCron extends CerberusCronPageExtension {
 
 			if(is_array($buckets))
 			foreach($buckets as $bucket) { /* @var $bucket Model_Bucket */
-				// Hash by team ID and bucket name
-				$hash = md5($bucket->team_id . strtolower($bucket->name));
+				// Hash by group ID and bucket name
+				$hash = md5($bucket->group_id . strtolower($bucket->name));
 				$bucket_to_id[$hash] = intval($bucket->id);
 			}
 		}
@@ -521,15 +521,15 @@ class ImportCron extends CerberusCronPageExtension {
 				$iDestGroupId = $iDestGroup->id;
 			
 		} elseif(null == ($iDestGroupId = @$group_name_to_id[strtolower($sGroup)])) {
-			$iDestGroupId = DAO_Group::createTeam(array(
-				DAO_Group::TEAM_NAME => $sGroup,				
+			$iDestGroupId = DAO_Group::create(array(
+				DAO_Group::NAME => $sGroup,				
 			));
 			
 			// Give all superusers manager access to this new group
 			if(is_array($workers))
 			foreach($workers as $worker) {
 				if($worker->is_superuser)
-					DAO_Group::setTeamMember($iDestGroupId,$worker->id,true);
+					DAO_Group::setGroupMember($iDestGroupId,$worker->id,true);
 			}
 			
 			// Rehash
@@ -623,13 +623,14 @@ class ImportCron extends CerberusCronPageExtension {
 			DAO_Ticket::IS_CLOSED => $isClosed,
 			DAO_Ticket::FIRST_WROTE_ID => intval($firstWroteInst->id),
 			DAO_Ticket::LAST_WROTE_ID => intval($lastWroteInst->id),
+			DAO_Ticket::ORG_ID => intval($firstWroteInst->contact_org_id),
 			DAO_Ticket::CREATED_DATE => $iCreatedDate,
 			DAO_Ticket::UPDATED_DATE => $iUpdatedDate,
-			DAO_Ticket::TEAM_ID => intval($iDestGroupId),
-			DAO_Ticket::CATEGORY_ID => intval($iDestBucketId),
+			DAO_Ticket::GROUP_ID => intval($iDestGroupId),
+			DAO_Ticket::BUCKET_ID => intval($iDestBucketId),
 			DAO_Ticket::LAST_ACTION_CODE => $sLastActionCode,
 		);
-		$ticket_id = DAO_Ticket::createTicket($fields);
+		$ticket_id = DAO_Ticket::create($fields);
 
 //		echo "Ticket: ",$ticket_id,"<BR>";
 //		print_r($fields);
@@ -811,7 +812,7 @@ class ImportCron extends CerberusCronPageExtension {
 		$isSuperuser = (integer) $xml->is_superuser;
 		
 		// Dupe check worker email
-		if(null != ($worker_id = DAO_Worker::lookupAgentEmail($sEmail))) {
+		if(null != ($worker_id = DAO_Worker::getByEmail($sEmail))) {
 			$logger->info('[Importer] Avoiding creating duplicate worker #'.$worker_id.' ('.$sEmail.')');
 			return true;
 		}
@@ -884,23 +885,42 @@ class ImportCron extends CerberusCronPageExtension {
 		$sPassword = (string) $xml->password;
 		$sOrganization = (string) $xml->organization;
 		
+		$addy_exists = false;
 		// Dupe check org
 		if(null != ($address = DAO_Address::lookupAddress($sEmail))) {
 			$logger->info('[Importer] Avoiding creating duplicate contact #'.$address->id.' ('.$sEmail.')');
-			// [TODO] Still associate with org if local blank?
-			// [TODO] Still associate password if local blank?
-			return true;
+			$addy_exists = true;
+			$address_id = $address->id;
 		}
 		
-		$fields = array(
-			DAO_Address::FIRST_NAME => $sFirstName,
-			DAO_Address::LAST_NAME => $sLastName,
-			DAO_Address::EMAIL => $sEmail,
-		);
-
-		// [TODO] Associate SC password
+		if(!$addy_exists) {
+			$fields = array(
+				DAO_Address::FIRST_NAME => $sFirstName,
+				DAO_Address::LAST_NAME => $sLastName,
+				DAO_Address::EMAIL => $sEmail,
+			);
+			$address_id = DAO_Address::create($fields);
+		}
 		
-		$address_id = DAO_Address::create($fields);
+		if(!empty($sPassword)) {
+			if(null != ($contact = DAO_ContactPerson::getWhere(sprintf("%s = %d", self::EMAIL_ID, $address_id)))) {
+				$salt = CerberusApplication::generatePassword(8);
+				$fields = array(
+					DAO_ContactPerson::EMAIL_ID => $address_id,
+					DAO_ContactPerson::LAST_LOGIN => time(),
+					DAO_ContactPerson::CREATED => time(),
+					DAO_ContactPerson::AUTH_SALT => $salt,
+					DAO_ContactPerson::AUTH_PASSWORD => md5($salt.$sPassword)
+				);
+				
+				$contact_person_id = DAO_ContactPerson::create($fields);
+				
+				DAO_Address::update($address_id, array(
+					DAO_Address::CONTACT_PERSON_ID => $contact_person_id
+				));
+				$logger->info('[Importer] Imported contact '. $sEmail);
+			}
+		}
 		
 		// Associate with organization
 		if(!empty($sOrganization)) {
@@ -908,6 +928,7 @@ class ImportCron extends CerberusCronPageExtension {
 				DAO_Address::update($address_id, array(
 					DAO_Address::CONTACT_ORG_ID => $org_id
 				));
+				$logger->info('[Importer] Associated address '.$sEmail.' with org '.$sOrganization);
 			}
 		}
 		
@@ -1044,6 +1065,41 @@ class Pop3Cron extends CerberusCronPageExtension {
 			!empty($account->username)?$account->username:"",
 			!empty($account->password)?$account->password:""))) {
 				$logger->error("[POP3] Failed with error: ".imap_last_error());
+				
+				// Increment fails
+				$num_fails = $account->num_fails + 1;
+				$fields = array(
+					DAO_Pop3Account::NUM_FAILS => $num_fails,
+				);
+				
+				// Automatically disable POP3s that fail 5+ times
+				if($num_fails >= 5) {
+					$fields[DAO_Pop3Account::ENABLED] = 0;
+					
+					$url_writer = DevblocksPlatform::getUrlService();
+					$workers = DAO_Worker::getAll();
+					
+					foreach($workers as $worker) {
+						// Only admins
+						if(!$worker->is_superuser)
+							continue;
+						
+						$notify_fields = array(
+							DAO_Notification::CONTEXT => null,
+							DAO_Notification::CONTEXT_ID => null,
+							DAO_Notification::CREATED_DATE => time(),
+							DAO_Notification::MESSAGE => sprintf("Mailbox '%s' had more than 5 connection errors and was automatically disabled: %s",
+								$account->nickname,
+								imap_last_error()
+							),
+							DAO_Notification::URL => $url_writer->write('c=config&a=mail_pop3', true),
+							DAO_Notification::WORKER_ID => $worker->id,
+						);
+						DAO_Notification::create($notify_fields);
+					}
+				}
+				
+				DAO_Pop3Account::updatePop3Account($account->id, $fields);
 				continue;
 			}
 			 
@@ -1102,12 +1158,15 @@ class Pop3Cron extends CerberusCronPageExtension {
 				$logger->info("[POP3] Downloaded message ".$msgno." (".sprintf("%d",($time*1000))." ms)");
 				
 				imap_delete($mailbox, $msgno);
-				continue;
 			}
-			 
+			
+			DAO_Pop3Account::updatePop3Account($account->id, array(
+				DAO_Pop3Account::NUM_FAILS => 0,
+			));
+			
 			imap_expunge($mailbox);
 			imap_close($mailbox);
-			imap_errors();
+			@imap_errors();
 			 
 			$logger->info("[POP3] Total Runtime: ".number_format((microtime(true)-$runtime)*1000,2)." ms");
 		}

@@ -34,8 +34,12 @@
 				{elseif $k == 'lead'}
 					<b>{$v.label|capitalize}:</b>
 					{$v.address->getName()}
-					&lt;<a href="javascript:;" onclick="genericAjaxPopup('peek','c=contacts&a=showAddressPeek&email={$v.address->email|escape:'url'}',null,false,'500');">{$v.address->email}</a>&gt;
-					<button id="btnOppAddyPeek" type="button" onclick="genericAjaxPopup('peek','c=contacts&a=showAddressPeek&email={$v.address->email|escape:'url'}&view_id=',null,false,'500');" style="visibility:false;display:none;"></button>
+					&lt;<a href="javascript:;" onclick="genericAjaxPopup('peek2','c=contacts&a=showAddressPeek&email={$v.address->email|escape:'url'}',null,false,'600');">{$v.address->email}</a>&gt;
+					<button id="btnOppAddyPeek" type="button" onclick="genericAjaxPopup('peek2','c=contacts&a=showAddressPeek&email={$v.address->email|escape:'url'}&view_id=',null,false,'600');" style="visibility:false;display:none;"></button>
+				{elseif $k == 'org'}
+					<b>{$v.label|capitalize}:</b>
+					<a href="javascript:;" onclick="genericAjaxPopup('peek2','c=contacts&a=showOrgPeek&id={$v.org->id}',null,false,'600');">{$v.org->name}</a>
+					<button id="btnOppOrgPeek" type="button" onclick="genericAjaxPopup('peek2','c=contacts&a=showOrgPeek&id={$v.org->id}&view_id=',null,false,'600');" style="visibility:false;display:none;"></button>
 				{else}
 					{include file="devblocks:cerberusweb.core::internal/custom_fields/profile_cell_renderer.tpl"}
 				{/if}
@@ -56,8 +60,10 @@
 		{devblocks_url assign=return_url full=true}c=crm&tab=opps&id={$page_context_id}{/devblocks_url}
 		{include file="devblocks:cerberusweb.core::internal/macros/display/button.tpl" context=$page_context context_id=$page_context_id macros=$macros return_url=$return_url}		
 		
-		<!-- Edit -->		
+		<!-- Edit -->
+		{if $active_worker->hasPriv('crm.opp.actions.update_all')}	
 		<button type="button" id="btnDisplayOppEdit"><span class="cerb-sprite sprite-document_edit"></span> Edit</button>
+		{/if}
 		
 		{$toolbar_exts = DevblocksPlatform::getExtensions('cerberusweb.crm.opp.toolbaritem', true)}
 		{foreach from=$toolbar_exts item=ext}
@@ -68,8 +74,10 @@
 	{if $pref_keyboard_shortcuts}
 	<small>
 		{$translate->_('common.keyboard')|lower}:
+		(<b>a</b>) show contact
 		(<b>e</b>) {'common.edit'|devblocks_translate|lower}
 		{if !empty($macros)}(<b>m</b>) {'common.macros'|devblocks_translate|lower} {/if}
+		(<b>o</b>) show organization
 		(<b>1-9</b>) change tab
 	</small> 
 	{/if}
@@ -152,7 +160,7 @@ $(document).keypress(function(event) {
 				$tabs.tabs('select', idx);
 			} catch(ex) { } 
 			break;
-		case 97:  // (A) E-mail Peek
+		case 97:  // (A) Email Peek
 			try {
 				$('#btnOppAddyPeek').click();
 			} catch(e) { } 
@@ -166,6 +174,11 @@ $(document).keypress(function(event) {
 			try {
 				$('#btnDisplayMacros').click();
 			} catch(ex) { } 
+			break;
+		case 111:  // (O) Org peek
+			try {
+				$('#btnOppOrgPeek').click();
+			} catch(e) { } 
 			break;
 		case 113:  // (Q) quick compose
 			try {

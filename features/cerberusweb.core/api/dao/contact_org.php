@@ -129,6 +129,19 @@ class DAO_ContactOrg extends C4_ORMHelper {
 			implode(',', $from_ids)
 		));
 		
+		// Merge context_scheduled_behavior
+		$db->Execute(sprintf("UPDATE IGNORE context_scheduled_behavior SET context_id = %d WHERE context = %s AND context_id IN (%s)",
+			$to_id,
+			$db->qstr(CerberusContexts::CONTEXT_ORG),
+			implode(',', $from_ids)
+		));
+		
+		// Merge tickets
+		$db->Execute(sprintf("UPDATE ticket SET org_id = %d WHERE org_id IN (%s)",
+			$to_id,
+			implode(',', $from_ids)
+		));
+		
 		return true;
 	}
 	
@@ -278,11 +291,17 @@ class DAO_ContactOrg extends C4_ORMHelper {
 		return NULL;
 	}
 	
+	public static function random() {
+		return self::_getRandom('contact_org');
+	}
+	
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_ContactOrg::getFields();
 		
 		// Sanitize
-		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy]) || !in_array($sortBy,$columns))
+		if('*'==substr($sortBy,0,1) || !isset($fields[$sortBy])
+			|| (SearchFields_ContactOrg::NAME != $sortBy && !in_array($sortBy, $columns))
+		)
 			$sortBy=null;
 		
         list($tables,$wheres) = parent::_parseSearchParams($params, $columns, $fields,$sortBy);
@@ -298,7 +317,6 @@ class DAO_ContactOrg extends C4_ORMHelper {
 			"c.phone as %s, ".
 			"c.website as %s, ".
 			"c.created as %s ",
-//			"INNER JOIN team tm ON (tm.id = t.team_id) ".
 			    SearchFields_ContactOrg::ID,
 			    SearchFields_ContactOrg::NAME,
 			    SearchFields_ContactOrg::STREET,
@@ -336,6 +354,9 @@ class DAO_ContactOrg extends C4_ORMHelper {
 		
 		// Virtuals
 		foreach($params as $param) {
+			if(!is_a($param, 'DevblocksSearchCriteria'))
+				continue;
+			
 			$param_key = $param->field;
 			settype($param_key, 'string');
 			switch($param_key) {
@@ -868,6 +889,10 @@ class Context_Org extends Extension_DevblocksContext {
 			'name' => $org->name,
 			'permalink' => $url_writer->write(sprintf("c=contacts&tab=orgs&action=display&id=%d-%s", $context_id, $friendly), true),
 		);
+	}
+	
+	function getRandom() {
+		return DAO_ContactOrg::random();		
 	}
 	
 	function getContext($org, &$token_labels, &$token_values, $prefix=null) {

@@ -40,6 +40,9 @@
 		<patch version="5.4.3" revision="935" file="patches/5.x/5.4.3.php" />
 		<patch version="5.4.4" revision="936" file="patches/5.x/5.4.4.php" />
 		<patch version="5.5.0" revision="944" file="patches/5.x/5.5.0.php" />
+		<patch version="5.6.0" revision="957" file="patches/5.x/5.6.0.php" />
+		<patch version="5.6.1" revision="961" file="patches/5.x/5.6.1.php" />
+		<patch version="5.6.2" revision="965" file="patches/5.x/5.6.2.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -205,7 +208,7 @@
 			<class name="Model_Group" />
 			<class name="SearchFields_Group" />
 			<class name="View_Group" />
-			<class name="Model_TeamMember" />
+			<class name="Model_GroupMember" />
 		</file>
 		
 		<file path="api/dao/mail_queue.php">
@@ -293,6 +296,7 @@
 		</file>
 		
 		<file path="api/dao/worker_role.php">
+			<class name="Context_WorkerRole" />
 			<class name="DAO_WorkerRole" />
 			<class name="Model_WorkerRole" />
 		</file>
@@ -517,6 +521,9 @@
 	<!-- Permissions -->
 
 	<acl>
+		<!-- Activity -->
+		<priv id="core.activity" label="acl.core.activity" />
+	
 		<!-- Addy Book -->
 		<priv id="core.addybook" label="acl.core.addybook" />
 		<priv id="core.addybook.actions.import" label="acl.core.addybook.actions.import" />
@@ -528,6 +535,7 @@
 		<priv id="core.addybook.org.actions.delete" label="acl.core.addybook.org.actions.delete" />
 		<priv id="core.addybook.org.view.actions.export" label="acl.core.addybook.org.view.actions.export" />
 		<priv id="core.addybook.person.actions.delete" label="acl.core.addybook.person.actions.delete" />
+		<priv id="core.addybook.person.actions.update" label="acl.core.addybook.person.actions.update" />
 
 		<!-- Display Ticket -->
 		<priv id="core.display.actions.attachments.download" label="acl.core.display.actions.attachments.download" />
@@ -540,8 +548,7 @@
 		<priv id="core.display.message.actions.delete" label="acl.core.display.message.actions.delete" />
 
 		<!-- Mail page -->
-		<priv id="core.mail.actions.auto_refresh" label="acl.core.mail.actions.auto_refresh" />
-		<priv id="core.mail.log_ticket" label="acl.core.mail.log_ticket" />
+		<priv id="core.mail" label="acl.core.mail" />
 		<priv id="core.mail.search" label="acl.core.mail.search" />
 		<priv id="core.mail.send" label="acl.core.mail.send" />
 
@@ -550,7 +557,6 @@
 		
 		<!-- Snippets -->
 		<priv id="core.snippets.actions.create" label="acl.core.snippets.actions.create" />
-		<priv id="core.snippets.actions.update_all" label="acl.core.snippets.actions.update_all" />
 
 		<!-- Tasks -->
 		<priv id="core.tasks.actions.create" label="acl.core.tasks.actions.create" />
@@ -598,7 +604,8 @@
 				<param key="options">
 					<value>
 						<!--<data key="create" />-->
-						<data key="find" />
+						<!--<data key="find" />-->
+						<!--<data key="snippets" />-->
 						<data key="workspace" />
 					</value>
 				</param>
@@ -618,6 +625,7 @@
 					<value>
 						<data key="create" />
 						<data key="find" />
+						<data key="snippets" />
 						<data key="workspace" />
 					</value>
 				</param>
@@ -654,6 +662,7 @@
 				<param key="options">
 					<value>
 						<data key="find" />
+						<data key="snippets" />
 						<data key="workspace" />
 					</value>
 				</param>
@@ -671,6 +680,7 @@
 				<param key="view_class" value="View_Message" />
 				<param key="options">
 					<value>
+						<data key="snippets" />
 						<data key="workspace" />
 					</value>
 				</param>
@@ -688,6 +698,7 @@
 				<param key="view_class" value="View_Notification" />
 				<param key="options">
 					<value>
+						<!--<data key="snippets" />-->
 						<data key="workspace" />
 					</value>
 				</param>
@@ -707,6 +718,7 @@
 					<value>
 						<data key="create" />
 						<data key="find" />
+						<data key="snippets" />
 						<data key="workspace" />
 					</value>
 				</param>
@@ -724,10 +736,9 @@
 				<param key="view_class" value="View_Snippet" />
 				<param key="options">
 					<value>
-						<!--
-						<data key="create" />
-						-->
+						<!--<data key="create" />-->
 						<data key="find" />
+						<!--<data key="snippets" />-->
 						<data key="workspace" />
 					</value>
 				</param>
@@ -747,6 +758,7 @@
 					<value>
 						<data key="create" />
 						<data key="find" />
+						<data key="snippets" />
 						<data key="workspace" />
 					</value>
 				</param>
@@ -764,7 +776,9 @@
 				<param key="view_class" value="View_Ticket" />
 				<param key="options">
 					<value>
+					<!--<data key="create" />-->
 						<data key="find" />
+						<data key="snippets" />
 						<data key="workspace" />
 					</value>
 				</param>
@@ -782,11 +796,33 @@
 				<param key="view_class" value="View_Worker" />
 				<param key="options">
 					<value>
-						<!--
-						<data key="find" />
-						-->
+						<!--<data key="create" />-->
+						<!--<data key="find" />-->
+						<data key="snippets" />
 						<data key="workspace" />
 					</value>
+				</param>
+			</params>
+		</extension>
+
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.role</id>
+			<name>Role</name>
+			<class>
+				<file>api/dao/worker_role.php</file>
+				<name>Context_WorkerRole</name>
+			</class>
+			<params>
+				<param key="view_class" value="View_WorkerRole" />
+				<param key="options">
+					<!--
+					<value>
+						<data key="create" />
+						<data key="find" />
+						<data key="snippets" />
+						<data key="workspace" />
+					</value>
+					-->
 				</param>
 			</params>
 		</extension>
@@ -1243,6 +1279,7 @@
 			<params>
 				<param key="uri" value="tickets" />
 				<param key="menutitle" value="common.mail" />
+				<param key="acl" value="core.mail" />
 			</params>
 		</extension>
 
@@ -1256,6 +1293,7 @@
 			<params>
 				<param key="uri" value="activity" />
 				<param key="menutitle" value="core.menu.activity" />
+				<param key="acl" value="core.activity" />
 			</params>
 		</extension>
 
@@ -1309,6 +1347,7 @@
 			<params>
 				<param key="uri" value="display" />
 				<param key="menutitle" value="" />
+				<param key="acl" value="core.mail" />
 			</params>
 		</extension>
 

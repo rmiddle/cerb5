@@ -1,6 +1,6 @@
 <form action="{devblocks_url}{/devblocks_url}" method="POST" id="formBatchUpdate" name="formBatchUpdate" onsubmit="return false;">
 <input type="hidden" name="c" value="tickets">
-<input type="hidden" name="a" value="doBatchUpdate">
+<input type="hidden" name="a" value="doBulkUpdate">
 <input type="hidden" name="view_id" value="{$view_id}">
 <input type="hidden" name="ticket_ids" value="">
 
@@ -36,17 +36,17 @@
 			<td width="100%"><select name="do_move">
 				<option value=""></option>
 	      		<optgroup label="Move to Group">
-	      		{foreach from=$teams item=team}
-	      			<option value="t{$team->id}">{$team->name}</option>
+	      		{foreach from=$groups item=group}
+	      			<option value="t{$group->id}">{$group->name}</option>
 	      		{/foreach}
 	      		</optgroup>
 	      		
-	      		{foreach from=$team_categories item=categories key=teamId}
-	      			{assign var=team value=$teams.$teamId}
-	      			{if !empty($active_worker_memberships.$teamId)}
-		      			<optgroup label="{$team->name}">
-		      			{foreach from=$categories item=category}
-		    				<option value="c{$category->id}">{$category->name}</option>
+	      		{foreach from=$group_buckets item=buckets key=groupId}
+	      			{assign var=group value=$groups.$groupId}
+	      			{if !empty($active_worker_memberships.$groupId)}
+		      			<optgroup label="{$group->name}">
+		      			{foreach from=$buckets item=bucket}
+		    				<option value="c{$bucket->id}">{$bucket->name}</option>
 		    			{/foreach}
 		    			</optgroup>
 	    			{/if}
@@ -154,7 +154,8 @@
 		<b>Reply:</b><br>
 		<textarea name="broadcast_message" style="width:100%;height:200px;border:1px solid rgb(180,180,180);padding:2px;"></textarea>
 		<br>
-		<button type="button" onclick="genericAjaxPost('formBatchUpdate','bulkTicketBroadcastTest','c=tickets&a=doBatchUpdateBroadcastTest');"><span class="cerb-sprite sprite-gear"></span> Test</button><!--
+		<button type="button" onclick="ajax.chooserSnippet('snippets',$('#bulkTicketBroadcast textarea[name=broadcast_message]'), { '{CerberusContexts::CONTEXT_TICKET}':'', '{CerberusContexts::CONTEXT_WORKER}':'{$active_worker->id}' });">{'common.snippets'|devblocks_translate|capitalize}</button>
+		<button type="button" onclick="genericAjaxPost('formBatchUpdate','bulkTicketBroadcastTest','c=tickets&a=doBulkUpdateBroadcastTest');"><span class="cerb-sprite sprite-gear"></span> Test</button><!--
 		--><select onchange="insertAtCursor(this.form.broadcast_message,this.options[this.selectedIndex].value);this.selectedIndex=0;this.form.broadcast_message.focus();">
 			<option value="">-- insert at cursor --</option>
 			{foreach from=$token_labels key=k item=v}

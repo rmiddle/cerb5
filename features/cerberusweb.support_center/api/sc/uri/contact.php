@@ -118,6 +118,10 @@ class UmScContactController extends Extension_UmScController {
 		$groups = DAO_Group::getAll();
 		$tpl->assign('groups', $groups);
 		
+		// Default reply-to
+		$replyto_default = DAO_AddressOutgoing::getDefault();
+		$tpl->assign('replyto_default', $replyto_default);
+		
 		// Contact: Fields
 		$ticket_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET);
 		$tpl->assign('ticket_fields', $ticket_fields);
@@ -340,12 +344,14 @@ class UmScContactController extends Extension_UmScController {
 			"\r\n";
 		}
 		
+		$community_portal = DAO_CommunityTool::getByCode(ChPortalHelper::getCode());
+		
 		$message = new CerberusParserMessage();
 		$message->headers['date'] = date('r'); 
 		$message->headers['to'] = $to;
 		$message->headers['subject'] = $subject;
 		$message->headers['message-id'] = CerberusApplication::generateMessageId();
-		$message->headers['x-cerberus-portal'] = 1; 
+		$message->headers['x-cerberus-portal'] = !empty($community_portal->name) ? $community_portal->name : $community_portal->code;
 		
 		// Sender
 		$fromList = imap_rfc822_parse_adrlist($sFrom,'');

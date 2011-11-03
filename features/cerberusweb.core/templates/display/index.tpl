@@ -9,11 +9,11 @@
 
 <h2>{'common.conversation'|devblocks_translate|capitalize}</h2>
 
-{assign var=ticket_team_id value=$ticket->team_id}
-{assign var=ticket_team value=$teams.$ticket_team_id}
-{assign var=ticket_category_id value=$ticket->category_id}
-{assign var=ticket_team_category_set value=$team_categories.$ticket_team_id}
-{assign var=ticket_category value=$ticket_team_category_set.$ticket_category_id}
+{assign var=ticket_group_id value=$ticket->group_id}
+{assign var=ticket_group value=$groups.$ticket_group_id}
+{assign var=ticket_bucket_id value=$ticket->bucket_id}
+{assign var=ticket_group_bucket_set value=$group_buckets.$ticket_group_id}
+{assign var=ticket_bucket value=$ticket_group_bucket_set.$ticket_bucket_id}
 
 <fieldset class="properties">
 	<legend>{$ticket->subject|truncate:128}</legend>
@@ -41,11 +41,17 @@
 				{else}
 					{$translate->_('status.open')}
 				{/if} 
+			{elseif $k == 'org'}
+				{$ticket_org = $ticket->getOrg()}
+				<b>{'contact_org.name'|devblocks_translate|capitalize}:</b>
+				{if !empty($ticket_org)}
+				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=contacts&a=showOrgPeek&id={$ticket->org_id}',null,false,'500');">{$ticket_org->name}</a>
+				{/if}
 			{elseif $k == 'bucket'}
 				<b>{$translate->_('common.bucket')|capitalize}:</b>
-				[{$teams.$ticket_team_id->name}]  
-				{if !empty($ticket_category_id)}
-					{$ticket_category->name}
+				[{$groups.$ticket_group_id->name}]  
+				{if !empty($ticket_bucket_id)}
+					{$ticket_bucket->name}
 				{else}
 					{$translate->_('common.inbox')|capitalize}
 				{/if}
@@ -65,7 +71,7 @@
 	{/foreach}
 	<br clear="all">
 	
-	<a style="color:black;font-weight:bold;" href="javascript:;" onclick="genericAjaxPopup('peek','c=display&a=showRequestersPanel&ticket_id={$ticket->id}',null,true,'500');">{'ticket.requesters'|devblocks_translate|capitalize}</a>:
+	<a style="color:black;font-weight:bold;" href="javascript:;" id="aRecipients" onclick="genericAjaxPopup('peek','c=display&a=showRequestersPanel&ticket_id={$ticket->id}',null,true,'500');">{'ticket.requesters'|devblocks_translate|capitalize}</a>:
 	<span id="displayTicketRequesterBubbles">
 		{include file="devblocks:cerberusweb.core::display/rpc/requester_list.tpl" ticket_id=$ticket->id}
 	</span>
@@ -128,6 +134,7 @@
 	<small>
 		{$translate->_('common.keyboard')|lower}:
 		(<b>e</b>) {'common.edit'|devblocks_translate|lower} 
+		(<b>i</b>) {'ticket.requesters'|devblocks_translate|lower} 
 		{if $active_worker->hasPriv('core.display.actions.comment')}(<b>o</b>) {$translate->_('common.comment')} {/if}
 		{if !empty($macros)}(<b>m</b>) {'common.macros'|devblocks_translate|lower} {/if}
 		{if !$ticket->is_closed && $active_worker->hasPriv('core.ticket.actions.close')}(<b>c</b>) {$translate->_('common.close')|lower} {/if}
@@ -149,15 +156,6 @@
 <div>
 {include file="devblocks:cerberusweb.core::internal/macros/behavior/scheduled_behavior_profile.tpl" context=$page_context context_id=$page_context_id}
 </div>
-
-{if empty($requesters)}
-<div class="ui-widget">
-	<div class="ui-state-error ui-corner-all" style="padding: 0 .7em; margin: 0.2em; "> 
-		<p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span> 
-		<strong>Warning:</strong> {$translate->_('ticket.recipients.empty')}</p>
-	</div>
-</div>
-{/if}
 
 <div id="displayTabs">
 	<ul>
@@ -241,6 +239,11 @@ $(document).keypress(function(event) {
 				$('#btnDisplayTicketEdit').click();
 			} catch(ex) { } 
 			break;
+		case 105:  // (I) recipients
+			try {
+				$('#aRecipients').click();
+			} catch(ex) { } 
+			break;
 		case 109:  // (M) macros
 			try {
 				$('#btnDisplayMacros').click();
@@ -258,7 +261,7 @@ $(document).keypress(function(event) {
 			break;
 		case 114:  // (R) reply to first message
 			try {
-				{if $expand_all}$('BUTTON.reply').last().click();{else}$('BUTTON.reply').first().click();{/if}
+				{if $expand_all}$('BUTTON.reply').last().next('BUTTON.split-right').click();{else}$('BUTTON.reply').first().next('BUTTON.split-right').click();{/if}
 			} catch(ex) { } 
 			break;
 		case 115:  // (S) spam

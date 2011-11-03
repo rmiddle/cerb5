@@ -76,16 +76,6 @@
         <seg>[Knowledgebase] Pode ver a knowledgebase</seg>
       </tuv>
     </tu>
-    <tu tuid="acl.core.mail.actions.auto_refresh">
-      <tuv xml:lang="pt_PT">
-        <seg>[Mail] Pode auto-refrescar a página de Email</seg>
-      </tuv>
-    </tu>
-    <tu tuid="acl.core.mail.log_ticket">
-      <tuv xml:lang="pt_PT">
-        <seg>[Mail] Pode abrir tickets em nome dos clientes</seg>
-      </tuv>
-    </tu>
     <tu tuid="acl.core.mail.overview">
       <tuv xml:lang="pt_PT">
         <seg>[Mail] Pode usar o tab visão global na página de Mail</seg>
@@ -931,11 +921,6 @@
         <seg>Modificar Dashboard</seg>
       </tuv>
     </tu>
-    <tu tuid="dashboard.no_teams">
-      <tuv xml:lang="pt_PT">
-        <seg>No há equipas visíveis.</seg>
-      </tuv>
-    </tu>
     <tu tuid="dashboard.num_rows">
       <tuv xml:lang="pt_PT">
         <seg>Linhas por páginas</seg>
@@ -954,11 +939,6 @@
     <tu tuid="dashboard.switch">
       <tuv xml:lang="pt_PT">
         <seg>Alterar</seg>
-      </tuv>
-    </tu>
-    <tu tuid="dashboard.teamwork">
-      <tuv xml:lang="pt_PT">
-        <seg>Trabalho de equipa</seg>
       </tuv>
     </tu>
     <tu tuid="display.button.read_all">
@@ -2294,26 +2274,6 @@ Se não solicitou esta operação, não clique no link em cima. O pedido expira 
     <tu tuid="tasks.ticket.tab.view">
       <tuv xml:lang="pt_PT">
         <seg>Tarefas do Ticket</seg>
-      </tuv>
-    </tu>
-    <tu tuid="teamwork.assign_work">
-      <tuv xml:lang="pt_PT">
-        <seg>Obter Tickets</seg>
-      </tuv>
-    </tu>
-    <tu tuid="teamwork.categories">
-      <tuv xml:lang="pt_PT">
-        <seg>Categorias Equipa</seg>
-      </tuv>
-    </tu>
-    <tu tuid="teamwork.group_management">
-      <tuv xml:lang="pt_PT">
-        <seg>Painel de Controlo</seg>
-      </tuv>
-    </tu>
-    <tu tuid="teamwork.my_team_loads">
-      <tuv xml:lang="pt_PT">
-        <seg>Cargas da minha equipa</seg>
       </tuv>
     </tu>
     <tu tuid="ticket.created">

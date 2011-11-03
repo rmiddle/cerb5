@@ -284,6 +284,10 @@ class DevblocksPlatform extends DevblocksEngine {
 			curl_setopt($ch, CURLOPT_URL, $url);
 			curl_setopt($ch, CURLOPT_HEADER, 0);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+			
+			$user_agent = 'Cerberus Helpdesk ' . APP_VERSION . ' (Build ' . APP_BUILD . ')';
+			curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
+			
 			$is_safemode = !(ini_get('open_basedir') == '' && ini_get('safe_mode' == 'Off'));	
 	
 			// We can't use option this w/ safemode enabled
@@ -1227,6 +1231,18 @@ class DevblocksPlatform extends DevblocksEngine {
 	 */
 	static function getOpenIDService() {
 		return _DevblocksOpenIDManager::getInstance();
+	}
+	
+	static function sanitizeArray($array, $type) {
+		switch($type) {
+			case 'integer':
+				return _DevblocksSanitizationManager::arrayAs($array, 'integer');
+				break;
+			default:
+				break;
+		}
+		
+		return false;
 	}
 	
 	/**

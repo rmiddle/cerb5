@@ -15,7 +15,7 @@
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
 
-class DAO_ContactPerson extends DevblocksORMHelper {
+class DAO_ContactPerson extends C4_ORMHelper {
 	const ID = 'id';
 	const EMAIL_ID = 'email_id';
 	const CREATED = 'created';
@@ -157,6 +157,10 @@ class DAO_ContactPerson extends DevblocksORMHelper {
 		return true;
 	}
 	
+	public static function random() {
+		return self::_getRandom('contact_person');
+	}
+	
 	public static function getSearchQueryComponents($columns, $params, $sortBy=null, $sortAsc=null) {
 		$fields = SearchFields_ContactPerson::getFields();
 		
@@ -193,13 +197,13 @@ class DAO_ContactPerson extends DevblocksORMHelper {
 			;
 		
 		// Custom field joins
-		//list($select_sql, $join_sql, $has_multiple_values) = self::_appendSelectJoinSqlForCustomFieldTables(
-		//	$tables,
-		//	$params,
-		//	'contact_person.id',
-		//	$select_sql,
-		//	$join_sql
-		//);
+		list($select_sql, $join_sql, $has_multiple_values) = self::_appendSelectJoinSqlForCustomFieldTables(
+			$tables,
+			$params,
+			'contact_person.id',
+			$select_sql,
+			$join_sql
+		);
 				
 		$where_sql = "".
 			(!empty($wheres) ? sprintf("WHERE %s ",implode(' AND ',$wheres)) : "WHERE 1 ");
@@ -208,6 +212,9 @@ class DAO_ContactPerson extends DevblocksORMHelper {
 	
 		// Virtuals
 		foreach($params as $param) {
+			if(!is_a($param, 'DevblocksSearchCriteria'))
+				continue;
+			
 			$param_key = $param->field;
 			settype($param_key, 'string');
 			switch($param_key) {
@@ -226,7 +233,7 @@ class DAO_ContactPerson extends DevblocksORMHelper {
 			'select' => $select_sql,
 			'join' => $join_sql,
 			'where' => $where_sql,
-			'has_multiple_values' => false,
+			'has_multiple_values' => $has_multiple_values,
 			'sort' => $sort_sql,
 		);
 	}
@@ -364,13 +371,13 @@ class SearchFields_ContactPerson implements IDevblocksSearchFields {
 		);
 		
 		// Custom Fields
-		//$fields = DAO_CustomField::getByContext(CerberusContexts::XXX);
+		$fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_CONTACT_PERSON);
 
-		//if(is_array($fields))
-		//foreach($fields as $field_id => $field) {
-		//	$key = 'cf_'.$field_id;
-		//	$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
-		//}
+		if(is_array($fields))
+		foreach($fields as $field_id => $field) {
+			$key = 'cf_'.$field_id;
+			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+		}
 		
 		// Sort by label (translation-conscious)
 		uasort($columns, create_function('$a, $b', "return strcasecmp(\$a->db_label,\$b->db_label);\n"));
@@ -766,6 +773,10 @@ class Context_ContactPerson extends Extension_DevblocksContext {
     	return $results;
     }
     
+    function getRandom() {
+    	return DAO_ContactPerson::random();
+    }
+    
 	function getMeta($context_id) {
 		$contact = DAO_ContactPerson::get($context_id);
 		$url_writer = DevblocksPlatform::getUrlService();
@@ -812,10 +823,10 @@ class Context_ContactPerson extends Extension_DevblocksContext {
 			'record_url' => $prefix.$translate->_('common.url.record'),
 		);
 		
-//		if(is_array($fields))
-//		foreach($fields as $cf_id => $field) {
-//			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
-//		}
+		if(is_array($fields))
+		foreach($fields as $cf_id => $field) {
+			$token_labels['custom_'.$cf_id] = $prefix.$field->name;
+		}
 
 		// Token values
 		$token_values = array();
@@ -871,23 +882,6 @@ class Context_ContactPerson extends Extension_DevblocksContext {
 			$token_values
 		);		
 
-		// Email Org
-//		$org_id = (null != $address && !empty($address->contact_org_id)) ? $address->contact_org_id : null;
-//		$merge_token_labels = array();
-//		$merge_token_values = array();
-//		CerberusContexts::getContext(CerberusContexts::CONTEXT_ORG, $org_id, $merge_token_labels, $merge_token_values, null, true);
-//
-//		CerberusContexts::merge(
-//			'org_',
-//			'',
-//			$merge_token_labels,
-//			$merge_token_values,
-//			$token_labels,
-//			$token_values
-//		);		
-		
-		// [TODO] Link contact
-		
 		return true;		
 	}
 

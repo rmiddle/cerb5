@@ -40,6 +40,12 @@
 		</file>
 	</class_loader>
 
+	<!-- ACL -->
+
+	<acl>
+		<priv id="datacenter.domains.actions.delete" label="acl.datacenter.domains.actions.delete" />
+	</acl>
+
 	<!-- Extensions -->
  
 	<extensions>
@@ -75,12 +81,11 @@
 				<param key="view_class" value="View_Domain" />
 				<param key="options">
 					<value>
+						<!--<data key="create" />-->
 						<data key="find" />
+						<data key="snippets" />
 						<data key="workspace" />
 					</value>
-					<!--
-						<data key="create" />
-					-->
 				</param>
 			</params>
 		</extension>

@@ -28,26 +28,31 @@ Sort biggest piles by:
 		<select name="piles_moveto[]" id="select{$hash}">
 			<option value=""></option>
 			<optgroup label="Move to Group" style="color:rgb(0,150,0);font-weight:bold;">
-				{foreach from=$teams item=team}
-					<option value="t{$team->id}">{$team->name}</option>
+				{foreach from=$groups item=group}
+					<option value="t{$group->id}">{$group->name}</option>
 				{/foreach}
 			</optgroup>
-			{foreach from=$team_categories item=team_category_list key=teamId}
-				{assign var=team value=$teams.$teamId}
-				{if isset($active_worker_memberships.$teamId)}
-					<optgroup label="-- {$team->name} --">
-					{foreach from=$team_category_list item=category}
-						<option value="c{$category->id}">{$category->name}</option>
+			{foreach from=$group_buckets item=group_bucket_list key=groupId}
+				{assign var=group value=$groups.$groupId}
+				{if isset($active_worker_memberships.$groupId)}
+					<optgroup label="-- {$group->name} --">
+					{foreach from=$group_bucket_list item=bucket}
+						<option value="c{$bucket->id}">{$bucket->name}</option>
 					{/foreach}
 					</optgroup>
 				{/if}
 			{/foreach}
-			<optgroup label="Actions" style="font-weight:bold;">
+			<optgroup label="Set Status" style="font-weight:bold;">
 				{if $active_worker->hasPriv('core.ticket.actions.close')}<option value="ac">Close</option>{/if}
 				{if $active_worker->hasPriv('core.ticket.actions.spam')}<option value="as">Report Spam</option>{/if}
 				{if $active_worker->hasPriv('core.ticket.actions.delete')}<option value="ad">Delete</option>{/if}
 			</optgroup>
-			<optgroup label="Assign" style="font-weight:bold;">
+			<optgroup label="Set Owner" style="font-weight:bold;">
+				{foreach from=$workers item=worker key=worker_id}
+					<option value="o{$worker_id}">{$worker->getName()}</option>
+				{/foreach}
+			</optgroup>
+			<optgroup label="Add Watcher" style="font-weight:bold;">
 				{foreach from=$workers item=worker key=worker_id}
 					<option value="w{$worker_id}">{$worker->getName()}</option>
 				{/foreach}
@@ -72,26 +77,31 @@ Sort biggest piles by:
 			<select name="piles_moveto[]" id="select{$sender_hash}">
 				<option value=""></option>
 				<optgroup label="Move to Group" style="color:rgb(0,150,0);font-weight:bold;">
-					{foreach from=$teams item=team}
-						<option value="t{$team->id}">{$team->name}</option>
+					{foreach from=$groups item=group}
+						<option value="t{$group->id}">{$group->name}</option>
 					{/foreach}
 				</optgroup>
-				{foreach from=$team_categories item=team_category_list key=teamId}
-					{assign var=team value=$teams.$teamId}
-					{if isset($active_worker_memberships.$teamId)}
-						<optgroup label="-- {$team->name} --">
-						{foreach from=$team_category_list item=category}
-							<option value="c{$category->id}">{$category->name}</option>
+				{foreach from=$group_buckets item=group_bucket_list key=groupId}
+					{assign var=group value=$groups.$groupId}
+					{if isset($active_worker_memberships.$groupId)}
+						<optgroup label="-- {$group->name} --">
+						{foreach from=$group_bucket_list item=bucket}
+							<option value="c{$bucket->id}">{$bucket->name}</option>
 						{/foreach}
 						</optgroup>
 					{/if}
 				{/foreach}
-				<optgroup label="Actions" style="font-weight:bold;">
+				<optgroup label="Set Status" style="font-weight:bold;">
 					{if $active_worker->hasPriv('core.ticket.actions.close')}<option value="ac">Close</option>{/if}
 					{if $active_worker->hasPriv('core.ticket.actions.spam')}<option value="as">Report Spam</option>{/if}
 					{if $active_worker->hasPriv('core.ticket.actions.delete')}<option value="ad">Delete</option>{/if}
 				</optgroup>
-				<optgroup label="Assign" style="font-weight:bold;">
+				<optgroup label="Set Owner" style="font-weight:bold;">
+					{foreach from=$workers item=worker key=worker_id}
+						<option value="o{$worker_id}">{$worker->getName()}</option>
+					{/foreach}
+				</optgroup>
+				<optgroup label="Add Watcher" style="font-weight:bold;">
 					{foreach from=$workers item=worker key=worker_id}
 						<option value="w{$worker_id}">{$worker->getName()}</option>
 					{/foreach}

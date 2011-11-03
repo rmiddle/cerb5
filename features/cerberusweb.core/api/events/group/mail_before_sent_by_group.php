@@ -18,7 +18,7 @@
 class Event_MailBeforeSentByGroup extends Extension_DevblocksEvent {
 	const ID = 'event.mail.sent.group';
 	
-	static function trigger(&$properties, Model_Message $message, Model_Ticket $ticket, Model_Group $group) {
+	static function trigger(&$properties, Model_Message $message=null, Model_Ticket $ticket=null, Model_Group $group) {
 		$events = DevblocksPlatform::getEventService();
 		$events->trigger(
 	        new Model_DevblocksEvent(
@@ -67,7 +67,7 @@ class Event_MailBeforeSentByGroup extends Extension_DevblocksEvent {
 			
 			$message = DAO_Message::get($result[SearchFields_Ticket::TICKET_LAST_MESSAGE_ID]);
 			$ticket = DAO_Ticket::get($result[SearchFields_Ticket::TICKET_ID]);
-			$group = DAO_Group::get($result[SearchFields_Ticket::TICKET_TEAM_ID]);
+			$group = DAO_Group::get($result[SearchFields_Ticket::TICKET_GROUP_ID]);
 		}
 		
 		$properties = array(
@@ -78,7 +78,7 @@ class Event_MailBeforeSentByGroup extends Extension_DevblocksEvent {
 			'ticket_reopen' => "+2 hours",
 			'closed' => 2,
 			'content' => "This is the message body\r\nOn more than one line.\r\n",
-			'agent_id' => $active_worker->id,
+			'worker_id' => $active_worker->id,
 		);
 		
 		$values['content'] =& $properties['content'];
@@ -88,7 +88,7 @@ class Event_MailBeforeSentByGroup extends Extension_DevblocksEvent {
 		$values['subject'] =& $properties['subject'];
 		$values['waiting_until'] =& $properties['ticket_reopen'];
 		$values['closed'] =& $properties['closed'];
-		$values['worker_id'] =& $properties['agent_id'];
+		$values['worker_id'] =& $properties['worker_id'];
 		
 		return new Model_DevblocksEvent(
 			self::ID,
@@ -133,12 +133,12 @@ class Event_MailBeforeSentByGroup extends Extension_DevblocksEvent {
 		$values['closed'] =& $properties['closed'];
 		
 		//$labels['worker_id'] = $prefix.'worker id';
-		$values['worker_id'] =& $properties['agent_id'];
+		$values['worker_id'] =& $properties['worker_id'];
 		
 		/**
 		 * Ticket
 		 */
-		
+
 		@$ticket = $event_model->params['ticket']; /* @var $ticket Model_Ticket */
 		@$ticket_id = $ticket->id;
 		
@@ -191,7 +191,7 @@ class Event_MailBeforeSentByGroup extends Extension_DevblocksEvent {
 		/**
 		 * Worker
 		 */
-		@$worker_id = $values['worker_id'];
+		@$worker_id = $properties['worker_id'];
 		$worker_labels = array();
 		$worker_values = array();
 		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $worker_id, $worker_labels, $worker_values, '', true);
@@ -219,9 +219,11 @@ class Event_MailBeforeSentByGroup extends Extension_DevblocksEvent {
 		 * Signature
 		 */
 		$labels['group_sig'] = 'Group signature';
-		if(!empty($group) && !empty($ticket)) {
-			if(null != ($worker = DAO_Worker::get($worker_id)))
-				$values['group_sig'] = $group->getReplySignature($ticket->category_id, $worker);
+		if(!empty($group)) {
+			if(null != ($worker = DAO_Worker::get($worker_id))) {
+				$sig_bucket_id = !empty($ticket) ? $ticket->bucket_id : 0;
+				$values['group_sig'] = $group->getReplySignature($sig_bucket_id, $worker);
+			}
 		}
 			
 		/**
@@ -382,11 +384,11 @@ class Event_MailBeforeSentByGroup extends Extension_DevblocksEvent {
 		switch($token) {
 			case 'append_to_content':
 			case 'prepend_to_content':
-				$tpl->display('devblocks:cerberusweb.core::events/mail_sent_by_group/action_add_content.tpl');
+				$tpl->display('devblocks:cerberusweb.core::events/mail_before_sent_by_group/action_add_content.tpl');
 				break;
 				
 			case 'replace_content':
-				$tpl->display('devblocks:cerberusweb.core::events/mail_sent_by_group/action_replace_content.tpl');
+				$tpl->display('devblocks:cerberusweb.core::events/mail_before_sent_by_group/action_replace_content.tpl');
 				break;
 
 			case 'create_notification':
@@ -410,9 +412,6 @@ class Event_MailBeforeSentByGroup extends Extension_DevblocksEvent {
 	function runActionExtension($token, $trigger, $params, &$values) {
 		@$ticket_id = $values['ticket_id'];
 
-		if(empty($ticket_id))
-			return;
-		
 		switch($token) {
 			case 'append_to_content':
 				$tpl_builder = DevblocksPlatform::getTemplateBuilder();
@@ -426,10 +425,25 @@ class Event_MailBeforeSentByGroup extends Extension_DevblocksEvent {
 				
 			case 'replace_content':
 				$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+				$replace = $tpl_builder->build($params['replace'], $values);
 				$with = $tpl_builder->build($params['with'], $values);
-				$values['content'] = str_replace($params['replace'], $with, $values['content']);
+				
+				if(isset($params['is_regexp']) && !empty($params['is_regexp'])) {
+					@$value = preg_replace($replace, $with, $values['body']);
+				} else {
+					$value = str_replace($replace, $with, $values['body']);
+				}
+				
+				if(!empty($value)) {
+					$values['body'] = trim($value,"\r\n");
+				}
 				break;
-			
+		}
+
+		if(empty($ticket_id))
+			return;
+		
+		switch($token) {
 			case 'create_notification':
 				DevblocksEventHelper::runActionCreateNotification($params, $values, CerberusContexts::CONTEXT_TICKET, $ticket_id);
 				break;

@@ -2,6 +2,10 @@
 <input type="hidden" name="c" value="calls">
 <input type="hidden" name="a" value="saveEntry">
 {if !empty($model) && !empty($model->id)}<input type="hidden" name="id" value="{$model->id}">{/if}
+{if empty($id) && !empty($context)}
+<input type="hidden" name="context" value="{$context}">
+<input type="hidden" name="context_id" value="{$context_id}">
+{/if}
 <input type="hidden" name="do_delete" value="0">
 
 <fieldset>
@@ -73,8 +77,8 @@
 	</div>
 </fieldset>
 
-<button type="button" onclick="genericAjaxPopupPostCloseReloadView('peek','frmCallEntry','{$view_id}', false, 'call_save');"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')|capitalize}</button>
-{if $model->id && ($active_worker->is_superuser || $active_worker->id == $model->worker_id)}<button type="button" onclick="if(confirm('Permanently delete this call entry?')) { this.form.do_delete.value='1';genericAjaxPopupPostCloseReloadView('peek','frmCallEntry','{$view_id}'); } "><span class="cerb-sprite2 sprite-minus-circle-frame"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
+<button type="button" onclick="genericAjaxPopupPostCloseReloadView(null,'frmCallEntry','{$view_id}', false, 'call_save');"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')|capitalize}</button>
+{if $model->id && ($active_worker->is_superuser || $active_worker->id == $model->worker_id)}<button type="button" onclick="if(confirm('Permanently delete this call entry?')) { this.form.do_delete.value='1';genericAjaxPopupPostCloseReloadView(null,'frmCallEntry','{$view_id}'); } "><span class="cerb-sprite2 sprite-minus-circle-frame"></span> {$translate->_('common.delete')|capitalize}</button>{/if}
 
 {if !empty($model->id)}
 <div style="float:right;">

@@ -76,18 +76,18 @@
 </fieldset>
 
 <fieldset>
-	<legend>Memberships</legend>
+	<legend>{'common.groups'|devblocks_translate|capitalize}</legend>
 	
-	{if $worker->id}{assign var=workerTeams value=$worker->getMemberships()}{/if}
-	{foreach from=$teams item=team key=team_id}
-	{assign var=member value=$workerTeams.$team_id}
-	<input type="hidden" name="group_ids[]" value="{$team->id}">
+	{if $worker->id}{assign var=workerGroups value=$worker->getMemberships()}{/if}
+	{foreach from=$groups item=group key=group_id}
+	{assign var=member value=$workerGroups.$group_id}
+	<input type="hidden" name="group_ids[]" value="{$group->id}">
 	<select name="group_roles[]" {if $disabled} disabled="disabled"{/if}>
 		<option value="">&nbsp;</option>
 		<option value="1" {if $member && !$member->is_manager}selected{/if}>Member</option>
 		<option value="2" {if $member && $member->is_manager}selected{/if}>Manager</option>
 	</select>
-	{$team->name}<br>
+	{$group->name}<br>
 	{/foreach}
 </fieldset>
 
@@ -99,9 +99,9 @@
 {/if}
 
 {if $active_worker->is_superuser}
-	<button type="button" onclick="if($('#formWorkerPeek').validate().form()) { genericAjaxPopupPostCloseReloadView('peek','formWorkerPeek', '{$view_id}', false, 'worker_save'); } "><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')}</button>
+	<button type="button" onclick="if($('#formWorkerPeek').validate().form()) { genericAjaxPopupPostCloseReloadView(null,'formWorkerPeek', '{$view_id}', false, 'worker_save'); } "><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')}</button>
 	{if !$disabled}
-		{if !empty($worker)}{if $active_worker->is_superuser && $active_worker->id != $worker->id}<button type="button" onclick="if(confirm('Are you sure you want to delete this worker and their history?')) { this.form.do_delete.value='1';genericAjaxPopupPostCloseReloadView('peek','formWorkerPeek', '{$view_id}'); } "><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('common.delete')|capitalize}</button>{/if}{/if}
+		{if !empty($worker)}{if $active_worker->is_superuser && $active_worker->id != $worker->id}<button type="button" onclick="if(confirm('Are you sure you want to delete this worker and their history?')) { this.form.do_delete.value='1';genericAjaxPopupPostCloseReloadView(null,'formWorkerPeek', '{$view_id}'); } "><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {$translate->_('common.delete')|capitalize}</button>{/if}{/if}
 	{/if}
 {else}
 	<div class="error">{$translate->_('error.core.no_acl.edit')}</div>	
