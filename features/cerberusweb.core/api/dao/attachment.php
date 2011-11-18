@@ -124,16 +124,25 @@ class DAO_Attachment extends DevblocksORMHelper {
 		$db = DevblocksPlatform::getDatabaseService();
 		$logger = DevblocksPlatform::getConsoleLog();
 		
-		// Delete attachments where links=0 and created > 24h
-		$db->Execute(sprintf("DELETE attachment ".
+		// Delete attachments where links=0 and created > 1h
+		$rs = $db->Execute(sprintf("SELECT SQL_CALC_FOUND_ROWS attachment.id ".
 			"FROM attachment ".
 			"LEFT JOIN attachment_link ON (attachment.id = attachment_link.attachment_id) ".
 			"WHERE attachment_link.attachment_id IS NULL ".
 			"AND attachment.updated <= %d",
-			(time()-86400)
-		)); 
+			(time()-3600)
+		));
 		
-		$logger->info('[Maint] Purged ' . $db->Affected_Rows() . ' attachment records.');
+		$count = $db->GetOne("SELECT FOUND_ROWS();");
+		
+		if(!empty($count)) {
+			while($row = mysql_fetch_row($rs)) {
+				DAO_Attachment::delete($row[0]);
+			}
+			mysql_free_result($rs);
+		}
+		
+		$logger->info('[Maint] Purged ' . $count . ' attachment records.');
 	}
 	
 	static function delete($ids) {
@@ -142,7 +151,8 @@ class DAO_Attachment extends DevblocksORMHelper {
 		if(empty($ids))
 			return;
 
-		Storage_Attachments::delete($ids);
+		if(false === Storage_Attachments::delete($ids))
+			return FALSE;
 		
 		// Delete links
 		foreach($ids as $id)
@@ -434,8 +444,10 @@ class Storage_Attachments extends Extension_DevblocksStorageSchema {
 		
 		while($row = mysql_fetch_assoc($rs)) {
 			$profile = !empty($row['storage_profile_id']) ? $row['storage_profile_id'] : $row['storage_extension'];
+			
 			if(null != ($storage = DevblocksPlatform::getStorageService($profile)))
-				$storage->delete('attachments', $row['storage_key']);
+				if(false === $storage->delete('attachments', $row['storage_key']))
+					return FALSE;
 		}
 		
 		mysql_free_result($rs);
@@ -923,8 +935,9 @@ class View_AttachmentLink extends C4_AbstractView implements IAbstractView_Subto
 			if(!$deleted) { 
 				//DAO_AttachmentLink::update($batch_ids, $change_fields);
 			} else {
-				foreach($batch_ids as $batch_id)
+				foreach($batch_ids as $batch_id) {
 					DAO_AttachmentLink::deleteByGUID($batch_id);
+				}
 			}
 			
 			unset($batch_ids);

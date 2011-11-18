@@ -150,7 +150,7 @@ class MaintCron extends CerberusCronPageExtension {
 		$purge_waitdays = intval($this->getParam('purge_waitdays', 7));
 		$purge_waitsecs = time() - (intval($purge_waitdays) * 86400);
 
-		$sql = sprintf("DELETE QUICK FROM ticket ".
+		$sql = sprintf("DELETE FROM ticket ".
 			"WHERE is_deleted = 1 ".
 			"AND updated_date < %d ",
 			$purge_waitsecs
@@ -1138,7 +1138,7 @@ class Pop3Cron extends CerberusCronPageExtension {
 				$fp = fopen($filename,'w');
 
 				if($fp) {
-					fwrite($fp,"X-downloaded-from: $account->nickname\r\n");
+					fwrite($fp,"X-Cerberus-Mailbox: " . $account->nickname . "\r\n");
 					fwrite($fp,$headers,strlen($headers));
 					fwrite($fp,"\r\n\r\n");
 					fwrite($fp,$body,strlen($body));
