@@ -496,8 +496,8 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 					
 					if(is_array($values)) {
 						// Is there an org associated with this context?
-						if(isset($values['initial_message_sender_org_id']) && !empty($values['initial_message_sender_org_id'])) {
-							DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, CerberusContexts::CONTEXT_ORG, $values['initial_message_sender_org_id']);
+						if(isset($values['org_id']) && !empty($values['org_id'])) {
+							DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, CerberusContexts::CONTEXT_ORG, $values['org_id']);
 						}
 					}
 					break;
