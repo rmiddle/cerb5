@@ -2738,6 +2738,21 @@ class Context_Ticket extends Extension_DevblocksContext {
 			}
 		}
 		
+		// Email Org
+		$org_id = (null != $ticket && !empty($ticket[SearchFields_Ticket::TICKET_ORG_ID])) ? $ticket[SearchFields_Ticket::TICKET_ORG_ID] : null;
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_ORG, $org_id, $merge_token_labels, $merge_token_values, null, true);
+
+		CerberusContexts::merge(
+			'ticket_org_',
+			'',
+			$merge_token_labels,
+			$merge_token_values,
+			$token_labels,
+			$token_values
+		);		
+		
 		// Requesters
 		$token_values['requesters'] = array();
 		$reqs = DAO_Ticket::getRequestersByTicket($ticket[SearchFields_Ticket::TICKET_ID]);
