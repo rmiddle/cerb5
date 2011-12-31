@@ -543,6 +543,18 @@
 
 		<!-- DAO -->
 		
+		<!-- CerbPlugin -->
+		
+		<tu tuid='dao.cerb_plugin.description'>
+			<tuv xml:lang="en_US"><seg>Description</seg></tuv>
+		</tu>
+		<tu tuid='dao.cerb_plugin.author'>
+			<tuv xml:lang="en_US"><seg>Author</seg></tuv>
+		</tu>
+		<tu tuid='dao.cerb_plugin.version'>
+			<tuv xml:lang="en_US"><seg>Version</seg></tuv>
+		</tu>
+		
 		<!-- DecisionNode -->
 		
 		<tu tuid='dao.decision_node.node_type'>
@@ -556,6 +568,18 @@
 		</tu>
 		<tu tuid='dao.decision_node.trigger_id'>
 			<tuv xml:lang="en_US"><seg>Trigger Id</seg></tuv>
+		</tu>
+		
+		<!-- Plugin Library -->
+		
+		<tu tuid='dao.plugin_library.plugin_id'>
+			<tuv xml:lang="en_US"><seg>Plugin ID</seg></tuv>
+		</tu>
+		<tu tuid='dao.plugin_library.icon_url'>
+			<tuv xml:lang="en_US"><seg>Icon URL</seg></tuv>
+		</tu>
+		<tu tuid='dao.plugin_library.requirements_json'>
+			<tuv xml:lang="en_US"><seg>Requirements</seg></tuv>
 		</tu>
 		
 		<!-- Snippets -->

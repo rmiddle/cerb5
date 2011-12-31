@@ -5,7 +5,7 @@ include_once(DEVBLOCKS_PATH . "api/services/bootstrap/cache.php");
 include_once(DEVBLOCKS_PATH . "api/services/bootstrap/database.php");
 include_once(DEVBLOCKS_PATH . "api/services/bootstrap/classloader.php");
 
-define('PLATFORM_BUILD',2011072001);
+define('PLATFORM_BUILD',2011120601);
 
 /**
  * A platform container for plugin/extension registries.
@@ -15,6 +15,87 @@ define('PLATFORM_BUILD',2011072001);
 class DevblocksPlatform extends DevblocksEngine {
     private function __construct() { return false; }
 
+    static function installPluginZip($zip_filename) {
+		// [TODO] Check write access in storage/plugins/
+		
+		// Unzip (Devblocks ZipArchive or pclzip)
+    	if(extension_loaded('zip')) {
+			$zip = new ZipArchive();
+			$result = $zip->open($zip_filename);
+			
+			// Read the plugin.xml file
+			for($i=0;$i<$zip->numFiles;$i++) {
+				$path = $zip->getNameIndex($i);
+				if(preg_match("#/plugin.xml$#", $path)) {
+					$manifest_fp = $zip->getStream($path);
+					$manifest_data = stream_get_contents($manifest_fp);
+					fclose($manifest_fp);
+					$xml = simplexml_load_string($manifest_data);
+					$plugin_id = (string) $xml->id;
+					//[TODO] Check version info
+				}
+			}
+			
+			$zip->extractTo(APP_STORAGE_PATH . '/plugins/');
+	
+		} else {
+			$zip = new PclZip($zip_filename);
+			
+			$contents = $zip->extract(PCLZIP_OPT_BY_PREG, "#/plugin.xml$#", PCLZIP_OPT_EXTRACT_AS_STRING);
+			$manifest_data = $contents[0]['content'];
+			
+			$xml = simplexml_load_string($manifest_data);
+			$plugin_id = (string) $xml->id;
+			
+			$list = $zip->extract(PCLZIP_OPT_PATH, APP_STORAGE_PATH . '/plugins/');
+    	}
+		
+    	if(empty($plugin_id))
+    		return false;
+    	
+		DevblocksPlatform::readPlugins();
+		DevblocksPlatform::clearCache();
+		return true;
+    }
+    
+    static function installPluginZipFromUrl($url) {
+		if(!extension_loaded('curl'))
+			return;
+		
+		$fp = DevblocksPlatform::getTempFile();
+		$fp_filename = DevblocksPlatform::getTempFileInfo($fp);
+		
+		$ch = curl_init($url);
+		curl_setopt_array($ch, array(
+			CURLOPT_CUSTOMREQUEST => 'GET',
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_FOLLOWLOCATION => true,
+			//CURLOPT_FILE => $fp,
+		));
+		$data = curl_exec($ch);
+		
+		// [TODO] Check status
+		//$info = curl_getinfo($ch);
+		//var_dump($info); 
+		//$status = curl_getinfo($ch, CURLINFO_HTTP_CODE); 
+		
+		// Write
+		fwrite($fp, $data, strlen($data));
+		fclose($fp);
+		curl_close($ch);
+		
+		return self::installPluginZip($fp_filename);
+    }
+    
+    static function uninstallPlugin($plugin_id) {
+		// [TODO] Verify the plugin from registry
+		// [TODO] Only uninstall from storage/plugins/
+		
+		$plugin = DevblocksPlatform::getPlugin($plugin_id);
+		$plugin->uninstall();
+		DevblocksPlatform::readPlugins();
+    }
+    
 	/**
 	 * @param mixed $value
 	 * @param string $type
@@ -143,6 +224,37 @@ class DevblocksPlatform extends DevblocksEngine {
 		
 		return $parts;
 	}
+	
+	static function intVersionToStr($version, $sections=3) {
+		$version = str_pad($version, $sections*2, '0', STR_PAD_LEFT);
+		$parts = str_split($version, 2);
+		
+		foreach($parts as $k => $v)
+			$parts[$k] = intval($v);
+		
+		return implode('.', $parts);
+	}
+	
+    static function strVersionToInt($version, $sections=3) {
+    	$parts = explode('.', $version);
+    	
+    	// Trim versions with too many significant places
+    	if(count($parts) > $sections)
+    		$parts = array_slice($parts, 0, $sections);
+    	
+    	// Pad versions with too few significant places
+    	for($ctr=count($parts); $ctr < $sections; $ctr++)
+    		$parts[] = '0';
+    	
+    	$v = 0;
+    	$multiplier = 1;
+    	foreach(array_reverse($parts) as $part) {
+    		$v += intval($part)*$multiplier;
+    		$multiplier *= 100;
+    	}
+    	
+    	return intval($v);
+    }
 	
 	/**
 	 * Return a string as a regular expression, parsing * into a non-greedy 
@@ -633,7 +745,7 @@ class DevblocksPlatform extends DevblocksEngine {
 	}
 	
 	/**
-	 * @return resource $fp
+	 * @return string $filename
 	 */
 	public static function getTempFileInfo($fp) {
 		// If we're asking about a specific temporary file
@@ -779,23 +891,33 @@ class DevblocksPlatform extends DevblocksEngine {
 	 * @static 
 	 * @return DevblocksExtensionManifest[]
 	 */
-	static function getExtensionRegistry($ignore_acl=false) {
+	static function getExtensionRegistry($ignore_acl=false, $nocache=false, $with_disabled=false) {
 	    $cache = self::getCacheService();
 	    static $acl_extensions = null;
 	    
-	    if(null === ($extensions = $cache->load(self::CACHE_EXTENSIONS))) {
+	    // Forced
+	    if($with_disabled)
+	    	$nocache = true;
+	    
+	    // Retrieve and cache
+	    if($nocache || null === ($extensions = $cache->load(self::CACHE_EXTENSIONS))) {
 		    $db = DevblocksPlatform::getDatabaseService();
-		    if(is_null($db)) return;
+		    if(is_null($db))
+		    	return;
+		    
+			$extensions = array();
 	
 		    $prefix = (APP_DB_PREFIX != '') ? APP_DB_PREFIX.'_' : ''; // [TODO] Cleanup
 	
 		    $sql = sprintf("SELECT e.id , e.plugin_id, e.point, e.pos, e.name , e.file , e.class, e.params ".
 				"FROM %sextension e ".
 				"INNER JOIN %splugin p ON (e.plugin_id=p.id) ".
-				"WHERE p.enabled = 1 ".
+				"WHERE 1 ".
+				"%s ".
 				"ORDER BY e.plugin_id ASC, e.pos ASC",
 					$prefix,
-					$prefix
+					$prefix,
+					($with_disabled ? '' : 'AND p.enabled = 1')
 				);
 			$results = $db->GetArray($sql); 
 				
@@ -814,7 +936,9 @@ class DevblocksPlatform extends DevblocksEngine {
 				$extensions[$extension->id] = $extension;
 			}
 
-			$cache->save($extensions, self::CACHE_EXTENSIONS);
+			if(!$nocache)
+				$cache->save($extensions, self::CACHE_EXTENSIONS);
+			
 			$acl_extensions = null;
 		}
 		
@@ -987,7 +1111,7 @@ class DevblocksPlatform extends DevblocksEngine {
 		    @$plugin->name = $row['name'];
 		    @$plugin->description = $row['description'];
 		    @$plugin->author = $row['author'];
-		    @$plugin->revision = intval($row['revision']);
+		    @$plugin->version = intval($row['version']);
 		    @$plugin->link = $row['link'];
 		    @$plugin->dir = $row['dir'];
 

@@ -379,7 +379,7 @@ class DevblocksPluginManifest {
 	var $name = '';
 	var $description = '';
 	var $author = '';
-	var $revision = 0;
+	var $version = 0;
 	var $link = '';
 	var $dir = '';
 	var $manifest_cache = array();
@@ -390,6 +390,8 @@ class DevblocksPluginManifest {
 	var $class_loader = array();
 	var $uri_routing = array();
 	var $extensions = array();
+	
+	var $_requirements_errors = array();
 	
 	function setEnabled($bool) {
 		$this->enabled = ($bool) ? 1 : 0;
@@ -430,6 +432,69 @@ class DevblocksPluginManifest {
 		return $patches;
 	}
 	
+	function checkRequirements() {
+		$this->_requirements_errors = array();
+		
+		switch($this->id) {
+			case 'devblocks.core':
+			case 'cerberusweb.core':
+				return true;
+				break;
+		}
+		
+		// Check version information
+		if(
+			null != (@$plugin_app_version = $this->manifest_cache['requires']['app_version'])
+			&& isset($plugin_app_version['min'])
+			&& isset($plugin_app_version['max'])
+		) {
+			// If APP_VERSION is below the min or above the max
+			if(DevblocksPlatform::strVersionToInt(APP_VERSION) < DevblocksPlatform::strVersionToInt($plugin_app_version['min']))
+				$this->_requirements_errors[] = 'This plugin requires a Cerb5 version of at least ' . $plugin_app_version['min'] . ' and you are using ' . APP_VERSION;
+			
+			if(DevblocksPlatform::strVersionToInt(APP_VERSION) > DevblocksPlatform::strVersionToInt($plugin_app_version['max']))
+				$this->_requirements_errors[] = 'This plugin was tested through Cerb5 version ' . $plugin_app_version['max'] . ' and you are using ' . APP_VERSION;
+			
+		// If no version information is available, fail.
+		} else {
+			$this->_requirements_errors[] = 'This plugin is missing requirements information in its manifest';
+		}
+		
+		// Check PHP extensions
+		if(isset($this->manifest_cache['requires']['php_extensions'])) 
+		foreach($this->manifest_cache['requires']['php_extensions'] as $php_extension => $data) {
+			if(!extension_loaded($php_extension))
+				$this->_requirements_errors[] = sprintf("The '%s' PHP extension is required", $php_extension);
+		}
+		
+		// Check dependencies
+		if(isset($this->manifest_cache['dependencies'])) {
+			$plugins = DevblocksPlatform::getPluginRegistry();
+			foreach($this->manifest_cache['dependencies'] as $dependency) {
+				if(!isset($plugins[$dependency])) {
+					$this->_requirements_errors[] = sprintf("The '%s' plugin is required", $dependency);
+				} else if(!$plugins[$dependency]->enabled) {
+					$dependency_name = isset($plugins[$dependency]) ? $plugins[$dependency]->name : $dependency; 
+					$this->_requirements_errors[] = sprintf("The '%s' (%s) plugin must be enabled first", $dependency_name, $dependency);
+				}
+			}
+		}
+		
+		// Status
+		
+		if(!empty($this->_requirements_errors))
+			return false;
+		
+		return true;
+	}
+	
+	function getRequirementsErrors() {
+		if(empty($this->_requirements_errors))
+			$this->checkRequirements();
+		
+		return $this->_requirements_errors;
+	}
+	
 	function purge() {
 		$db = DevblocksPlatform::getDatabaseService();
 		$prefix = (APP_DB_PREFIX != '') ? APP_DB_PREFIX.'_' : ''; // [TODO] Cleanup
@@ -447,6 +512,44 @@ class DevblocksPluginManifest {
         	"WHERE %1\$sextension.id IS NULL",
         	$prefix
         ));
+	}
+	
+	function uninstall() {
+		$plugin_path = APP_PATH . '/' . $this->dir;
+		$storage_path = APP_STORAGE_PATH . '/plugins/';
+		
+		// Only delete the files if the plugin is in the storage filesystem.
+		if(0 == substr_compare($plugin_path, $storage_path, 0, strlen($storage_path), true)) {
+			$this->_recursiveDelTree($plugin_path);
+			return true;
+		}
+		
+		return false;
+	}
+	
+	function _recursiveDelTree($dir) {
+		if(!file_exists($dir) || !is_dir($dir))
+			return false;
+		
+		$storage_path = APP_STORAGE_PATH . '/plugins/';
+		$dir = rtrim($dir,"/\\") . '/';
+		
+		if(0 != substr_compare($storage_path, $dir, 0, strlen($storage_path)))
+			return false;
+		
+		$files = glob($dir . '*', GLOB_MARK);
+		foreach($files as $file) {
+			if(is_dir($file)) {
+				$this->_recursiveDelTree($file);
+			} else {
+				unlink($file);
+			}
+		}
+		
+		if(file_exists($dir) && is_dir($dir))
+			rmdir($dir);
+		
+		return true;
 	}
 };
 
