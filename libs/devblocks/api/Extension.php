@@ -228,7 +228,7 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 	
 	function renderCondition($token, $trigger, $params=array(), $seq=null) {
 		$conditions = $this->getConditions($trigger);
-		$extensions = $this->getConditionExtensions();
+		$condition_extensions = $this->getConditionExtensions();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('params', $params);
@@ -466,19 +466,25 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 							break;
 							
 						case Model_CustomField::TYPE_WORKER:
+							@$worker_ids = $params['worker_id'];
 							$not = (substr($params['oper'],0,1) == '!');
 							$oper = ltrim($params['oper'],'!');
 							
 							if(!is_array($value))
 								$value = empty($value) ? array() : array($value);
 							
-							if(!is_array($params['worker_id']))
-								return false;
+							if(is_null($worker_ids))
+								$worker_ids = array();
+							
+							if(empty($worker_ids) && empty($value)) {
+								$pass = true;
+								break;
+							}
 							
 							switch($oper) {
 								case 'in':
 									$pass = false;
-									foreach($params['worker_id'] as $v) {
+									foreach($worker_ids as $v) {
 										if(in_array($v, $value)) {
 											$pass = true;
 											break;
@@ -547,6 +553,7 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 		$actions = $this->getActionExtensions();
 		
 		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('trigger', $trigger);
 		$tpl->assign('params', $params);
 
 		if(!is_null($seq))
@@ -576,6 +583,9 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 								break;
 							case Model_CustomField::TYPE_SINGLE_LINE:
 								return DevblocksEventHelper::renderActionSetVariableString($this->getLabels());
+								break;
+							case Model_CustomField::TYPE_WORKER:
+								return DevblocksEventHelper::renderActionSetVariableWorker();
 								break;
 						}
 					} else {
@@ -641,13 +651,10 @@ class DevblocksEventHelper {
 		$tpl = DevblocksPlatform::getTemplateService();
 		
 		switch($custom_field->type) {
+			case Model_CustomField::TYPE_MULTI_LINE:
 			case Model_CustomField::TYPE_SINGLE_LINE:
 			case Model_CustomField::TYPE_URL:
-				$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_string.tpl');
-				break;
-				
-			case Model_CustomField::TYPE_MULTI_LINE:
-				$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_clob.tpl');
+				$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_var_string.tpl');
 				break;
 				
 			case Model_CustomField::TYPE_NUMBER:
@@ -690,11 +697,11 @@ class DevblocksEventHelper {
 			return;
 		
 		switch($custom_field->type) {
+			case Model_CustomField::TYPE_SINGLE_LINE:
+			case Model_CustomField::TYPE_MULTI_LINE:
 			case Model_CustomField::TYPE_CHECKBOX:
 			case Model_CustomField::TYPE_DROPDOWN:
-			case Model_CustomField::TYPE_MULTI_LINE:
 			case Model_CustomField::TYPE_NUMBER:
-			case Model_CustomField::TYPE_SINGLE_LINE:
 			case Model_CustomField::TYPE_URL:
 				@$value = $params['value'];
 				
@@ -736,6 +743,11 @@ class DevblocksEventHelper {
 			case Model_CustomField::TYPE_WORKER:
 				@$worker_id = $params['worker_id'];
 				
+				// Variable?
+				if(substr($worker_id,0,4) == 'var_') {
+					@$worker_id = intval($values[$worker_id]);
+				}
+				
 				DAO_CustomFieldValue::setFieldValue($context, $context_id, $field_id, $worker_id);
 				
 				if(!empty($value_key)) {
@@ -758,6 +770,18 @@ class DevblocksEventHelper {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('token_labels', $labels);
 		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_var_string.tpl');
+	}
+	
+	static function renderActionSetVariableWorker() {
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		// Workers
+		$tpl->assign('workers', DAO_Worker::getAll());
+		
+		// Groups
+		$tpl->assign('groups', DAO_Group::getAll());
+		
+		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_var_worker.tpl');
 	}
 	
 	static function runActionSetVariable($token, $trigger, $params, &$values) {
@@ -786,11 +810,117 @@ class DevblocksEventHelper {
 				
 			case Model_CustomField::TYPE_SINGLE_LINE:
 			case Model_CustomField::TYPE_MULTI_LINE:
-				if(!isset($params['content']))
+				if(!isset($params['value']))
 					break;
 				
 				$tpl_builder = DevblocksPlatform::getTemplateBuilder();
-				$value = $tpl_builder->build($params['content'], $values);
+				$value = $tpl_builder->build($params['value'], $values);
+				break;
+				
+			case Model_CustomField::TYPE_WORKER:
+				@$worker_ids = $params['worker_id'];
+				@$group_ids = $params['group_id'];
+				@$mode = $params['mode'];
+				@$opt_logged_in = $params['opt_logged_in'];
+				
+				$possible_workers = array();
+				
+				// Add workers
+				if(!empty($worker_ids)) {
+					foreach($worker_ids as $id)
+						$possible_workers[$id] = true;
+				}
+				
+				// Add groups
+				if(!empty($group_ids)) {
+					foreach($group_ids as $group_id)
+					$members = DAO_Group::getGroupMembers($group_id);
+					foreach($members as $member) {
+						$possible_workers[$member->id] = true;
+					}
+				}
+				
+				// Filter
+				$workers = DAO_Worker::getAll();
+				
+				if(!empty($opt_logged_in))
+					$workers_online = DAO_Worker::getAllOnline();
+				
+				foreach($possible_workers as $k => $worker) {
+					// Remove non-existent workers
+					if(!isset($workers[$k])) {
+						unset($possible_workers[$k]);
+						continue;
+					}
+		
+					// Filter to online workers
+					if(!empty($opt_logged_in) && !isset($workers_online[$k])) {
+						unset($possible_workers[$k]);
+						continue;
+					}
+				}
+		
+				// We require at least one worker 
+				if(empty($possible_workers)) {
+					$values[$var] = 0;
+					return;
+				}
+				
+				$chosen_worker_id = 0;
+				
+				// Mode
+				switch($mode) {
+					// Random
+					default:
+					case 'random':
+						$ids = array_keys($possible_workers);
+						shuffle($ids);
+						$chosen_worker_id = reset($ids);
+						break;
+						
+					// Sequential
+					case 'seq':
+						$key = sprintf("trigger.%d.counter", $trigger->id);
+						
+						$registry = DevblocksPlatform::getRegistryService();
+						$count = intval($registry->get($key));
+						
+						$idx = $count % count($possible_workers);
+						
+						$ids = array_keys($possible_workers);
+						$chosen_worker_id = $ids[$idx];
+						break;
+						
+					// Fewest open assignments
+					case 'load_balance':
+						$worker_loads = array();
+						
+						// Initialize
+						foreach(array_keys($possible_workers) as $id) {
+							$worker_loads[$id] = 0;
+						}
+						
+						// Consult database
+						$db = DevblocksPlatform::getDatabaseService();
+						$sql = sprintf("SELECT COUNT(id) AS hits, owner_id FROM ticket WHERE is_closed = 0 AND is_deleted = 0 AND is_waiting = 0 AND owner_id != 0 AND owner_id IN (%s) GROUP BY owner_id",
+							implode(',', array_keys($possible_workers))
+						);
+						$results = $db->GetArray($sql);
+						
+						if(!empty($results))
+						foreach($results as $row) {
+							$worker_loads[$row['owner_id']] = intval($row['hits']);
+						}
+						
+						asort($worker_loads);
+						reset($worker_loads);
+						
+						$chosen_worker_id = key($worker_loads);
+						break;
+				}
+				
+				$value = $chosen_worker_id;
+				
 				break;
 		}
 
@@ -951,12 +1081,46 @@ class DevblocksEventHelper {
 		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_set_worker.tpl');
 	}
 	
-	static function runActionSetTicketOwner($params, $values, $ticket_id) {
-		@$owner_id = intval($params['worker_id']);
+	static function runActionSetTicketOwner($params, &$values, $ticket_id, $values_prefix) {
+		@$owner_id = $params['worker_id'];
+		
+		// Variable?
+		if(substr($owner_id,0,4) == 'var_') {
+			@$owner_id = intval($values[$owner_id]);
+		}
+		
 		$fields = array(
 			DAO_Ticket::OWNER_ID => $owner_id,
 		);
 		DAO_Ticket::update($ticket_id, $fields);
+		
+		/**
+		 * Re-update owner values
+		 * // [TODO] This should be more easily reusable
+		 */
+		$worker_labels = array();
+		$worker_values = array();
+		$labels = array();
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $owner_id, $worker_labels, $worker_values, NULL, true);
+				
+			// Clear dupe content
+			CerberusContexts::scrubTokensWithRegexp(
+				$worker_labels,
+				$worker_values,
+				array(
+					"#^address_org_#",
+				)
+			);
+		
+			// Merge
+			CerberusContexts::merge(
+				$values_prefix,
+				'',
+				$worker_labels,
+				$worker_values,
+				$labels,
+				$values
+			);
 	}
 	
 	static function renderActionAddWatchers() {
