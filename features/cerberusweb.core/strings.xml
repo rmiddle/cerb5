@@ -486,6 +486,9 @@
 		<tu tuid='common.today'>
 			<tuv xml:lang="en_US"><seg>today</seg></tuv>
 		</tu>
+		<tu tuid='common.type'>
+			<tuv xml:lang="en_US"><seg>Type</seg></tuv>
+		</tu>
 		<tu tuid='common.unassign'>
 			<tuv xml:lang="en_US"><seg>Unassign</seg></tuv>
 		</tu>
@@ -506,6 +509,9 @@
 		</tu>
 		<tu tuid='common.url.record'>
 			<tuv xml:lang="en_US"><seg>Record URL</seg></tuv>
+		</tu>
+		<tu tuid='common.watch'>
+			<tuv xml:lang="en_US"><seg>watch</seg></tuv>
 		</tu>
 		<tu tuid='common.watcher'>
 			<tuv xml:lang="en_US"><seg>watcher</seg></tuv>

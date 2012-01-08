@@ -90,7 +90,7 @@
 		<input type="hidden" name="deleted" value="{if $ticket->is_deleted}1{else}0{/if}">
 		<input type="hidden" name="spam" value="0">
 		
-		<span>
+		<span id="spanWatcherToolbar">
 		{$object_watchers = DAO_ContextLink::getContextLinks($page_context, array($page_context_id), CerberusContexts::CONTEXT_WORKER)}
 		{include file="devblocks:cerberusweb.core::internal/watchers/context_follow_button.tpl" context=$page_context context_id=$page_context_id full=true}
 		</span>
@@ -140,6 +140,7 @@
 		{$translate->_('common.keyboard')|lower}:
 		(<b>e</b>) {'common.edit'|devblocks_translate|lower} 
 		(<b>i</b>) {'ticket.requesters'|devblocks_translate|lower} 
+		(<b>w</b>) {$translate->_('common.watch')|lower}  
 		{if $active_worker->hasPriv('core.display.actions.comment')}(<b>o</b>) {$translate->_('common.comment')} {/if}
 		{if !empty($macros)}(<b>m</b>) {'common.macros'|devblocks_translate|lower} {/if}
 		{if !$ticket->is_closed && $active_worker->hasPriv('core.ticket.actions.close')}(<b>c</b>) {$translate->_('common.close')|lower} {/if}
@@ -204,12 +205,16 @@
 <script type="text/javascript">
 {if $pref_keyboard_shortcuts}
 $(document).keypress(function(event) {
-	if(event.altKey || event.ctrlKey || event.shiftKey || event.metaKey)
+	if(event.altKey || event.ctrlKey || event.metaKey)
 		return;
 	
 	if($(event.target).is(':input'))
 		return;
 
+	// We only want shift on the Shift+R shortcut right now
+	if(event.shiftKey && event.which != 82)
+		return;
+	
 	hotkey_activated = true;
 	
 	switch(event.which) {
@@ -264,14 +269,25 @@ $(document).keypress(function(event) {
 				$('#btnPrint').click();
 			} catch(ex) { } 
 			break;
+		case 82:   // (r)
 		case 114:  // (R) reply to first message
 			try {
-				{if $expand_all}$('BUTTON.reply').last().next('BUTTON.split-right').click();{else}$('BUTTON.reply').first().next('BUTTON.split-right').click();{/if}
+				{if $expand_all}$btn = $('BUTTON.reply').last();{else}$btn = $('BUTTON.reply').first();{/if}
+				if(event.shiftKey) {
+					$btn.next('BUTTON.split-right').click();
+				} else {
+					$btn.click();
+				}
 			} catch(ex) { } 
 			break;
 		case 115:  // (S) spam
 			try {
 				$('#btnSpam').click();
+			} catch(ex) { } 
+			break;
+		case 119:  // (W) watch
+			try {
+				$('#spanWatcherToolbar button:first').click();
 			} catch(ex) { } 
 			break;
 		case 120:  // (X) delete

@@ -934,6 +934,7 @@ class DevblocksEventHelper {
 	static function renderActionScheduleBehavior($context, $context_id, $event_point) {
 		$tpl = DevblocksPlatform::getTemplateService();
 		
+		// Macros
 		$macros = DAO_TriggerEvent::getByOwner($context, $context_id, $event_point);
 		$tpl->assign('macros', $macros);
 		
@@ -945,7 +946,6 @@ class DevblocksEventHelper {
 		@$run_date = $params['run_date'];
 		@$on_dupe = $params['on_dupe'];
 		
-		// [TODO] Relative dates
 		@$run_timestamp = strtotime($run_date);
 		
 		if(empty($behavior_id))
@@ -984,11 +984,21 @@ class DevblocksEventHelper {
 				break;
 		}
 		
+		// Variables as parameters
+		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+		$vars = array();
+		foreach($params as $k => $v) {
+			if(substr($k,0,4) == 'var_') {
+				$vars[$k] = $tpl_builder->build($v, $values);
+			}
+		}
+		
 		$fields = array(
 			DAO_ContextScheduledBehavior::CONTEXT => $context,
 			DAO_ContextScheduledBehavior::CONTEXT_ID => $context_id,
 			DAO_ContextScheduledBehavior::BEHAVIOR_ID => $behavior_id,
 			DAO_ContextScheduledBehavior::RUN_DATE => intval($run_timestamp),
+			DAO_ContextScheduledBehavior::VARIABLES_JSON => json_encode($vars),
 		);
 		return DAO_ContextScheduledBehavior::create($fields);
 	}
@@ -1025,6 +1035,8 @@ class DevblocksEventHelper {
 	}
 	
 	static function runActionCreateComment($params, $values, $context, $context_id) {
+		$notify_worker_ids = isset($params['notify_worker_id']) ? $params['notify_worker_id'] : array();
+		
 		// Translate message tokens
 		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
 		$content = $tpl_builder->build($params['content'], $values);
@@ -1036,7 +1048,7 @@ class DevblocksEventHelper {
 			DAO_Comment::CREATED => time(),
 			DAO_Comment::COMMENT => $content,
 		);
-		$comment_id = DAO_Comment::create($fields);
+		$comment_id = DAO_Comment::create($fields, $notify_worker_ids);
 		
 		return $comment_id;
 	}
@@ -1143,14 +1155,16 @@ class DevblocksEventHelper {
 	 * Action: Create Notification
 	 */
 	
-	static function renderActionCreateNotification() {
+	static function renderActionCreateNotification($notify_map=array()) {
 		$tpl = DevblocksPlatform::getTemplateService();
+		
 		$tpl->assign('workers', DAO_Worker::getAll());
+		$tpl->assign('notify_map', $notify_map);
 		
 		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_create_notification.tpl');
 	}
 	
-	static function runActionCreateNotification($params, $values, $context, $context_id) {
+	static function runActionCreateNotification($params, $values, $context, $context_id, $notify_map=array()) {
 		$notify_worker_ids = isset($params['notify_worker_id']) ? $params['notify_worker_id'] : array();
 
 		// Watchers?
@@ -1160,6 +1174,22 @@ class DevblocksEventHelper {
 			$notify_worker_ids = array_merge($notify_worker_ids, array_keys($watchers));
 		}
 
+		// If we're notifying contexual worker IDs, add them
+		if(is_array($notify_map) && !empty($notify_map))
+		foreach($notify_map as $key) {
+			// If the value doesn't exist, bail out
+			if(!isset($values[$key]))
+				continue;
+			
+			$id = intval($values[$key]);
+			
+			// If the value is empty, bail out
+			if(empty($id))
+				continue;
+			
+			$notify_worker_ids = array_merge($notify_worker_ids, array($id));
+		}
+		
 		if(!is_array($notify_worker_ids) || empty($notify_worker_ids))
 			return;
 		
@@ -1199,12 +1229,14 @@ class DevblocksEventHelper {
 	}
 	
 	static function runActionCreateTask($params, $values, $context=null, $context_id=null) {
-		$due_date = intval(@strtotime($params['due_date']));
+		$due_date = $params['due_date'];
+		$notify_worker_ids = isset($params['notify_worker_id']) ? $params['notify_worker_id'] : array();
 	
 		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
 		$title = $tpl_builder->build($params['title'], $values);
+		$due_date = intval(@strtotime($tpl_builder->build($params['due_date'], $values)));
 		$comment = $tpl_builder->build($params['comment'], $values);
-		
+
 		$fields = array(
 			DAO_Task::TITLE => $title,
 			DAO_Task::UPDATED_DATE => time(),
@@ -1226,8 +1258,6 @@ class DevblocksEventHelper {
 				DAO_Comment::CREATED => time(),
 			);
 			
-			// Notify
-			@$notify_worker_ids = $params['notify_worker_id'];
 			DAO_Comment::create($fields, $notify_worker_ids);
 		}
 		

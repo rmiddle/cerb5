@@ -1808,17 +1808,24 @@ class ChInternalController extends DevblocksControllerExtension {
 
 			$run_timestamp = @strtotime($run_date) or time();
 
+			// Variables
+			@$var_keys = DevblocksPlatform::importGPC($_REQUEST['var_keys'],'array',array());
+			@$var_vals = DevblocksPlatform::importGPC($_REQUEST['var_vals'],'array',array());
+
+			$vars = DAO_ContextScheduledBehavior::buildVariables($var_keys, $var_vals, $macro);			
+			
 			if($run_timestamp > time()) {
 				DAO_ContextScheduledBehavior::create(array(
 					DAO_ContextScheduledBehavior::BEHAVIOR_ID => $macro->id,
 					DAO_ContextScheduledBehavior::CONTEXT => $context,
 					DAO_ContextScheduledBehavior::CONTEXT_ID => $context_id,
 					DAO_ContextScheduledBehavior::RUN_DATE => $run_timestamp,
+					DAO_ContextScheduledBehavior::VARIABLES_JSON => json_encode($vars),
 				));
 				
 			} else {
 				// Execute now
-				call_user_func(array($ext->class, 'trigger'), $macro->id, $context_id);
+				call_user_func(array($ext->class, 'trigger'), $macro->id, $context_id, $vars);
 				
 			}
 			
@@ -1884,8 +1891,12 @@ class ChInternalController extends DevblocksControllerExtension {
 			
 		} else { // Update
 			$job = DAO_ContextScheduledBehavior::get($job_id);
-			$tpl->assign('job', $job);
 
+			if(null == $job)
+				return;
+			
+			$tpl->assign('job', $job);
+			
 			// Verify permission
 			
 			if(null == ($ctx = DevblocksPlatform::getExtension($job->context, true))) /* @var $ctx Extension_DevblocksContext */
@@ -1907,10 +1918,13 @@ class ChInternalController extends DevblocksControllerExtension {
 		@$job_id = DevblocksPlatform::importGPC($_REQUEST['job_id'],'integer',0);
 		@$run_date = DevblocksPlatform::importGPC($_REQUEST['run_date'],'string','');
 		@$do_delete = DevblocksPlatform::importGPC($_REQUEST['do_delete'],'integer',0);
-		
+
 		$active_worker = CerberusApplication::getActiveWorker();
 		
 		if(null == ($job = DAO_ContextScheduledBehavior::get($job_id)))
+			return;
+		
+		if(null == ($trigger = DAO_TriggerEvent::get($job->behavior_id)))
 			return;
 		
 		if(null == ($ctx = DevblocksPlatform::getExtension($job->context, true))) /* @var $ctx Extension_DevblocksContext */
@@ -1926,8 +1940,15 @@ class ChInternalController extends DevblocksControllerExtension {
 		} else {
 			$run_timestamp = @strtotime($run_date) or time();
 			
+			// Variables
+			@$var_keys = DevblocksPlatform::importGPC($_REQUEST['var_keys'],'array',array());
+			@$var_vals = DevblocksPlatform::importGPC($_REQUEST['var_vals'],'array',array());
+			
+			$vars = DAO_ContextScheduledBehavior::buildVariables($var_keys, $var_vals, $trigger);			
+			
 			DAO_ContextScheduledBehavior::update($job->id, array(
-				DAO_ContextScheduledBehavior::RUN_DATE => $run_timestamp, 
+				DAO_ContextScheduledBehavior::RUN_DATE => $run_timestamp,
+				DAO_ContextScheduledBehavior::VARIABLES_JSON => json_encode($vars), 
 			));
 			
 		}
@@ -2194,12 +2215,17 @@ class ChInternalController extends DevblocksControllerExtension {
 				break;
 				
 			case 'action':
-				if(null != ($ext = DevblocksPlatform::getExtension($trigger->event_point, true)))
-					$tpl->assign('actions', $ext->getActions($trigger));
+				if(null != ($evt = $trigger->getEvent()))
+					$tpl->assign('actions', $evt->getActions($trigger));
 					
 				// Workers
 				$tpl->assign('workers', DAO_Worker::getAll());
-					
+				
+				// Action labels
+				$labels = $evt->getLabels($trigger);
+				$tpl->assign('labels', $labels);
+
+				// Template
 				$tpl->display('devblocks:cerberusweb.core::internal/decisions/editors/action.tpl');
 				break;
 				
@@ -2225,6 +2251,20 @@ class ChInternalController extends DevblocksControllerExtension {
 		$tpl->clearAssign('type');
 	}
 
+	function showScheduleBehaviorParamsAction() {
+		@$name_prefix = DevblocksPlatform::importGPC($_REQUEST['name_prefix'],'string', '');
+		@$trigger_id = DevblocksPlatform::importGPC($_REQUEST['trigger_id'],'integer', 0);
+
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		$tpl->assign('namePrefix', $name_prefix);
+		
+		$trigger = DAO_TriggerEvent::get($trigger_id);
+		$tpl->assign('macro_params', $trigger->variables);
+		
+		$tpl->display('devblocks:cerberusweb.core::events/action_schedule_behavior_params.tpl');
+	}
+	
 	function doDecisionAddConditionAction() {
 		@$condition = DevblocksPlatform::importGPC($_REQUEST['condition'],'string', '');
 		@$trigger_id = DevblocksPlatform::importGPC($_REQUEST['trigger_id'],'integer', 0);

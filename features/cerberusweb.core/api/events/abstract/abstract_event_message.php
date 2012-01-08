@@ -604,7 +604,11 @@ abstract class AbstractEvent_Message extends Extension_DevblocksEvent {
 				break;
 				
 			case 'create_notification':
-				DevblocksEventHelper::renderActionCreateNotification();
+				$translate = DevblocksPlatform::getTranslationService();
+				$notify_map = array(
+					'ticket_owner_id' => mb_convert_case($translate->_('common.owner'), MB_CASE_TITLE),
+				);
+				DevblocksEventHelper::renderActionCreateNotification($notify_map);
 				break;
 				
 			case 'create_task':
@@ -686,9 +690,9 @@ abstract class AbstractEvent_Message extends Extension_DevblocksEvent {
 					CerberusContexts::CONTEXT_TICKET,
 					$ticket_id,
 					$values['group_id'],
-					@$values['ticket_bucket_id'] or 0,
+					@intval($values['ticket_bucket_id']),
 					$values['id'],
-					@$values['ticket_owner_id'] or 0,
+					@intval($values['ticket_owner_id']),
 					$values['sender_address'],
 					$values['sender_full_name'],
 					$values['ticket_subject']
@@ -730,7 +734,10 @@ abstract class AbstractEvent_Message extends Extension_DevblocksEvent {
 				break;
 				
 			case 'create_notification':
-				DevblocksEventHelper::runActionCreateNotification($params, $values, CerberusContexts::CONTEXT_TICKET, $ticket_id);
+				$notify_map = array(
+					'ticket_owner_id' => 'ticket_owner_id',
+				);
+				DevblocksEventHelper::runActionCreateNotification($params, $values, CerberusContexts::CONTEXT_TICKET, $ticket_id, $notify_map);
 				break;
 				
 			case 'create_task':
