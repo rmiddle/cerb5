@@ -2,7 +2,7 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2011, WebGroup Media LLC
+| All source code & content (c) Copyright 2012, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
 | This source code is released under the Devblocks Public License.
@@ -1798,10 +1798,18 @@ class ChInternalController extends DevblocksControllerExtension {
 			if(null == ($macro = DAO_TriggerEvent::get($macro_id))) /* @var $macro Model_TriggerEvent */
 				throw new Exception("Invalid macro.");
 			
-			// ACL: Ensure the worker owns the macro
-			if(false == ($macro->owner_context == CerberusContexts::CONTEXT_WORKER && $macro->owner_context_id == $active_worker->id))
-				throw new Exception("Access denied to macro.");
-				
+			// ACL: Ensure the worker has access to the macro
+			switch($macro->owner_context) {
+				case CerberusContexts::CONTEXT_WORKER:
+					if($macro->owner_context_id != $active_worker->id)
+						throw new Exception("Access denied to macro.");
+					break;
+				case CerberusContexts::CONTEXT_GROUP:
+					if(!$active_worker->isGroupMember($macro->owner_context_id))
+						throw new Exception("Access denied to macro.");
+					break;
+			}
+			
 			// Load event manifest
 			if(null == ($ext = DevblocksPlatform::getExtension($macro->event_point, false))) /* @var $ext DevblocksExtensionManifest */
 				throw new Exception("Invalid event.");

@@ -2,7 +2,7 @@
 /***********************************************************************
  | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
  |-----------------------------------------------------------------------
- | All source code & content (c) Copyright 2011, WebGroup Media LLC
+ | All source code & content (c) Copyright 2012, WebGroup Media LLC
  |   unless specifically noted otherwise.
  |
  | This source code is released under the Devblocks Public License.
@@ -1336,6 +1336,9 @@ class Cron_VirtualAttendantScheduledBehavior extends CerberusCronPageExtension {
 						if(null == ($ext = DevblocksPlatform::getExtension($macro->event_point, false))) /* @var $ext DevblocksExtensionManifest */
 							throw new Exception("Invalid event.");
 					
+						// We delete it first so it's not included in rescheduling behavior
+						DAO_ContextScheduledBehavior::delete($behavior->id);
+						
 						// Execute
 						call_user_func(array($ext->class, 'trigger'), $macro->id, $behavior->context_id, $behavior->variables);
 							
@@ -1344,8 +1347,6 @@ class Cron_VirtualAttendantScheduledBehavior extends CerberusCronPageExtension {
 					} catch (Exception $e) {
 						$logger->error(sprintf("Failed executing behavior %d: %s", $behavior->id, $e->getMessage()));
 					}
-
-					DAO_ContextScheduledBehavior::delete($behavior->id);
 				}
 			}
 		} while(!empty($behaviors) && $stop_time > time());

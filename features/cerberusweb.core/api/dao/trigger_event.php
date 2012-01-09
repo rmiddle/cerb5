@@ -2,7 +2,7 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2011, WebGroup Media LLC
+| All source code & content (c) Copyright 2012, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
 | This source code is released under the Devblocks Public License.
@@ -62,6 +62,32 @@ class DAO_TriggerEvent extends C4_ORMHelper {
 	    }
 	    
 	    return $behaviors;
+	}
+	
+	static function getByOwners($owners, $event_point=null) {
+		$macros = array();
+		
+		foreach($owners as $owner) {
+			@$owner_context = $owner[0];
+			@$owner_context_id = $owner[1];
+			@$owner_label = $owner[2];
+			
+			if(empty($owner_context) || empty($owner_context_id))
+				continue;
+			
+			$add_macros = DAO_TriggerEvent::getByOwner($owner_context, $owner_context_id, $event_point);
+			
+			if(!empty($owner_label)) {
+				foreach($add_macros as $k => $add_macro) { /* @var $add_macro Model_TriggerEvent */
+					$add_macros[$k]->title = sprintf("[%s] %s", $owner_label, $add_macro->title);
+				}
+			}
+			
+			$macros = array_merge($macros, $add_macros);
+		}
+		
+		
+		return $macros;
 	}
 	
 	/**

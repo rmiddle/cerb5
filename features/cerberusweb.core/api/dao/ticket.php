@@ -2,7 +2,7 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2011, WebGroup Media LLC
+| All source code & content (c) Copyright 2012, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
 | This source code is released under the Cerberus Public License.
@@ -2690,6 +2690,7 @@ class Context_Ticket extends Extension_DevblocksContext {
 			$token_values['spam_training'] = $ticket[SearchFields_Ticket::TICKET_SPAM_TRAINING];
 			$token_values['subject'] = $ticket[SearchFields_Ticket::TICKET_SUBJECT];
 			$token_values['updated'] = $ticket[SearchFields_Ticket::TICKET_UPDATED_DATE];
+			$token_values['org_id'] = $ticket[SearchFields_Ticket::TICKET_ORG_ID];
 			
 			// Status
 			@$is_closed = intval($ticket[SearchFields_Ticket::TICKET_CLOSED]);
@@ -2849,6 +2850,21 @@ class Context_Ticket extends Extension_DevblocksContext {
 				$token_values
 			);
 		
+		// Org
+		$org_id = $ticket[SearchFields_Ticket::TICKET_ORG_ID];
+		$merge_token_labels = array();
+		$merge_token_values = array();
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_ORG, $org_id, $merge_token_labels, $merge_token_values, '', true);
+		
+			CerberusContexts::merge(
+				'org_',
+				'Ticket:Org:',
+				$merge_token_labels,
+				$merge_token_values,
+				$token_labels,
+				$token_values
+			);
+			
 		// Plugin-provided tokens
 		$token_extension_mfts = DevblocksPlatform::getExtensions('cerberusweb.template.token', false);
 		foreach($token_extension_mfts as $mft) { /* @var $mft DevblocksExtensionManifest */

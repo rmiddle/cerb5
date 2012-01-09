@@ -2,7 +2,7 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2011, WebGroup Media LLC
+| All source code & content (c) Copyright 2012, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
 | This source code is released under the Devblocks Public License.
@@ -58,6 +58,7 @@ class ChDisplayPage extends CerberusPageExtension {
 		
 		$properties = array(
 			'status' => null,
+			'owner' => null,
 			'mask' => null,
 			'bucket' => null,
 			'org' => null,
@@ -79,9 +80,6 @@ class ChDisplayPage extends CerberusPageExtension {
 			),
 		);
 		
-		if(!empty($ticket->owner_id))
-			$properties['owner'] = null;
-
 		@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TICKET, $ticket->id)) or array();
 
 		foreach($custom_fields as $cf_id => $cfield) {
@@ -135,8 +133,16 @@ class ChDisplayPage extends CerberusPageExtension {
 		
 		$tpl->assign('ticket', $ticket);
 
+		$groups = DAO_Group::getAll();
+
 		// Macros
-		$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.ticket');
+		$macros = DAO_TriggerEvent::getByOwners(
+			array(
+				array(CerberusContexts::CONTEXT_WORKER, $active_worker->id, null),
+				array(CerberusContexts::CONTEXT_GROUP, $ticket->group_id, $groups[$ticket->group_id]->name),
+			),
+			'event.macro.ticket'
+		);
 		$tpl->assign('macros', $macros);
 		
 		// TicketToolbarItem Extensions
@@ -156,7 +162,6 @@ class ChDisplayPage extends CerberusPageExtension {
 		$context_watchers = CerberusContexts::getWatchers(CerberusContexts::CONTEXT_TICKET, $ticket->id);
 		$tpl->assign('context_watchers', $context_watchers);
 		
-		$groups = DAO_Group::getAll();
 		$tpl->assign('groups', $groups);
 		
 		$group_buckets = DAO_Bucket::getGroups();
@@ -1087,6 +1092,50 @@ class ChDisplayPage extends CerberusPageExtension {
 		$tpl->display('devblocks:cerberusweb.core::display/modules/history/index.tpl');
 	}
 
+	// Display actions
+	
+	function doTakeAction() {
+		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer',0);
+		
+		$active_worker = CerberusApplication::getActiveWorker();
+		
+		if(empty($ticket_id))
+			return;
+
+		// Check context for worker auth
+		$ticket_context = DevblocksPlatform::getExtension(CerberusContexts::CONTEXT_TICKET, true, true); /* @var $ticket_context Extension_DevblocksContext */
+
+		if(!$ticket_context->authorize($ticket_id, $active_worker))
+			return;
+
+		if(null == ($ticket = DAO_Ticket::get($ticket_id)))
+			return;
+		
+		if(empty($ticket->owner_id)) {
+			DAO_Ticket::update($ticket_id, array(
+				DAO_Ticket::OWNER_ID => $active_worker->id,
+			));
+		}
+	}
+	
+	function doSurrenderAction() {
+		@$ticket_id = DevblocksPlatform::importGPC($_REQUEST['ticket_id'],'integer');
+		
+		$active_worker = CerberusApplication::getActiveWorker();
+		
+		if(empty($ticket_id))
+			return;
+
+		if(null == ($ticket = DAO_Ticket::get($ticket_id)))
+			return;
+		
+		if($ticket->owner_id == $active_worker->id) {
+			DAO_Ticket::update($ticket_id, array(
+				DAO_Ticket::OWNER_ID => 0,
+			));
+		}
+	}
+	
 	// Requesters
 	
 	function showRequestersPanelAction() {

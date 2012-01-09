@@ -2,7 +2,7 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2011, WebGroup Media LLC
+| All source code & content (c) Copyright 2012, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
 | This source code is released under the Devblocks Public License.
@@ -499,9 +499,16 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 					CerberusContexts::getContext($context, $context_id, $labels, $values);
 					
 					if(is_array($values)) {
+						// Try the ticket's org
+						@$org_id = $values['org_id'];
+						
+						// Fallback to the initial sender's org
+						if(empty($org_id))
+							@$org_id = $values['initial_message_sender_org_id'];
+						
 						// Is there an org associated with this context?
-						if(isset($values['initial_message_sender_org_id']) && !empty($values['initial_message_sender_org_id'])) {
-							DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, CerberusContexts::CONTEXT_ORG, $values['initial_message_sender_org_id']);
+						if(!empty($org_id)) {
+							DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, CerberusContexts::CONTEXT_ORG, $org_id);
 						}
 					}
 					break;

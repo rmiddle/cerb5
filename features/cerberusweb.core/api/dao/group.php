@@ -2,7 +2,7 @@
 /***********************************************************************
 | Cerberus Helpdesk(tm) developed by WebGroup Media, LLC.
 |-----------------------------------------------------------------------
-| All source code & content (c) Copyright 2011, WebGroup Media LLC
+| All source code & content (c) Copyright 2012, WebGroup Media LLC
 |   unless specifically noted otherwise.
 |
 | This source code is released under the Devblocks Public License.
@@ -982,6 +982,22 @@ class View_Group extends C4_AbstractView implements IAbstractView_Subtotals {
 
 class Context_Group extends Extension_DevblocksContext {
 	const ID = 'cerberusweb.contexts.group';
+	
+	function authorize($context_id, Model_Worker $worker) {
+		// Security
+		try {
+			if(empty($worker))
+				throw new Exception();
+			
+			if($worker->isGroupMember($context_id))
+				return TRUE;
+				
+		} catch (Exception $e) {
+			// Fail
+		}
+		
+		return FALSE;
+	}
 	
 	function getRandom() {
 		return DAO_Group::random();
