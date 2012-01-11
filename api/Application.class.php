@@ -694,28 +694,30 @@ class CerberusContexts {
 					$values
 				);
 			}
+		}
+		// Plugin-provided tokens
+		$token_extension_mfts = DevblocksPlatform::getExtensions('cerberusweb.snippet.token', false);
+		foreach($token_extension_mfts as $mft) { /* @var $mft DevblocksExtensionManifest */
+			@$token = $mft->params['token'];
+			@$label = $mft->params['label'];
+			@$contexts = $mft->params['contexts'][0];
 			
-			// Plugin-provided tokens
-			$token_extension_mfts = DevblocksPlatform::getExtensions('cerberusweb.snippet.token', false);
-			foreach($token_extension_mfts as $mft) { /* @var $mft DevblocksExtensionManifest */
-				@$token = $mft->params['token'];
-				@$label = $mft->params['label'];
-				@$contexts = $mft->params['contexts'][0];
-				
-				if(empty($token) || empty($label) || !is_array($contexts))
-					continue;
+			if(empty($token) || empty($label) || !is_array($contexts))
+				continue;
 	
-				if(!isset($contexts[$context]))
-					continue;
-					
-				if(null != ($ext = $mft->createInstance()) && $ext instanceof IContextToken) {
-					/* @var $ext IContextToken */
-					$value = $ext->getValue($context, $values);
-					
-					if(!empty($value)) {
-						$labels['plugin_'.$token] = '(Plugin) '.$label;
-						$values['plugin_'.$token] = $value;
-					}
+			if(!isset($contexts[$context]))
+				continue;
+				
+			if(isset($labels['plugin_'.$token]))
+				continue;
+
+            if(null != ($ext = $mft->createInstance()) && $ext instanceof IContextToken) {
+				/* @var $ext IContextToken */
+				$value = $ext->getValue($context, $values);
+				
+				if(!empty($value)) {
+					$labels['plugin_'.$token] = '(Plugin) '.$label;
+					$values['plugin_'.$token] = $value;
 				}
 			}
 		}
