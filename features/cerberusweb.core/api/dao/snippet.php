@@ -219,6 +219,40 @@ class DAO_Snippet extends C4_ORMHelper {
 			
 		$sort_sql = (!empty($sortBy)) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ";
 		
+		// Virtuals
+		foreach($params as $param) {
+			if(!is_a($param,'DevblocksSearchCriteria'))
+				continue;
+			
+			$param_key = $param->field;
+			settype($param_key, 'string');
+
+			switch($param_key) {
+				case SearchFields_Snippet::VIRTUAL_OWNER:
+					if(!is_array($param->value))
+						break;
+					
+					$wheres = array();
+						
+					foreach($param->value as $owner_context) {
+						@list($context, $context_id) = explode(':', $owner_context);
+						
+						if(empty($context))
+							continue;
+						
+						$wheres[] = sprintf("(snippet.owner_context = %s AND snippet.owner_context_id = %d)",
+							C4_ORMHelper::qstr($context),
+							$context_id
+						);
+					}
+					
+					if(!empty($wheres))
+						$where_sql .= 'AND ' . implode(' OR ', $wheres);
+					
+					break;
+			}
+		}
+		
 		$result = array(
 			'primary_table' => 'snippet',
 			'select' => $select_sql,
@@ -308,6 +342,8 @@ class SearchFields_Snippet implements IDevblocksSearchFields {
 	
 	const USAGE_HITS = 'su_hits';
 	
+	const VIRTUAL_OWNER = '*_owner';
+	
 	/**
 	 * @return DevblocksSearchField[]
 	 */
@@ -323,6 +359,8 @@ class SearchFields_Snippet implements IDevblocksSearchFields {
 			self::CONTENT => new DevblocksSearchField(self::CONTENT, 'snippet', 'content', $translate->_('common.content')),
 			
 			self::USAGE_HITS => new DevblocksSearchField(self::USAGE_HITS, 'snippet_usage', 'hits', $translate->_('dao.snippet_usage.hits')),
+			
+			self::VIRTUAL_OWNER => new DevblocksSearchField(self::VIRTUAL_OWNER, '*', 'owner', $translate->_('common.owner')),
 		);
 		
 		// Custom Fields
@@ -438,6 +476,7 @@ class View_Snippet extends C4_AbstractView implements IAbstractView_Subtotals {
 		$this->view_columns = array(
 			SearchFields_Snippet::TITLE,
 			SearchFields_Snippet::CONTEXT,
+			SearchFields_Snippet::VIRTUAL_OWNER,
 		);
 		$this->addColumnsHidden(array(
 			SearchFields_Snippet::ID,
@@ -576,6 +615,18 @@ class View_Snippet extends C4_AbstractView implements IAbstractView_Subtotals {
 				
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context.tpl');
 				break;
+			case SearchFields_Snippet::VIRTUAL_OWNER:
+				$groups = DAO_Group::getAll();
+				$tpl->assign('groups', $groups);
+				
+				$roles = DAO_WorkerRole::getAll();
+				$tpl->assign('roles', $roles);
+				
+				$workers = DAO_Worker::getAll();
+				$tpl->assign('workers', $workers);
+				
+				$tpl->display('devblocks:cerberusweb.core::internal/snippets/views/criteria/virtual_owner.tpl');
+				break;
 			default:
 				// Custom Fields
 				if('cf_' == substr($field,0,3)) {
@@ -586,6 +637,47 @@ class View_Snippet extends C4_AbstractView implements IAbstractView_Subtotals {
 				break;
 		}
 	}
+	
+	function renderVirtualCriteria($param) {
+		$key = $param->field;
+		
+		$translate = DevblocksPlatform::getTranslationService();
+		
+		switch($key) {
+			case SearchFields_Snippet::VIRTUAL_OWNER:
+				echo sprintf("%s %s ", 
+					mb_convert_case($translate->_('common.owner'), MB_CASE_TITLE),
+					$param->operator
+				);
+				
+				$objects = array();
+				
+				if(is_array($param->value))
+				foreach($param->value as $v) {
+					@list($context, $context_id) = explode(':', $v);
+					
+					if(empty($context) || empty($context_id))
+						continue;
+					
+					if(null == ($ext = Extension_DevblocksContext::get($context)))
+						return;
+					
+					$meta = $ext->getMeta($context_id);
+					
+					if(empty($meta))
+						return;
+					
+					$objects[] = sprintf("<b>%s (%s)</b>",
+						$meta['name'],
+						$ext->manifest->name
+					);
+				}
+				
+				echo implode('; ', $objects);
+				
+				break;
+		}
+	}	
 
 	function renderCriteriaParam($param) {
 		$field = $param->field;
@@ -638,6 +730,11 @@ class View_Snippet extends C4_AbstractView implements IAbstractView_Subtotals {
 			case SearchFields_Snippet::CONTEXT:
 				@$in_contexts = DevblocksPlatform::importGPC($_REQUEST['contexts'],'array',array());
 				$criteria = new DevblocksSearchCriteria($field,DevblocksSearchCriteria::OPER_IN,$in_contexts);
+				break;
+				
+			case SearchFields_Snippet::VIRTUAL_OWNER:
+				@$owner_contexts = DevblocksPlatform::importGPC($_REQUEST['owner_context'],'array',array());
+				$criteria = new DevblocksSearchCriteria($field,$oper,$owner_contexts);
 				break;
 				
 			default:
@@ -738,7 +835,7 @@ class Context_Snippet extends Extension_DevblocksContext {
 
 		// Polymorph
 		if(is_numeric($snippet)) {
-			$snippet = DAO_Task::get($snippet);
+			$snippet = DAO_Snippet::get($snippet);
 		} elseif($snippet instanceof Model_Snippet) {
 			// It's what we want already.
 		} else {
@@ -802,10 +899,14 @@ class Context_Snippet extends Extension_DevblocksContext {
 		$view->view_columns = array(
 			SearchFields_Snippet::TITLE,
 			SearchFields_Snippet::CONTEXT,
+			SearchFields_Snippet::VIRTUAL_OWNER,
 			SearchFields_Snippet::USAGE_HITS,
 		);
 		
 		$params_required = array();
+		
+		$worker_group_ids = array_keys($active_worker->getMemberships());
+		$worker_role_ids = array_keys(DAO_WorkerRole::getRolesByWorker($active_worker->id));
 		
 		// Restrict owners
 		$param_ownership = array(
@@ -818,7 +919,12 @@ class Context_Snippet extends Extension_DevblocksContext {
 			array(
 				DevblocksSearchCriteria::GROUP_AND,
 				SearchFields_Snippet::OWNER_CONTEXT => new DevblocksSearchCriteria(SearchFields_Snippet::OWNER_CONTEXT,DevblocksSearchCriteria::OPER_EQ,CerberusContexts::CONTEXT_GROUP),
-				SearchFields_Snippet::OWNER_CONTEXT_ID => new DevblocksSearchCriteria(SearchFields_Snippet::OWNER_CONTEXT_ID,DevblocksSearchCriteria::OPER_IN,array_keys($active_worker->getMemberships())),
+				SearchFields_Snippet::OWNER_CONTEXT_ID => new DevblocksSearchCriteria(SearchFields_Snippet::OWNER_CONTEXT_ID,DevblocksSearchCriteria::OPER_IN,$worker_group_ids),
+			),
+			array(
+				DevblocksSearchCriteria::GROUP_AND,
+				SearchFields_Snippet::OWNER_CONTEXT => new DevblocksSearchCriteria(SearchFields_Snippet::OWNER_CONTEXT,DevblocksSearchCriteria::OPER_EQ,CerberusContexts::CONTEXT_ROLE),
+				SearchFields_Snippet::OWNER_CONTEXT_ID => new DevblocksSearchCriteria(SearchFields_Snippet::OWNER_CONTEXT_ID,DevblocksSearchCriteria::OPER_IN,$worker_role_ids),
 			),
 		);
 		$params_required['_ownership'] = $param_ownership;
