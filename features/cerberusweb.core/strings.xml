@@ -444,6 +444,9 @@
 		<tu tuid='common.settings'>
 			<tuv xml:lang="en_US"><seg>settings</seg></tuv>
 		</tu>
+		<tu tuid='common.signature'>
+			<tuv xml:lang="en_US"><seg>signature</seg></tuv>
+		</tu>
 		<tu tuid='common.snippets'>
 			<tuv xml:lang="en_US"><seg>snippets</seg></tuv>
 		</tu>
@@ -551,6 +554,18 @@
 		</tu>
 
 		<!-- DAO -->
+
+		<!-- CalendarEvent -->
+		
+		<tu tuid='dao.calendar_event.is_available'>
+			<tuv xml:lang="en_US"><seg>Is Available</seg></tuv>
+		</tu>
+		<tu tuid='dao.calendar_event.date_start'>
+			<tuv xml:lang="en_US"><seg>Start Date</seg></tuv>
+		</tu>
+		<tu tuid='dao.calendar_event.date_end'>
+			<tuv xml:lang="en_US"><seg>End Date</seg></tuv>
+		</tu>
 		
 		<!-- CerbPlugin -->
 		
@@ -1737,6 +1752,9 @@ For example: *receipt*</seg></tuv>
 		</tu>
 		<tu tuid='ticket.recipients.empty'>
 			<tuv xml:lang="en_US"><seg>This ticket has no recipients.</seg></tuv>
+		</tu>
+		<tu tuid='ticket.reopen_date'>
+			<tuv xml:lang="en_US"><seg>Reopen Date</seg></tuv>
 		</tu>
 		<tu tuid='ticket.requester'>
 			<tuv xml:lang="en_US"><seg>Recipient</seg></tuv>
