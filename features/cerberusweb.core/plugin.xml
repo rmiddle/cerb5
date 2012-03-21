@@ -44,7 +44,7 @@
 		<patch version="5.6.1" revision="961" file="patches/5.x/5.6.1.php" />
 		<patch version="5.6.2" revision="965" file="patches/5.x/5.6.2.php" />
 		<patch version="5.7.0" revision="973" file="patches/5.x/5.7.0.php" />
-		<patch version="5.8.0" revision="974" file="patches/5.x/5.8.0.php" />
+		<patch version="5.8.0" revision="980" file="patches/5.x/5.8.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -1416,6 +1416,19 @@
 				<params>
 					<param key="page_id" value="core.page.configuration" />
 					<param key="uri" value="acl" />
+				</params>
+			</extension>
+			
+			<extension point="cerberusweb.ui.page.section">
+				<id>core.page.setup.virtual_attendants</id>
+				<name>Virtual Attendants Section</name>
+				<class>
+					<file>api/uri/config/attendants.php</file>
+					<name>PageSection_SetupAttendants</name>
+				</class>
+				<params>
+					<param key="page_id" value="core.page.configuration" />
+					<param key="uri" value="attendants" />
 				</params>
 			</extension>
 		
