@@ -166,7 +166,7 @@ class DAO_ContextScheduledBehavior extends C4_ORMHelper {
 			
 			if(!empty($only_context_id)) {
 				$wheres[] = sprintf("context_id = %d",
-					$db->qstr($only_context_id)
+					$only_context_id
 				);
 			}
 		}

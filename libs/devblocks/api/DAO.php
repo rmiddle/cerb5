@@ -125,7 +125,9 @@ abstract class DevblocksORMHelper {
 		if(is_array($params))
 		foreach($params as $param) {
 			// Skip virtuals
-			// [TODO] Handle this better (GROUP_OR/AND)
+			if(!is_array($param) && !is_object($param))
+				continue;
+			
 			if(!is_array($param) && '*_' == substr($param->field,0,2))
 				continue;
 			
@@ -164,6 +166,10 @@ abstract class DevblocksORMHelper {
 						$outer_wheres[] = self::_parseNestedSearchParams($p, $tables, $fields);
 						
 					} else {
+						// Skip virtuals
+						if('*_' == substr($p->field,0,2))
+							continue;
+						
 						// [JAS]: Filter allowed columns (ignore invalid/deprecated)
 						if(!isset($fields[$p->field]))
 							continue;

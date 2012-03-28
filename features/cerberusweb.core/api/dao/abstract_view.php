@@ -148,10 +148,10 @@ abstract class C4_AbstractView {
 	function addParams($params, $replace=false) {
 		if($replace)
 			$this->removeAllParams();
-			
+		
 		if(is_array($params))
 		foreach($params as $key => $param) {
-			$key = !is_string($key) ? $param->field : $key;
+			$key = (!is_string($key) && is_object($param)) ? $param->field : $key;
 			$this->addParam($param, $key);	
 		}	
 	}
@@ -511,6 +511,7 @@ abstract class C4_AbstractView {
 		$active_worker = CerberusApplication::getActiveWorker();
 		
 		// Presets
+		// [TODO] Cache?
 		return DAO_ViewFiltersPreset::getWhere(
 			sprintf("%s = %s AND %s = %d",
 				DAO_ViewFiltersPreset::VIEW_CLASS,

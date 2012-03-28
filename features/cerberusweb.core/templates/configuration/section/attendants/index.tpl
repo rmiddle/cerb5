@@ -1,20 +1,14 @@
-{$menu_divid = "{uniqid()}"}
+<h2>Virtual Attendants</h2>
 
-<b>{$translate->_('search.operator')|capitalize}:</b><br>
-<blockquote style="margin:5px;">
-	<select name="oper">
-		<option value="in">{$translate->_('search.oper.in_list')}</option>
-		<option value="{DevblocksSearchCriteria::OPER_IN_OR_NULL}">blank or in list</option>
-		<option value="not in">{$translate->_('search.oper.in_list.not')}</option>
-		<option value="{DevblocksSearchCriteria::OPER_NIN_OR_NULL}">blank or not in list</option>
-	</select>
-</blockquote>
+<form action="javascript:;" onsubmit="return false;">
 
-<b>{'common.owner'|devblocks_translate|capitalize}:</b><br>
+<div>
+	<b>{'common.owner'|devblocks_translate|capitalize}:</b> 
+	<input id="inputSetupVaOwner" type="text" size="32" class="input_search filter">
+	<ul id="divSetupVaOwnerBubbles" class="bubbles"></ul>
+</div>
 
-<input type="text" size="32" class="input_search filter">
-
-<ul class="cerb-popupmenu" id="{$menu_divid}" style="display:block;margin-bottom:5px;max-height:200px;overflow-x:hidden;overflow-y:auto;">
+<ul class="cerb-popupmenu" id="menuSetupVaOwnerPicker" style="display:block;margin-bottom:5px;max-height:200px;overflow-x:hidden;overflow-y:auto;">
 	{foreach from=$roles item=role name=roles}
 	<li context="{CerberusContexts::CONTEXT_ROLE}" context_id="{$role->id}" label="{$role->name} (Role)">
 		<div class="item">
@@ -42,15 +36,38 @@
 	</li>
 	{/foreach}
 </ul>
+</form>
 
-<ul class="bubbles" style="display:block;"></ul>
-
+<div id="setupAttendantTabs">
+	<ul>
+		{$tabs = []}
+		{$point = 'setup.attendants.tab'}
+	</ul>
+</div> 
 <br>
 
+{$selected_tab_idx=0}
+{foreach from=$tabs item=tab_label name=tabs}
+	{if $tab_label==$selected_tab}{$selected_tab_idx = $smarty.foreach.tabs.index}{/if}
+{/foreach}
+
 <script type="text/javascript">
-$menu = $('#{$menu_divid}');
-$input = $menu.prevAll('input.filter');
-$input.focus();
+$(function() {
+	$tabs = $("#setupAttendantTabs");
+	var tabs = $tabs.tabs({ 
+		selected:{$selected_tab_idx},
+		select:function(e) {
+			$menu = $('#menuSetupVaOwnerPicker');
+			$menu.hide();
+		},
+		{literal}tabTemplate: "<li><a href='#{href}'>#{label}</a></li>"{/literal}
+	});
+});
+	
+// Owner selector
+$menu = $('#menuSetupVaOwnerPicker');
+$input = $('#inputSetupVaOwner');
+{if empty($context)}$input.focus();{/if}
 
 $input.keypress(
 	function(e) {
@@ -63,11 +80,16 @@ $input.keypress(
 		}
 	}
 );
-	
+
+$input.focus(function(e) {
+	$menu = $('#menuSetupVaOwnerPicker');
+	$menu.show();
+});
+
 $input.keyup(
 	function(e) {
 		term = $(this).val().toLowerCase();
-		$menu = $(this).nextAll('ul.cerb-popupmenu');
+		$menu = $('#menuSetupVaOwnerPicker');
 		$menu.find('> li > div.item').each(function(e) {
 			if(-1 != $(this).html().toLowerCase().indexOf(term)) {
 				$(this).parent().show();
@@ -75,6 +97,7 @@ $input.keyup(
 				$(this).parent().hide();
 			}
 		});
+		$menu.show();
 	}
 );
 
@@ -91,23 +114,22 @@ $menu.find('> li > div.item a').click(function() {
 	$frm = $(this).closest('form');
 	
 	$ul = $li.closest('ul');
-	$bubbles = $ul.nextAll('ul.bubbles');
+	$menu = $('#menuSetupVaOwnerPicker');
+	$bubbles = $('#divSetupVaOwnerBubbles');
+	$tabs = $("#setupAttendantTabs");
 	
 	context = $li.attr('context');
 	context_id = $li.attr('context_id');
 	label = $li.attr('label');
-
+	
 	context_pair = context+':'+context_id;
 
-	// Check for dupe context pair
-	if($bubbles.find('li input:hidden[value="'+context_pair+'"]').length > 0)
-		return;
+	// [TODO] Check for dupe context pair
+	//if($bubbles.find('li input:hidden[value="'+context_pair+'"]').length > 0)
+	//	return;
 	
-	$bubble = $('<li></li>');
-	$bubble.append($('<input type="hidden" name="owner_context[]" value="'+context_pair+'">'));
-	$bubble.append(label);
-	$bubble.append('<a href="javascript:;" onclick="$li=$(this).closest(\'li\');$li.remove();"><span class="ui-icon ui-icon-trash" style="display:inline-block;width:14px;height:14px;"></span></a>');
+	url = "{devblocks_url}ajax.php?c=internal&a=showAttendantTab&point={$point}{/devblocks_url}";
 	
-	$bubbles.append($bubble);
-});	
+	$tabs.tabs( "add", url + "&context=" + context + "&context_id=" + context_id, label );
+});		
 </script>

@@ -458,6 +458,10 @@ class Model_TriggerEvent {
 		return $this->_nodes;
 	}
 	
+	public function getNodes() {
+		return $this->_getNodes();
+	}
+	
 	public function getDecisionTreeData() {
 		$nodes = $this->_getNodes();
 		$tree = $this->_getTree();
@@ -492,23 +496,25 @@ class Model_TriggerEvent {
 		}
 	}
 	
-	public function runDecisionTree(&$dictionary) {
+	public function runDecisionTree(&$dictionary, $dry_run=false) {
 		$nodes = $this->_getNodes();
 		$tree = $this->_getTree();
 		$path = array();
 		
 		// [TODO] This could be more efficient
 		$event = DevblocksPlatform::getExtension($this->event_point, true); /* @var $event Extension_DevblocksEvent */
-		//var_dump($event);
 		
-		$this->_recurseRunTree($event, $nodes, $tree, 0, $dictionary, $path);
+		// Add a convenience pointer
+		$dictionary['_trigger'] = $this;
+		
+		$this->_recurseRunTree($event, $nodes, $tree, 0, $dictionary, $path, $dry_run);
 		
 		// [TODO] Run actions in bulk, or run inline?
 		
 		return $path;
 	}
 	
-	private function _recurseRunTree($event, $nodes, $tree, $node_id, &$dictionary, &$path) {
+	private function _recurseRunTree($event, $nodes, $tree, $node_id, &$dictionary, &$path, $dry_run=false) {
 		$logger = DevblocksPlatform::getConsoleLog("Assistant");
 		// Does our current node pass?
 		$pass = true;
@@ -516,8 +522,6 @@ class Model_TriggerEvent {
 		// If these conditions match...
 		if(!empty($node_id)) {
 			$logger->info($nodes[$node_id]->node_type . ' :: ' . $nodes[$node_id]->title . ' (' . $node_id . ')');
-//			var_dump($nodes[$node_id]->node_type);
-//			var_dump($nodes[$node_id]->params);
 			
 			// Handle the node type
 			switch($nodes[$node_id]->node_type) {
@@ -539,7 +543,7 @@ class Model_TriggerEvent {
 								
 							if(!isset($condition_data['condition']))
 								continue;
-								
+							
 							$condition = $condition_data['condition'];
 							
 							$group_pass = $event->runCondition($condition, $this, $condition_data, $dictionary);
@@ -574,9 +578,10 @@ class Model_TriggerEvent {
 					foreach($nodes[$node_id]->params['actions'] as $params) {
 						if(!isset($params['action']))
 							continue;
-
+						
 						$action = $params['action'];
-						$event->runAction($action, $this, $params, $dictionary);
+						
+						$event->runAction($action, $this, $params, $dictionary, $dry_run);
 					}
 					break;
 			}
@@ -600,20 +605,20 @@ class Model_TriggerEvent {
 				// Always run all actions
 				case 'action':
 					if($pass)
-						$this->_recurseRunTree($event, $nodes, $tree, $child_id, $dictionary, $path);
+						$this->_recurseRunTree($event, $nodes, $tree, $child_id, $dictionary, $path, $dry_run);
 					break;
 					
 				default:
 					switch($parent_type) {
 						case 'outcome':
 							if($pass)
-								$this->_recurseRunTree($event, $nodes, $tree, $child_id, $dictionary, $path);
+								$this->_recurseRunTree($event, $nodes, $tree, $child_id, $dictionary, $path, $dry_run);
 							break;
 							
 						case 'switch':
 							// Only run the first successful child outcome
 							if($pass && !$switch)
-								if($this->_recurseRunTree($event, $nodes, $tree, $child_id, $dictionary, $path))
+								if($this->_recurseRunTree($event, $nodes, $tree, $child_id, $dictionary, $path, $dry_run))
 									$switch = true;
 							break;
 							

@@ -92,12 +92,14 @@
 				<name>Context_Opportunity</name>
 			</class>
 			<params>
+				<param key="alias" value="opportunity" />
 				<param key="view_class" value="View_CrmOpportunity" />
 				<param key="options">
 					<value>
 						<data key="create" />
 						<data key="find" />
 						<data key="snippets" />
+						<data key="va_variable" />
 						<data key="workspace" />
 					</value>
 				</param>
@@ -147,6 +149,7 @@
 				<name>Event_CrmOpportunityMacro</name>
 			</class>
 			<params>
+				<param key="macro_context" value="cerberusweb.contexts.opportunity" />
 				<param key="contexts">
 					<value>
 						<data key="cerberusweb.contexts.worker" />

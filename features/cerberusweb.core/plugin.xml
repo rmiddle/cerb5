@@ -44,6 +44,7 @@
 		<patch version="5.6.1" revision="961" file="patches/5.x/5.6.1.php" />
 		<patch version="5.6.2" revision="965" file="patches/5.x/5.6.2.php" />
 		<patch version="5.7.0" revision="973" file="patches/5.x/5.7.0.php" />
+		<patch version="5.8.0" revision="980" file="patches/5.x/5.8.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -627,6 +628,7 @@
 				<name>Context_ContactPerson</name>
 			</class>
 			<params>
+				<param key="alias" value="person" />
 				<param key="view_class" value="View_ContactPerson" />
 				<param key="options">
 					<value>
@@ -647,12 +649,14 @@
 				<name>Context_Address</name>
 			</class>
 			<params>
+				<param key="alias" value="address" />
 				<param key="view_class" value="View_Address" />
 				<param key="options">
 					<value>
 						<data key="create" />
 						<data key="find" />
 						<data key="snippets" />
+						<data key="va_variable" />
 						<data key="workspace" />
 					</value>
 				</param>
@@ -667,6 +671,7 @@
 				<name>Context_Comment</name>
 			</class>
 			<params>
+				<param key="alias" value="comment" />
 				<param key="view_class" value="View_Comment" />
 				<!--
 				<param key="options">
@@ -685,6 +690,7 @@
 				<name>Context_Group</name>
 			</class>
 			<params>
+				<param key="alias" value="group" />
 				<param key="view_class" value="View_Group" />
 				<param key="options">
 					<value>
@@ -704,6 +710,7 @@
 				<name>Context_Message</name>
 			</class>
 			<params>
+				<param key="alias" value="message" />
 				<param key="view_class" value="View_Message" />
 				<param key="options">
 					<value>
@@ -722,6 +729,7 @@
 				<name>Context_Notification</name>
 			</class>
 			<params>
+				<param key="alias" value="notification" />
 				<param key="view_class" value="View_Notification" />
 				<param key="options">
 					<value>
@@ -740,12 +748,14 @@
 				<name>Context_Org</name>
 			</class>
 			<params>
+				<param key="alias" value="org" />
 				<param key="view_class" value="View_ContactOrg" />
 				<param key="options">
 					<value>
 						<data key="create" />
 						<data key="find" />
 						<data key="snippets" />
+						<data key="va_variable" />
 						<data key="workspace" />
 					</value>
 				</param>
@@ -760,6 +770,7 @@
 				<name>Context_Snippet</name>
 			</class>
 			<params>
+				<param key="alias" value="snippet" />
 				<param key="view_class" value="View_Snippet" />
 				<param key="options">
 					<value>
@@ -780,12 +791,14 @@
 				<name>Context_Task</name>
 			</class>
 			<params>
+				<param key="alias" value="task" />
 				<param key="view_class" value="View_Task" />
 				<param key="options">
 					<value>
 						<data key="create" />
 						<data key="find" />
 						<data key="snippets" />
+						<data key="va_variable" />
 						<data key="workspace" />
 					</value>
 				</param>
@@ -800,12 +813,14 @@
 				<name>Context_Ticket</name>
 			</class>
 			<params>
+				<param key="alias" value="ticket" />
 				<param key="view_class" value="View_Ticket" />
 				<param key="options">
 					<value>
 					<!--<data key="create" />-->
 						<data key="find" />
 						<data key="snippets" />
+						<data key="va_variable" />
 						<data key="workspace" />
 					</value>
 				</param>
@@ -820,12 +835,14 @@
 				<name>Context_Worker</name>
 			</class>
 			<params>
+				<param key="alias" value="worker" />
 				<param key="view_class" value="View_Worker" />
 				<param key="options">
 					<value>
 						<!--<data key="create" />-->
 						<!--<data key="find" />-->
 						<data key="snippets" />
+						<data key="va_variable" />
 						<data key="workspace" />
 					</value>
 				</param>
@@ -976,6 +993,7 @@
 				<name>Event_AddressMacro</name>
 			</class>
 			<params>
+				<param key="macro_context" value="cerberusweb.contexts.address" />
 				<param key="contexts">
 					<value>
 						<data key="cerberusweb.contexts.worker" />
@@ -992,6 +1010,7 @@
 				<name>Event_OrgMacro</name>
 			</class>
 			<params>
+				<param key="macro_context" value="cerberusweb.contexts.org" />
 				<param key="contexts">
 					<value>
 						<data key="cerberusweb.contexts.worker" />
@@ -1008,6 +1027,7 @@
 				<name>Event_TaskMacro</name>
 			</class>
 			<params>
+				<param key="macro_context" value="cerberusweb.contexts.task" />
 				<param key="contexts">
 					<value>
 						<data key="cerberusweb.contexts.worker" />
@@ -1024,6 +1044,7 @@
 				<name>Event_TicketMacro</name>
 			</class>
 			<params>
+				<param key="macro_context" value="cerberusweb.contexts.ticket" />
 				<param key="contexts">
 					<value>
 						<data key="cerberusweb.contexts.group" />
@@ -1416,6 +1437,19 @@
 				<params>
 					<param key="page_id" value="core.page.configuration" />
 					<param key="uri" value="acl" />
+				</params>
+			</extension>
+			
+			<extension point="cerberusweb.ui.page.section">
+				<id>core.page.setup.virtual_attendants</id>
+				<name>Virtual Attendants Section</name>
+				<class>
+					<file>api/uri/config/attendants.php</file>
+					<name>PageSection_SetupAttendants</name>
+				</class>
+				<params>
+					<param key="page_id" value="core.page.configuration" />
+					<param key="uri" value="attendants" />
 				</params>
 			</extension>
 		

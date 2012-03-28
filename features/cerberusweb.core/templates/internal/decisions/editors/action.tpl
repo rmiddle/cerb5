@@ -72,10 +72,19 @@
 </fieldset>
 {/if}
 
+{$status_div = "status_{uniqid()}"}
+
 <form class="toolbar">
-	<button type="button" onclick="genericAjaxPost('frmDecisionAction{$id}Action','','c=internal&a=saveDecisionPopup',function() { genericAjaxPopupDestroy('node_action{$id}'); genericAjaxGet('decisionTree{$trigger_id}','c=internal&a=showDecisionTree&id={$trigger_id}'); });"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {'common.save_changes'|devblocks_translate|capitalize}</button>
+	{if isset($id)}
+		<button type="button" onclick="genericAjaxPost('frmDecisionAction{$id}Action','','c=internal&a=saveDecisionPopup',function() { genericAjaxPopupDestroy('node_action{$id}'); genericAjaxGet('decisionTree{$trigger_id}','c=internal&a=showDecisionTree&id={$trigger_id}'); });"><span class="cerb-sprite2 sprite-folder-tick-circle"></span> {'common.save_and_close'|devblocks_translate|capitalize}</button>
+	{else}
+		<button type="button" onclick="genericAjaxPost('frmDecisionAction{$id}Action','','c=internal&a=saveDecisionPopup',function() { genericAjaxPopupDestroy('node_action{$id}'); genericAjaxGet('decisionTree{$trigger_id}','c=internal&a=showDecisionTree&id={$trigger_id}'); });"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {'common.save_changes'|devblocks_translate|capitalize}</button>
+	{/if}
+	{if isset($id)}<button type="button" onclick="genericAjaxPost('frmDecisionAction{$id}Action','','c=internal&a=saveDecisionPopup',function() { Devblocks.showSuccess('#{$status_div}', 'Saved!'); genericAjaxGet('decisionTree{$trigger_id}','c=internal&a=showDecisionTree&id={$trigger_id}'); });"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {'common.save_and_continue'|devblocks_translate|capitalize}</button>{/if}
 	{if isset($id)}<button type="button" onclick="$(this).closest('form').hide().prev('fieldset.delete').show();"><span class="cerb-sprite2 sprite-cross-circle-frame"></span> {'common.delete'|devblocks_translate|capitalize}</button>{/if}
 </form>
+
+<div id="{$status_div}" style="display:none;"></div>	
 
 <script type="text/javascript">
 	$popup = genericAjaxPopupFetch('node_action{$id}');
@@ -107,8 +116,10 @@
 		$popup.delegate(':text.placeholders, textarea.placeholders', 'focus', function(e) {
 			toolbar = $('#divDecisionActionToolbar{$id}');
 			src = (null==e.srcElement) ? e.target : e.srcElement;
-			toolbar.find('div.tester').html('');
-			toolbar.show().insertAfter(src);
+			if(0 == $(src).nextAll('#divDecisionActionToolbar{$id}').length) {
+				toolbar.find('div.tester').html('');
+				toolbar.show().insertAfter(src);
+			}
 		});
 		
 		$popup.find('#frmDecisionActionAdd{$id} SELECT').first().change(function() {
