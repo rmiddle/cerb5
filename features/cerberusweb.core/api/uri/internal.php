@@ -2337,6 +2337,11 @@ class ChInternalController extends DevblocksControllerExtension {
 					$ext = DevblocksPlatform::getExtension($trigger->event_point, false);
 					$tpl->assign('ext', $ext);
 				}
+				
+				// Contexts that can show up in VA vars
+				$list_contexts = Extension_DevblocksContext::getAll(false, 'va_variable');
+				$tpl->assign('list_contexts', $list_contexts);
+				
 				$tpl->display('devblocks:cerberusweb.core::internal/decisions/editors/trigger.tpl');
 				break;
 		}
@@ -2371,6 +2376,9 @@ class ChInternalController extends DevblocksControllerExtension {
 		
 		$ext_event->setEvent($event_model);
 		
+		$event_params_json = json_encode($event_model->params);
+		$tpl->assign('event_params_json', $event_params_json);
+
 		$labels = $ext_event->getLabels($trigger);
 		$values = $ext_event->getValues();
 
@@ -2395,7 +2403,8 @@ class ChInternalController extends DevblocksControllerExtension {
 	
 	function runBehaviorSimulatorAction() {
 		@$trigger_id = DevblocksPlatform::importGPC($_POST['trigger_id'],'integer', 0);
-		@$values = DevblocksPlatform::importGPC($_POST['values'],'array', array());
+		@$event_params_json = DevblocksPlatform::importGPC($_POST['event_params_json'],'string', '');
+		@$custom_values = DevblocksPlatform::importGPC($_POST['values'],'array', array());
 		
 		$tpl = DevblocksPlatform::getTemplateService();
 		
@@ -2409,6 +2418,23 @@ class ChInternalController extends DevblocksControllerExtension {
  		if(null == ($ext_event = DevblocksPlatform::getExtension($trigger->event_point, true))) /* @var $ext_event Extension_DevblocksEvent */
  			return;
 
+ 		// Reconstruct the event scope
+ 		
+ 		$event_model = new Model_DevblocksEvent();
+ 		$event_model->id = $trigger->event_point;
+ 		$event_model_params = json_decode($event_params_json, true);
+ 		$event_model->params = is_array($event_model_params) ? $event_model_params : array();
+ 		$ext_event->setEvent($event_model);
+
+ 		$tpl->assign('event', $ext_event);
+ 		
+ 		// Merge baseline values with user overrides
+ 		
+ 		$values = $ext_event->getValues();
+ 		$values = array_merge($values, $custom_values);
+ 		
+ 		// Get conditions
+ 		
  		$conditions = $ext_event->getConditions($trigger);
  		
  		// Sanitize values
@@ -2422,12 +2448,15 @@ class ChInternalController extends DevblocksControllerExtension {
  		} 		
  		
  		// Behavior data
- 		
+
 		$behavior_data = $trigger->getDecisionTreeData();
 		$tpl->assign('behavior_data', $behavior_data);
 		
 		$behavior_path = $trigger->runDecisionTree($values, true);
 		$tpl->assign('behavior_path', $behavior_path);
+		
+		if(isset($values['_simulator_output']))
+			$tpl->assign('simulator_output', $values['_simulator_output']);
 		
 		$tpl->display('devblocks:cerberusweb.core::internal/decisions/simulator/results.tpl');
 	}
@@ -2895,7 +2924,6 @@ class ChInternalController extends DevblocksControllerExtension {
 		
 		foreach($results as $row) {
 			$day_range = range(strtotime('midnight', $row['date_start']), strtotime('midnight', $row['date_end']), 86400);
-			//var_dump($day_range);
 			
 			foreach($day_range as $epoch) {
 				if(!isset($calendar_events[$epoch]))

@@ -458,6 +458,10 @@ class Model_TriggerEvent {
 		return $this->_nodes;
 	}
 	
+	public function getNodes() {
+		return $this->_getNodes();
+	}
+	
 	public function getDecisionTreeData() {
 		$nodes = $this->_getNodes();
 		$tree = $this->_getTree();
@@ -499,7 +503,9 @@ class Model_TriggerEvent {
 		
 		// [TODO] This could be more efficient
 		$event = DevblocksPlatform::getExtension($this->event_point, true); /* @var $event Extension_DevblocksEvent */
-		//var_dump($event);
+		
+		// Add a convenience pointer
+		$dictionary['_trigger'] = $this;
 		
 		$this->_recurseRunTree($event, $nodes, $tree, 0, $dictionary, $path, $dry_run);
 		
@@ -516,8 +522,6 @@ class Model_TriggerEvent {
 		// If these conditions match...
 		if(!empty($node_id)) {
 			$logger->info($nodes[$node_id]->node_type . ' :: ' . $nodes[$node_id]->title . ' (' . $node_id . ')');
-//			var_dump($nodes[$node_id]->node_type);
-//			var_dump($nodes[$node_id]->params);
 			
 			// Handle the node type
 			switch($nodes[$node_id]->node_type) {
@@ -539,7 +543,7 @@ class Model_TriggerEvent {
 								
 							if(!isset($condition_data['condition']))
 								continue;
-								
+							
 							$condition = $condition_data['condition'];
 							
 							$group_pass = $event->runCondition($condition, $this, $condition_data, $dictionary);
@@ -575,13 +579,9 @@ class Model_TriggerEvent {
 						if(!isset($params['action']))
 							continue;
 						
-						// Is this a dry run?  If so, don't actually change anything
-						// [TODO] It would be cool to see what the action *would* have done (snippet output, etc)
-						if($dry_run)
-							continue;
-
 						$action = $params['action'];
-						$event->runAction($action, $this, $params, $dictionary);
+						
+						$event->runAction($action, $this, $params, $dictionary, $dry_run);
 					}
 					break;
 			}

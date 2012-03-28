@@ -3,6 +3,7 @@
 <input type="hidden" name="a" value="runBehaviorSimulator">
 {if isset($node)}<input type="hidden" name="id" value="{$node->id}">{/if}
 {if isset($trigger)}<input type="hidden" name="trigger_id" value="{$trigger->id}">{/if}
+<input type="hidden" name="event_params_json" value="{$event_params_json}">
 
 <fieldset>
 	<legend>{'common.properties'|devblocks_translate}</legend>
@@ -31,12 +32,11 @@
 	</div>
 </fieldset>
 
-
 <div>
 	<button type="button" onclick="genericAjaxPost('frmBehaviorSimulator{$trigger->id}','divBehaviorSimulatorResults{$trigger->id}','');">Simulate</button>
 </div>
 
-<div id="divBehaviorSimulatorResults{$trigger->id}" style="margin-top:10px;padding:5px;"></div>
+<div id="divBehaviorSimulatorResults{$trigger->id}" style="padding:5px;"></div>
 
 </form>
 
