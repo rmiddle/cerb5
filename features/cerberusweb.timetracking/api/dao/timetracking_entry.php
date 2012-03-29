@@ -324,23 +324,17 @@ class DAO_TimeTrackingEntry extends C4_ORMHelper {
 			
 		$sort_sql = (!empty($sortBy) ? sprintf("ORDER BY %s %s ",$sortBy,($sortAsc || is_null($sortAsc))?"ASC":"DESC") : " ");
 		
-		// Virtuals
-		foreach($params as $param) {
-			if(!is_a($param, 'DevblocksSearchCriteria'))
-				continue;
-			
-			$param_key = $param->field;
-			settype($param_key, 'string');
-			switch($param_key) {
-				case SearchFields_TimeTrackingEntry::VIRTUAL_WATCHERS:
-					$has_multiple_values = true;
-					$from_context = 'cerberusweb.contexts.timetracking';
-					$from_index = 'tt.id';
-					
-					self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $join_sql, $where_sql);
-					break;
-			}
-		}		
+		// Translate virtual fields
+		
+		array_walk_recursive(
+			$params,
+			array('DAO_TimeTrackingEntry', '_translateVirtualParameters'),
+			array(
+				'join_sql' => &$join_sql,
+				'where_sql' => &$where_sql,
+				'has_multiple_values' => &$has_multiple_values
+			)
+		);
 		
 		$result = array(
 			'primary_table' => 'tt',
@@ -353,6 +347,27 @@ class DAO_TimeTrackingEntry extends C4_ORMHelper {
 		
 		return $result;
 	}	
+	
+	private static function _translateVirtualParameters($param, $key, &$args) {
+		$join_sql =& $args['join_sql'];
+		$where_sql =& $args['where_sql']; 
+		$has_multiple_values =& $args['has_multiple_values'];
+		
+		if(!is_a($param, 'DevblocksSearchCriteria'))
+			return;
+		
+		$param_key = $param->field;
+		settype($param_key, 'string');
+		switch($param_key) {
+			case SearchFields_TimeTrackingEntry::VIRTUAL_WATCHERS:
+				$has_multiple_values = true;
+				$from_context = 'cerberusweb.contexts.timetracking';
+				$from_index = 'tt.id';
+				
+				self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $join_sql, $where_sql);
+				break;
+		}
+	}
 	
     /**
      * Enter description here...
@@ -648,8 +663,6 @@ class View_TimeTracking extends C4_AbstractView implements IAbstractView_Subtota
 		
 		switch($this->renderTemplate) {
 			case 'contextlinks_chooser':
-				$tpl->display('devblocks:cerberusweb.timetracking::timetracking/time/view_contextlinks_chooser.tpl');
-				break;
 			default:
 				$tpl->assign('view_template', 'devblocks:cerberusweb.timetracking::timetracking/time/view.tpl');
 				$tpl->display('devblocks:cerberusweb.core::internal/views/subtotals_and_view.tpl');
@@ -1054,6 +1067,7 @@ class Context_TimeTracking extends Extension_DevblocksContext {
 		$view->renderSortBy = SearchFields_TimeTrackingEntry::LOG_DATE;
 		$view->renderSortAsc = false;
 		$view->renderLimit = 10;
+		$view->renderFilters = true;
 		$view->renderTemplate = 'contextlinks_chooser';
 		
 		C4_AbstractViewLoader::setView($view_id, $view);
