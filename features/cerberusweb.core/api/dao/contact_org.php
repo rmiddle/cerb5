@@ -377,10 +377,6 @@ class DAO_ContactOrg extends C4_ORMHelper {
 	}
 	
 	private static function _translateVirtualParameters($param, $key, &$args) {
-		$join_sql =& $args['join_sql'];
-		$where_sql =& $args['where_sql']; 
-		$has_multiple_values =& $args['has_multiple_values'];
-		
 		if(!is_a($param, 'DevblocksSearchCriteria'))
 			return;
 		
@@ -388,11 +384,11 @@ class DAO_ContactOrg extends C4_ORMHelper {
 		settype($param_key, 'string');
 		switch($param_key) {
 			case SearchFields_Task::VIRTUAL_WATCHERS:
-				$has_multiple_values = true;
+				$args['has_multiple_values'] = true;
 				$from_context = 'cerberusweb.contexts.org';
 				$from_index = 'c.id';
 				
-				self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $join_sql, $where_sql);
+				self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $args['join_sql'], $args['where_sql']);
 				break;
 		}
 	}
@@ -757,22 +753,11 @@ class View_ContactOrg extends C4_AbstractView implements IAbstractView_Subtotals
 			case SearchFields_ContactOrg::COUNTRY:
 			case SearchFields_ContactOrg::PHONE:
 			case SearchFields_ContactOrg::WEBSITE:
-				// force wildcards if none used on a LIKE
-				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
-				&& false === (strpos($value,'*'))) {
-					$value = $value.'*';
-				}
-				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
+				$criteria = $this->_doSetCriteriaString($field, $oper, $value);
 				break;
 				
 			case SearchFields_ContactOrg::CREATED:
-				@$from = DevblocksPlatform::importGPC($_REQUEST['from'],'string','');
-				@$to = DevblocksPlatform::importGPC($_REQUEST['to'],'string','');
-
-				if(empty($from)) $from = 0;
-				if(empty($to)) $to = 'today';
-
-				$criteria = new DevblocksSearchCriteria($field,$oper,array($from,$to));
+				$criteria = $this->_doSetCriteriaDate($field, $oper);
 				break;
 				
 			case SearchFields_ContactOrg::VIRTUAL_WATCHERS:
@@ -994,6 +979,10 @@ class Context_Org extends Extension_DevblocksContext {
 					}
 				}
 			}
+			
+			// Watchers
+			$watchers = CerberusContexts::getWatchers(CerberusContexts::CONTEXT_ORG, $org->id, true);
+			$token_values['watchers'] = $watchers;
 		}
 
 		return true;		

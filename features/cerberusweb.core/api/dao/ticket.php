@@ -1188,10 +1188,6 @@ class DAO_Ticket extends C4_ORMHelper {
 	}
 	
 	private static function _translateVirtualParameters($param, $key, &$args) {
-		$join_sql =& $args['join_sql'];
-		$where_sql =& $args['where_sql']; 
-		$has_multiple_values =& $args['has_multiple_values'];
-		
 		if(!is_a($param, 'DevblocksSearchCriteria'))
 			return;
 		
@@ -1200,11 +1196,11 @@ class DAO_Ticket extends C4_ORMHelper {
 
 		switch($param_key) {
 			case SearchFields_Ticket::VIRTUAL_WATCHERS:
-				$has_multiple_values = true;
+				$args['has_multiple_values'] = true;
 				$from_context = 'cerberusweb.contexts.ticket';
 				$from_index = 't.id';
 				
-				self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $join_sql, $where_sql);
+				self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $args['join_sql'], $args['where_sql']);
 				break;
 				
 			case SearchFields_Ticket::VIRTUAL_ASSIGNABLE:
@@ -1212,9 +1208,9 @@ class DAO_Ticket extends C4_ORMHelper {
 				$assignable_bucket_ids = array_keys($assignable_buckets);
 				array_unshift($assignable_bucket_ids, 0);
 				if($param->value) { // true
-					$where_sql .= sprintf("AND t.bucket_id IN (%s) ", implode(',', $assignable_bucket_ids));	
+					$args['where_sql'] .= sprintf("AND t.bucket_id IN (%s) ", implode(',', $assignable_bucket_ids));	
 				} else { // false
-					$where_sql .= sprintf("AND t.bucket_id NOT IN (%s) ", implode(',', $assignable_bucket_ids));	
+					$args['where_sql'] .= sprintf("AND t.bucket_id NOT IN (%s) ", implode(',', $assignable_bucket_ids));	
 				}
 				break;
 				
@@ -1223,7 +1219,7 @@ class DAO_Ticket extends C4_ORMHelper {
 				$roster = $member->getMemberships();
 				if(empty($roster))
 					break;
-				$where_sql .= sprintf("AND t.group_id IN (%s) ", implode(',', array_keys($roster)));
+				$args['where_sql'] .= sprintf("AND t.group_id IN (%s) ", implode(',', array_keys($roster)));
 				break;
 				
 			case SearchFields_Ticket::VIRTUAL_STATUS:
@@ -1253,7 +1249,7 @@ class DAO_Ticket extends C4_ORMHelper {
 				if(empty($status_sql))
 					break;
 				
-				$where_sql .= 'AND (' . implode(' OR ', $status_sql) . ') ';
+				$args['where_sql'] .= 'AND (' . implode(' OR ', $status_sql) . ') ';
 				break;
 		}		
 	}
@@ -1525,6 +1521,7 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 			SearchFields_Ticket::TICKET_SPAM_SCORE,
 			SearchFields_Ticket::TICKET_OWNER_ID,
 		);
+		
 		$this->addColumnsHidden(array(
 			SearchFields_Ticket::CONTEXT_LINK,
 			SearchFields_Ticket::CONTEXT_LINK_ID,
@@ -1717,9 +1714,6 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 		;
 		
 		$results = $db->GetArray($sql);
-//		$total = count($results);
-//		$total = ($total < 20) ? $total : $db->GetOne("SELECT FOUND_ROWS()");
-//		var_dump($total);
 
 		return $results;
 	}	
@@ -1820,9 +1814,6 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 		;
 		
 		$results = $db->GetArray($sql);
-//		$total = count($results);
-//		$total = ($total < 20) ? $total : $db->GetOne("SELECT FOUND_ROWS()");
-//		var_dump($total);
 
 		return $results;
 	}	
@@ -1950,10 +1941,8 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 	function renderCriteria($field) {
 		$tpl = DevblocksPlatform::getTemplateService();
 		$tpl->assign('id', $this->id);
-		$tpl->assign('view', $this);
 
 		switch($field) {
-			case SearchFields_Ticket::TICKET_ID:
 			case SearchFields_Ticket::TICKET_MASK:
 			case SearchFields_Ticket::TICKET_SUBJECT:
 			case SearchFields_Ticket::TICKET_FIRST_WROTE:
@@ -1966,6 +1955,7 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 
 			case SearchFields_Ticket::TICKET_FIRST_WROTE_SPAM:
 			case SearchFields_Ticket::TICKET_FIRST_WROTE_NONSPAM:
+			case SearchFields_Ticket::TICKET_ID:
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__number.tpl');
 				break;
 					
@@ -1983,7 +1973,14 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 				break;
 					
 			case SearchFields_Ticket::TICKET_SPAM_TRAINING:
-				$tpl->display('devblocks:cerberusweb.core::tickets/search/criteria/ticket_spam_training.tpl');
+				$options = array(
+					'N' => 'Not Spam',
+					'S' => 'Spam',
+					'' => 'Not Trained',
+				);
+				
+				$tpl->assign('options', $options);
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__list.tpl');
 				break;
 				
 			case SearchFields_Ticket::TICKET_SPAM_SCORE:
@@ -1991,7 +1988,14 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 				break;
 
 			case SearchFields_Ticket::TICKET_LAST_ACTION_CODE:
-				$tpl->display('devblocks:cerberusweb.core::tickets/search/criteria/ticket_last_action.tpl');
+				$options = array(
+					'O' => 'New Ticket',
+					'R' => 'Customer Reply',
+					'W' => 'Worker Reply',
+				);
+				
+				$tpl->assign('options', $options);
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__list.tpl');
 				break;
 
 			case SearchFields_Ticket::TICKET_GROUP_ID:
@@ -2029,7 +2033,17 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 				break;
 				
 			case SearchFields_Ticket::VIRTUAL_STATUS:
-				$tpl->display('devblocks:cerberusweb.core::tickets/search/criteria/ticket_status.tpl');
+				$translate = DevblocksPlatform::getTranslationService();
+				
+				$options = array(
+					'open' => $translate->_('status.open'),
+					'waiting' => $translate->_('status.waiting'),
+					'closed' => $translate->_('status.closed'),
+					'deleted' => $translate->_('status.deleted'),
+				);
+				
+				$tpl->assign('options', $options);
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__list.tpl');
 				break;
 				
 			default:
@@ -2101,20 +2115,15 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 		$values = !is_array($param->value) ? array($param->value) : $param->value;
 
 		switch($field) {
+			case SearchFields_Ticket::TICKET_WAITING:
+			case SearchFields_Ticket::TICKET_DELETED:
+			case SearchFields_Ticket::TICKET_CLOSED:
+			case SearchFields_Ticket::VIRTUAL_ASSIGNABLE:
+				$this->_renderCriteriaParamBoolean($param);
+				break;
+			
 			case SearchFields_Ticket::TICKET_OWNER_ID:
-				$workers = DAO_Worker::getAll();
-				$strings = array();
-
-				foreach($values as $val) {
-					if(empty($val)) {
-						$strings[] = 'nobody';
-					} elseif(!isset($workers[$val])) {
-						continue;
-					} else {
-						$strings[] = $workers[$val]->getName();
-					}
-				}
-				echo implode(", ", $strings);
+				$this->_renderCriteriaParamWorker($param);
 				break;
 				
 			case SearchFields_Ticket::TICKET_GROUP_ID:
@@ -2198,7 +2207,6 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 		$criteria = null;
 
 		switch($field) {
-			case SearchFields_Ticket::TICKET_ID:
 			case SearchFields_Ticket::TICKET_MASK:
 			case SearchFields_Ticket::TICKET_SUBJECT:
 			case SearchFields_Ticket::TICKET_FIRST_WROTE:
@@ -2206,12 +2214,7 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 			case SearchFields_Ticket::REQUESTER_ADDRESS:
 			case SearchFields_Ticket::TICKET_INTERESTING_WORDS:
 			case SearchFields_Ticket::ORG_NAME:
-				// force wildcards if none used on a LIKE
-				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
-				&& false === (strpos($value,'*'))) {
-					$value = $value.'*';
-				}
-				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
+				$criteria = $this->_doSetCriteriaString($field, $oper, $value);
 				break;
 
 			case SearchFields_Ticket::TICKET_WAITING:
@@ -2224,22 +2227,14 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 				
 			case SearchFields_Ticket::TICKET_FIRST_WROTE_SPAM:
 			case SearchFields_Ticket::TICKET_FIRST_WROTE_NONSPAM:
+			case SearchFields_Ticket::TICKET_ID:
 				$criteria = new DevblocksSearchCriteria($field,$oper,$value);
 				break;
 
 			case SearchFields_Ticket::TICKET_CREATED_DATE:
 			case SearchFields_Ticket::TICKET_UPDATED_DATE:
 			case SearchFields_Ticket::TICKET_DUE_DATE:
-				@$from = DevblocksPlatform::importGPC($_REQUEST['from'],'string','');
-				@$to = DevblocksPlatform::importGPC($_REQUEST['to'],'string','');
-
-				if(empty($from) || (!is_numeric($from) && @false === strtotime(str_replace('.','-',$from))))
-					$from = 0;
-					
-				if(empty($to) || (!is_numeric($to) && @false === strtotime(str_replace('.','-',$to))))
-					$to = 'now';
-
-				$criteria = new DevblocksSearchCriteria($field,$oper,array($from,$to));
+				$criteria = $this->_doSetCriteriaDate($field, $oper);
 				break;
 
 			case SearchFields_Ticket::TICKET_SPAM_SCORE:
@@ -2249,13 +2244,11 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 				}
 				break;
 
-			case SearchFields_Ticket::TICKET_SPAM_TRAINING:
-				$criteria = new DevblocksSearchCriteria($field,$oper,$value);
-				break;
-
 			case SearchFields_Ticket::TICKET_LAST_ACTION_CODE:
-				@$last_action_code = DevblocksPlatform::importGPC($_REQUEST['last_action'],'array',array());
-				$criteria = new DevblocksSearchCriteria($field,$oper,$last_action_code);
+			case SearchFields_Ticket::TICKET_SPAM_TRAINING:
+			case SearchFields_Ticket::VIRTUAL_STATUS:
+				@$options = DevblocksPlatform::importGPC($_REQUEST['options'],'array',array());
+				$criteria = new DevblocksSearchCriteria($field,$oper,$options);
 				break;
 
 			case SearchFields_Ticket::TICKET_GROUP_ID:
@@ -2283,34 +2276,7 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 				break;
 				
 			case SearchFields_Ticket::TICKET_OWNER_ID:
-				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
-				
-				switch($oper) {
-					case DevblocksSearchCriteria::OPER_IN:
-						if(empty($worker_ids)) {
-							$oper = DevblocksSearchCriteria::OPER_EQ;
-							$worker_ids = 0;
-						}
-						break;
-					case DevblocksSearchCriteria::OPER_IN_OR_NULL:
-						$oper = DevblocksSearchCriteria::OPER_IN;
-						if(!in_array('0', $worker_ids))
-							$worker_ids[] = '0';
-						break;
-					case DevblocksSearchCriteria::OPER_NIN:
-						if(empty($worker_ids)) {
-							$oper = DevblocksSearchCriteria::OPER_NEQ;
-							$worker_ids = 0;
-						}
-						break;
-					case 'not in and not null':
-						$oper = DevblocksSearchCriteria::OPER_NIN;
-						if(!in_array('0', $worker_ids))
-							$worker_ids[] = '0';
-						break;
-				}
-				
-				$criteria = new DevblocksSearchCriteria($field, $oper, $worker_ids);
+				$criteria = $this->_doSetCriteriaWorker($field, $oper);
 				break;
 				
 			case SearchFields_Ticket::VIRTUAL_WATCHERS:
@@ -2321,11 +2287,6 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 			case SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER:
 				@$worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);
 				$criteria = new DevblocksSearchCriteria($field, '=', $worker_id);
-				break;
-				
-			case SearchFields_Ticket::VIRTUAL_STATUS:
-				@$statuses = DevblocksPlatform::importGPC($_REQUEST['value'],'array',array());
-				$criteria = new DevblocksSearchCriteria($field, null, $statuses);
 				break;
 				
 			default:
@@ -2776,22 +2737,11 @@ class Context_Ticket extends Extension_DevblocksContext {
 					}
 				}
 			}
+			
+			// Watchers
+			$watchers = CerberusContexts::getWatchers(CerberusContexts::CONTEXT_TICKET, $ticket[SearchFields_Ticket::TICKET_ID], true);
+			$token_values['watchers'] = $watchers;
 		}
-		
-		// Email Org
-		$org_id = (null != $ticket && !empty($ticket[SearchFields_Ticket::TICKET_ORG_ID])) ? $ticket[SearchFields_Ticket::TICKET_ORG_ID] : null;
-		$merge_token_labels = array();
-		$merge_token_values = array();
-		CerberusContexts::getContext(CerberusContexts::CONTEXT_ORG, $org_id, $merge_token_labels, $merge_token_values, null, true);
-
-		CerberusContexts::merge(
-			'ticket_org_',
-			'',
-			$merge_token_labels,
-			$merge_token_values,
-			$token_labels,
-			$token_values
-		);		
 		
 		// Requesters
 		$token_values['requesters'] = array();

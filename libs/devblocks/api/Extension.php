@@ -1356,9 +1356,6 @@ class DevblocksEventHelper {
 
 		$trigger = $values['_trigger'];
 
-		$event = $trigger->getEvent();
-		$values_to_contexts = $event->getValuesContexts($trigger);
-		
 		if(empty($behavior_id)) {
 			return "[ERROR] No behavior is selected. Skipping...";
 		}
@@ -1393,7 +1390,9 @@ class DevblocksEventHelper {
 		@$on = DevblocksPlatform::importVar($params['on'],'string','');
 		
 		if(!empty($on)) {
-			$on_result = DevblocksEventHelper::onContexts($on, $values_to_contexts, $values);
+			$event = $trigger->getEvent();
+			
+			$on_result = DevblocksEventHelper::onContexts($on, $event->getValuesContexts($trigger), $values);
 			@$on_objects = $on_result['objects'];
 			
 			if(is_array($on_objects)) {
@@ -1418,39 +1417,6 @@ class DevblocksEventHelper {
 		
 		if(empty($behavior_id))
 			return FALSE;
-		
-		switch($on_dupe) {
-			// Only keep first
-			case 'first':
-				// Keep the first, delete everything else, and don't add a new one
-				$behaviors = DAO_ContextScheduledBehavior::getByContext($context, $context_id);
-				$found_first = false;
-				foreach($behaviors as $k => $behavior) { /* @var $behavior Model_ContextScheduledBehavior */
-					if($behavior->behavior_id == $behavior_id) {
-						if($found_first) {
-							DAO_ContextScheduledBehavior::delete($k);
-						}
-						$found_first = $k;
-					}
-				}
-				
-				// If we already have one, don't make a new one.
-				if($found_first)
-					return $found_first;
-				
-				break;
-
-			// Only keep latest
-			case 'last':
-				// Delete everything prior so we only have the new one below
-				DAO_ContextScheduledBehavior::deleteByBehavior($behavior_id, $context, $context_id);
-				break;
-			
-			// Allow dupes
-			default:
-				// Do nothing
-				break;
-		}
 		
 		// Variables as parameters
 		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
@@ -1477,6 +1443,40 @@ class DevblocksEventHelper {
 				foreach($on_objects as $on_object) {
 					if(!isset($on_object['id']) && empty($on_object['id']))
 						continue;
+					
+					switch($on_dupe) {
+						// Only keep first
+						case 'first':
+							// Keep the first, delete everything else, and don't add a new one
+							$behaviors = DAO_ContextScheduledBehavior::getByContext($on_object['context']->id, $on_object['id']);
+							$found_first = false;
+							foreach($behaviors as $k => $behavior) { /* @var $behavior Model_ContextScheduledBehavior */
+								if($behavior->behavior_id == $behavior_id) {
+									if($found_first) {
+										DAO_ContextScheduledBehavior::delete($k);
+									}
+									$found_first = $k;
+								}
+							}
+							
+							// If we already have one, don't make a new one.
+							if($found_first)
+								return $found_first;
+							
+							break;
+			
+						// Only keep latest
+						case 'last':
+							// Delete everything prior so we only have the new one below
+							DAO_ContextScheduledBehavior::deleteByBehavior($behavior_id, $on_object['context']->id, $on_object['id']);
+							break;
+						
+						// Allow dupes
+						default:
+							// Do nothing
+							break;
+					}
+					
 					
 					$fields = array(
 						DAO_ContextScheduledBehavior::CONTEXT => $on_object['context']->id,
@@ -1864,11 +1864,10 @@ class DevblocksEventHelper {
 	 * Action: Create Notification
 	 */
 	
-	static function renderActionCreateNotification($trigger, $notify_map=array()) {
+	static function renderActionCreateNotification($trigger) {
 		$tpl = DevblocksPlatform::getTemplateService();
 		
 		$tpl->assign('workers', DAO_Worker::getAll());
-		$tpl->assign('notify_map', $notify_map);
 
 		$event = $trigger->getEvent();
 		$values_to_contexts = $event->getValuesContexts($trigger);
@@ -1877,7 +1876,7 @@ class DevblocksEventHelper {
 		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_create_notification.tpl');
 	}
 	
-	static function simulateActionCreateNotification($params, $values, $default_on, $notify_map=array()) {
+	static function simulateActionCreateNotification($params, $values, $default_on) {
 		// Translate message tokens
 		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
 		$content = $tpl_builder->build($params['content'], $values);
@@ -1918,29 +1917,6 @@ class DevblocksEventHelper {
 		$notify_worker_ids = isset($params['notify_worker_id']) ? $params['notify_worker_id'] : array();
 		$notify_worker_ids = DevblocksEventHelper::mergeWorkerVars($notify_worker_ids, $values);
 
-		// Watchers?
-		// [TODO] Fix (context+context_id should relate to 'on')
-		if(isset($params['notify_watchers']) && !empty($params['notify_watchers'])) {
-			//$watchers = CerberusContexts::getWatchers($context, $context_id);
-			//$notify_worker_ids = array_merge($notify_worker_ids, array_keys($watchers));
-		}
-		
-		// If we're notifying contexual worker IDs, add them
-		if(is_array($notify_map) && !empty($notify_map))
-		foreach($notify_map as $key) {
-			// If the value doesn't exist, bail out
-			if(!isset($values[$key]))
-				continue;
-			
-			$id = intval($values[$key]);
-			
-			// If the value is empty, bail out
-			if(empty($id))
-				continue;
-			
-			$notify_worker_ids = array_merge($notify_worker_ids, array($id));
-		}		
-		
 		if(!empty($notify_worker_ids)) {
 			$out .= ">>> Notifying:\n";
 			
@@ -1954,7 +1930,7 @@ class DevblocksEventHelper {
 		return $out;		
 	}
 	
-	static function runActionCreateNotification($params, $values, $default_on, $notify_map=array()) {
+	static function runActionCreateNotification($params, $values, $default_on) {
 		$trigger = $values['_trigger'];
 		$event = $trigger->getEvent();
 		
@@ -1963,30 +1939,6 @@ class DevblocksEventHelper {
 		$notify_worker_ids = isset($params['notify_worker_id']) ? $params['notify_worker_id'] : array();
 		$notify_worker_ids = DevblocksEventHelper::mergeWorkerVars($notify_worker_ids, $values);
 				
-		// Watchers?
-		if(isset($params['notify_watchers']) && !empty($params['notify_watchers'])) {
-			// [TODO] Lazy load from values (and set back to)
-			$watchers = CerberusContexts::getWatchers($context, $context_id);
-			$notify_worker_ids = array_merge($notify_worker_ids, array_keys($watchers));
-		}
-
-		// If we're notifying contexual worker IDs, add them
-		// [TODO] Revamp this
-		if(is_array($notify_map) && !empty($notify_map))
-		foreach($notify_map as $key) {
-			// If the value doesn't exist, bail out
-			if(!isset($values[$key]))
-				continue;
-			
-			$id = intval($values[$key]);
-			
-			// If the value is empty, bail out
-			if(empty($id))
-				continue;
-			
-			$notify_worker_ids = array_merge($notify_worker_ids, array($id));
-		}
-		
 		// Only notify an individual worker once
 		$notify_worker_ids = array_unique($notify_worker_ids);
 		
@@ -2656,9 +2608,18 @@ class DevblocksEventHelper {
 			if(!is_array($on_keys))
 				$on_keys = array($on_keys);
 
+			$vals = array();
+			
 			foreach($on_keys as $on) {
-				$vals = is_array($values[$on]) ? $values[$on] : array($values[$on]);
-	
+				if(preg_match("#(.*)_watchers#", $on)) {
+					if(isset($values[$on]) && is_array($values[$on]))
+						$vals = array_keys($values[$on]);
+					
+				} else {
+					if(isset($values[$on]))
+						$vals = is_array($values[$on]) ? $values[$on] : array($values[$on]);
+				}
+				
 				@$ctx_ext = $values_to_contexts[$on]['context'];
 				if(!empty($ctx_ext) && null != ($ctx = Extension_DevblocksContext::get($ctx_ext))) {
 					foreach($vals as $ctx_id) {
@@ -2678,11 +2639,14 @@ class DevblocksEventHelper {
 		if(is_array($worker_ids))
 		foreach($worker_ids as $k => $worker_id) {
 			if(!is_numeric($worker_id)) {
-				@$val = $values[$worker_id];
+				$key = $worker_id;
+				@$val = $values[$key];
 				unset($worker_ids[$k]);
 				
 				if(!empty($val)) {
-					if(is_array($val)) {
+					if(preg_match("#(.*)_watchers#", $key)) {
+						$worker_ids = array_merge($worker_ids, array_keys($val));
+					} elseif(is_array($val)) {
 						$worker_ids = array_merge($worker_ids, $val);
 					} else {
 						$worker_ids[] = $val;
@@ -2729,6 +2693,8 @@ class DevblocksEventHelper {
 		// Force reload parameters (we can't trust the session)
 		if(false == ($view = C4_AbstractViewLoader::unserializeAbstractView($view_model)))
 			return;
+		
+		$view->setPlaceholderValues($values);
 		
 		// [TODO] Iterate through pages if over a certain list length?
 		//$view->renderLimit = (isset($params['limit']) && is_numeric($params['limit'])) ? intval($params['limit']) : 100;

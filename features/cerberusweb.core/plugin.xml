@@ -4,7 +4,7 @@
 	<name>[Cerb5] Core</name>
 	<description>The core functionality of Cerberus Helpdesk.</description>
 	<author>WebGroup Media, LLC.</author>
-	<version>5.7.2</version>
+	<version>5.8.0</version>
 	<link>http://wiki.cerb4.com/wiki/New_Changes</link>
 	
 	<!-- Plugin Dependencies -->
@@ -44,7 +44,7 @@
 		<patch version="5.6.1" revision="961" file="patches/5.x/5.6.1.php" />
 		<patch version="5.6.2" revision="965" file="patches/5.x/5.6.2.php" />
 		<patch version="5.7.0" revision="973" file="patches/5.x/5.7.0.php" />
-		<patch version="5.8.0" revision="980" file="patches/5.x/5.8.0.php" />
+		<patch version="5.8.0" revision="982" file="patches/5.x/5.8.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -366,6 +366,10 @@
 			<class name="AbstractEvent_Ticket" />
 		</file>
 		
+		<file path="api/events/abstract/abstract_event_worker.php">
+			<class name="AbstractEvent_Worker" />
+		</file>
+		
 		<file path="api/events/app/mail_received_by_app.php">
 			<class name="Event_MailReceivedByApp" />
 		</file>
@@ -414,12 +418,20 @@
 			<class name="Event_TicketMacro" />
 		</file>
 		
+		<file path="api/events/macro/worker_macro.php">
+			<class name="Event_WorkerMacro" />
+		</file>
+		
 		<file path="api/events/worker/mail_received_by_watcher.php">
 			<class name="Event_MailReceivedByWatcher" />
 		</file>
 		
 		<file path="api/events/worker/notification_received_by_worker.php">
 			<class name="Event_NotificationReceivedByWorker" />
+		</file>
+		
+		<file path="api/uri/internal/virtual_attendants.php">
+			<class name="Subcontroller_Internal_VirtualAttendants" />
 		</file>
 		
 		<file path="api/uri/portal.php">
@@ -1048,6 +1060,25 @@
 				<param key="contexts">
 					<value>
 						<data key="cerberusweb.contexts.group" />
+						<data key="cerberusweb.contexts.worker" />
+					</value>
+				</param>
+			</params>
+		</extension>
+		
+		<extension point="devblocks.event">
+			<id>event.macro.worker</id>
+			<name>Custom worker behavior</name>
+			<class>
+				<file>api/events/macro/worker_macro.php</file>
+				<name>Event_WorkerMacro</name>
+			</class>
+			<params>
+				<param key="macro_context" value="cerberusweb.contexts.worker" />
+				<param key="contexts">
+					<value>
+						<data key="cerberusweb.contexts.group" />
+						<data key="cerberusweb.contexts.role" />
 						<data key="cerberusweb.contexts.worker" />
 					</value>
 				</param>
@@ -1684,6 +1715,19 @@
 				<params>
 					<param key="page_id" value="core.page.configuration" />
 					<param key="uri" value="scheduler" />
+				</params>
+			</extension>
+		
+			<extension point="cerberusweb.ui.page.section">
+				<id>core.page.setup.scheduled_behavior</id>
+				<name>Scheduled Behavior Section</name>
+				<class>
+					<file>api/uri/config/scheduled_behavior.php</file>
+					<name>PageSection_SetupScheduledBehavior</name>
+				</class>
+				<params>
+					<param key="page_id" value="core.page.configuration" />
+					<param key="uri" value="scheduled_behavior" />
 				</params>
 			</extension>
 		

@@ -5,7 +5,7 @@
 <form>
 <fieldset style="">
 	<div style="float:left;">
-		<img src="{if $is_ssl}https://secure.{else}http://www.{/if}gravatar.com/avatar/{$worker->email|trim|lower|md5}?s=64&d=mm" border="0" style="margin:0px 5px 5px 0px;">
+		<img src="{if $is_ssl}https://secure.{else}http://www.{/if}gravatar.com/avatar/{$worker->email|trim|lower|md5}?s=64&d={devblocks_url full=true}c=resource&p=cerberusweb.core&f=images/wgm/gravatar_nouser.jpg{/devblocks_url}" height="64" width="64" border="0" style="margin:0px 5px 5px 0px;">
 	</div>
 	<div style="float:left;">
 		<h1 style="color:rgb(0,120,0);font-weight:bold;font-size:150%;margin:0px;">{$worker->getName()}</h1>
@@ -51,6 +51,11 @@
 		{if $active_worker->is_superuser || $worker->id == $active_worker->id}
 		{$tabs[] = 'attendant'}
 		<li><a href="{devblocks_url}ajax.php?c=internal&a=showAttendantTab&point={$point}&context={CerberusContexts::CONTEXT_WORKER}&context_id={$worker->id}{/devblocks_url}">Virtual Attendant</a></li>
+		{/if}
+		
+		{if $active_worker->is_superuser || $worker->id == $active_worker->id}
+		{$tabs[] = 'behavior'}
+		<li><a href="{devblocks_url}ajax.php?c=internal&a=showScheduledBehaviorTab&point={$point}&context={CerberusContexts::CONTEXT_WORKER}&context_id={$worker->id}{/devblocks_url}">Scheduled Behavior</a></li>
 		{/if}
 
 		{$tabs[] = 'links'}

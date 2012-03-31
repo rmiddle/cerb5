@@ -328,6 +328,7 @@ class View_ExampleObject extends C4_AbstractView implements IAbstractView_Subtot
 		$this->view_columns = array(
 			SearchFields_ExampleObject::CREATED,
 		);
+		
 		$this->addColumnsHidden(array(
 			SearchFields_ExampleObject::ID,
 			SearchFields_ExampleObject::CONTEXT_LINK,
@@ -402,10 +403,6 @@ class View_ExampleObject extends C4_AbstractView implements IAbstractView_Subtot
 				$counts = $this->_getSubtotalCountForStringColumn('DAO_ExampleObject', $column);
 				break;
 
-//			case SearchFields_ExampleObject::EXAMPLE:
-//				$counts = $this->_getSubtotalCountForBooleanColumn('DAO_ExampleObject', $column);
-//				break;
-				
 			case SearchFields_ExampleObject::VIRTUAL_WATCHERS:
 				$counts = $this->_getSubtotalCountForWatcherColumn('DAO_ExampleObject', $column);
 				break;
@@ -434,8 +431,6 @@ class View_ExampleObject extends C4_AbstractView implements IAbstractView_Subtot
 
 		switch($this->renderTemplate) {
 			case 'contextlinks_chooser':
-				$tpl->display('devblocks:example.object::example_object/view_contextlinks_chooser.tpl');
-				break;
 			default:
 				$tpl->assign('view_template', 'devblocks:example.object::example_object/view.tpl');
 				$tpl->display('devblocks:cerberusweb.core::internal/views/subtotals_and_view.tpl');
@@ -505,12 +500,7 @@ class View_ExampleObject extends C4_AbstractView implements IAbstractView_Subtot
 
 		switch($field) {
 			case SearchFields_ExampleObject::NAME:
-				// force wildcards if none used on a LIKE
-				if(($oper == DevblocksSearchCriteria::OPER_LIKE || $oper == DevblocksSearchCriteria::OPER_NOT_LIKE)
-				&& false === (strpos($value,'*'))) {
-					$value = $value.'*';
-				}
-				$criteria = new DevblocksSearchCriteria($field, $oper, $value);
+				$criteria = $this->_doSetCriteriaString($field, $oper, $value);
 				break;
 				
 			case SearchFields_ExampleObject::ID:
@@ -518,13 +508,7 @@ class View_ExampleObject extends C4_AbstractView implements IAbstractView_Subtot
 				break;
 				
 			case SearchFields_ExampleObject::CREATED:
-				@$from = DevblocksPlatform::importGPC($_REQUEST['from'],'string','');
-				@$to = DevblocksPlatform::importGPC($_REQUEST['to'],'string','');
-
-				if(empty($from)) $from = 0;
-				if(empty($to)) $to = 'today';
-
-				$criteria = new DevblocksSearchCriteria($field,$oper,array($from,$to));
+				$criteria = $this->_doSetCriteriaDate($field, $oper);
 				break;
 				
 			case 'placeholder_bool':
@@ -710,6 +694,10 @@ class Context_ExampleObject extends Extension_DevblocksContext {
 					}
 				}
 			}
+			
+			// Watchers
+			$watchers = CerberusContexts::getWatchers(Context_ExampleObject::ID, $object->id, true);
+			$token_values['watchers'] = $watchers;
 		}
 
 		// Example link
@@ -750,6 +738,7 @@ class Context_ExampleObject extends Extension_DevblocksContext {
 		$view->renderSortAsc = false;
 		$view->renderLimit = 10;
 		$view->renderTemplate = 'contextlinks_chooser';
+		$view->renderFilters = true;
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;
 	}

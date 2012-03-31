@@ -46,7 +46,7 @@
  * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2012032801);
+define("APP_BUILD", 2012033101);
 define("APP_VERSION", '5.8.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -698,30 +698,28 @@ class CerberusContexts {
 					$values
 				);
 			}
-		}
-		// Plugin-provided tokens
-		$token_extension_mfts = DevblocksPlatform::getExtensions('cerberusweb.snippet.token', false);
-		foreach($token_extension_mfts as $mft) { /* @var $mft DevblocksExtensionManifest */
-			@$token = $mft->params['token'];
-			@$label = $mft->params['label'];
-			@$contexts = $mft->params['contexts'][0];
 			
-			if(empty($token) || empty($label) || !is_array($contexts))
-				continue;
+			// Plugin-provided tokens
+			$token_extension_mfts = DevblocksPlatform::getExtensions('cerberusweb.snippet.token', false);
+			foreach($token_extension_mfts as $mft) { /* @var $mft DevblocksExtensionManifest */
+				@$token = $mft->params['token'];
+				@$label = $mft->params['label'];
+				@$contexts = $mft->params['contexts'][0];
+				
+				if(empty($token) || empty($label) || !is_array($contexts))
+					continue;
 	
-			if(!isset($contexts[$context]))
-				continue;
-				
-			if(isset($labels['plugin_'.$token]))
-				continue;
-
-            if(null != ($ext = $mft->createInstance()) && $ext instanceof IContextToken) {
-				/* @var $ext IContextToken */
-				$value = $ext->getValue($context, $values);
-				
-				if(!empty($value)) {
-					$labels['plugin_'.$token] = '(Plugin) '.$label;
-					$values['plugin_'.$token] = $value;
+				if(!isset($contexts[$context]))
+					continue;
+					
+				if(null != ($ext = $mft->createInstance()) && $ext instanceof IContextToken) {
+					/* @var $ext IContextToken */
+					$value = $ext->getValue($context, $values);
+					
+					if(!empty($value)) {
+						$labels['plugin_'.$token] = '(Plugin) '.$label;
+						$values['plugin_'.$token] = $value;
+					}
 				}
 			}
 		}
@@ -780,7 +778,7 @@ class CerberusContexts {
 		return true;
 	}
 	
-	static public function getWatchers($context, $context_id) {
+	static public function getWatchers($context, $context_id, $as_contexts=false) {
 		list($results, $null) = DAO_Worker::search(
 			array(
 				SearchFields_Worker::ID,
@@ -798,11 +796,26 @@ class CerberusContexts {
 		
 		$workers = array();
 		
-		if(!empty($results)) {
-			$workers = DAO_Worker::getWhere(sprintf("%s IN (%s)",
-				DAO_Worker::ID,
-				implode(',', array_keys($results))
-			));
+		// Does the caller want the watchers as context objects?
+		if($as_contexts) {
+			foreach(array_keys($results) as $watcher_id) {
+				$null_labels = array();
+				$watcher_values = array();
+
+				CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $watcher_id, $null_labels, $watcher_values, null, true);
+				
+				$workers[$watcher_id] = $watcher_values;
+			}
+			
+		// Or as Model_* objects?
+		} else {
+			if(!empty($results)) {
+				$workers = DAO_Worker::getWhere(sprintf("%s IN (%s)",
+					DAO_Worker::ID,
+					implode(',', array_keys($results))
+				));
+			}
+			
 		}
 		
 		return $workers;
@@ -1529,6 +1542,8 @@ class C4_ORMHelper extends DevblocksORMHelper {
 	}
 	
 	static function _searchComponentsVirtualWatchers(&$param, $from_context, $from_index, &$join_sql, &$where_sql) {
+		$param->value = DevblocksPlatform::sanitizeArray($param->value, 'integer', array('nonzero','unique'));
+		
 		// Join and return anything
 		if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
 			$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
