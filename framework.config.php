@@ -9,6 +9,7 @@ define('APP_DB_PCONNECT',false);
 
 define('LANG_CHARSET_CODE','iso-8859-1'); // iso-8859-1, utf-8
 define('DB_CHARSET_CODE','latin1'); // latin1, utf8
+//define('DEVELOPMENT_ARCHIVE_PARSER_MSGSOURCE', true);
 
 // Memcached (high-performance shared memory cache)
 // optional, memcached 1.2.x + extension must be enabled
