@@ -708,6 +708,7 @@
 					<value>
 						<data key="find" />
 						<data key="snippets" />
+						<data key="va_variable" />
 						<data key="workspace" />
 					</value>
 				</param>
@@ -746,6 +747,7 @@
 				<param key="options">
 					<value>
 						<!--<data key="snippets" />-->
+						<data key="va_variable" />
 						<data key="workspace" />
 					</value>
 				</param>

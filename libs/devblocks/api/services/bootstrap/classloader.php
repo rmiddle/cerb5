@@ -79,6 +79,9 @@ class _DevblocksClassLoadManager {
 		$this->registerClasses(DEVBLOCKS_PATH . 'api/services/event.php', array(
 			'_DevblocksEventManager',
 		));
+		$this->registerClasses(DEVBLOCKS_PATH . 'api/services/event/event_helper.php', array(
+			'DevblocksEventHelper',
+		));
 		$this->registerClasses(DEVBLOCKS_PATH . 'api/services/logging.php', array(
 			'_DevblocksLogManager',
 		));
@@ -119,6 +122,7 @@ class _DevblocksClassLoadManager {
 		$this->registerClasses(DEVBLOCKS_PATH . 'api/services/template_builder.php', array(
 			'_DevblocksTemplateBuilder',
 			'_DevblocksTwigExtensions',
+			'DevblocksDictionaryDelegate',
 		));
 		$this->registerClasses(DEVBLOCKS_PATH . 'api/services/template.php', array(
 			'_DevblocksTemplateManager',

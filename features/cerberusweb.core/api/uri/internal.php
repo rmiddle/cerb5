@@ -2499,7 +2499,7 @@ class ChInternalController extends DevblocksControllerExtension {
 		
 		if(null == ($trigger = DAO_TriggerEvent::get($trigger_id)))
 			return;
-		
+
 		$tpl->assign('trigger', $trigger);
 		
  		if(null == ($ext_event = DevblocksPlatform::getExtension($trigger->event_point, true))) /* @var $ext_event Extension_DevblocksEvent */
@@ -2538,7 +2538,7 @@ class ChInternalController extends DevblocksControllerExtension {
 
 		$behavior_data = $trigger->getDecisionTreeData();
 		$tpl->assign('behavior_data', $behavior_data);
-		
+
 		$behavior_path = $trigger->runDecisionTree($values, true);
 		$tpl->assign('behavior_path', $behavior_path);
 		
@@ -2677,7 +2677,8 @@ class ChInternalController extends DevblocksControllerExtension {
 				if(empty($var_labels[$idx]))
 					continue;
 				
-				$key = strtolower(!empty($var_keys[$idx]) ? $var_keys[$idx] : ('var_' . DevblocksPlatform::strToPermalink($v)));
+				$var_name = 'var_' . DevblocksPlatform::strAlphaNum(DevblocksPlatform::strToPermalink($v),'_');
+				$key = strtolower(!empty($var_keys[$idx]) ? $var_keys[$idx] : $var_name);
 				$variables[$key] = array(
 					'key' => $key,
 					'label' => $v,
@@ -2874,7 +2875,7 @@ class ChInternalController extends DevblocksControllerExtension {
 			if(false === ($out = $tpl_builder->build($content, $values))) {
 				// If we failed, show the compile errors
 				$errors = $tpl_builder->getErrors();
-				$success= false;
+				$success = false;
 				$output = @array_shift($errors);
 			} else {
 				// If successful, return the parsed template

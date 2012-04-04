@@ -17,7 +17,7 @@
  */
 class Twig_Environment
 {
-    const VERSION = '1.5.1';
+    const VERSION = '1.7.0-DEV';
 
     protected $charset;
     protected $loader;
@@ -43,6 +43,7 @@ class Twig_Environment
     protected $templateClassPrefix = '__TwigTemplate_';
     protected $functionCallbacks;
     protected $filterCallbacks;
+    protected $variableCallbacks;
     protected $staging;
 
     /**
@@ -109,6 +110,7 @@ class Twig_Environment
         $this->setCache($options['cache']);
         $this->functionCallbacks = array();
         $this->filterCallbacks = array();
+        $this->variableCallbacks = array();
     }
 
     /**
@@ -617,6 +619,12 @@ class Twig_Environment
     public function addExtension(Twig_ExtensionInterface $extension)
     {
         $this->extensions[$extension->getName()] = $extension;
+        $this->parsers = null;
+        $this->visitors = null;
+        $this->filters = null;
+        $this->tests = null;
+        $this->functions = null;
+        $this->globals = null;
     }
 
     /**
@@ -627,6 +635,12 @@ class Twig_Environment
     public function removeExtension($name)
     {
         unset($this->extensions[$name]);
+        $this->parsers = null;
+        $this->visitors = null;
+        $this->filters = null;
+        $this->tests = null;
+        $this->functions = null;
+        $this->globals = null;
     }
 
     /**
@@ -659,12 +673,13 @@ class Twig_Environment
     public function addTokenParser(Twig_TokenParserInterface $parser)
     {
         $this->staging['token_parsers'][] = $parser;
+        $this->parsers = null;
     }
 
     /**
      * Gets the registered Token Parsers.
      *
-     * @return Twig_TokenParserInterface[] An array of Twig_TokenParserInterface instances
+     * @return Twig_TokenParserBrokerInterface A broker containing token parsers
      */
     public function getTokenParsers()
     {
@@ -682,7 +697,7 @@ class Twig_Environment
                 foreach($parsers as $parser) {
                     if ($parser instanceof Twig_TokenParserInterface) {
                         $this->parsers->addTokenParser($parser);
-                    } else if ($parser instanceof Twig_TokenParserBrokerInterface) {
+                    } elseif ($parser instanceof Twig_TokenParserBrokerInterface) {
                         $this->parsers->addTokenParserBroker($parser);
                     } else {
                         throw new Twig_Error_Runtime('getTokenParsers() must return an array of Twig_TokenParserInterface or Twig_TokenParserBrokerInterface instances');
@@ -721,6 +736,7 @@ class Twig_Environment
     public function addNodeVisitor(Twig_NodeVisitorInterface $visitor)
     {
         $this->staging['visitors'][] = $visitor;
+        $this->visitors = null;
     }
 
     /**
@@ -743,12 +759,13 @@ class Twig_Environment
     /**
      * Registers a Filter.
      *
-     * @param string               $name    The filter name
-     * @param Twig_FilterInterface $visitor A Twig_FilterInterface instance
+     * @param string               $name   The filter name
+     * @param Twig_FilterInterface $filter A Twig_FilterInterface instance
      */
     public function addFilter($name, Twig_FilterInterface $filter)
     {
         $this->staging['filters'][$name] = $filter;
+        $this->filters = null;
     }
 
     /**
@@ -820,14 +837,44 @@ class Twig_Environment
     }
 
     /**
+     * Registers an undefined variable callback.
+     * 
+     * @param string $callable
+     */
+    public function registerUndefinedVariableCallback($callable, $replace=false)
+    {
+		if($replace) {
+	    	$this->variableCallbacks = array($callable);
+		} else {
+			$this->variableCallbacks[] = $callable;
+		}
+    }
+    
+    /**
+     * Attempts to get a value for an undefined variable from a callback.
+     * 
+     * @param string 			$name	The callback
+     * @return mixed
+     */
+    public function getUndefinedVariable($name)
+	{
+		foreach ($this->variableCallbacks as $callback) {
+            if (false !== $value = call_user_func($callback, $name)) {
+                return $value;
+            }
+        }
+    }
+    
+    /**
      * Registers a Test.
      *
-     * @param string             $name    The test name
-     * @param Twig_TestInterface $visitor A Twig_TestInterface instance
+     * @param string             $name The test name
+     * @param Twig_TestInterface $test A Twig_TestInterface instance
      */
     public function addTest($name, Twig_TestInterface $test)
     {
         $this->staging['tests'][$name] = $test;
+        $this->tests = null;
     }
 
     /**
@@ -856,6 +903,7 @@ class Twig_Environment
     public function addFunction($name, Twig_FunctionInterface $function)
     {
         $this->staging['functions'][$name] = $function;
+        $this->functions = null;
     }
 
     /**
@@ -935,6 +983,7 @@ class Twig_Environment
     public function addGlobal($name, $value)
     {
         $this->staging['globals'][$name] = $value;
+        $this->globals = null;
     }
 
     /**
@@ -1018,8 +1067,13 @@ class Twig_Environment
 
     protected function writeCacheFile($file, $content)
     {
-        if (!is_dir(dirname($file))) {
-            mkdir(dirname($file), 0777, true);
+        $dir = dirname($file);
+        if (!is_dir($dir)) {
+            if (false === @mkdir($dir, 0777, true) && !is_dir($dir)) {
+                throw new RuntimeException(sprintf("Unable to create the cache directory (%s).", $dir));
+            }
+        } elseif (!is_writable($dir)) {
+            throw new RuntimeException(sprintf("Unable to write in the cache directory (%s).", $dir));
         }
 
         $tmpFile = tempnam(dirname($file), basename($file));
