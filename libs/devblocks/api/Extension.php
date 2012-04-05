@@ -314,7 +314,7 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 	
 	abstract function getConditionExtensions();
 	abstract function renderConditionExtension($token, $trigger, $params=array(), $seq=null);
-	abstract function runConditionExtension($token, $trigger, $params, $values);
+	abstract function runConditionExtension($token, $trigger, $params, DevblocksDictionaryDelegate $dict);
 	
 	function renderCondition($token, $trigger, $params=array(), $seq=null) {
 		$conditions = $this->getConditions($trigger);
@@ -391,8 +391,8 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 		}
 	}
 	
-	function runCondition($token, $trigger, $params, $values) {
-		$logger = DevblocksPlatform::getConsoleLog('Assistant');
+	function runCondition($token, $trigger, $params, DevblocksDictionaryDelegate $dict) {
+		$logger = DevblocksPlatform::getConsoleLog('Attendant');
 		$conditions = $this->getConditions($trigger);
 		$extensions = $this->getConditionExtensions();
 		$not = false;
@@ -401,9 +401,12 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 		$now = time();
 		
 		// Overload the current time? (simulate)
-		if(isset($values['_current_time'])) {
-			$now = $values['_current_time'];
+		if(isset($dict->_current_time)) {
+			$now = $dict->_current_time;
 		}
+		
+		$logger->info('');
+		$logger->info(sprintf("Checking condition '%s'...", $token));
 		
 		// Built-in actions
 		switch($token) {
@@ -411,7 +414,7 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 				$not = (substr($params['oper'],0,1) == '!');
 				$oper = ltrim($params['oper'],'!');
 				
-				@$months = DevblocksPlatform::importVar($params['months'],'array',array());
+				@$months = DevblocksPlatform::importVar($params['month'],'array',array());
 				
 				switch($oper) {
 					case 'is':
@@ -454,7 +457,7 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 			default:
 				// Operators
 				if(null != (@$condition = $conditions[$token])) {
-					if(null == (@$value = $values[$token])) {
+					if(null == (@$value = $dict->$token)) {
 						$value = '';
 					}
 					
@@ -463,16 +466,30 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 						case Model_CustomField::TYPE_CHECKBOX:
 							$bool = intval($params['bool']);
 							$pass = !empty($value) == $bool;
+							$logger->info(sprintf("Checkbox: %s = %s",
+								(!empty($value) ? 'true' : 'false'),
+								(!empty($bool) ? 'true' : 'false')
+							));
 							break;
 							
 						case Model_CustomField::TYPE_DATE:
 							$not = (substr($params['oper'],0,1) == '!');
 							$oper = ltrim($params['oper'],'!');
+							$oper = 'between';
+							
+							$from = strtotime($params['from']);
+							$to = strtotime($params['to']);
+							
+							$logger->info(sprintf("Date: `%s` %s%s `%s` and `%s`",
+								DevblocksPlatform::strPrettyTime($value),
+								(!empty($not) ? 'not ' : ''),
+								$oper,
+								DevblocksPlatform::strPrettyTime($from),
+								DevblocksPlatform::strPrettyTime($to)
+							));
+							
 							switch($oper) {
-								case 'is':
 								case 'between':
-									$from = strtotime($params['from']);
-									$to = strtotime($params['to']);
 									if($to < $from)
 										$to += 86400; // +1 day
 									$pass = ($value >= $from && $value <= $to) ? true : false;
@@ -485,6 +502,14 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 						case Model_CustomField::TYPE_URL:
 							$not = (substr($params['oper'],0,1) == '!');
 							$oper = ltrim($params['oper'],'!');
+							
+							$logger->info(sprintf("Text: `%s` %s%s `%s`",
+								$value,
+								(!empty($not) ? 'not ' : ''),
+								$oper,
+								$params['value']
+							));
+							
 							switch($oper) {
 								case 'is':
 									$pass = (0==strcasecmp($value,$params['value']));
@@ -511,15 +536,24 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 						case Model_CustomField::TYPE_NUMBER:
 							$not = (substr($params['oper'],0,1) == '!');
 							$oper = ltrim($params['oper'],'!');
+							$desired_value = intval($params['value']); 
+							
+							$logger->info(sprintf("Number: %d %s%s %d",
+								$value,
+								(!empty($not) ? 'not ' : ''),
+								$oper,
+								$desired_value
+							));
+							
 							switch($oper) {
 								case 'is':
-									$pass = intval($value)==intval($params['value']);
+									$pass = intval($value)==$desired_value;
 									break;
 								case 'gt':
-									$pass = intval($value) > intval($params['value']);
+									$pass = intval($value) > $desired_value;
 									break;
 								case 'lt':
-									$pass = intval($value) < intval($params['value']);
+									$pass = intval($value) < $desired_value;
 									break;
 							}
 							break;
@@ -527,8 +561,16 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 						case Model_CustomField::TYPE_DROPDOWN:
 							$not = (substr($params['oper'],0,1) == '!');
 							$oper = ltrim($params['oper'],'!');
+							$desired_values = isset($params['values']) ? $params['values'] : array();
 							
-							if(!isset($params['values']) || !is_array($params['values'])) {
+							$logger->info(sprintf("`%s` %s%s `%s`",
+								$value,
+								(!empty($not) ? 'not ' : ''),
+								$oper,
+								implode('; ', $desired_values)
+							));
+							
+							if(!isset($desired_values) || !is_array($desired_values)) {
 								$pass = false;
 								break;
 							}
@@ -536,7 +578,7 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 							switch($oper) {
 								case 'in':
 									$pass = false;
-									if(in_array($value, $params['values'])) {
+									if(in_array($value, $desired_values)) {
 										$pass = true;
 									}
 									break;
@@ -548,13 +590,22 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 							$oper = ltrim($params['oper'],'!');
 							
 							if(preg_match("#(.*?_custom)_(\d+)#", $token, $matches) && 3 == count($matches)) {
-								@$value = $values[$matches[1]][$matches[2]]; 
+								$value_token = $matches[1];
+								$value_field = $dict->$value_token; 
+								@$value = $value_field[$matches[2]]; 
 							}
 							
 							if(!is_array($value) || !isset($params['values']) || !is_array($params['values'])) {
 								$pass = false;
 								break;
 							}
+							
+							$logger->info(sprintf("Multi-checkbox: `%s` %s%s `%s`",
+								implode('; ', $params['values']),
+								(!empty($not) ? 'not ' : ''),
+								$oper,
+								implode('; ', $value)
+							));
 							
 							switch($oper) {
 								case 'is':
@@ -609,29 +660,38 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 
 						default:
 							if(substr($condition['type'],0,4) == 'ctx_') {
-								$count = (isset($values[$token]) && is_array($values[$token])) ? count($values[$token]) : 0;
+								$count = (isset($dict->$token) && is_array($dict->$token)) ? count($dict->$token) : 0;
 								
 								$not = (substr($params['oper'],0,1) == '!');
 								$oper = ltrim($params['oper'],'!');
+								$desired_count = intval($params['value']);
+
+								$logger->info(sprintf("Count: %d %s%s %d",
+									$count,
+									$not,
+									$oper,
+									$desired_count
+								));
+								
 								switch($oper) {
 									case 'is':
-										$pass = $count==intval($params['value']);
+										$pass = $count==$desired_count;
 										break;
 									case 'gt':
-										$pass = $count > intval($params['value']);
+										$pass = $count > $desired_count;
 										break;
 									case 'lt':
-										$pass = $count < intval($params['value']);
+										$pass = $count < $desired_count;
 										break;
 								}
 							
 							} else {
 								if(isset($extensions[$token])) {
-									$pass = $this->runConditionExtension($token, $trigger, $params, $values);
+									$pass = $this->runConditionExtension($token, $trigger, $params, $dict);
 								} else {
 									if(null != ($ext = DevblocksPlatform::getExtension($token, true))
 										&& $ext instanceof Extension_DevblocksEventCondition) { /* @var $ext Extension_DevblocksEventCondition */ 
-										$pass = $ext->run($token, $trigger, $params, $values);
+										$pass = $ext->run($token, $trigger, $params, $dict);
 									}
 								}
 							}	
@@ -645,7 +705,7 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 		if($not)
 			$pass = !$pass;
 			
-		$logger->info(sprintf("Checking condition '%s'... %s", $token, ($pass ? 'PASS' : 'FAIL')));
+		$logger->info(sprintf("  ... %s", ($pass ? 'PASS' : 'FAIL')));
 		
 		return $pass;
 	}
@@ -678,8 +738,8 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 	
 	abstract function getActionExtensions();
 	abstract function renderActionExtension($token, $trigger, $params=array(), $seq=null);
-	abstract function runActionExtension($token, $trigger, $params, &$values);
-	protected function simulateActionExtension($token, $trigger, $params, &$values) {}
+	abstract function runActionExtension($token, $trigger, $params, DevblocksDictionaryDelegate $dict);
+	protected function simulateActionExtension($token, $trigger, $params, DevblocksDictionaryDelegate $dict) {}
 	
 	function renderAction($token, $trigger, $params=array(), $seq=null) {
 		$actions = $this->getActionExtensions();
@@ -741,25 +801,25 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 	}
 	
 	// Are we doing a dry run?
-	function simulateAction($token, $trigger, $params, &$values) {
+	function simulateAction($token, $trigger, $params, DevblocksDictionaryDelegate $dict) {
 		$actions = $this->getActionExtensions();
 
 		if(null != (@$action = $actions[$token])) {
 			if(method_exists($this, 'simulateActionExtension'))
-				return $this->simulateActionExtension($token, $trigger, $params, $values);
+				return $this->simulateActionExtension($token, $trigger, $params, $dict);
 			
 		} else {
 			switch($token) {
 				default:
 					// Variables
 					if(substr($token,0,4) == 'var_') {
-						return DevblocksEventHelper::runActionSetVariable($token, $trigger, $params, $values);
+						return DevblocksEventHelper::runActionSetVariable($token, $trigger, $params, $dict);
 					
 					} else {
 						// Plugins
 						if(null != ($ext = DevblocksPlatform::getExtension($token, true))
 							&& $ext instanceof Extension_DevblocksEventAction) { /* @var $ext Extension_DevblocksEventAction */ 
-							//return $ext->simulate($token, $trigger, $params, $values);
+							//return $ext->simulate($token, $trigger, $params, $dict);
 						}
 					}
 					break;
@@ -767,7 +827,7 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 		}		
 	}
 	
-	function runAction($token, $trigger, $params, &$values, $dry_run=false) {
+	function runAction($token, $trigger, $params, DevblocksDictionaryDelegate $dict, $dry_run=false) {
 		$actions = $this->getActionExtensions();
 		
 		$out = '';
@@ -775,9 +835,9 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 		if(null != (@$action = $actions[$token])) {
 			// Is this a dry run?  If so, don't actually change anything
 			if($dry_run) {
-				$out = $this->simulateAction($token, $trigger, $params, $values);
+				$out = $this->simulateAction($token, $trigger, $params, $dict);
 			} else {
-				$this->runActionExtension($token, $trigger, $params, $values);
+				$this->runActionExtension($token, $trigger, $params, $dict);
 			}
 			
 		} else {
@@ -786,10 +846,10 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 					// Variables
 					if(substr($token,0,4) == 'var_') {
 						// Always set the action vars, even in simulation.
-						DevblocksEventHelper::runActionSetVariable($token, $trigger, $params, $values);
+						DevblocksEventHelper::runActionSetVariable($token, $trigger, $params, $dict);
 						
 						if($dry_run) {
-							$out = DevblocksEventHelper::simulateActionSetVariable($token, $trigger, $params, $values);
+							$out = DevblocksEventHelper::simulateActionSetVariable($token, $trigger, $params, $dict);
 						} else {
 							return;
 						}
@@ -800,9 +860,9 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 							&& $ext instanceof Extension_DevblocksEventAction) { /* @var $ext Extension_DevblocksEventAction */
 							if($dry_run) {
 								if(method_exists($ext, 'simulate'))
-									$out = $ext->simulate($token, $trigger, $params, $values);
+									$out = $ext->simulate($token, $trigger, $params, $dict);
 							} else {
-								return $ext->run($token, $trigger, $params, $values);
+								return $ext->run($token, $trigger, $params, $dict);
 							}
 						}
 					}
@@ -817,8 +877,8 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 			$log = EventListener_Triggers::getNodeLog();
 			$nodes = $trigger->getNodes();
 			
-			if(!isset($values['_simulator_output']) || !is_array($values['_simulator_output']))
-				$values['_simulator_output'] = array();
+			if(!isset($dict->_simulator_output) || !is_array($dict->_simulator_output))
+				$dict->_simulator_output = array();
 			
 			$output = array(
 				'action' => $nodes[array_pop($log)]->title,
@@ -826,7 +886,9 @@ abstract class Extension_DevblocksEvent extends DevblocksExtension {
 				'content' => $out,
 			);
 			
-			$values['_simulator_output'][] = $output;
+			$previous_output = $dict->_simulator_output;
+			$previous_output[] = $output;
+			$dict->_simulator_output = $previous_output;
 			unset($out);
 		}
 	}
@@ -843,7 +905,7 @@ abstract class Extension_DevblocksEventCondition extends DevblocksExtension {
 	}
 	
 	abstract function render(Extension_DevblocksEvent $event, Model_TriggerEvent $trigger, $params=array(), $seq=null);
-	abstract function run($token, Model_TriggerEvent $trigger, $params, $values);
+	abstract function run($token, Model_TriggerEvent $trigger, $params, DevblocksDictionaryDelegate $dict);
 };
 
 abstract class Extension_DevblocksEventAction extends DevblocksExtension {
@@ -857,8 +919,8 @@ abstract class Extension_DevblocksEventAction extends DevblocksExtension {
 	}
 	
 	abstract function render(Extension_DevblocksEvent $event, Model_TriggerEvent $trigger, $params=array(), $seq=null);
-	function simulate($token, Model_TriggerEvent $trigger, $params, &$values) {}
-	abstract function run($token, Model_TriggerEvent $trigger, $params, &$values);
+	function simulate($token, Model_TriggerEvent $trigger, $params, DevblocksDictionaryDelegate $dict) {}
+	abstract function run($token, Model_TriggerEvent $trigger, $params, DevblocksDictionaryDelegate $dict);
 }
 
 abstract class DevblocksHttpResponseListenerExtension extends DevblocksExtension {

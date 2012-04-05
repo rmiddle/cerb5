@@ -346,10 +346,10 @@ class DevblocksPlatform extends DevblocksEngine {
 		
 		// Strip tags
 		$search = array(
+		    '@<![\s\S]*?--[ \t\n\r]*>@',
 			'@<script[^>]*?>.*?</script>@si',
 		    '@<style[^>]*?>.*?</style>@siU',
 		    '@<[\/\!]*?[^<>]*?>@si',
-		    '@<![\s\S]*?--[ \t\n\r]*>@',
 		);
 		$str = preg_replace($search, '', $str);
 		
@@ -1369,11 +1369,14 @@ class DevblocksPlatform extends DevblocksEngine {
 	}
 	
 	static function sanitizeArray($array, $type, $options=array()) {
+		if(!is_array($array))
+			return array();
+		
 		switch($type) {
 			case 'integer':
 				$array = _DevblocksSanitizationManager::arrayAs($array, 'integer');
 				
-				if(in_array('nonzero', $options)) {
+				if(is_array($options) && in_array('nonzero', $options)) {
 					foreach($array as $k => $v) {
 						if(empty($v))
 							unset($array[$k]);
