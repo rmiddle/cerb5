@@ -46,7 +46,7 @@
  * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2012040401);
+define("APP_BUILD", 2012040901);
 define("APP_VERSION", '5.8.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -185,9 +185,9 @@ class CerberusApplication extends DevblocksApplication {
 		// Requirements
 		
 		// PHP Version
-		if(version_compare(PHP_VERSION,"5.2") >=0) {
+		if(version_compare(PHP_VERSION,"5.3") >=0) {
 		} else {
-			$errors[] = sprintf("Cerberus Helpdesk %s requires PHP 5.2 or later. Your server PHP version is %s",
+			$errors[] = sprintf("Cerberus Helpdesk %s requires PHP 5.3 or later. Your server PHP version is %s",
 				APP_VERSION,
 				PHP_VERSION 
 			);
@@ -629,6 +629,7 @@ class CerberusContexts {
 	const CONTEXT_ADDRESS = 'cerberusweb.contexts.address';
 	const CONTEXT_ATTACHMENT = 'cerberusweb.contexts.attachment';
 	const CONTEXT_BUCKET = 'cerberusweb.contexts.bucket';
+	const CONTEXT_CALENDAR_EVENT = 'cerberusweb.contexts.calendar_event';
 	const CONTEXT_CALL = 'cerberusweb.contexts.call';
 	const CONTEXT_COMMENT = 'cerberusweb.contexts.comment';
 	const CONTEXT_CONTACT_PERSON = 'cerberusweb.contexts.contact_person';
@@ -1539,6 +1540,63 @@ class C4_ORMHelper extends DevblocksORMHelper {
 		}
 		
 		return array($select_sql, $join_sql, $return_multiple_values);
+	}
+
+	static function _searchComponentsVirtualOwner(&$param, &$join_sql, &$where_sql) {
+		$worker_ids = DevblocksPlatform::sanitizeArray($param->value, 'integer', array('nonzero','unique'));
+		
+		// Join and return anything
+		if(DevblocksSearchCriteria::OPER_TRUE == $param->operator) {
+			$param->operator = DevblocksSearchCriteria::OPER_IS_NOT_NULL;
+			
+		} else {
+			if(empty($param->value)) {
+				switch($param->operator) {
+					case DevblocksSearchCriteria::OPER_IN:
+						$param->operator = DevblocksSearchCriteria::OPER_IS_NULL;
+						break;
+					case DevblocksSearchCriteria::OPER_NIN:
+						$param->operator = DevblocksSearchCriteria::OPER_IS_NOT_NULL;
+						break;
+				}
+			}
+			
+			switch($param->operator) {
+				case DevblocksSearchCriteria::OPER_IN:
+					$where_sql .= sprintf("AND owner_context = %s AND owner_context_id IN (%s) ",
+						self::qstr(CerberusContexts::CONTEXT_WORKER),
+						implode(',', $worker_ids)
+					);
+					break;
+				case DevblocksSearchCriteria::OPER_IN_OR_NULL:
+				case DevblocksSearchCriteria::OPER_IS_NULL:
+					$worker_ids[] = 0;
+					$where_sql .= sprintf("AND owner_context = %s AND owner_context_id IN (%s) ",
+						self::qstr(CerberusContexts::CONTEXT_WORKER),
+						implode(',', $worker_ids)
+					);
+					break;
+				case DevblocksSearchCriteria::OPER_NIN:
+					$where_sql .= sprintf("AND owner_context = %s AND owner_context_id NOT IN (%s) ",
+						self::qstr(CerberusContexts::CONTEXT_WORKER),
+						implode(',', $worker_ids)
+					);
+					break;
+				case DevblocksSearchCriteria::OPER_IS_NOT_NULL:
+					$where_sql .= sprintf("AND owner_context = %s AND owner_context_id NOT = 0 ",
+						self::qstr(CerberusContexts::CONTEXT_WORKER),
+						implode(',', $worker_ids)
+					);
+					break;
+				case DevblocksSearchCriteria::OPER_NIN_OR_NULL:
+					$worker_ids[] = 0;
+					$where_sql .= sprintf("AND owner_context = %s AND owner_context_id NOT IN (%s) ",
+						self::qstr(CerberusContexts::CONTEXT_WORKER),
+						implode(',', $worker_ids)
+					);
+					break;
+			}
+		}
 	}
 	
 	static function _searchComponentsVirtualWatchers(&$param, $from_context, $from_index, &$join_sql, &$where_sql) {

@@ -1921,11 +1921,16 @@ class DevblocksEventHelper {
 			);
 			
 			$ctx = Extension_DevblocksContext::get($context);
-			$view_model = new C4_AbstractViewModel();
-			$view_model->id = $view_id;
-			$view_model->is_ephemeral = true;
-			$view_model->renderFilters = true;
-			$view_model->class_name = $ctx->getViewClass();
+			
+			$view = $ctx->getChooserView(); /* @var $view C4_AbstractView */
+			
+			if($view instanceof C4_AbstractView) {
+				$view->id = $view_id;
+				$view->is_ephemeral = true;
+				$view->renderFilters = true;
+	
+				$view_model = C4_AbstractViewLoader::serializeAbstractView($view);
+			}
 		}
 		
 		return $view_model;
@@ -1969,17 +1974,24 @@ class DevblocksEventHelper {
 				break;
 		}
 		
+		$objects = array();
+		
 		// Preload these from DAO
-		$objects = $view->getDataAsObjects($new_ids);
+		if(is_array($new_ids))
+			$objects = $view->getDataAsObjects($new_ids);
 
 		if(is_array($objects))
-		foreach($objects as $object_id => $object) {
-			$obj_labels = array();
-			$obj_values = array();
-			CerberusContexts::getContext($context, $object, $obj_labels, $obj_values, null, true);
-			$array = $dict->$token;
-			$array[$object_id] = $obj_values;
-			$dict->$token = $array;
+		foreach($new_ids as $new_id) {
+			$object = isset($objects[$new_id]) ? $objects[$new_id] : null;
+			
+			if(!empty($object)) {
+				$obj_labels = array();
+				$obj_values = array();
+				CerberusContexts::getContext($context, $object, $obj_labels, $obj_values, null, true);
+				$array = $dict->$token;
+				$array[$new_id] = $obj_values;
+				$dict->$token = $array;
+			}
 		}
 	}
 };
