@@ -372,13 +372,24 @@ class DevblocksEventHelper {
 					$label ? $label : '(object)' 
 				);
 			}
+
+			$obj_name = strtolower($context_ext->name);
 			
-			$out .= "\nWith fields:\n";
+			$out .= "\nTo use the list as placeholders:\n";
+			
+			$out .= sprintf("{%% for %s in %s %%}\n * {{%s._label}}\n{%% endfor %%}\n",
+				$obj_name,
+				$token,
+				$obj_name
+			);
+			
+			$out .= "\nPlaceholders:\n";
 
 			foreach($fields as $k => $v) {
 				if(substr($k,0,1)=='_')
 					continue;
-				$out .= sprintf(" * %s\n     %s\n",
+				$out .= sprintf(" * %s.%s\n     %s\n",
+					$obj_name,
 					$k,
 					$v
 				);
@@ -1111,6 +1122,7 @@ class DevblocksEventHelper {
 
 		$event = $trigger->getEvent();
 		$values_to_contexts = $event->getValuesContexts($trigger);
+		
 		$tpl->assign('values_to_contexts', $values_to_contexts);
 		
 		$tpl->display('devblocks:cerberusweb.core::internal/decisions/actions/_create_notification.tpl');
@@ -1127,7 +1139,6 @@ class DevblocksEventHelper {
 		$out = sprintf(">>> Sending a notification:\n".
 			"\n".
 			"%s\n".
-			"\n".
 			""
 			,
 			rtrim($content)
@@ -1142,16 +1153,20 @@ class DevblocksEventHelper {
 			@$on_objects = $on_result['objects'];
 			
 			if(is_array($on_objects)) {
-				$out .= ">>> On:\n";
+				$out .= "\n>>> On:\n";
 				
 				foreach($on_objects as $on_object) {
 					$on_object_context = Extension_DevblocksContext::get($on_object['_context']);
 					$out .= ' * (' . $on_object_context->manifest->name . ') ' . $on_object['_label'] . "\n";  
 				}
-				
-				$out .= "\n";
 			}
-		}		
+			
+		} elseif(!empty($params['url'])) {
+			$out .= sprintf("\n>>> Link to:\n%s\n",
+				$params['url']
+			);
+			
+		}
 		
 		// Notify
 		
@@ -1159,7 +1174,7 @@ class DevblocksEventHelper {
 		$notify_worker_ids = DevblocksEventHelper::mergeWorkerVars($notify_worker_ids, $dict);
 
 		if(!empty($notify_worker_ids)) {
-			$out .= ">>> Notifying:\n";
+			$out .= "\n>>> Notifying:\n";
 			
 			foreach($notify_worker_ids as $worker_id) {
 				if(null != ($worker = DAO_Worker::get($worker_id))) {
@@ -1190,33 +1205,50 @@ class DevblocksEventHelper {
 		
 		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
 		$content = $tpl_builder->build($params['content'], $dict);
+		@$url = DevblocksPlatform::importVar($params['url'],'string','');
 		
 		$notify_contexts = array();
 		
 		// On: Are we notifying about something else?
 		
 		@$on = DevblocksPlatform::importVar($params['on'],'string',$default_on);
-		
-		$on_result = DevblocksEventHelper::onContexts($on, $event->getValuesContexts($trigger), $dict);
-		@$on_objects = $on_result['objects'];
-		
-		if(is_array($on_objects)) {
-			foreach($on_objects as $on_object) {
-				$notify_contexts[] = array($on_object['_context'], $on_object['id']);
+
+		if(!empty($on)) {
+			$on_result = DevblocksEventHelper::onContexts($on, $event->getValuesContexts($trigger), $dict);
+			@$on_objects = $on_result['objects'];
+			
+			if(is_array($on_objects)) {
+				foreach($on_objects as $on_object) {
+					$notify_contexts[] = array($on_object['_context'], $on_object['id']);
+				}
 			}
 		}
-			
+		
 		// Send notifications
 		
 		foreach($notify_worker_ids as $notify_worker_id) {
-			foreach($notify_contexts as $notify_context_data) {
+			if(!empty($notify_contexts)) {
+				if(is_array($notify_contexts))
+				foreach($notify_contexts as $notify_context_data) {
+					$fields = array(
+						DAO_Notification::CONTEXT => $notify_context_data[0],
+						DAO_Notification::CONTEXT_ID => $notify_context_data[1],
+						DAO_Notification::WORKER_ID => $notify_worker_id,
+						DAO_Notification::CREATED_DATE => time(),
+						DAO_Notification::MESSAGE => $content,
+						DAO_Notification::URL => '',
+					);
+					$notification_id = DAO_Notification::create($fields);
+				}
+				
+			} elseif(!empty($url)) {
 				$fields = array(
-					DAO_Notification::CONTEXT => $notify_context_data[0],
-					DAO_Notification::CONTEXT_ID => $notify_context_data[1],
+					DAO_Notification::CONTEXT => null,
+					DAO_Notification::CONTEXT_ID => null,
 					DAO_Notification::WORKER_ID => $notify_worker_id,
 					DAO_Notification::CREATED_DATE => time(),
 					DAO_Notification::MESSAGE => $content,
-					DAO_Notification::URL => '',
+					DAO_Notification::URL => $url,
 				);
 				$notification_id = DAO_Notification::create($fields);
 			}
