@@ -26,11 +26,10 @@ class Subcontroller_Internal_VirtualAttendants {
 		 * Secure looking at other worker tabs (check superuser, worker_id)
 		 */
 		
-		if(null == ($ctx = Extension_DevblocksContext::get($context)))
-			return;
+		$ctx = Extension_DevblocksContext::get($context);
 		
 		if(!$active_worker->is_superuser) {
-			if(!$ctx->authorize($context_id, $active_worker))
+			if(is_null($ctx) || !$ctx->authorize($context_id, $active_worker))
 				return;
 		}
 
@@ -58,21 +57,6 @@ class Subcontroller_Internal_VirtualAttendants {
 		
 		C4_AbstractViewLoader::setView($view->id, $view);
 
-		// Macros
-
-		$meta = $ctx->getMeta($context_id);		
-		$tpl->assign('return_url', @$meta['permalink']);
-		
-		// If we're looking at a worker, but not ourselves...
-		if($context == CerberusContexts::CONTEXT_WORKER && $context_id != $active_worker->id) {
-			// ... and we're a superuser, then use our own macros instead
-			if($active_worker->is_superuser)
-				$context_id = $active_worker->id;
-		}
-		
-		$macros = DAO_TriggerEvent::getByOwner($context, $context_id, 'event.macro.worker');
-		$tpl->assign('macros', $macros);
-		
 		// Template
 		
 		$tpl->display('devblocks:cerberusweb.core::internal/va/scheduled_behavior/tab.tpl');

@@ -56,6 +56,50 @@ class Page_Profiles extends CerberusPageExtension {
 				}
 				$tpl->assign('selected_tab', $selected_tab);
 				
+				// Custom fields
+				
+				$custom_fields = DAO_CustomField::getAll();
+				$tpl->assign('custom_fields', $custom_fields);
+				
+				// Properties
+				
+				$translate = DevblocksPlatform::getTranslationService();
+				
+				$properties = array();
+				
+// 				$properties['email'] = array(
+// 					'label' => ucfirst($translate->_('common.email')),
+// 					'type' => Model_CustomField::TYPE_SINGLE_LINE,
+// 					'value' => $worker->email,
+// 				);
+				
+				@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_GROUP, $group->id)) or array();
+		
+				foreach($custom_fields as $cf_id => $cfield) {
+					if(!isset($values[$cf_id]))
+						continue;
+						
+					$properties['cf_' . $cf_id] = array(
+						'label' => $cfield->name,
+						'type' => $cfield->type,
+						'value' => $values[$cf_id],
+					);
+				}
+				
+				$tpl->assign('properties', $properties);				
+				
+				// Macros
+				$macros = DAO_TriggerEvent::getByOwners(
+					array(
+						array(CerberusContexts::CONTEXT_WORKER, $active_worker->id, null),
+						array(CerberusContexts::CONTEXT_GROUP, $group->id, $group->name),
+					),
+					'event.macro.group'
+				);
+				$tpl->assign('macros', $macros);
+				
+				// Template
+				
 				$tpl->display('devblocks:cerberusweb.core::profiles/group/index.tpl');
 				break;
 				
@@ -89,6 +133,51 @@ class Page_Profiles extends CerberusPageExtension {
 				$counts = DAO_ContextLink::getContextLinkCounts(CerberusContexts::CONTEXT_WORKER, $worker_id);
 				$watching_total = intval(array_sum($counts));
 				$tpl->assign('watching_total', $watching_total);
+				
+				// Custom fields
+				
+				$custom_fields = DAO_CustomField::getAll();
+				$tpl->assign('custom_fields', $custom_fields);
+				
+				// Properties
+				
+				$translate = DevblocksPlatform::getTranslationService();
+				
+				$properties = array();
+				
+				$properties['email'] = array(
+					'label' => ucfirst($translate->_('common.email')),
+					'type' => Model_CustomField::TYPE_SINGLE_LINE,
+					'value' => $worker->email,
+				);
+				
+				$properties['is_superuser'] = array(
+					'label' => ucfirst($translate->_('worker.is_superuser')),
+					'type' => Model_CustomField::TYPE_CHECKBOX,
+					'value' => $worker->is_superuser,
+				);
+				
+				@$values = array_shift(DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_WORKER, $worker->id)) or array();
+		
+				foreach($custom_fields as $cf_id => $cfield) {
+					if(!isset($values[$cf_id]))
+						continue;
+						
+					$properties['cf_' . $cf_id] = array(
+						'label' => $cfield->name,
+						'type' => $cfield->type,
+						'value' => $values[$cf_id],
+					);
+				}
+				
+				$tpl->assign('properties', $properties);				
+				
+				// Macros
+		
+				$macros = DAO_TriggerEvent::getByOwner(CerberusContexts::CONTEXT_WORKER, $active_worker->id, 'event.macro.worker');
+				$tpl->assign('macros', $macros);
+
+				// Template
 				
 				$tpl->display('devblocks:cerberusweb.core::profiles/worker/index.tpl');
 				break;

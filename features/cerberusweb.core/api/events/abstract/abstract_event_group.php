@@ -15,27 +15,26 @@
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
 
-abstract class AbstractEvent_Org extends Extension_DevblocksEvent {
+abstract class AbstractEvent_Group extends Extension_DevblocksEvent {
 	protected $_event_id = null; // override
 
 	/**
 	 * 
-	 * @param integer $org_id
+	 * @param integer $group_id
 	 * @return Model_DevblocksEvent
 	 */
-	function generateSampleEventModel($org_id=null) {
+	function generateSampleEventModel($group_id=null) {
 		
-		if(empty($org_id)) {
+		if(empty($group_id)) {
 			// Pull the latest record
-			list($results) = DAO_ContactOrg::search(
+			list($results) = DAO_Group::search(
 				array(),
 				array(
-					//new DevblocksSearchCriteria(SearchFields_ContactOrg::IS_CLOSED,'=',0),
 				),
 				10,
 				0,
-				SearchFields_ContactOrg::ID,
-				false,
+				SearchFields_Group::ID,
+				true,
 				false
 			);
 			
@@ -43,13 +42,13 @@ abstract class AbstractEvent_Org extends Extension_DevblocksEvent {
 			
 			$result = array_shift($results);
 			
-			$org_id = $result[SearchFields_ContactOrg::ID];
+			$group_id = $result[SearchFields_Group::ID];
 		}
 		
 		return new Model_DevblocksEvent(
 			$this->_event_id,
 			array(
-				'org_id' => $org_id,
+				'group_id' => $group_id,
 			)
 		);
 	}	
@@ -59,17 +58,17 @@ abstract class AbstractEvent_Org extends Extension_DevblocksEvent {
 		$values = array();
 
 		/**
-		 * Org
+		 * Group
 		 */
 		
-		@$org_id = $event_model->params['org_id']; 
+		@$group_id = $event_model->params['group_id']; 
 		$merge_labels = array();
 		$merge_values = array();
-		CerberusContexts::getContext(CerberusContexts::CONTEXT_ORG, $org_id, $merge_labels, $merge_values, null, true);
+		CerberusContexts::getContext(CerberusContexts::CONTEXT_GROUP, $group_id, $merge_labels, $merge_values, null, true);
 
 			// Merge
 			CerberusContexts::merge(
-				'org_',
+				'group_',
 				'',
 				$merge_labels,
 				$merge_values,
@@ -87,13 +86,9 @@ abstract class AbstractEvent_Org extends Extension_DevblocksEvent {
 	
 	function getValuesContexts($trigger) {
 		$vals = array(
-			'org_id' => array(
-				'label' => 'Organization',
-				'context' => CerberusContexts::CONTEXT_ORG,
-			),
-			'org_watchers' => array(
-				'label' => 'Organization watchers',
-				'context' => CerberusContexts::CONTEXT_WORKER,
+			'group_id' => array(
+				'label' => 'Group',
+				'context' => CerberusContexts::CONTEXT_GROUP,
 			),
 		);
 		
@@ -108,28 +103,12 @@ abstract class AbstractEvent_Org extends Extension_DevblocksEvent {
 	function getConditionExtensions() {
 		$labels = $this->getLabels();
 		
-		$labels['org_link'] = 'Org is linked';
-		
-		$labels['org_watcher_count'] = 'Org watcher count';
-		
 		$types = array(
-			'org_city' => Model_CustomField::TYPE_SINGLE_LINE,
-			'org_country' => Model_CustomField::TYPE_SINGLE_LINE,
-			'org_created|date' => Model_CustomField::TYPE_DATE,
-			'org_name' => Model_CustomField::TYPE_SINGLE_LINE,
-			'org_phone' => Model_CustomField::TYPE_SINGLE_LINE,
-			'org_postal' => Model_CustomField::TYPE_SINGLE_LINE,
-			'org_province' => Model_CustomField::TYPE_SINGLE_LINE,
-			'org_street' => Model_CustomField::TYPE_SINGLE_LINE,
-			'org_website' => Model_CustomField::TYPE_URL,
-			
-			'org_link' => null,
-			
-			'org_watcher_count' => null,
+			'group_name' => Model_CustomField::TYPE_SINGLE_LINE,
 		);
 
 		$conditions = $this->_importLabelsTypesAsConditions($labels, $types);
-		
+
 		return $conditions;		
 	}
 	
@@ -141,15 +120,6 @@ abstract class AbstractEvent_Org extends Extension_DevblocksEvent {
 			$tpl->assign('namePrefix','condition'.$seq);
 		
 		switch($token) {
-			case 'org_link':
-				$contexts = Extension_DevblocksContext::getAll(false);
-				$tpl->assign('contexts', $contexts);
-				$tpl->display('devblocks:cerberusweb.core::events/condition_link.tpl');
-				break;
-				
-			case 'org_watcher_count':
-				$tpl->display('devblocks:cerberusweb.core::internal/decisions/conditions/_number.tpl');
-				break;
 		}
 
 		$tpl->clearAssign('namePrefix');
@@ -160,70 +130,6 @@ abstract class AbstractEvent_Org extends Extension_DevblocksEvent {
 		$pass = true;
 		
 		switch($token) {
-			case 'org_link':
-				$not = (substr($params['oper'],0,1) == '!');
-				$oper = ltrim($params['oper'],'!');
-				
-				$from_context = null;
-				$from_context_id = null;
-				
-				switch($token) {
-					case 'org_link':
-						$from_context = CerberusContexts::CONTEXT_ORG;
-						@$from_context_id = $dict->org_id;
-						break;
-					default:
-						$pass = false;
-				}
-				
-				// Get links by context+id
-
-				if(!empty($from_context) && !empty($from_context_id)) {
-					@$context_strings = $params['context_objects'];
-					$links = DAO_ContextLink::intersect($from_context, $from_context_id, $context_strings);
-					
-					// OPER: any, !any, all
-	
-					switch($oper) {
-						case 'in':
-							$pass = (is_array($links) && !empty($links));
-							break;
-						case 'all':
-							$pass = (is_array($links) && count($links) == count($context_strings));
-							break;
-						default:
-							$pass = false;
-							break;
-					}
-					
-					$pass = ($not) ? !$pass : $pass;
-					
-				} else {
-					$pass = false;
-				}
-				break;
-				
-			case 'org_watcher_count':
-				$not = (substr($params['oper'],0,1) == '!');
-				$oper = ltrim($params['oper'],'!');
-				
-				$value = count($dict->org_watchers);
-				
-				switch($oper) {
-					case 'is':
-						$pass = intval($value)==intval($params['value']);
-						break;
-					case 'gt':
-						$pass = intval($value) > intval($params['value']);
-						break;
-					case 'lt':
-						$pass = intval($value) < intval($params['value']);
-						break;
-				}
-				
-				$pass = ($not) ? !$pass : $pass;
-				break;
-							
 			default:
 				$pass = false;
 				break;
@@ -235,16 +141,16 @@ abstract class AbstractEvent_Org extends Extension_DevblocksEvent {
 	function getActionExtensions() {
 		$actions = 
 			array(
-				'add_watchers' => array('label' =>'Add watchers'),
+// 				'add_watchers' => array('label' =>'Add watchers'),
 				'create_comment' => array('label' =>'Create a comment'),
 				'create_notification' => array('label' =>'Create a notification'),
 				'create_task' => array('label' =>'Create a task'),
 				'create_ticket' => array('label' =>'Create a ticket'),
 				'schedule_behavior' => array('label' => 'Schedule behavior'),
-				'set_org_links' => array('label' => 'Set links on organization'),
+				'send_email' => array('label' => 'Send email'),
 				'unschedule_behavior' => array('label' => 'Unschedule behavior'),
 			)
-			+ DevblocksEventHelper::getActionCustomFields(CerberusContexts::CONTEXT_ORG)
+			+ DevblocksEventHelper::getActionCustomFields(CerberusContexts::CONTEXT_GROUP)
 			;
 			
 		return $actions;
@@ -261,9 +167,9 @@ abstract class AbstractEvent_Org extends Extension_DevblocksEvent {
 		$tpl->assign('token_labels', $labels);
 			
 		switch($token) {
-			case 'add_watchers':
-				DevblocksEventHelper::renderActionAddWatchers($trigger);
-				break;
+// 			case 'add_watchers':
+// 				DevblocksEventHelper::renderActionAddWatchers($trigger);
+// 				break;
 			
 			case 'create_comment':
 				DevblocksEventHelper::renderActionCreateComment($trigger);
@@ -292,15 +198,13 @@ abstract class AbstractEvent_Org extends Extension_DevblocksEvent {
 			
 				DevblocksEventHelper::renderActionScheduleBehavior($trigger);
 				break;
-				
+
+			case 'send_email':
+				DevblocksEventHelper::renderActionSendEmail($trigger);
+				break;
+
 			case 'unschedule_behavior':
 				DevblocksEventHelper::renderActionUnscheduleBehavior($trigger);
-				break;
-				
-			case 'set_org_links':
-				$contexts = Extension_DevblocksContext::getAll(false);
-				$tpl->assign('contexts', $contexts);
-				$tpl->display('devblocks:cerberusweb.core::events/action_set_links.tpl');
 				break;
 				
 			default:
@@ -318,43 +222,36 @@ abstract class AbstractEvent_Org extends Extension_DevblocksEvent {
 	}
 	
 	function simulateActionExtension($token, $trigger, $params, DevblocksDictionaryDelegate $dict) {
-		@$org_id = $dict->org_id;
+		@$group_id = $dict->group_id;
 
-		if(empty($org_id))
+		if(empty($group_id))
 			return;
 		
 		switch($token) {
-			case 'add_watchers':
-				return DevblocksEventHelper::simulateActionAddWatchers($params, $dict, 'org_id');
-				break;
-			
+// 			case 'add_watchers':
+// 				return DevblocksEventHelper::simulateActionAddWatchers($params, $dict, 'group_id');
+// 				break;
 			case 'create_comment':
-				return DevblocksEventHelper::simulateActionCreateComment($params, $dict, 'org_id');
+				return DevblocksEventHelper::simulateActionCreateComment($params, $dict, 'group_id');
 				break;
-				
 			case 'create_notification':
-				return DevblocksEventHelper::simulateActionCreateNotification($params, $dict, 'org_id');
+				return DevblocksEventHelper::simulateActionCreateNotification($params, $dict, 'group_id');
 				break;
-				
 			case 'create_task':
-				return DevblocksEventHelper::simulateActionCreateTask($params, $dict, 'org_id');
+				return DevblocksEventHelper::simulateActionCreateTask($params, $dict, 'group_id');
 				break;
-
 			case 'create_ticket':
-				return DevblocksEventHelper::simulateActionCreateTicket($params, $dict, 'org_id');
+				return DevblocksEventHelper::simulateActionCreateTicket($params, $dict);
 				break;
-				
 			case 'schedule_behavior':
 				return DevblocksEventHelper::simulateActionScheduleBehavior($params, $dict);
 				break;
-				
+			case 'send_email':
+				return DevblocksEventHelper::simulateActionSendEmail($params, $dict);
+				break;
 			case 'unschedule_behavior':
 				return DevblocksEventHelper::simulateActionUnscheduleBehavior($params, $dict);
 				break;
-				
-			case 'set_org_links':
-				break;
-				
 			default:
 				if('set_cf_' == substr($token,0,7)) {
 					$field_id = substr($token,7);
@@ -364,83 +261,58 @@ abstract class AbstractEvent_Org extends Extension_DevblocksEvent {
 					
 					// If different types of custom fields, need to find the proper context_id
 					switch($custom_field->context) {
-						case CerberusContexts::CONTEXT_ORG:
+						case CerberusContexts::CONTEXT_GROUP:
 							$context = $custom_field->context;
-							$context_id = $org_id;
+							$context_id = $group_id;
 							break;
 					}
 					
 					if(!empty($context) && !empty($context_id))
-						return DevblocksEventHelper::simulateActionSetCustomField($custom_field, 'org_custom', $params, $dict, $context, $context_id);
+						return DevblocksEventHelper::simulateActionSetCustomField($custom_field, 'group_custom', $params, $dict, $context, $context_id);
 				}
-				break;	
+				break;
 		}
 	}
 	
 	function runActionExtension($token, $trigger, $params, DevblocksDictionaryDelegate $dict) {
-		@$org_id = $dict->org_id;
+		@$group_id = $dict->group_id;
 
-		if(empty($org_id))
+		if(empty($group_id))
 			return;
 		
 		switch($token) {
-			case 'add_watchers':
-				DevblocksEventHelper::runActionAddWatchers($params, $dict, 'org_id');
-				break;
+// 			case 'add_watchers':
+// 				DevblocksEventHelper::runActionAddWatchers($params, $dict, 'group_id');
+// 				break;
 			
 			case 'create_comment':
-				DevblocksEventHelper::runActionCreateComment($params, $dict, 'org_id');
+				DevblocksEventHelper::runActionCreateComment($params, $dict, 'group_id');
 				break;
 				
 			case 'create_notification':
-				DevblocksEventHelper::runActionCreateNotification($params, $dict, 'org_id');
+				DevblocksEventHelper::runActionCreateNotification($params, $dict, 'group_id');
 				break;
 				
 			case 'create_task':
-				DevblocksEventHelper::runActionCreateTask($params, $dict, 'org_id');
+				DevblocksEventHelper::runActionCreateTask($params, $dict, 'group_id');
 				break;
 
 			case 'create_ticket':
-				DevblocksEventHelper::runActionCreateTicket($params, $dict, 'org_id');
+				DevblocksEventHelper::runActionCreateTicket($params, $dict);
 				break;
 				
 			case 'schedule_behavior':
 				DevblocksEventHelper::runActionScheduleBehavior($params, $dict);
+				break;
+
+			case 'send_email':
+				DevblocksEventHelper::runActionSendEmail($params, $dict);
 				break;
 				
 			case 'unschedule_behavior':
 				DevblocksEventHelper::runActionUnscheduleBehavior($params, $dict);
 				break;
 				
-			case 'set_org_links':
-				@$to_context_strings = $params['context_objects'];
-
-				if(!is_array($to_context_strings) || empty($to_context_strings))
-					break;
-
-				$from_context = null;
-				$from_context_id = null;
-				
-				switch($token) {
-					case 'set_org_links':
-						$from_context = CerberusContexts::CONTEXT_ORG;
-						@$from_context_id = $dict->org_id;
-						break;
-				}
-				
-				if(empty($from_context) || empty($from_context_id))
-					break;
-				
-				foreach($to_context_strings as $to_context_string) {
-					@list($to_context, $to_context_id) = explode(':', $to_context_string);
-					
-					if(empty($to_context) || empty($to_context_id))
-						continue;
-					
-					DAO_ContextLink::setLink($from_context, $from_context_id, $to_context, $to_context_id);
-				}				
-				break;
-				
 			default:
 				if('set_cf_' == substr($token,0,7)) {
 					$field_id = substr($token,7);
@@ -450,14 +322,14 @@ abstract class AbstractEvent_Org extends Extension_DevblocksEvent {
 					
 					// If different types of custom fields, need to find the proper context_id
 					switch($custom_field->context) {
-						case CerberusContexts::CONTEXT_ORG:
+						case CerberusContexts::CONTEXT_GROUP:
 							$context = $custom_field->context;
-							$context_id = $org_id;
+							$context_id = $group_id;
 							break;
 					}
 					
 					if(!empty($context) && !empty($context_id))
-						DevblocksEventHelper::runActionSetCustomField($custom_field, 'org_custom', $params, $dict, $context, $context_id);
+						DevblocksEventHelper::runActionSetCustomField($custom_field, 'group_custom', $params, $dict, $context, $context_id);
 				}
 				break;	
 		}
