@@ -1372,6 +1372,7 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 			self::ORG_NAME => new DevblocksSearchField(self::ORG_NAME, 'o', 'name', $translate->_('contact_org.name')),
 			self::REQUESTER_ADDRESS => new DevblocksSearchField(self::REQUESTER_ADDRESS, 'ra', 'email',$translate->_('ticket.requester')),
 			
+			self::TICKET_ORG_ID => new DevblocksSearchField(self::TICKET_ORG_ID, 't','org_id',$translate->_('contact_org.id')),
 			self::TICKET_OWNER_ID => new DevblocksSearchField(self::TICKET_OWNER_ID,'t','owner_id',$translate->_('common.owner')),
 			self::TICKET_GROUP_ID => new DevblocksSearchField(self::TICKET_GROUP_ID,'t','group_id',$translate->_('common.group')),
 			self::TICKET_BUCKET_ID => new DevblocksSearchField(self::TICKET_BUCKET_ID, 't', 'bucket_id',$translate->_('common.bucket')),
@@ -1514,12 +1515,13 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 			SearchFields_Ticket::CONTEXT_LINK_ID,
 			SearchFields_Ticket::FULLTEXT_COMMENT_CONTENT,
 			SearchFields_Ticket::FULLTEXT_MESSAGE_CONTENT,
-			SearchFields_Ticket::REQUESTER_ID,
 			SearchFields_Ticket::REQUESTER_ADDRESS,
+			SearchFields_Ticket::REQUESTER_ID,
 			SearchFields_Ticket::TICKET_CLOSED,
 			SearchFields_Ticket::TICKET_DELETED,
-			SearchFields_Ticket::TICKET_WAITING,
 			SearchFields_Ticket::TICKET_INTERESTING_WORDS,
+			SearchFields_Ticket::TICKET_ORG_ID,
+			SearchFields_Ticket::TICKET_WAITING,
 			SearchFields_Ticket::VIRTUAL_ASSIGNABLE,
 			SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER,
 			SearchFields_Ticket::VIRTUAL_STATUS,
@@ -1527,13 +1529,14 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 		));
 		
 		$this->addParamsHidden(array(
-			SearchFields_Ticket::REQUESTER_ID,
-			SearchFields_Ticket::TICKET_CLOSED,
-			SearchFields_Ticket::TICKET_DELETED,
-			SearchFields_Ticket::TICKET_WAITING,
-			SearchFields_Ticket::TICKET_BUCKET_ID,
 			SearchFields_Ticket::CONTEXT_LINK,
 			SearchFields_Ticket::CONTEXT_LINK_ID,
+			SearchFields_Ticket::REQUESTER_ID,
+			SearchFields_Ticket::TICKET_BUCKET_ID,
+			SearchFields_Ticket::TICKET_CLOSED,
+			SearchFields_Ticket::TICKET_DELETED,
+			SearchFields_Ticket::TICKET_ORG_ID,
+			SearchFields_Ticket::TICKET_WAITING,
 		));
 		
 		$this->doResetCriteria();
@@ -2337,6 +2340,8 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 		$change_fields = array();
 		$custom_fields = array();
 
+		$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+		
 		// Make sure we have actions
 		if(empty($do))
 			return;
@@ -2366,6 +2371,11 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 				case 'reopen':
 					@$date = strtotime($v['date']);
 					$change_fields[DAO_Ticket::DUE_DATE] = intval($date);
+					break;
+				case 'broadcast':
+					if(isset($v['worker_id'])) {
+						CerberusContexts::getContext(CerberusContexts::CONTEXT_WORKER, $v['worker_id'], $worker_labels, $worker_values);
+					}
 					break;
 				default:
 					// Custom fields
@@ -2504,11 +2514,24 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 					);
 					$is_queued = (isset($broadcast_params['is_queued']) && $broadcast_params['is_queued']) ? true : false; 
 					
-					$tpl_builder = DevblocksPlatform::getTemplateBuilder();
-					
 					if(is_array($tickets))
 					foreach($tickets as $ticket_id => $row) {
 						CerberusContexts::getContext(CerberusContexts::CONTEXT_TICKET, $row, $tpl_labels, $tpl_tokens);
+						
+						// Add the signature to the token_values
+						// [TODO] This shouldn't be redundant with ::doBulkUpdateBroadcastTestAction()
+						if(in_array('signature', $tpl_builder->tokenize($broadcast_params['message']))) {
+							if(isset($tpl_tokens['group_id']) && null != ($sig_group = DAO_Group::get($tpl_tokens['group_id']))) {
+								 $sig_template = $sig_group->getReplySignature(@intval($tpl_tokens['bucket_id']));
+
+								 if(isset($worker_values)) {
+									 if(false !== ($out = $tpl_builder->build($sig_template, $worker_values))) {
+									 	$tpl_tokens['signature'] = $out;
+									 }
+								 }
+							}
+						}
+						
 						$body = $tpl_builder->build($broadcast_params['message'], $tpl_tokens);
 						
 						$fields = array(
@@ -2670,6 +2693,7 @@ class Context_Ticket extends Extension_DevblocksContext {
 			'created|date' => $prefix.$translate->_('ticket.created'),
 			'id' => $prefix.$translate->_('ticket.id'),
 			'mask' => $prefix.$translate->_('ticket.mask'),
+			'reopen_date|date' => $prefix.$translate->_('ticket.reopen_date'),
 			'spam_score' => $prefix.$translate->_('ticket.spam_score'),
 			'spam_training' => $prefix.$translate->_('ticket.spam_training'),
 			'status' => $prefix.$translate->_('common.status'),
@@ -2691,6 +2715,7 @@ class Context_Ticket extends Extension_DevblocksContext {
 			$token_values['created'] = $ticket[SearchFields_Ticket::TICKET_CREATED_DATE];
 			$token_values['id'] = $ticket[SearchFields_Ticket::TICKET_ID];
 			$token_values['mask'] = $ticket[SearchFields_Ticket::TICKET_MASK];
+			$token_values['reopen_date'] = $ticket[SearchFields_Ticket::TICKET_DUE_DATE];
 			$token_values['spam_score'] = $ticket[SearchFields_Ticket::TICKET_SPAM_SCORE];
 			$token_values['spam_training'] = $ticket[SearchFields_Ticket::TICKET_SPAM_TRAINING];
 			$token_values['subject'] = $ticket[SearchFields_Ticket::TICKET_SUBJECT];
