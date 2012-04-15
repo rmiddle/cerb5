@@ -19,6 +19,7 @@
 <form id="customize{$view->id}" name="customize{$view->id}" action="#" onsubmit="return false;" style="display:none;"></form>
 <form id="viewForm{$view->id}" name="viewForm{$view->id}" action="{devblocks_url}{/devblocks_url}" method="post">
 <input type="hidden" name="view_id" value="{$view->id}">
+<input type="hidden" name="context_id" value="cerberusweb.contexts.snippet">
 <input type="hidden" name="c" value="tickets">
 <input type="hidden" name="a" value="">
 <table cellpadding="5" cellspacing="0" border="0" width="100%" class="worklistBody">
@@ -78,7 +79,9 @@
 				<td>
 					{if !is_null($owner_context_ext)}
 						{$meta = $owner_context_ext->getMeta($owner_context_id)}
+						{if !empty($meta)}
 						{$meta.name} 
+						{/if}
 						({$owner_context_ext->manifest->name})
 					{/if}
 				</td>
