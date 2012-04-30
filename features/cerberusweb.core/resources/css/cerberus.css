@@ -18,7 +18,7 @@ a {
 h1 {
 	font-weight: bold;
 	font-size: 1.5em;
-	color: rgb(0,150,0);
+	color: rgb(0,120,0);
 	margin:0px;
 }
 
@@ -305,33 +305,32 @@ UL.navmenu {
 	margin:0px;
 	padding:0px;
 	list-style:none;
-	color: rgb(80, 80, 80);
+	color:rgb(80,80,80);
 }
 
-UL.navmenu LI {
+UL.navmenu > LI {
 	float:left;
 	background-color:rgb(240,240,240);
-	border-right:1px solid rgb(134, 169, 227);
+	border-right:1px solid rgb(210,210,210);
 	padding:5px 8px;
 	margin:0px;
 }
 
-UL.navmenu LI A {
-	color: rgb(80, 80, 80);
+UL.navmenu > LI:hover {
+	background-color:rgb(220,220,220);
+}
+
+UL.navmenu > LI > A {
+	color: rgb(80,80,80);
 	font-weight:normal;
-	text-decoration:underline;
+	text-decoration:none;
 }
 
-UL.navmenu LI.selected {
-	background-color: rgb(134, 169, 227);
-	background: linear-gradient(top, rgb(98,132,221), rgb(134, 169, 227));
-	background: -webkit-gradient(linear, left top, left bottom, from(rgb(98,132,221)), to(rgb(134, 169, 227)));
-	background: -moz-linear-gradient(top, rgb(98,132,221), rgb(134, 169, 227));
-	background: -o-linear-gradient(top, rgb(98,132,221), rgb(134, 169, 227));
-	background: -ms-linear-gradient(top, rgb(98,132,221), rgb(134, 169, 227));
+UL.navmenu > LI.selected {
+	background-color: rgb(69,85,96);
 }
 
-UL.navmenu LI.selected A {
+UL.navmenu > LI.selected > A {
 	color:rgb(255,255,255);
 	text-decoration:none;
 	font-weight:normal;
@@ -344,7 +343,7 @@ UL.submenu {
 	margin-bottom:5px;
 	padding:0px;
 	list-style:none;
-	color: rgb(255, 255, 255);
+	color: rgb(255,255,255);
 }
 
 UL.submenu LI {
@@ -364,12 +363,7 @@ UL.submenu A {
 /* Worklists */
 
 table.worklist {
-	background-color:rgb(134,169,227);
-	background: linear-gradient(top, rgb(134,169,227), rgb(98,132,221));
-	background: -webkit-gradient(linear, left top, left bottom, from(rgb(134,169,227)), to(rgb(98,132,221)));
-	background: -moz-linear-gradient(top, rgb(134,169,227), rgb(98,132,221));
-	background: -o-linear-gradient(top, rgb(134,169,227), rgb(98,132,221));
-	background: -ms-linear-gradient(top, rgb(134,169,227), rgb(98,132,221));
+	background-color:rgb(100,135,225);
 	border-radius: 5px 5px 0px 0px;	
 	-moz-border-radius: 5px 5px 0px 0px;
 	-webkit-border-radius: 5px 5px 0px 0px;
@@ -799,12 +793,21 @@ DIV.cerb-properties > DIV > LABEL {
 	margin-right:1px;
 }
 
+FIELDSET.peek {
+	border-width:2px 0px 0px 0px;
+}
+
+FIELDSET.peek LEGEND {
+	color:rgb(0,120,0);
+}
+
 FIELDSET.properties {
 	margin:0px 10px 0px 10px;
 	border-width:2px 0px 0px 0px;
 }
 
 FIELDSET.properties LEGEND {
+	color:rgb(50,50,50);
 }
 
 FIELDSET.properties DIV.property {
@@ -833,7 +836,7 @@ DIV.cerb-popupmenu {
 	background: -moz-linear-gradient(top, rgb(232,242,254), rgb(255,255,255));
 	background: -o-linear-gradient(top, rgb(232,242,254),  rgb(255,255,255));
 	background: -ms-linear-gradient(top, rgb(232,242,254),  rgb(255,255,255));
-	border:1px solid rgb(152,162,200);
+	border:1px solid rgb(100,135,225);
 }
 
 UL.cerb-popupmenu {
@@ -848,7 +851,10 @@ UL.cerb-popupmenu {
 	background: -moz-linear-gradient(top, rgb(232,242,254), rgb(255,255,255));
 	background: -o-linear-gradient(top, rgb(232,242,254),  rgb(255,255,255));
 	background: -ms-linear-gradient(top, rgb(232,242,254),  rgb(255,255,255));
-	border:1px solid rgb(152,162,200);
+	border:1px solid rgb(100,135,225);
+	-moz-box-shadow: 0 5px 15px 0px rgb(175,175,175);
+	-webkit-box-shadow: 0 5px 15px 0px rgb(175,175,175);
+	box-shadow: 0 5px 15px 0px rgb(175,175,175);
 }
 
 UL.cerb-popupmenu.cerb-float {
@@ -906,26 +912,25 @@ UL.cerb-popupmenu > LI > HR {
 
 #kbArticleContent h1, #kbArticleContent h2, #kbArticleContent h3, #kbArticleContent h4, #kbArticleContent h5, #kbArticleContent h6 { 
 	font-weight: bold;
-	color: rgb(0,120,0);
+	color: rgb(50,50,50);
 	margin:10px 0px;
 	line-height: normal;
 }
 
 #kbArticleContent h1 {
 	font-size: 190%;
-	color: rgb(0,120,0);
+	color: rgb(50,50,50);
 	border-bottom: 1px solid rgb(180,180,180);
 }
 
 #kbArticleContent h2 {
 	font-size: 170%;
-	color: rgb(50,50,50);
+	color: rgb(74,110,158);
 }
 
 #kbArticleContent h3 {
-	font-size: 145%;
-	color: rgb(74,110,158);
-	border-bottom: 1px solid rgb(180,180,180);
+	font-size: 150%;
+	color: rgb(50,50,50);
 }
 
 #kbArticleContent h4 {
@@ -934,14 +939,12 @@ UL.cerb-popupmenu > LI > HR {
 }
 
 #kbArticleContent h5 {
-	font-size: 110%;
-	font-style: italic;
+	font-size: 120%;
 	color: rgb(50,50,50);
 }
 
 #kbArticleContent h6 {
-	font-size: 100%;
-	font-style: italic;
+	font-size: 110%;
 	color: rgb(50,50,50);
 }
 
@@ -982,6 +985,7 @@ UL.cerb-popupmenu > LI > HR {
 /* Menu */
 
 DIV.cerb-menu {
+	margin-top:-5px;
 }
 
 DIV.cerb-menu > UL {
@@ -992,13 +996,12 @@ DIV.cerb-menu > UL {
 
 DIV.cerb-menu > UL > LI {
 	padding:5px 10px;
-	background-color:rgb(134,169,227);
-	border-left:1px solid white;
+	background-color:rgb(100,135,225);
 	float:left;
 }
 
 DIV.cerb-menu > UL > LI:hover {
-	background-color:rgb(74,110,194);
+	background-color:rgb(85,100,150);
 }
 
 DIV.cerb-menu > UL > LI > DIV {
@@ -1391,18 +1394,10 @@ UL.ui-autocomplete.ui-menu .ui-menu-item a.ui-state-hover {
 
 .ui-dialog .ui-dialog-titlebar { 
 	background-color:rgb(98,132,221);
-	/*
-	background: linear-gradient(top, rgb(134,169,227), rgb(98,132,221));
-	background: -webkit-gradient(linear, left top, left bottom, from(rgb(134,169,227)), to(rgb(98,132,221)));
-	background: -moz-linear-gradient(top, rgb(134,169,227), rgb(98,132,221));
-	background: -o-linear-gradient(top, rgb(134,169,227), rgb(98,132,221));
-	background: -ms-linear-gradient(top, rgb(134,169,227), rgb(98,132,221));
-	*/
 	border: 0px; 
 	font-size: 15px;
 	font-weight:bold;
 	padding:5px 5px 5px 10px;
-	/*text-shadow:0.1em 0.1em rgb(50,105,175);*/
 }
 
 /* jQuery Validation */

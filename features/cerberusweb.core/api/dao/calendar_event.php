@@ -23,6 +23,9 @@ class DAO_CalendarEvent extends C4_ORMHelper {
 	
 	static function update($ids, $fields) {
 		parent::_update($ids, 'calendar_event', $fields);
+		
+		// Log the context update
+		DevblocksPlatform::markContextChanged(CerberusContexts::CONTEXT_CALENDAR_EVENT, $ids);
 	}
 	
 	static function updateWhere($fields, $where) {
@@ -304,16 +307,16 @@ class SearchFields_CalendarEvent implements IDevblocksSearchFields {
 		$translate = DevblocksPlatform::getTranslationService();
 		
 		$columns = array(
-			self::ID => new DevblocksSearchField(self::ID, 'calendar_event', 'id', $translate->_('common.id')),
-			self::NAME => new DevblocksSearchField(self::NAME, 'calendar_event', 'name', $translate->_('common.name')),
+			self::ID => new DevblocksSearchField(self::ID, 'calendar_event', 'id', $translate->_('common.id'), Model_CustomField::TYPE_NUMBER),
+			self::NAME => new DevblocksSearchField(self::NAME, 'calendar_event', 'name', $translate->_('common.name'), Model_CustomField::TYPE_SINGLE_LINE),
 			self::OWNER_CONTEXT => new DevblocksSearchField(self::OWNER_CONTEXT, 'calendar_event', 'owner_context', $translate->_('common.owner_context')),
 			self::OWNER_CONTEXT_ID => new DevblocksSearchField(self::OWNER_CONTEXT_ID, 'calendar_event', 'owner_context_id', $translate->_('common.owner_context_id')),
 			self::RECURRING_ID => new DevblocksSearchField(self::RECURRING_ID, 'calendar_event', 'recurring_id', $translate->_('dao.calendar_event.recurring_id')),
-			self::IS_AVAILABLE => new DevblocksSearchField(self::IS_AVAILABLE, 'calendar_event', 'is_available', $translate->_('dao.calendar_event.is_available')),
-			self::DATE_START => new DevblocksSearchField(self::DATE_START, 'calendar_event', 'date_start', $translate->_('dao.calendar_event.date_start')),
-			self::DATE_END => new DevblocksSearchField(self::DATE_END, 'calendar_event', 'date_end', $translate->_('dao.calendar_event.date_end')),
+			self::IS_AVAILABLE => new DevblocksSearchField(self::IS_AVAILABLE, 'calendar_event', 'is_available', $translate->_('dao.calendar_event.is_available'), Model_CustomField::TYPE_CHECKBOX),
+			self::DATE_START => new DevblocksSearchField(self::DATE_START, 'calendar_event', 'date_start', $translate->_('dao.calendar_event.date_start'), Model_CustomField::TYPE_DATE),
+			self::DATE_END => new DevblocksSearchField(self::DATE_END, 'calendar_event', 'date_end', $translate->_('dao.calendar_event.date_end'), Model_CustomField::TYPE_DATE),
 			
-			self::VIRTUAL_OWNER => new DevblocksSearchField(self::VIRTUAL_OWNER, '*', 'owner', $translate->_('common.owner')),
+			self::VIRTUAL_OWNER => new DevblocksSearchField(self::VIRTUAL_OWNER, '*', 'owner', $translate->_('common.owner'), null),
 		);
 		
 		// Custom Fields
@@ -322,7 +325,7 @@ class SearchFields_CalendarEvent implements IDevblocksSearchFields {
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
-			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		}
 		
 		// Sort by label (translation-conscious)
@@ -674,8 +677,7 @@ class Context_CalendarEvent extends Extension_DevblocksContext {
 		return array(
 			'id' => $calendar_event->id,
 			'name' => $calendar_event->name,
-			//'permalink' => $url_writer->writeNoProxy(sprintf("c=tasks&action=display&id=%d-%s",$task->id, $friendly), true),
-			'permalink' => null,
+			'permalink' => $url_writer->writeNoProxy(sprintf("c=profiles&type=calendar_event&id=%d-%s", $calendar_event->id, $friendly), true),
 		);
 	}
 	
@@ -772,11 +774,13 @@ class Context_CalendarEvent extends Extension_DevblocksContext {
 		return $values;
 	}	
 	
-	function getChooserView() {
+	function getChooserView($view_id=null) {
+		if(empty($view_id))
+			$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
+
 		$active_worker = CerberusApplication::getActiveWorker();
 		
 		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id;
 		$defaults->is_ephemeral = true;
@@ -812,7 +816,7 @@ class Context_CalendarEvent extends Extension_DevblocksContext {
 		$view->renderSortBy = SearchFields_CalendarEvent::DATE_START;
 		$view->renderSortAsc = true;
 		$view->renderLimit = 10;
-		$view->renderFilters = true;
+		$view->renderFilters = false;
 		$view->renderTemplate = 'contextlinks_chooser';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;		

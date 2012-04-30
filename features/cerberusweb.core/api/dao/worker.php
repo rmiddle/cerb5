@@ -238,29 +238,16 @@ class DAO_Worker extends C4_ORMHelper {
 		return null;		
 	}
 	
-	static function update($ids, $fields, $flush_cache=true) {
-		if(!is_array($ids)) $ids = array($ids);
+	static function update($ids, $fields, $option_bits=0) {
+		parent::_update($ids, 'worker', $fields);		
+
+	    // Log the context update
+	    if(0 == ($option_bits & DevblocksORMHelper::OPT_UPDATE_NO_EVENTS)) {
+   			DevblocksPlatform::markContextChanged(CerberusContexts::CONTEXT_WORKER, $ids);
+	    }
 		
-		$db = DevblocksPlatform::getDatabaseService();
-		$sets = array();
-		
-		if(!is_array($fields) || empty($fields) || empty($ids))
-			return;
-		
-		foreach($fields as $k => $v) {
-			$sets[] = sprintf("%s = %s",
-				$k,
-				$db->qstr($v)
-			);
-		}
-			
-		$sql = sprintf("UPDATE worker SET %s WHERE id IN (%s)",
-			implode(', ', $sets),
-			implode(',', $ids)
-		);
-		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
-		
-		if($flush_cache) {
+	    // Flush cache
+		if(0 == ($option_bits & DevblocksORMHelper::OPT_UPDATE_NO_FLUSH_CACHE)) {
 			self::clearCache();
 		}
 	}
@@ -410,11 +397,15 @@ class DAO_Worker extends C4_ORMHelper {
 
 		// Update activity once per 30 seconds
 		if($ignore_wait || $worker->last_activity_date < (time()-30)) {
-		    DAO_Worker::update($worker->id,array(
-		        DAO_Worker::LAST_ACTIVITY_DATE => time(),
-		        DAO_Worker::LAST_ACTIVITY => serialize($activity),
-		        DAO_Worker::LAST_ACTIVITY_IP => sprintf("%u",ip2long($ip)),
-		    ));
+		    DAO_Worker::update(
+		    	$worker->id,
+		    	array(
+		        	DAO_Worker::LAST_ACTIVITY_DATE => time(),
+		        	DAO_Worker::LAST_ACTIVITY => serialize($activity),
+		        	DAO_Worker::LAST_ACTIVITY_IP => sprintf("%u",ip2long($ip)),
+		        ),
+		        DevblocksORMHelper::OPT_UPDATE_NO_EVENTS
+		    );
 		}
 	}
 
@@ -660,14 +651,14 @@ class SearchFields_Worker implements IDevblocksSearchFields {
 		
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'w', 'id', $translate->_('common.id')),
-			self::FIRST_NAME => new DevblocksSearchField(self::FIRST_NAME, 'w', 'first_name', $translate->_('worker.first_name')),
-			self::LAST_NAME => new DevblocksSearchField(self::LAST_NAME, 'w', 'last_name', $translate->_('worker.last_name')),
-			self::TITLE => new DevblocksSearchField(self::TITLE, 'w', 'title', $translate->_('worker.title')),
-			self::EMAIL => new DevblocksSearchField(self::EMAIL, 'w', 'email', ucwords($translate->_('common.email'))),
-			self::IS_SUPERUSER => new DevblocksSearchField(self::IS_SUPERUSER, 'w', 'is_superuser', $translate->_('worker.is_superuser')),
+			self::FIRST_NAME => new DevblocksSearchField(self::FIRST_NAME, 'w', 'first_name', $translate->_('worker.first_name'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::LAST_NAME => new DevblocksSearchField(self::LAST_NAME, 'w', 'last_name', $translate->_('worker.last_name'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::TITLE => new DevblocksSearchField(self::TITLE, 'w', 'title', $translate->_('worker.title'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::EMAIL => new DevblocksSearchField(self::EMAIL, 'w', 'email', ucwords($translate->_('common.email')), Model_CustomField::TYPE_SINGLE_LINE),
+			self::IS_SUPERUSER => new DevblocksSearchField(self::IS_SUPERUSER, 'w', 'is_superuser', $translate->_('worker.is_superuser'), Model_CustomField::TYPE_CHECKBOX),
 			self::LAST_ACTIVITY => new DevblocksSearchField(self::LAST_ACTIVITY, 'w', 'last_activity', $translate->_('worker.last_activity')),
-			self::LAST_ACTIVITY_DATE => new DevblocksSearchField(self::LAST_ACTIVITY_DATE, 'w', 'last_activity_date', $translate->_('worker.last_activity_date')),
-			self::IS_DISABLED => new DevblocksSearchField(self::IS_DISABLED, 'w', 'is_disabled', ucwords($translate->_('common.disabled'))),
+			self::LAST_ACTIVITY_DATE => new DevblocksSearchField(self::LAST_ACTIVITY_DATE, 'w', 'last_activity_date', $translate->_('worker.last_activity_date'), Model_CustomField::TYPE_DATE),
+			self::IS_DISABLED => new DevblocksSearchField(self::IS_DISABLED, 'w', 'is_disabled', ucwords($translate->_('common.disabled')), Model_CustomField::TYPE_CHECKBOX),
 			
 			self::VIRTUAL_GROUPS => new DevblocksSearchField(self::VIRTUAL_GROUPS, '*', 'groups', $translate->_('common.groups')),
 			self::VIRTUAL_CALENDAR_AVAILABILITY => new DevblocksSearchField(self::VIRTUAL_CALENDAR_AVAILABILITY, '*', 'calendar_availability', 'Calendar Availability'),
@@ -682,7 +673,7 @@ class SearchFields_Worker implements IDevblocksSearchFields {
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
-			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		}
 		
 		// Sort by label (translation-conscious)
@@ -1363,9 +1354,11 @@ class Context_Worker extends Extension_DevblocksContext {
 		return $values;
 	}	
 	
-	function getChooserView() {
+	function getChooserView($view_id=null) {
+		if(empty($view_id))
+			$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
+
 		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id;
 		$defaults->is_ephemeral = true;
@@ -1381,7 +1374,7 @@ class Context_Worker extends Extension_DevblocksContext {
 			SearchFields_Worker::IS_DISABLED => new DevblocksSearchCriteria(SearchFields_Worker::IS_DISABLED,'=',0),
 		), true);
 		$view->renderLimit = 10;
-		$view->renderFilters = true;
+		$view->renderFilters = false;
 		$view->renderTemplate = 'contextlinks_chooser';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		

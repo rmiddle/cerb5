@@ -46,7 +46,7 @@
  * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2012041401);
+define("APP_BUILD", 2012042801);
 define("APP_VERSION", '5.8.0-dev');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
@@ -1338,57 +1338,12 @@ class Context_Application extends Extension_DevblocksContext {
 		return $values;
 	}	
 	
-	function getChooserView() {
+	function getChooserView($view_id=null) {
 		return null;
-		/*
-		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
-		$defaults = new C4_AbstractViewModel();
-		$defaults->id = $view_id;
-		$defaults->is_ephemeral = true;
-		$defaults->class_name = $this->getViewClass();
-		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
-		$view->name = 'Roles';
-		$view->view_columns = array(
-			SearchFields_WorkerRole::NAME,
-		);
-		$view->addParams(array(
-			//SearchFields_Worker::IS_DISABLED => new DevblocksSearchCriteria(SearchFields_Worker::IS_DISABLED,'=',0),
-		), true);
-		$view->renderLimit = 10;
-		$view->renderTemplate = 'contextlinks_chooser';
-		C4_AbstractViewLoader::setView($view_id, $view);
-		
-		return $view;
-		*/
 	}
 	
 	function getView($context=null, $context_id=null, $options=array()) {
 		return null;
-		/*
-		$view_id = str_replace('.','_',$this->id);
-		
-		$defaults = new C4_AbstractViewModel();
-		$defaults->id = $view_id; 
-		$defaults->class_name = $this->getViewClass();
-		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
-		$view->name = 'Roles';
-		
-		$params_req = array();
-		
-		if(!empty($context) && !empty($context_id)) {
-			$params_req = array(
-				new DevblocksSearchCriteria(SearchFields_Worker::CONTEXT_LINK,'=',$context),
-				new DevblocksSearchCriteria(SearchFields_Worker::CONTEXT_LINK_ID,'=',$context_id),
-			);
-		}
-
-		$view->addParamsRequired($params_req, true);
-		
-		$view->renderTemplate = 'context';
-		C4_AbstractViewLoader::setView($view_id, $view);
-		return $view;
-		*/
 	}	
 };
 

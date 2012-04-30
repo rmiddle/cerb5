@@ -1,12 +1,19 @@
 {$page_context = CerberusContexts::CONTEXT_TIMETRACKING}
 {$page_context_id = $time_entry->id}
 
-{include file="devblocks:cerberusweb.timetracking::timetracking/display/submenu.tpl"}
+<div style="float:left;">
+	<h1>{$time_entry->getSummary()}</h1>
+</div>
 
-<h2>{'timetracking.activity.tab'|devblocks_translate|capitalize}</h2>
+<div style="float:right;">
+	{$ctx = Extension_DevblocksContext::get($page_context)}
+	{include file="devblocks:cerberusweb.core::search/quick_search.tpl" view=$ctx->getSearchView() return_url="{devblocks_url}c=search&context={$ctx->manifest->params.alias}{/devblocks_url}" reset=true}
+</div>
+
+<div style="clear:both;"></div>
 
 <fieldset class="properties">
-	<legend>{$time_entry->getSummary()}</legend>
+	<legend>{'timetracking.activity.tab'|devblocks_translate|capitalize}</legend>
 	
 	<form action="{devblocks_url}{/devblocks_url}" method="post" style="margin-bottom:5px;">
 		{foreach from=$properties item=v key=k name=props}
@@ -14,6 +21,9 @@
 				{if $k == 'status'}
 					<b>{$v.label}:</b>
 					{$v.value}
+				{elseif $k == 'time_spent'}
+					<b>{$v.label}:</b>
+					{$time_entry->getTimeSpentAsString()}
 				{else}
 					{include file="devblocks:cerberusweb.core::internal/custom_fields/profile_cell_renderer.tpl"}
 				{/if}
@@ -83,7 +93,7 @@
 		var tabs = $("#timeTabs").tabs( { selected:{$tab_selected_idx} } );
 		
 		$('#btnDisplayTimeEdit').bind('click', function() {
-			$popup = genericAjaxPopup('peek','c=timetracking&a=showEntry&id={$page_context_id}',null,false,'550');
+			$popup = genericAjaxPopup('peek','c=internal&a=showPeekPopup&context={$page_context}&context_id={$page_context_id}',null,false,'550');
 			$popup.one('timetracking_save', function(event) {
 				event.stopPropagation();
 				document.location.href = '{devblocks_url}c=timetracking&a=display&id={$page_context_id}{/devblocks_url}';

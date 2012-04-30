@@ -136,17 +136,8 @@ class ChTimeTrackingEventListener extends DevblocksEventListenerExtension {
             case 'ticket.action.merge':
             	$new_ticket_id = $event->params['new_ticket_id'];
             	$old_ticket_ids = $event->params['old_ticket_ids'];
-
-            	// [TODO] Change over to context links (and handle globally)
-//            	$fields = array(
-//            		DAO_TimeTrackingEntry::SOURCE_ID => $new_ticket_id,
-//            	);
-//            	 DAO_TimeTrackingEntry::updateWhere($fields,sprintf("%s = '%s' AND %s IN (%s)",
-//            		DAO_TimeTrackingEntry::SOURCE_EXTENSION_ID,
-//            		ChTimeTrackingTicketSource::ID,
-//            		DAO_TimeTrackingEntry::SOURCE_ID,
-//            		implode(',', $old_ticket_ids)
-//            	));
+            	
+            	// [TODO]
             	break;
         }
     }
@@ -182,11 +173,6 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 				}
 				$tpl->assign('time_entry', $time_entry);						
 
-//				if(null == (@$tab_selected = $stack[0])) {
-//					$tab_selected = $visit->get(self::SESSION_OPP_TAB, '');
-//				}
-//				$tpl->assign('tab_selected', $tab_selected);
-
 				// Custom fields
 				
 				$custom_fields = DAO_CustomField::getAll();
@@ -208,10 +194,10 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 					'value' => $time_entry->log_date,
 				);
 				
-				$properties['time_actual_mins'] = array(
-					'label' => ucfirst($translate->_('timetracking_entry.time_actual_mins')),
-					'type' => Model_CustomField::TYPE_NUMBER,
-					'value' => $time_entry->time_actual_mins,
+				$properties['time_spent'] = array(
+					'label' => 'Time spent',
+					'type' => null,
+					'value' => $time_entry->time_actual_mins * 60,
 				);
 				
 				// [TODO] Worker?
@@ -290,76 +276,16 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 		$this->_startTimer();
 	}
 	
-	function pauseTimerAction() {
-		$total = $this->_stopTimer();
-	}
-	
-	function getStopTimerPanelAction() {
+	function pauseTimerJsonAction() {
+		header("Content-Type: application/json");
+		
 		$total_secs = $this->_stopTimer();
-		$this->_stopTimer();
 		
-		$object = new Model_TimeTrackingEntry();
-		$object->id = 0;
-		$object->log_date = time();
-
-		// Time
-		$object->time_actual_mins = ceil($total_secs/60);
-		
-		// If we're linking a context during creation
-		@$context = strtolower($_SESSION['timetracking_context']);
-		@$context_id = intval($_SESSION['timetracking_context_id']);
-		$object->context = $context;
-		$object->context_id = $context_id;
-		
-		$this->showEntryAction($object);
-	}
-	
-	function showEntryAction($model=null) {
-		$tpl = DevblocksPlatform::getTemplateService();
-
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
-		
-		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
-		$tpl->assign('view_id', $view_id);
-		
-		/*
-		 * This treats procedurally created model objects
-		 * the same as existing objects
-		 */ 
-		if(!empty($id)) { // Were we given a model ID to load?
-			if(null != ($model = DAO_TimeTrackingEntry::get($id)))
-				$tpl->assign('model', $model);
-		} elseif (!empty($model)) { // Were we passed a model object without an ID?
-			$tpl->assign('model', $model);
-		}
-
-		/* @var $model Model_TimeTrackingEntry */
-		
-		// Activities
-		// [TODO] Cache
-		$billable_activities = DAO_TimeTrackingActivity::getWhere(sprintf("%s!=0",DAO_TimeTrackingActivity::RATE));
-		$tpl->assign('billable_activities', $billable_activities);
-		$nonbillable_activities = DAO_TimeTrackingActivity::getWhere(sprintf("%s=0",DAO_TimeTrackingActivity::RATE));
-		$tpl->assign('nonbillable_activities', $nonbillable_activities);
-
-		// Comments
-		$comments = DAO_Comment::getByContext(CerberusContexts::CONTEXT_TIMETRACKING, $id);
-		$last_comment = array_shift($comments);
-		unset($comments);
-		$tpl->assign('last_comment', $last_comment);
-		
-		// Custom fields
-		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TIMETRACKING); 
-		$tpl->assign('custom_fields', $custom_fields);
-
-		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TIMETRACKING, $id);
-		if(isset($custom_field_values[$id]))
-			$tpl->assign('custom_field_values', $custom_field_values[$id]);
-		
-		$types = Model_CustomField::getTypes();
-		$tpl->assign('types', $types);
-		
-		$tpl->display('devblocks:cerberusweb.timetracking::timetracking/rpc/time_entry_panel.tpl');
+		echo json_encode(array(
+			'status' => true,
+			'total_mins' => ceil($total_secs/60),
+		));
+		exit;
 	}
 	
 	function saveEntryAction() {
@@ -380,10 +306,6 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 		@$log_date = DevblocksPlatform::importGPC($_REQUEST['log_date'],'string','now');
 		if(false == (@$log_date = strtotime($log_date)))
 			$log_date = time();
-		
-		// Context
-		@$context = DevblocksPlatform::importGPC($_POST['context'],'string','');		
-		@$context_id = DevblocksPlatform::importGPC($_POST['context_id'],'integer',0);
 		
 		// Comment
 		@$comment = DevblocksPlatform::importGPC($_POST['comment'],'string','');
@@ -423,9 +345,13 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 			$translate = DevblocksPlatform::getTranslationService();
 			$url_writer = DevblocksPlatform::getUrlService();
 			
+			// Context Link (if given)
+			@$link_context = DevblocksPlatform::importGPC($_REQUEST['link_context'],'string','');
+			@$link_context_id = DevblocksPlatform::importGPC($_REQUEST['link_context_id'],'integer','');
+			
 			// Procedurally create a comment
-			// [TODO] Move this to a better event
-			switch($context) {
+			// [TODO] Check context for 'comment' option
+			switch($link_context) {
 				// If ticket, add a comment about the timeslip to the ticket
 				case CerberusContexts::CONTEXT_OPPORTUNITY:
 				case CerberusContexts::CONTEXT_TICKET:
@@ -458,61 +384,61 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 							DAO_Comment::ADDRESS_ID => intval($worker_address->id),
 							DAO_Comment::COMMENT => $context_comment,
 							DAO_Comment::CREATED => time(),
-							DAO_Comment::CONTEXT => $context,
-							DAO_Comment::CONTEXT_ID => intval($context_id),
+							DAO_Comment::CONTEXT => $link_context,
+							DAO_Comment::CONTEXT_ID => intval($link_context_id),
 						);
 						DAO_Comment::create($fields);
 					}
 					break;
 			}
 			
-		} else { // modify
-			DAO_TimeTrackingEntry::update($id, $fields);
-		}
-
-		// Establishing a context link?
-		if(!empty($context) && !empty($context_id)) {
-			// Primary context
-			DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, $context, $context_id);
-			
-			// Associated contexts
-			switch($context) {
-				case CerberusContexts::CONTEXT_OPPORTUNITY:
-					if(!class_exists('DAO_CrmOpportunity', true))
+			// Establishing a context link?
+			if(isset($link_context) && isset($link_context_id)) {
+				// Primary context
+				DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, $link_context, $link_context_id);
+				
+				// Associated contexts
+				switch($link_context) {
+					case CerberusContexts::CONTEXT_OPPORTUNITY:
+						if(!class_exists('DAO_CrmOpportunity', true))
+							break;
+							
+						$labels = null;
+						$values = null;
+						CerberusContexts::getContext($link_context, $link_context_id, $labels, $values);
+						
+						if(is_array($values)) {
+							// Is there an org associated with this context?
+							if(isset($values['email_org_id']) && !empty($values['email_org_id'])) {
+								DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, CerberusContexts::CONTEXT_ORG, $values['email_org_id']);
+							}
+						}
 						break;
 						
-					$labels = null;
-					$values = null;
-					CerberusContexts::getContext($context, $context_id, $labels, $values);
-					
-					if(is_array($values)) {
-						// Is there an org associated with this context?
-						if(isset($values['email_org_id']) && !empty($values['email_org_id'])) {
-							DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, CerberusContexts::CONTEXT_ORG, $values['email_org_id']);
-						}
-					}
-					break;
-					
-				case CerberusContexts::CONTEXT_TICKET:
-					$labels = null;
-					$values = null;
-					CerberusContexts::getContext($context, $context_id, $labels, $values);
-					
-					if(is_array($values)) {
-						// Try the ticket's org
-						@$org_id = $values['org_id'];
+					case CerberusContexts::CONTEXT_TICKET:
+						$labels = null;
+						$values = null;
+						CerberusContexts::getContext($link_context, $link_context_id, $labels, $values);
 						
-						// Fallback to the initial sender's org
-						if(empty($org_id))
-							@$org_id = $values['initial_message_sender_org_id'];
-						
-						// Is there an org associated with this context?
-						if(!empty($org_id)) {
-							DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, CerberusContexts::CONTEXT_ORG, $org_id);
+						if(is_array($values)) {
+							// Try the ticket's org
+							@$org_id = $values['org_id'];
+							
+							// Fallback to the initial sender's org
+							if(empty($org_id))
+								@$org_id = $values['initial_message_sender_org_id'];
+							
+							// Is there an org associated with this context?
+							if(!empty($org_id)) {
+								DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TIMETRACKING, $id, CerberusContexts::CONTEXT_ORG, $org_id);
+							}
 						}
-					}
-					break;
-			}
+						break;
+				}
+			}			
+			
+		} else { // modify
+			DAO_TimeTrackingEntry::update($id, $fields);
 		}
 		
 		// Custom field saves
@@ -706,29 +632,6 @@ class ChTimeTrackingPage extends CerberusPageExtension {
 	}
 	
 };
-
-if (class_exists('Extension_ActivityTab')):
-class TimeTrackingActivityTab extends Extension_ActivityTab {
-	const VIEW_ACTIVITY_TIMETRACKING = 'activity_timetracking';
-	
-	function showTab() {
-		$tpl = DevblocksPlatform::getTemplateService();
-		
-		if(null == ($view = C4_AbstractViewLoader::getView(self::VIEW_ACTIVITY_TIMETRACKING))) {
-			$view = new View_TimeTracking();
-			$view->id = self::VIEW_ACTIVITY_TIMETRACKING;
-			$view->renderSortBy = SearchFields_TimeTrackingEntry::LOG_DATE;
-			$view->renderSortAsc = 0;
-			
-			C4_AbstractViewLoader::setView($view->id, $view);
-		}
-		
-		$tpl->assign('view', $view);
-		
-		$tpl->display('devblocks:cerberusweb.timetracking::activity_tab/index.tpl');		
-	}
-}
-endif;
 
 if(class_exists('Extension_PageSection')):
 class ChTimeTracking_SetupPageSection extends Extension_PageSection {

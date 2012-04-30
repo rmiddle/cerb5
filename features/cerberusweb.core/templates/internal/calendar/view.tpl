@@ -70,12 +70,8 @@
 			{*</td>*}
 			<td colspan="{$smarty.foreach.headers.total}">
 				<input type="checkbox" name="row_id[]" value="{$result.c_id}" style="display:none;">
-				{if $result.t_is_completed}
-					<span class="cerb-sprite2 sprite-tick-circle-frame-gray" title="{$result.t_completed_date|devblocks_date}"></span>
-				{/if}
-				<a href="{devblocks_url}c=calendar&d=display&id={$result.c_id}-{$result.c_name|devblocks_permalink}{/devblocks_url}" class="subject">{if !empty($result.c_name)}{$result.c_name}{else}New Event{/if}</a> 
-				
-				<button type="button" class="peek" style="visibility:hidden;padding:1px;margin:0px 5px;" onclick="genericAjaxPopup('peek','c=tasks&a=showTaskPeek&id={$result.t_id}&view_id={$view->id}',null,false,'550');"><span class="cerb-sprite2 sprite-document-search-result" style="margin-left:2px" title="{$translate->_('views.peek')}"></span></button>
+				<a href="{devblocks_url}c=profiles&a=calendar_event&id={$result.c_id}-{$result.c_name|devblocks_permalink}{/devblocks_url}" class="subject">{if !empty($result.c_name)}{$result.c_name}{else}New Event{/if}</a> 
+				<button type="button" class="peek" style="visibility:hidden;padding:1px;margin:0px 5px;" onclick="genericAjaxPopup('peek','c=internal&a=showPeekPopup&context={CerberusContexts::CONTEXT_CALENDAR_EVENT}&context_id={$result.c_id}&view_id={$view->id}',null,false,'500');"><span class="cerb-sprite2 sprite-document-search-result" style="margin-left:2px" title="{$translate->_('views.peek')}"></span></button>
 			</td>
 		</tr>
 		<tr class="{$tableRowClass}">

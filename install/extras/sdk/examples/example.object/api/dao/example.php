@@ -21,6 +21,9 @@ class DAO_ExampleObject extends C4_ORMHelper {
 	
 	static function update($ids, $fields) {
 		parent::_update($ids, 'example_object', $fields);
+		
+	    // Log the context update
+   		//DevblocksPlatform::markContextChanged('example.context', $ids);
 	}
 	
 	static function updateWhere($fields, $where) {
@@ -297,7 +300,7 @@ class SearchFields_ExampleObject implements IDevblocksSearchFields {
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
-			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		}
 		
 		// Sort by label (translation-conscious)
@@ -718,11 +721,13 @@ class Context_ExampleObject extends Extension_DevblocksContext {
 		return $values;
 	}	
 	
-	function getChooserView() {
+	function getChooserView($view_id=null) {
 		$active_worker = CerberusApplication::getActiveWorker();
-		
+
+		if(empty($view_id))
+			$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
+	
 		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id;
 		$defaults->is_ephemeral = true;
@@ -737,7 +742,7 @@ class Context_ExampleObject extends Extension_DevblocksContext {
 		$view->renderSortAsc = false;
 		$view->renderLimit = 10;
 		$view->renderTemplate = 'contextlinks_chooser';
-		$view->renderFilters = true;
+		$view->renderFilters = false;
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;
 	}

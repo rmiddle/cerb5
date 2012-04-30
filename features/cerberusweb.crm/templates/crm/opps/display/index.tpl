@@ -1,20 +1,19 @@
 {$page_context = CerberusContexts::CONTEXT_OPPORTUNITY}
 {$page_context_id = $opp->id}
 
-{include file="devblocks:cerberusweb.crm::crm/submenu.tpl"}
-
 <div style="float:left;">
-	<h2>{'crm.common.opportunity'|devblocks_translate|capitalize}</h2>
+	<h1>{$opp->name}</h1>
 </div>
 
 <div style="float:right;">
-	{include file="devblocks:cerberusweb.crm::crm/quick_search.tpl"}
+	{$ctx = Extension_DevblocksContext::get($page_context)}
+	{include file="devblocks:cerberusweb.core::search/quick_search.tpl" view=$ctx->getSearchView() return_url="{devblocks_url}c=search&context={$ctx->manifest->params.alias}{/devblocks_url}" reset=true}
 </div>
 
-<br clear="all">
+<div style="clear:both;"></div>
 
 <fieldset class="properties">
-	<legend>{$opp->name|truncate:128}</legend>
+	<legend>{'crm.common.opportunity'|devblocks_translate|capitalize}</legend>
 	
 	<form action="{devblocks_url}{/devblocks_url}" onsubmit="return false;" style="margin-bottom:5px;">
 
@@ -34,12 +33,12 @@
 				{elseif $k == 'lead'}
 					<b>{$v.label|capitalize}:</b>
 					{$v.address->getName()}
-					&lt;<a href="javascript:;" onclick="genericAjaxPopup('peek2','c=contacts&a=showAddressPeek&email={$v.address->email|escape:'url'}',null,false,'600');">{$v.address->email}</a>&gt;
-					<button id="btnOppAddyPeek" type="button" onclick="genericAjaxPopup('peek2','c=contacts&a=showAddressPeek&email={$v.address->email|escape:'url'}&view_id=',null,false,'600');" style="visibility:false;display:none;"></button>
+					&lt;<a href="javascript:;" onclick="genericAjaxPopup('peek2','c=internal&a=showPeekPopup&context={CerberusContexts::CONTEXT_ADDRESS}&email={$v.address->email|escape:'url'}',null,false,'600');">{$v.address->email}</a>&gt;
+					<button id="btnOppAddyPeek" type="button" onclick="genericAjaxPopup('peek2','c=internal&a=showPeekPopup&context={CerberusContexts::CONTEXT_ADDRESS}&email={$v.address->email|escape:'url'}&view_id=',null,false,'600');" style="visibility:false;display:none;"></button>
 				{elseif $k == 'org'}
 					<b>{$v.label|capitalize}:</b>
-					<a href="javascript:;" onclick="genericAjaxPopup('peek2','c=contacts&a=showOrgPeek&id={$v.org->id}',null,false,'600');">{$v.org->name}</a>
-					<button id="btnOppOrgPeek" type="button" onclick="genericAjaxPopup('peek2','c=contacts&a=showOrgPeek&id={$v.org->id}&view_id=',null,false,'600');" style="visibility:false;display:none;"></button>
+					<a href="javascript:;" onclick="genericAjaxPopup('peek2','c=internal&a=showPeekPopup&context={CerberusContexts::CONTEXT_ORG}&context_id={$v.org->id}',null,false,'600');">{$v.org->name}</a>
+					<button id="btnOppOrgPeek" type="button" onclick="genericAjaxPopup('peek2','c=internal&a=showPeekPopup&context={CerberusContexts::CONTEXT_ORG}&context_id={$v.org->id}&view_id=',null,false,'600');" style="visibility:false;display:none;"></button>
 				{else}
 					{include file="devblocks:cerberusweb.core::internal/custom_fields/profile_cell_renderer.tpl"}
 				{/if}
@@ -120,10 +119,10 @@
 		var tabs = $("#oppTabs").tabs( { selected:{$selected_tab_idx} } );
 		
 		$('#btnDisplayOppEdit').bind('click', function() {
-			$popup = genericAjaxPopup('peek','c=crm&a=showOppPanel&id={$page_context_id}',null,false,'550');
+			$popup = genericAjaxPopup('peek','c=internal&a=showPeekPopup&context={CerberusContexts::CONTEXT_OPPORTUNITY}&context_id={$page_context_id}',null,false,'550');
 			$popup.one('opp_save', function(event) {
 				event.stopPropagation();
-				document.location.href = '{devblocks_url}c=crm&a=display&id={$page_context_id}{/devblocks_url}';
+				document.location.href = '{devblocks_url}c=profiles&a=opportunity&id={$page_context_id}-{$opp->name|devblocks_permalink}{/devblocks_url}';
 			});
 		})
 	});

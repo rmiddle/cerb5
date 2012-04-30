@@ -47,35 +47,6 @@
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
 
-if (class_exists('Extension_ActivityTab')):
-class ChFeedbackActivityTab extends Extension_ActivityTab {
-	const VIEW_ACTIVITY_FEEDBACK = 'activity_feedback';
-	
-	function showTab() {
-		$translate = DevblocksPlatform::getTranslationService();
-		$tpl = DevblocksPlatform::getTemplateService();
-		
-		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'C4_FeedbackEntryView';
-		$defaults->id = self::VIEW_ACTIVITY_FEEDBACK;
-		$defaults->name = $translate->_('feedback.activity.tab');
-		$defaults->view_columns = array(
-			SearchFields_FeedbackEntry::LOG_DATE,
-			SearchFields_FeedbackEntry::ADDRESS_EMAIL,
-			SearchFields_FeedbackEntry::SOURCE_URL,
-		);
-		$defaults->renderSortBy = SearchFields_FeedbackEntry::LOG_DATE;
-		$defaults->renderSortAsc = 0;
-		
-		$view = C4_AbstractViewLoader::getView(self::VIEW_ACTIVITY_FEEDBACK, $defaults);
-
-		$tpl->assign('view', $view);
-		
-		$tpl->display('devblocks:cerberusweb.feedback::activity_tab/index.tpl');		
-	}
-}
-endif;
-
 class DAO_FeedbackEntry extends C4_ORMHelper {
 	const ID = 'id';
 	const LOG_DATE = 'log_date';
@@ -101,6 +72,9 @@ class DAO_FeedbackEntry extends C4_ORMHelper {
 	
 	static function update($ids, $fields) {
 		parent::_update($ids, 'feedback_entry', $fields);
+		
+	    // Log the context update
+   		DevblocksPlatform::markContextChanged(CerberusContexts::CONTEXT_FEEDBACK, $ids);
 	}
 	
 	/**
@@ -368,16 +342,16 @@ class SearchFields_FeedbackEntry {
 		$translate = DevblocksPlatform::getTranslationService();
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'f', 'id', $translate->_('feedback_entry.id')),
-			self::LOG_DATE => new DevblocksSearchField(self::LOG_DATE, 'f', 'log_date', $translate->_('feedback_entry.log_date')),
+			self::LOG_DATE => new DevblocksSearchField(self::LOG_DATE, 'f', 'log_date', $translate->_('feedback_entry.log_date'), Model_CustomField::TYPE_DATE),
 			self::WORKER_ID => new DevblocksSearchField(self::WORKER_ID, 'f', 'worker_id', $translate->_('feedback_entry.worker_id')),
-			self::QUOTE_TEXT => new DevblocksSearchField(self::QUOTE_TEXT, 'f', 'quote_text', $translate->_('feedback_entry.quote_text')),
-			self::QUOTE_MOOD => new DevblocksSearchField(self::QUOTE_MOOD, 'f', 'quote_mood', $translate->_('feedback_entry.quote_mood')),
+			self::QUOTE_TEXT => new DevblocksSearchField(self::QUOTE_TEXT, 'f', 'quote_text', $translate->_('feedback_entry.quote_text'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::QUOTE_MOOD => new DevblocksSearchField(self::QUOTE_MOOD, 'f', 'quote_mood', $translate->_('feedback_entry.quote_mood'), Model_CustomField::TYPE_SINGLE_LINE),
 			self::QUOTE_ADDRESS_ID => new DevblocksSearchField(self::QUOTE_ADDRESS_ID, 'f', 'quote_address_id'),
-			self::SOURCE_URL => new DevblocksSearchField(self::SOURCE_URL, 'f', 'source_url', $translate->_('feedback_entry.source_url')),
+			self::SOURCE_URL => new DevblocksSearchField(self::SOURCE_URL, 'f', 'source_url', $translate->_('feedback_entry.source_url'), Model_CustomField::TYPE_SINGLE_LINE),
 			
-			self::ADDRESS_EMAIL => new DevblocksSearchField(self::ADDRESS_EMAIL, 'a', 'email', $translate->_('feedback_entry.quote_address')),
+			self::ADDRESS_EMAIL => new DevblocksSearchField(self::ADDRESS_EMAIL, 'a', 'email', $translate->_('feedback_entry.quote_address'), Model_CustomField::TYPE_SINGLE_LINE),
 
-			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers')),
+			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', mb_convert_case($translate->_('common.watchers'), MB_CASE_TITLE), 'WS'),
 			
 			self::CONTEXT_LINK => new DevblocksSearchField(self::CONTEXT_LINK, 'context_link', 'from_context', null),
 			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
@@ -388,7 +362,7 @@ class SearchFields_FeedbackEntry {
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
-			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		}
 		
 		// Sort by label (translation-conscious)
@@ -783,79 +757,6 @@ class ChFeedbackController extends DevblocksControllerExtension {
 	    }
 	}
 	
-	function showEntryAction() {
-		@$active_worker = CerberusApplication::getActiveWorker(); 
-		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-		$tpl->assign('view_id', $view_id);
-
-		// Editing
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer',0);
-		
-		// Creating
-		@$msg_id = DevblocksPlatform::importGPC($_REQUEST['msg_id'],'integer',0);
-		@$quote = DevblocksPlatform::importGPC($_REQUEST['quote'],'string','');
-		@$url = DevblocksPlatform::importGPC($_REQUEST['url'],'string','');
-		@$source_ext_id = DevblocksPlatform::importGPC($_REQUEST['source_ext_id'],'string','');
-		@$source_id = DevblocksPlatform::importGPC($_REQUEST['source_id'],'integer',0);
-		
-		/*
-		 * This treats procedurally created model objects
-		 * the same as existing objects
-		 */ 
-		if(empty($id)) {
-			$model = new Model_FeedbackEntry();
-			
-			if(!empty($msg_id)) {
-				if(null != ($message = DAO_Message::get($msg_id))) {
-					$model->id = 0;
-					$model->log_date = time();
-					$model->quote_address_id = $message->address_id;
-					$model->quote_mood = 0;
-					$model->quote_text = $quote;
-					$model->worker_id = $active_worker->id;
-					$model->source_url = $url;
-				}
-			}
-		} elseif(!empty($id)) { // Were we given a model ID to load?
-			if(null == ($model = DAO_FeedbackEntry::get($id))) {
-				$id = null;
-				$model = new Model_Feedback();
-			}
-		}
-
-		// Author (if not anonymous)
-		if(!empty($model->quote_address_id)) {
-			if(null != ($address = DAO_Address::get($model->quote_address_id))) {
-				$tpl->assign('address', $address);
-			}
-		}
-
-		if(empty($model->source_url) && !empty($url))
-			$model->source_url = $url;
-		
-		if(!empty($source_ext_id)) {
-			$tpl->assign('source_extension_id', $source_ext_id);
-			$tpl->assign('source_id', $source_id);
-		}
-		
-		// Custom fields
-		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_FEEDBACK); 
-		$tpl->assign('custom_fields', $custom_fields);
-
-		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_FEEDBACK, $id);
-		if(isset($custom_field_values[$id]))
-			$tpl->assign('custom_field_values', $custom_field_values[$id]);
-		
-		$types = Model_CustomField::getTypes();
-		$tpl->assign('types', $types);
-		
-		$tpl->assign('model', $model);
-		
-		$tpl->display('devblocks:cerberusweb.feedback::feedback/ajax/feedback_entry_panel.tpl');
-	}
-	
 	function saveEntryAction() {
 		$active_worker = CerberusApplication::getActiveWorker();
 		
@@ -945,6 +846,13 @@ class ChFeedbackController extends DevblocksControllerExtension {
 		// Custom field saves
 		@$field_ids = DevblocksPlatform::importGPC($_POST['field_ids'], 'array', array());
 		DAO_CustomFieldValue::handleFormPost(CerberusContexts::CONTEXT_FEEDBACK, $id, $field_ids);
+		
+		// Context Link (if given)
+		@$link_context = DevblocksPlatform::importGPC($_REQUEST['link_context'],'string','');
+		@$link_context_id = DevblocksPlatform::importGPC($_REQUEST['link_context_id'],'integer','');
+		if(!empty($id) && !empty($link_context) && !empty($link_context_id)) {
+			DAO_ContextLink::setLink(CerberusContexts::CONTEXT_FEEDBACK, $id, $link_context, $link_context_id);
+		}
 	}
 	
 	function showBulkPanelAction() {
@@ -1024,7 +932,7 @@ if (class_exists('Extension_MessageToolbarItem',true)):
 	};
 endif;
 
-class Context_Feedback extends Extension_DevblocksContext {
+class Context_Feedback extends Extension_DevblocksContext implements IDevblocksContextPeek {
     static function searchInboundLinks($from_context, $from_context_id) {
     	list($results, $null) = DAO_FeedbackEntry::search(
     		array(
@@ -1180,9 +1088,11 @@ class Context_Feedback extends Extension_DevblocksContext {
 		return $values;
 	}	
 	
-	function getChooserView() {
+	function getChooserView($view_id=null) {
+		if(empty($view_id))
+			$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
+
 		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id;
 		$defaults->is_ephemeral = true;
@@ -1234,5 +1144,76 @@ class Context_Feedback extends Extension_DevblocksContext {
 		$view->renderTemplate = 'context';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;
+	}
+	
+	function renderPeekPopup($context_id=0, $view_id='') {
+		$id = $context_id; // [TODO] Rename below and remove
+		
+		@$active_worker = CerberusApplication::getActiveWorker(); 
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		$tpl->assign('view_id', $view_id);
+
+		// Creating
+		@$msg_id = DevblocksPlatform::importGPC($_REQUEST['msg_id'],'integer',0);
+		@$quote = DevblocksPlatform::importGPC($_REQUEST['quote'],'string','');
+		@$url = DevblocksPlatform::importGPC($_REQUEST['url'],'string','');
+		@$source_ext_id = DevblocksPlatform::importGPC($_REQUEST['source_ext_id'],'string','');
+		@$source_id = DevblocksPlatform::importGPC($_REQUEST['source_id'],'integer',0);
+		
+		/*
+		 * This treats procedurally created model objects
+		 * the same as existing objects
+		 */ 
+		if(empty($id)) {
+			$model = new Model_FeedbackEntry();
+			
+			if(!empty($msg_id)) {
+				if(null != ($message = DAO_Message::get($msg_id))) {
+					$model->id = 0;
+					$model->log_date = time();
+					$model->quote_address_id = $message->address_id;
+					$model->quote_mood = 0;
+					$model->quote_text = $quote;
+					$model->worker_id = $active_worker->id;
+					$model->source_url = $url;
+				}
+			}
+		} elseif(!empty($id)) { // Were we given a model ID to load?
+			if(null == ($model = DAO_FeedbackEntry::get($id))) {
+				$id = null;
+				$model = new Model_Feedback();
+			}
+		}
+
+		// Author (if not anonymous)
+		if(!empty($model->quote_address_id)) {
+			if(null != ($address = DAO_Address::get($model->quote_address_id))) {
+				$tpl->assign('address', $address);
+			}
+		}
+
+		if(empty($model->source_url) && !empty($url))
+			$model->source_url = $url;
+		
+		if(!empty($source_ext_id)) {
+			$tpl->assign('source_extension_id', $source_ext_id);
+			$tpl->assign('source_id', $source_id);
+		}
+		
+		// Custom fields
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_FEEDBACK); 
+		$tpl->assign('custom_fields', $custom_fields);
+
+		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_FEEDBACK, $id);
+		if(isset($custom_field_values[$id]))
+			$tpl->assign('custom_field_values', $custom_field_values[$id]);
+		
+		$types = Model_CustomField::getTypes();
+		$tpl->assign('types', $types);
+		
+		$tpl->assign('model', $model);
+		
+		$tpl->display('devblocks:cerberusweb.feedback::feedback/ajax/peek.tpl');		
 	}
 };

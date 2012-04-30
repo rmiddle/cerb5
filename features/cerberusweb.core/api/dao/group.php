@@ -172,29 +172,16 @@ class DAO_Group extends C4_ORMHelper {
 	/**
 	 * Enter description here...
 	 *
-	 * @param integer $id
+	 * @param array $ids
 	 * @param array $fields
 	 */
-	static function update($id, $fields) {
-		$db = DevblocksPlatform::getDatabaseService();
-		$sets = array();
-		
-		if(!is_array($fields) || empty($fields) || empty($id))
-			return;
-		
-		foreach($fields as $k => $v) {
-			$sets[] = sprintf("%s = %s",
-				$k,
-				$db->qstr($v)
-			);
-		}
-			
-		$sql = sprintf("UPDATE worker_group SET %s WHERE id = %d",
-			implode(', ', $sets),
-			$id
-		);
-		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+	static function update($ids, $fields) {
+		parent::_update($ids, 'worker_group', $fields);
 
+		// Log the context update
+		DevblocksPlatform::markContextChanged(CerberusContexts::CONTEXT_GROUP, $id);
+
+   		// Clear cache
 		self::clearCache();
 	}
 	
@@ -483,7 +470,7 @@ class SearchFields_Group implements IDevblocksSearchFields {
 		
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'g', 'id', $translate->_('common.id')),
-			self::NAME => new DevblocksSearchField(self::NAME, 'g', 'name', $translate->_('common.name')),
+			self::NAME => new DevblocksSearchField(self::NAME, 'g', 'name', $translate->_('common.name'), Model_CustomField::TYPE_SINGLE_LINE),
 			
 			self::CONTEXT_LINK => new DevblocksSearchField(self::CONTEXT_LINK, 'context_link', 'from_context', null),
 			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
@@ -495,7 +482,7 @@ class SearchFields_Group implements IDevblocksSearchFields {
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
-			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		}
 		
 		// Sort by label (translation-conscious)
@@ -1113,9 +1100,11 @@ class Context_Group extends Extension_DevblocksContext {
 		return $values;
 	}	
 	
-	function getChooserView() {
+	function getChooserView($view_id=null) {
+		if(empty($view_id))
+			$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
+
 		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id;
 		$defaults->is_ephemeral = true;
@@ -1133,7 +1122,7 @@ class Context_Group extends Extension_DevblocksContext {
 //		$view->renderSortBy = SearchFields_Group::NAME;
 //		$view->renderSortAsc = true;
 		$view->renderLimit = 10;
-		$view->renderFilters = true;
+		$view->renderFilters = false;
 		$view->renderTemplate = 'contextlinks_chooser';
 		C4_AbstractViewLoader::setView($view_id, $view);
 

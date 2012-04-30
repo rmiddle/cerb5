@@ -15,29 +15,6 @@
 |	http://www.cerberusweb.com	  http://www.webgroupmedia.com/
 ***********************************************************************/
 
-if (class_exists('Extension_ActivityTab')):
-class ChTasksActivityTab extends Extension_ActivityTab {
-	const VIEW_ACTIVITY_TASKS = 'activity_tasks';
-	
-	function showTab() {
-		$tpl = DevblocksPlatform::getTemplateService();
-		$translate = DevblocksPlatform::getTranslationService();
-		
-		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'View_Task';
-		$defaults->id = self::VIEW_ACTIVITY_TASKS;
-		$defaults->name = $translate->_('activity.tab.tasks');
-		$defaults->renderSortBy = SearchFields_Task::DUE_DATE;
-		$defaults->renderSortAsc = true;
-		
-		$view = C4_AbstractViewLoader::getView(self::VIEW_ACTIVITY_TASKS, $defaults);
-		$tpl->assign('view', $view);
-
-		$tpl->display('devblocks:cerberusweb.core::tasks/activity_tab/index.tpl');		
-	}
-}
-endif;
-
 class ChTasksPage extends CerberusPageExtension {
 	function render() {
 		$tpl = DevblocksPlatform::getTemplateService();
@@ -163,46 +140,6 @@ class ChTasksPage extends CerberusPageExtension {
 		return true;
 	}
 	
-	function showTaskPeekAction() {
-		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer','');
-		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
-		
-		$tpl = DevblocksPlatform::getTemplateService();
-
-		// Handle context links ([TODO] as an optional array)
-		@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
-		@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer','');
-		$tpl->assign('context', $context);
-		$tpl->assign('context_id', $context_id);
-		
-		if(!empty($id)) {
-			$task = DAO_Task::get($id);
-			$tpl->assign('task', $task);
-		}
-
-		// Custom fields
-		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TASK); 
-		$tpl->assign('custom_fields', $custom_fields);
-
-		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TASK, $id);
-		if(isset($custom_field_values[$id]))
-			$tpl->assign('custom_field_values', $custom_field_values[$id]);
-		
-		$types = Model_CustomField::getTypes();
-		$tpl->assign('types', $types);
-
-		// Comments
-		$comments = DAO_Comment::getByContext(CerberusContexts::CONTEXT_TASK, $id);
-		$last_comment = array_shift($comments);
-		unset($comments);
-		$tpl->assign('last_comment', $last_comment);
-
-		// View
-		$tpl->assign('id', $id);
-		$tpl->assign('view_id', $view_id);
-		$tpl->display('devblocks:cerberusweb.core::tasks/rpc/peek.tpl');
-	}
-	
 	function saveTaskPeekAction() {
 		@$id = DevblocksPlatform::importGPC($_REQUEST['id'],'integer','');
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string','');
@@ -257,10 +194,10 @@ class ChTasksPage extends CerberusPageExtension {
 					CerberusContexts::addWatchers(CerberusContexts::CONTEXT_TASK, $id, $active_worker->id);
 				
 				// Context Link (if given)
-				@$context = DevblocksPlatform::importGPC($_REQUEST['context'],'string','');
-				@$context_id = DevblocksPlatform::importGPC($_REQUEST['context_id'],'integer','');
-				if(!empty($id) && !empty($context) && !empty($context_id)) {
-					DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TASK, $id, $context, $context_id);
+				@$link_context = DevblocksPlatform::importGPC($_REQUEST['link_context'],'string','');
+				@$link_context_id = DevblocksPlatform::importGPC($_REQUEST['link_context_id'],'integer','');
+				if(!empty($id) && !empty($link_context) && !empty($link_context_id)) {
+					DAO_ContextLink::setLink(CerberusContexts::CONTEXT_TASK, $id, $link_context, $link_context_id);
 				}
 			}
 
@@ -427,37 +364,6 @@ class ChTasksPage extends CerberusPageExtension {
 		
 		exit;
 	}
-	
-	function doQuickSearchAction() {
-		@$type = DevblocksPlatform::importGPC($_POST['type'],'string');
-		@$query = DevblocksPlatform::importGPC($_POST['query'],'string');
-	
-		$query = trim($query);
-	
-		$defaults = new C4_AbstractViewModel();
-		$defaults->class_name = 'View_Task';
-		$defaults->id = ChTasksActivityTab::VIEW_ACTIVITY_TASKS;
-		$view = C4_AbstractViewLoader::getView($defaults->id, $defaults);
-	
-		$params = array();
-		if(!is_numeric($query))
-			if($query && false===strpos($query,'*'))
-				$query = '*' . $query . '*';
-	
-		switch($type) {
-			case "title":
-				$params[SearchFields_Task::TITLE] = new DevblocksSearchCriteria(SearchFields_Task::TITLE, DevblocksSearchCriteria::OPER_LIKE, strtolower($query));
-				break;
-		}
-	
-		$view->addParams($params, false); // Add, don't replace
-		$view->renderPage = 0;
-		$view->renderSortBy = null;
-	
-		C4_AbstractViewLoader::setView($defaults->id,$view);
-	
-		DevblocksPlatform::redirect(new DevblocksHttpResponse(array('activity','tasks')));
-	}	
 	
 	function viewTasksExploreAction() {
 		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string');

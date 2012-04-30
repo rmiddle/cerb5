@@ -1,5 +1,10 @@
 <?php
 abstract class DevblocksORMHelper {
+	const OPT_GET_NO_CACHE = 1;
+	
+	const OPT_UPDATE_NO_FLUSH_CACHE = 1;
+	const OPT_UPDATE_NO_EVENTS = 2;
+	
 	static protected function _getWhereSQL($where=null, $sortBy=null, $sortAsc=true, $limit=null) {
 		// Where
 		$where_sql = !empty($where) ? sprintf("WHERE %s ", $where) : '';
@@ -38,7 +43,9 @@ abstract class DevblocksORMHelper {
 	 * @param array $fields
 	 */
 	static protected function _update($ids=array(), $table, $fields, $idcol='id') {
-	    if(!is_array($ids)) $ids = array($ids);
+	    if(!is_array($ids))
+	    	$ids = array($ids);
+	    
 		$db = DevblocksPlatform::getDatabaseService();
 		$sets = array();
 		
@@ -810,7 +817,7 @@ class SearchFields_DevblocksTemplate implements IDevblocksSearchFields {
 		//if(is_array($fields))
 		//foreach($fields as $field_id => $field) {
 		//	$key = 'cf_'.$field_id;
-		//	$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+		//	$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		//}
 		
 		// Sort by label (translation-conscious)
@@ -1467,7 +1474,7 @@ class SearchFields_DevblocksStorageProfile implements IDevblocksSearchFields {
 		//if(is_array($fields))
 		//foreach($fields as $field_id => $field) {
 		//	$key = 'cf_'.$field_id;
-		//	$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+		//	$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		//}
 		
 		// Sort by label (translation-conscious)

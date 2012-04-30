@@ -87,13 +87,13 @@ class DAO_Task extends C4_ORMHelper {
 	    	
 	    	parent::_update($ids, 'task', $fields);
 	    	
-	    	// Local events
-	    	self::_processUpdateEvents($object_changes);
-	    	
-	        /*
-	         * Trigger an event about the changes
-	         */
 	    	if(!empty($object_changes)) {
+		    	// Local events
+		    	self::_processUpdateEvents($object_changes);
+	    		
+		        /*
+		         * Trigger an event about the changes
+		         */
 			    $eventMgr = DevblocksPlatform::getEventService();
 			    $eventMgr->trigger(
 			        new Model_DevblocksEvent(
@@ -103,8 +103,12 @@ class DAO_Task extends C4_ORMHelper {
 		                )
 		            )
 			    );
+			    
+			    // Log the context update
+	    		DevblocksPlatform::markContextChanged(CerberusContexts::CONTEXT_TASK, $ids);
 	    	}
-    	}
+	    	
+    	} // batch loop
 	}
 	
 	static function _processUpdateEvents($objects) {
@@ -425,13 +429,13 @@ class SearchFields_Task implements IDevblocksSearchFields {
 		
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 't', 'id', $translate->_('common.id')),
-			self::UPDATED_DATE => new DevblocksSearchField(self::UPDATED_DATE, 't', 'updated_date', $translate->_('task.updated_date')),
-			self::TITLE => new DevblocksSearchField(self::TITLE, 't', 'title', $translate->_('common.title')),
-			self::IS_COMPLETED => new DevblocksSearchField(self::IS_COMPLETED, 't', 'is_completed', $translate->_('task.is_completed')),
-			self::DUE_DATE => new DevblocksSearchField(self::DUE_DATE, 't', 'due_date', $translate->_('task.due_date')),
-			self::COMPLETED_DATE => new DevblocksSearchField(self::COMPLETED_DATE, 't', 'completed_date', $translate->_('task.completed_date')),
+			self::UPDATED_DATE => new DevblocksSearchField(self::UPDATED_DATE, 't', 'updated_date', $translate->_('task.updated_date'), Model_CustomField::TYPE_DATE),
+			self::TITLE => new DevblocksSearchField(self::TITLE, 't', 'title', $translate->_('common.title'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::IS_COMPLETED => new DevblocksSearchField(self::IS_COMPLETED, 't', 'is_completed', $translate->_('task.is_completed'), Model_CustomField::TYPE_CHECKBOX),
+			self::DUE_DATE => new DevblocksSearchField(self::DUE_DATE, 't', 'due_date', $translate->_('task.due_date'), Model_CustomField::TYPE_DATE),
+			self::COMPLETED_DATE => new DevblocksSearchField(self::COMPLETED_DATE, 't', 'completed_date', $translate->_('task.completed_date'), Model_CustomField::TYPE_DATE),
 			
-			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers')),
+			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers'), 'WS'),
 			
 			self::CONTEXT_LINK => new DevblocksSearchField(self::CONTEXT_LINK, 'context_link', 'from_context', null),
 			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
@@ -439,7 +443,7 @@ class SearchFields_Task implements IDevblocksSearchFields {
 		
 		$tables = DevblocksPlatform::getDatabaseTables();
 		if(isset($tables['fulltext_comment_content'])) {
-			$columns[self::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchField(self::FULLTEXT_COMMENT_CONTENT, 'ftcc', 'content', $translate->_('comment.filters.content'));
+			$columns[self::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchField(self::FULLTEXT_COMMENT_CONTENT, 'ftcc', 'content', $translate->_('comment.filters.content'), 'FT');
 		}
 		
 		// Custom Fields
@@ -447,7 +451,7 @@ class SearchFields_Task implements IDevblocksSearchFields {
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
-			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		}
 		
 		// Sort by label (translation-conscious)
@@ -843,7 +847,7 @@ class View_Task extends C4_AbstractView implements IAbstractView_Subtotals {
 	}	
 };
 
-class Context_Task extends Extension_DevblocksContext {
+class Context_Task extends Extension_DevblocksContext implements IDevblocksContextPeek, IDevblocksContextImport {
 	function getMeta($context_id) {
 		$task = DAO_Task::get($context_id);
 		$url_writer = DevblocksPlatform::getUrlService();
@@ -959,11 +963,13 @@ class Context_Task extends Extension_DevblocksContext {
 		return $values;
 	}	
 	
-	function getChooserView() {
+	function getChooserView($view_id=null) {
 		$active_worker = CerberusApplication::getActiveWorker();
+
+		if(empty($view_id))
+			$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		
 		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id;
 		$defaults->is_ephemeral = true;
@@ -980,7 +986,7 @@ class Context_Task extends Extension_DevblocksContext {
 		$view->renderSortBy = SearchFields_Task::UPDATED_DATE;
 		$view->renderSortAsc = false;
 		$view->renderLimit = 10;
-		$view->renderFilters = true;
+		$view->renderFilters = false;
 		$view->renderTemplate = 'contextlinks_chooser';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;		
@@ -1009,5 +1015,120 @@ class Context_Task extends Extension_DevblocksContext {
 		$view->renderTemplate = 'context';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;
+	}
+	
+	function renderPeekPopup($context_id=0, $view_id='') {
+		$tpl = DevblocksPlatform::getTemplateService();
+
+		if(!empty($context_id)) {
+			$task = DAO_Task::get($context_id);
+			$tpl->assign('task', $task);
+		}
+
+		// Custom fields
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TASK); 
+		$tpl->assign('custom_fields', $custom_fields);
+
+		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TASK, $context_id);
+		if(isset($custom_field_values[$context_id]))
+			$tpl->assign('custom_field_values', $custom_field_values[$context_id]);
+		
+		$types = Model_CustomField::getTypes();
+		$tpl->assign('types', $types);
+
+		// Comments
+		$comments = DAO_Comment::getByContext(CerberusContexts::CONTEXT_TASK, $context_id);
+		$last_comment = array_shift($comments);
+		unset($comments);
+		$tpl->assign('last_comment', $last_comment);
+
+		// View
+		$tpl->assign('id', $context_id);
+		$tpl->assign('view_id', $view_id);
+		$tpl->display('devblocks:cerberusweb.core::tasks/rpc/peek.tpl');		
+	}
+	
+	function importGetKeys() {
+		// [TODO] Translate
+	
+		$keys = array(
+			'completed_date' => array(
+				'label' => 'Completed Date',
+				'type' => Model_CustomField::TYPE_DATE,
+				'param' => SearchFields_Task::COMPLETED_DATE,
+			),
+			'due_date' => array(
+				'label' => 'Due Date',
+				'type' => Model_CustomField::TYPE_DATE,
+				'param' => SearchFields_Task::DUE_DATE,
+			),
+			'is_completed' => array(
+				'label' => 'Is Completed',
+				'type' => Model_CustomField::TYPE_CHECKBOX,
+				'param' => SearchFields_Task::IS_COMPLETED,
+			),
+			'title' => array(
+				'label' => 'Title',
+				'type' => Model_CustomField::TYPE_SINGLE_LINE,
+				'param' => SearchFields_Task::TITLE,
+				'required' => true,
+			),
+			'updated_date' => array(
+				'label' => 'Updated Date',
+				'type' => Model_CustomField::TYPE_DATE,
+				'param' => SearchFields_Task::UPDATED_DATE,
+			),
+		);
+	
+		$cfields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TASK);
+	
+		foreach($cfields as $cfield_id => $cfield) {
+			$keys['cf_' . $cfield_id] = array(
+				'label' => $cfield->name,
+				'type' => $cfield->type,
+				'param' => 'cf_' . $cfield_id,
+			);
+		}
+	
+		DevblocksPlatform::sortObjects($keys, '[label]', true);
+	
+		return $keys;
+	}
+	
+	function importKeyValue($key, $value) {
+		switch($key) {
+		}
+	
+		return $value;
+	}
+	
+	function importSaveObject(array $fields, array $custom_fields, array $meta) {
+		if(isset($fields[DAO_Task::IS_COMPLETED]) && !empty($fields[DAO_Task::IS_COMPLETED]) && !isset($fields[DAO_Task::COMPLETED_DATE])) {
+			$fields[DAO_Task::COMPLETED_DATE] = time();
+		}
+		
+		if(!isset($fields[DAO_Task::UPDATED_DATE])) {
+			$fields[DAO_Task::UPDATED_DATE] = time();
+		}
+		
+		// If new...
+		if(!isset($meta['object_id']) || empty($meta['object_id'])) {
+			// Make sure we have a name
+			if(!isset($fields[DAO_Task::TITLE])) {
+				$fields[DAO_Task::TITLE] = 'New ' . $this->manifest->name;
+			}
+	
+			// Create
+			$meta['object_id'] = DAO_Task::create($fields);
+	
+		} else {
+			// Update
+			DAO_Task::update($meta['object_id'], $fields);
+		}
+	
+		// Custom fields
+		if(!empty($custom_fields) && !empty($meta['object_id'])) {
+			DAO_CustomFieldValue::formatAndSetFieldValues($this->manifest->id, $meta['object_id'], $custom_fields, false, true, true); //$is_blank_unset (4th)
+		}
 	}
 };

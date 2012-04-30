@@ -1,13 +1,16 @@
 {$page_context = CerberusContexts::CONTEXT_TICKET}
 {$page_context_id = $ticket->id}
 
-{include file="devblocks:cerberusweb.core::tickets/submenu.tpl"}
-
-<div style="float:right">
-	{include file="devblocks:cerberusweb.core::tickets/quick_search_box.tpl"}
+<div style="float:left">
+	<h1>{$ticket->subject}</h1>
 </div>
 
-<h2>{'common.conversation'|devblocks_translate|capitalize}</h2>
+<div style="float:right">
+	{$ctx = Extension_DevblocksContext::get($page_context)}
+	{include file="devblocks:cerberusweb.core::search/quick_search.tpl" view=$ctx->getSearchView() return_url="{devblocks_url}c=search&context={$ctx->manifest->params.alias}{/devblocks_url}" reset=true}
+</div>
+
+<div style="clear:both;"></div>
 
 {assign var=ticket_group_id value=$ticket->group_id}
 {assign var=ticket_group value=$groups.$ticket_group_id}
@@ -16,7 +19,7 @@
 {assign var=ticket_bucket value=$ticket_group_bucket_set.$ticket_bucket_id}
 
 <fieldset class="properties">
-	<legend>{$ticket->subject|truncate:128}
+	<legend>{'common.conversation'|devblocks_translate|capitalize}
         {if DevblocksPlatform::isPluginEnabled('cerberusweb.timetracking')}
             - Total Ticket Time Worked: {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp;
         {/if}
@@ -49,7 +52,7 @@
 				{$ticket_org = $ticket->getOrg()}
 				<b>{'contact_org.name'|devblocks_translate|capitalize}:</b>
 				{if !empty($ticket_org)}
-				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=contacts&a=showOrgPeek&id={$ticket->org_id}',null,false,'500');">{$ticket_org->name}</a>
+				<a href="javascript:;" onclick="genericAjaxPopup('peek','c=internal&a=showPeekPopup&context={CerberusContexts::CONTEXT_ORG}&context_id={$ticket->org_id}',null,false,'500');">{$ticket_org->name}</a>
 				{/if}
 			{elseif $k == 'bucket'}
 				<b>{$translate->_('common.bucket')|capitalize}:</b>
