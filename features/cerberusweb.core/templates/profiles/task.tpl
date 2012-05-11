@@ -13,7 +13,11 @@
 <div style="clear:both;"></div>
 
 <fieldset class="properties">
-	<legend>Task</legend>
+			<legend>{$task->title|truncate:128} - 
+                {if isset($total_time_minutes)}
+                    <b>Total Ticket Time Worked: </b> {$total_time_hours} Hours {$total_time_minutes} Mins&nbsp; 
+                {/if}
+            </legend>
 	
 	{foreach from=$properties item=v key=k name=props}
 		<div class="property">
