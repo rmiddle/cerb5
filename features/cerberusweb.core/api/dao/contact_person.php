@@ -40,6 +40,9 @@ class DAO_ContactPerson extends C4_ORMHelper {
 	
 	static function update($ids, $fields) {
 		parent::_update($ids, 'contact_person', $fields);
+		
+		// Log the context update
+		DevblocksPlatform::markContextChanged(CerberusContexts::CONTEXT_CONTACT_PERSON, $ids);
 	}
 	
 	static function updateWhere($fields, $where) {
@@ -355,16 +358,16 @@ class SearchFields_ContactPerson implements IDevblocksSearchFields {
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'contact_person', 'id', $translate->_('common.id')),
 			self::EMAIL_ID => new DevblocksSearchField(self::EMAIL_ID, 'contact_person', 'email_id'),
-			self::CREATED => new DevblocksSearchField(self::CREATED, 'contact_person', 'created', $translate->_('common.created')),
-			self::LAST_LOGIN => new DevblocksSearchField(self::LAST_LOGIN, 'contact_person', 'last_login', $translate->_('dao.contact_person.last_login')),
+			self::CREATED => new DevblocksSearchField(self::CREATED, 'contact_person', 'created', $translate->_('common.created'), Model_CustomField::TYPE_DATE),
+			self::LAST_LOGIN => new DevblocksSearchField(self::LAST_LOGIN, 'contact_person', 'last_login', $translate->_('dao.contact_person.last_login'), Model_CustomField::TYPE_DATE),
 			self::AUTH_SALT => new DevblocksSearchField(self::AUTH_SALT, 'contact_person', 'auth_salt', $translate->_('dao.contact_person.auth_salt')),
 			self::AUTH_PASSWORD => new DevblocksSearchField(self::AUTH_PASSWORD, 'contact_person', 'auth_password', $translate->_('dao.contact_person.auth_password')),
 			
-			self::ADDRESS_EMAIL => new DevblocksSearchField(self::ADDRESS_EMAIL, 'address', 'email', $translate->_('common.email')),
-			self::ADDRESS_FIRST_NAME => new DevblocksSearchField(self::ADDRESS_FIRST_NAME, 'address', 'first_name', $translate->_('address.first_name')),
-			self::ADDRESS_LAST_NAME => new DevblocksSearchField(self::ADDRESS_LAST_NAME, 'address', 'last_name', $translate->_('address.last_name')),
+			self::ADDRESS_EMAIL => new DevblocksSearchField(self::ADDRESS_EMAIL, 'address', 'email', $translate->_('common.email'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::ADDRESS_FIRST_NAME => new DevblocksSearchField(self::ADDRESS_FIRST_NAME, 'address', 'first_name', $translate->_('address.first_name'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::ADDRESS_LAST_NAME => new DevblocksSearchField(self::ADDRESS_LAST_NAME, 'address', 'last_name', $translate->_('address.last_name'), Model_CustomField::TYPE_SINGLE_LINE),
 			
-			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers')),
+			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers'), 'WS'),
 			
 			self::CONTEXT_LINK => new DevblocksSearchField(self::CONTEXT_LINK, 'context_link', 'from_context', null),
 			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
@@ -376,7 +379,7 @@ class SearchFields_ContactPerson implements IDevblocksSearchFields {
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
-			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		}
 		
 		// Sort by label (translation-conscious)
@@ -748,7 +751,7 @@ class View_ContactPerson extends C4_AbstractView implements IAbstractView_Subtot
 	}			
 };
 
-class Context_ContactPerson extends Extension_DevblocksContext {
+class Context_ContactPerson extends Extension_DevblocksContext implements IDevblocksContextProfile {
     static function searchInboundLinks($from_context, $from_context_id) {
     	list($results, $null) = DAO_ContactPerson::search(
     		array(
@@ -772,10 +775,18 @@ class Context_ContactPerson extends Extension_DevblocksContext {
     	return DAO_ContactPerson::random();
     }
     
+    function profileGetUrl($context_id) {
+    	if(empty($context_id))
+    		return '';
+    
+    	$url_writer = DevblocksPlatform::getUrlService();
+    	$url = $url_writer->writeNoProxy('c=profiles&type=contact_person&id='.$context_id, true);
+    	return $url;
+    }
+    
 	function getMeta($context_id) {
 		$contact = DAO_ContactPerson::get($context_id);
-		$url_writer = DevblocksPlatform::getUrlService();
-		
+
 		$address = $contact->getPrimaryAddress();
 
 		$name = $address->getName();
@@ -785,12 +796,16 @@ class Context_ContactPerson extends Extension_DevblocksContext {
 		else
 			$name = $address->email;
 		
+		$url = $this->profileGetUrl($context_id);
 		$friendly = DevblocksPlatform::strToPermalink($address->email);
+		
+		if(!empty($friendly))
+			$url .= '-' . $friendly;
 		
 		return array(
 			'id' => $contact->id,
 			'name' => $name,
-			'permalink' => $url_writer->writeNoProxy(sprintf("c=contacts&tab=people&id=%d-%s",$context_id, $friendly), true),
+			'permalink' => $url,
 		);
 	}
     
@@ -840,7 +855,7 @@ class Context_ContactPerson extends Extension_DevblocksContext {
 			
 			// URL
 			$url_writer = DevblocksPlatform::getUrlService();
-			$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=contacts&tab=people&id=%d",$person->id), true);
+			$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=profiles&type=contact_person&id=%d",$person->id), true);
 			
 			// Primary Email
 			$email_id = (null != $person && !empty($person->email_id)) ? $person->email_id : null;
@@ -898,11 +913,13 @@ class Context_ContactPerson extends Extension_DevblocksContext {
 		return $values;
 	}	
 	
-	function getChooserView() {
+	function getChooserView($view_id=null) {
 		$translate = DevblocksPlatform::getTranslationService();
+
+		if(empty($view_id))
+			$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		
 		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id;
 		$defaults->is_ephemeral = true;
@@ -920,7 +937,7 @@ class Context_ContactPerson extends Extension_DevblocksContext {
 		$view->renderSortBy = SearchFields_ContactPerson::LAST_LOGIN;
 		$view->renderSortAsc = false;
 		$view->renderLimit = 10;
-		$view->renderFilters = true;
+		$view->renderFilters = false;
 		$view->renderTemplate = 'contextlinks_chooser';
 		
 		C4_AbstractViewLoader::setView($view_id, $view);

@@ -742,6 +742,10 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 				$this->_handleCommentCreate($event);
 				break;
 				
+			case 'context.update':
+				$this->_handleContextUpdate($event);
+				break;
+				
 			case 'context.delete':
 				$this->_handleContextDelete($event);
 				break;
@@ -760,6 +764,13 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 		}
 	}
 
+	private function _handleContextUpdate($event) {
+		@$context = $event->params['context'];
+		@$context_ids = $event->params['context_ids'];
+
+		DAO_ContextScheduledBehavior::updateRelativeSchedules($context, $context_ids);
+	}
+	
 	private function _handleContextDelete($event) {
 		@$context = $event->params['context'];
 		@$context_ids = $event->params['context_ids'];
@@ -772,7 +783,7 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 		DAO_CustomFieldValue::deleteByContextIds($context, $context_ids);
 		DAO_Notification::deleteByContext($context, $context_ids);
 		DAO_TriggerEvent::deleteByOwner($context, $context_ids);
-		DAO_Workspace::deleteByOwner($context, $context_ids);
+		DAO_WorkspacePage::deleteByOwner($context, $context_ids);
 	}
 	
 	private function _handleContextMaint($event) {
@@ -950,7 +961,8 @@ class ChCoreEventListener extends DevblocksEventListenerExtension {
 		DAO_ContactPerson::maint();
 		DAO_OpenIdToContactPerson::maint();
 		DAO_Attachment::maint();
-		DAO_Workspace::maint();
+		DAO_WorkspacePage::maint();
+		DAO_WorkspaceTab::maint();
 	}
 	
 	private function _handleCronHeartbeat($event) {

@@ -123,8 +123,10 @@ class DAO_KbArticle extends C4_ORMHelper {
 	}
 
 	static function update($ids, $fields) {
-		if(!is_array($ids)) $ids = array($ids);
 		parent::_update($ids, 'kb_article', $fields);
+		
+	    // Log the context update
+   		DevblocksPlatform::markContextChanged(CerberusContexts::CONTEXT_KB_ARTICLE, $ids);
 	}
 	
 	static function delete($ids) {
@@ -432,16 +434,16 @@ class SearchFields_KbArticle implements IDevblocksSearchFields {
 		
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'kb', 'id', $translate->_('kb_article.id')),
-			self::TITLE => new DevblocksSearchField(self::TITLE, 'kb', 'title', $translate->_('kb_article.title')),
-			self::UPDATED => new DevblocksSearchField(self::UPDATED, 'kb', 'updated', $translate->_('kb_article.updated')),
-			self::VIEWS => new DevblocksSearchField(self::VIEWS, 'kb', 'views', $translate->_('kb_article.views')),
+			self::TITLE => new DevblocksSearchField(self::TITLE, 'kb', 'title', $translate->_('kb_article.title'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::UPDATED => new DevblocksSearchField(self::UPDATED, 'kb', 'updated', $translate->_('kb_article.updated'), Model_CustomField::TYPE_DATE),
+			self::VIEWS => new DevblocksSearchField(self::VIEWS, 'kb', 'views', $translate->_('kb_article.views'), Model_CustomField::TYPE_NUMBER),
 			self::FORMAT => new DevblocksSearchField(self::FORMAT, 'kb', 'format', $translate->_('kb_article.format')),
 			self::CONTENT => new DevblocksSearchField(self::CONTENT, 'kb', 'content', $translate->_('kb_article.content')),
 			
 			self::CATEGORY_ID => new DevblocksSearchField(self::CATEGORY_ID, 'katc', 'kb_category_id'),
 			self::TOP_CATEGORY_ID => new DevblocksSearchField(self::TOP_CATEGORY_ID, 'katc', 'kb_top_category_id', $translate->_('kb_article.topic')),
 			
-			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers')),
+			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers'), 'WS'),
 			
 			self::CONTEXT_LINK => new DevblocksSearchField(self::CONTEXT_LINK, 'context_link', 'from_context', null),
 			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
@@ -450,7 +452,7 @@ class SearchFields_KbArticle implements IDevblocksSearchFields {
 		// Fulltext
 		$tables = DevblocksPlatform::getDatabaseTables();
 		if(isset($tables['fulltext_kb_article'])) {
-			$columns[self::FULLTEXT_ARTICLE_CONTENT] = new DevblocksSearchField(self::FULLTEXT_ARTICLE_CONTENT, 'ftkb', 'content', $translate->_('kb_article.content'));
+			$columns[self::FULLTEXT_ARTICLE_CONTENT] = new DevblocksSearchField(self::FULLTEXT_ARTICLE_CONTENT, 'ftkb', 'content', $translate->_('kb_article.content'), 'FT');
 		}
 		
 		// Custom Fields
@@ -458,7 +460,7 @@ class SearchFields_KbArticle implements IDevblocksSearchFields {
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
-			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		}
 		
 		// Sort by label (translation-conscious)
@@ -611,7 +613,7 @@ class Model_KbArticle {
 	}
 };
 
-class Context_KbArticle extends Extension_DevblocksContext {
+class Context_KbArticle extends Extension_DevblocksContext implements IDevblocksContextProfile, IDevblocksContextPeek {
 	function authorize($context_id, Model_Worker $worker) {
 		return TRUE;
 	}
@@ -619,17 +621,29 @@ class Context_KbArticle extends Extension_DevblocksContext {
 	function getRandom() {
 		return DAO_KbArticle::random();
 	}
+
+	function profileGetUrl($context_id) {
+		if(empty($context_id))
+			return '';
+		
+		$url_writer = DevblocksPlatform::getUrlService();
+		$url = $url_writer->writeNoProxy(sprintf("c=profiles&type=kb&id=%d", $context_id, true));
+		return $url;
+	}
 	
 	function getMeta($context_id) {
 		$article = DAO_KbArticle::get($context_id);
-		$url_writer = DevblocksPlatform::getUrlService();
 		
+		$url = $this->profileGetUrl($context_id);
 		$friendly = DevblocksPlatform::strToPermalink($article->title);
+		
+		if(!empty($friendly))
+			$url .= '-' . $friendly;
 		
 		return array(
 			'id' => $article->id,
 			'name' => $article->title,
-			'permalink' => $url_writer->writeNoProxy(sprintf("c=kb&ar=article&id=%d-%s", $article->id, $friendly, true)),
+			'permalink' => $url,
 		);
 	}
 	
@@ -681,7 +695,7 @@ class Context_KbArticle extends Extension_DevblocksContext {
 			
 			// URL
 			$url_writer = DevblocksPlatform::getUrlService();
-			$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=kb&ar=article&id=%d-%s",$article->id, DevblocksPlatform::strToPermalink($article->title)), true);
+			$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=profiles&type=kb&id=%d-%s",$article->id, DevblocksPlatform::strToPermalink($article->title)), true);
 		}
 		
 		return TRUE;
@@ -736,11 +750,13 @@ class Context_KbArticle extends Extension_DevblocksContext {
 		return $values;
 	}	
 	
-	function getChooserView() {
+	function getChooserView($view_id=null) {
 		$active_worker = CerberusApplication::getActiveWorker();
+
+		if(empty($view_id))
+			$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		
 		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id;
 		$defaults->is_ephemeral = true;
@@ -758,7 +774,7 @@ class Context_KbArticle extends Extension_DevblocksContext {
 		$view->renderSortBy = SearchFields_KbArticle::UPDATED;
 		$view->renderSortAsc = false;
 		$view->renderLimit = 10;
-		$view->renderFilters = true;
+		$view->renderFilters = false;
 		$view->renderTemplate = 'contextlinks_chooser';
 		
 		C4_AbstractViewLoader::setView($view_id, $view);
@@ -788,6 +804,24 @@ class Context_KbArticle extends Extension_DevblocksContext {
 		$view->renderTemplate = 'context';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;
+	}
+	
+	function renderPeekPopup($context_id=0, $view_id='') {
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		if(!empty($context_id)) {
+			$article = DAO_KbArticle::get($context_id);
+			$tpl->assign('article', $article);
+		}
+		
+		if(!empty($view_id))
+			$tpl->assign('view_id', $view_id);
+			
+		@$return_uri = DevblocksPlatform::importGPC($_REQUEST['return_uri'],'string','');
+		if(!empty($return_uri))
+			$tpl->assign('return_uri', $return_uri);
+		
+		$tpl->display('devblocks:cerberusweb.kb::kb/peek_readonly.tpl');
 	}
 };
 
@@ -929,7 +963,7 @@ class View_KbArticle extends C4_AbstractView implements IAbstractView_Subtotals 
 		switch($this->renderTemplate) {
 			case 'chooser':
 			default:
-				$tpl->assign('view_template', 'devblocks:cerberusweb.kb::view/view.tpl');
+				$tpl->assign('view_template', 'devblocks:cerberusweb.kb::kb/view.tpl');
 				$tpl->display('devblocks:cerberusweb.core::internal/views/subtotals_and_view.tpl');
 				break;
 		}

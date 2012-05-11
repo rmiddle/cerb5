@@ -53,6 +53,9 @@ class DAO_Notification extends DevblocksORMHelper {
 	
 	static function update($ids, $fields) {
 		parent::_update($ids, 'notification', $fields);
+		
+		// Log the context update
+	    DevblocksPlatform::markContextChanged(CerberusContexts::CONTEXT_NOTIFICATION, $ids);
 	}
 	
 	static function updateWhere($fields, $where) {
@@ -373,11 +376,11 @@ class SearchFields_Notification implements IDevblocksSearchFields {
 			self::ID => new DevblocksSearchField(self::ID, 'we', 'id', $translate->_('notification.id')),
 			self::CONTEXT => new DevblocksSearchField(self::CONTEXT, 'we', 'context', null),
 			self::CONTEXT_ID => new DevblocksSearchField(self::CONTEXT_ID, 'we', 'context_id', null),
-			self::CREATED_DATE => new DevblocksSearchField(self::CREATED_DATE, 'we', 'created_date', $translate->_('notification.created_date')),
-			self::WORKER_ID => new DevblocksSearchField(self::WORKER_ID, 'we', 'worker_id', $translate->_('notification.worker_id')),
-			self::MESSAGE => new DevblocksSearchField(self::MESSAGE, 'we', 'message', $translate->_('notification.message')),
-			self::IS_READ => new DevblocksSearchField(self::IS_READ, 'we', 'is_read', $translate->_('notification.is_read')),
-			self::URL => new DevblocksSearchField(self::URL, 'we', 'url', $translate->_('common.url')),
+			self::CREATED_DATE => new DevblocksSearchField(self::CREATED_DATE, 'we', 'created_date', $translate->_('notification.created_date'), Model_CustomField::TYPE_DATE),
+			self::WORKER_ID => new DevblocksSearchField(self::WORKER_ID, 'we', 'worker_id', $translate->_('notification.worker_id'), Model_CustomField::TYPE_WORKER),
+			self::MESSAGE => new DevblocksSearchField(self::MESSAGE, 'we', 'message', $translate->_('notification.message'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::IS_READ => new DevblocksSearchField(self::IS_READ, 'we', 'is_read', $translate->_('notification.is_read'), Model_CustomField::TYPE_CHECKBOX),
+			self::URL => new DevblocksSearchField(self::URL, 'we', 'url', $translate->_('common.url'), Model_CustomField::TYPE_SINGLE_LINE),
 		);
 		
 		// Sort by label (translation-conscious)
@@ -398,16 +401,27 @@ class Model_Notification {
 	public $url;
 	
 	public function getURL() {
+		$url = $this->url;
+		
+		if(substr($this->url,0,6) == 'ctx://') {
+			$url = CerberusContexts::parseContextUrl($this->url);
+			
 		// Check if we have a context link, otherwise use raw URL
-		if(!empty($this->context)) {
+		} elseif(!empty($this->context)) {
 			// Invoke context class
 			if(null != ($ctx = Extension_DevblocksContext::get($this->context))) { /* @var $ctx Extension_DevblocksContext */
-				$meta = $ctx->getMeta($this->context_id);
-				if(isset($meta['permalink']) && !empty($meta['permalink']))
-					return $meta['permalink'];
+				if($ctx instanceof IDevblocksContextProfile) { /* @var $ctx IDevblocksContextProfile */
+					$url = $ctx->profileGetUrl($this->context_id);
+					
+				} else {
+					$meta = $ctx->getMeta($this->context_id);
+					if(isset($meta['permalink']) && !empty($meta['permalink']))
+						$url = $meta['permalink'];
+				}
 			}
-		} 
-		return $this->url;
+		}
+		
+		return $url;
 	}
 };
 
@@ -839,11 +853,13 @@ class Context_Notification extends Extension_DevblocksContext {
 		return $values;
 	}	
 	
-	function getChooserView() {
+	function getChooserView($view_id=null) {
 		$active_worker = CerberusApplication::getActiveWorker();
-		
+
+		if(empty($view_id))
+			$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
+	
 		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id;
 		$defaults->is_ephemeral = true;
@@ -851,10 +867,12 @@ class Context_Notification extends Extension_DevblocksContext {
 		$view = C4_AbstractViewLoader::getView($view_id, $defaults);
 		$view->name = 'Notifications';
 		
-		$params = array();
+		$params = array(
+			SearchFields_Notification::IS_READ => new DevblocksSearchCriteria(SearchFields_Notification::IS_READ, '=', 0),
+		);
 				
 		if(!empty($active_worker)) {
-			$params[SearchFields_Notification::WORKER_ID] = new DevblocksSearchCriteria(SearchFields_Notification::WORKER_ID,'=',$active_worker->id);
+			$params[SearchFields_Notification::WORKER_ID] = new DevblocksSearchCriteria(SearchFields_Notification::WORKER_ID,'in',array($active_worker->id));
 		}
 		
 		$view->addParams($params, true);
@@ -864,7 +882,7 @@ class Context_Notification extends Extension_DevblocksContext {
 		$view->renderSortBy = SearchFields_Notification::CREATED_DATE;
 		$view->renderSortAsc = false;
 		$view->renderLimit = 10;
-		$view->renderFilters = true;
+		$view->renderFilters = false;
 		$view->renderTemplate = 'contextlinks_chooser';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;		

@@ -42,7 +42,52 @@ class DevblocksExtension {
 	}
 };
 
+interface IDevblocksContextPeek {
+    function renderPeekPopup($context_id=0, $view_id='');
+}
+
+interface IDevblocksContextImport {
+    function importGetKeys();
+    function importKeyValue($key, $value);
+    function importSaveObject(array $fields, array $custom_fields, array $meta);
+}
+
+interface IDevblocksContextProfile {
+	function profileGetUrl($context_id);
+}
+
 abstract class Extension_DevblocksContext extends DevblocksExtension {
+	static $_changed_contexts = array();
+	
+	static function markContextChanged($context, $context_ids) {
+		if(!is_array($context_ids))
+			$context_ids = array($context_ids);
+		
+		if(!isset(self::$_changed_contexts[$context]))
+			self::$_changed_contexts[$context] = array();
+		
+		self::$_changed_contexts[$context] = array_merge(self::$_changed_contexts[$context], $context_ids);
+	}
+	
+	static function shutdownTriggerChangedContextsEvents() {
+	    $eventMgr = DevblocksPlatform::getEventService();
+	    
+		if(is_array(self::$_changed_contexts))
+		foreach(self::$_changed_contexts as $context => $context_ids) {
+		    $eventMgr->trigger(
+		        new Model_DevblocksEvent(
+		            'context.update',
+	                array(
+	                	'context' => $context,
+	                    'context_ids' => $context_ids,
+	                )
+	            )
+		    );
+		}
+		
+		self::$_changed_contexts = array();
+	}
+	
 	/**
 	 * @param unknown_type $as_instances
 	 * @param unknown_type $with_options
@@ -124,7 +169,26 @@ abstract class Extension_DevblocksContext extends DevblocksExtension {
 	abstract function getRandom();
     abstract function getMeta($context_id);
     abstract function getContext($object, &$token_labels, &$token_values, $prefix=null);
-    abstract function getChooserView();
+    function getSearchView($view_id=null) {
+    	if(empty($view_id)) {
+	    	$view_id = sprintf("search_%s",
+    			str_replace('.','_',DevblocksPlatform::strToPermalink($this->id))
+	    	);
+    	}
+    	
+    	if(null == ($view = C4_AbstractViewLoader::getView($view_id))) {
+    		$view = $this->getChooserView($view_id); /* @var $view C4_AbstractViewModel */
+    	}
+    	
+    	$view->name = 'Search Results';
+    	$view->renderFilters = false;
+    	$view->is_ephemeral = false;
+    	
+    	C4_AbstractViewLoader::setView($view_id, $view);
+    	
+    	return $view;
+    }
+    abstract function getChooserView($view_id=null);
     function getViewClass() {
     	return @$this->manifest->params['view_class'];
     }
@@ -1074,29 +1138,35 @@ class _DevblocksSortHelper {
 			}
 			
 			if($is_index) {
-				if(!isset($a_test[$prop]) || !isset($b_test[$prop]))
+				if(!isset($a_test[$prop]) && !isset($b_test[$prop]))
 					return 0;
 				
-				$a_test = $a_test[$prop];
-				$b_test = $b_test[$prop];
+				@$a_test = $a_test[$prop];
+				@$b_test = $b_test[$prop];
 				
 			} else {
-				if(!isset($a_test->$prop) || !isset($b_test->$prop))
+				if(!isset($a_test->$prop) && !isset($b_test->$prop)) {
 					return 0;
+				}
 				
-				$a_test = $a_test->$prop;
-				$b_test = $b_test->$prop;
+				@$a_test = $a_test->$prop;
+				@$b_test = $b_test->$prop;
 			}
 		}
 		
 		if(is_numeric($a_test) && is_numeric($b_test)) {
 			settype($a_test, 'integer');
 			settype($b_test, 'integer');
+			
 			if($a_test==$b_test)
 				return 0;
+			
 			return ($a_test > $b_test) ? 1 : -1;
 			
 		} else {
+			$a_test = is_null($a_test) ? '' : $a_test;
+			$b_test = is_null($b_test) ? '' : $b_test;
+			
 			if(!is_string($a_test) || !is_string($b_test))
 				return 0;
 			

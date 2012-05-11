@@ -51,25 +51,8 @@ function linkAddContext(ref) {
 		}
 	}
 	
-	// [TODO] Make this generic
-	// [TODO] Move peek to context?
-
-	if($context == 'cerberusweb.contexts.task') {
-		$popup = genericAjaxPopup('peek','c=tasks&a=showTaskPeek&id=0&context={$context}&context_id={$context_id}',null,false,'500');
-		$popup.one('dialogclose', reload_action);
-	} else if($context == 'cerberusweb.contexts.address') {
-		$popup = genericAjaxPopup('peek','c=contacts&a=showAddressPeek&id=0&context={$context}&context_id={$context_id}',null,false,'500');
-		$popup.one('dialogclose', reload_action);
-	} else if($context == 'cerberusweb.contexts.org') {
-		$popup = genericAjaxPopup('peek','c=contacts&a=showOrgPeek&id=0&context={$context}&context_id={$context_id}',null,false,'500');
-		$popup.one('dialogclose', reload_action);
-	} else if($context == 'cerberusweb.contexts.opportunity') {
-		$popup = genericAjaxPopup('peek','c=crm&a=showOppPanel&id=0&context={$context}&context_id={$context_id}',null,false,'500');
-		$popup.one('dialogclose', reload_action);
-	} else if($context == 'cerberusweb.contexts.call') {
-		$popup = genericAjaxPopup('peek','c=calls&a=showEntry&id=0&context={$context}&context_id={$context_id}',null,false,'500');
-		$popup.one('dialogclose', reload_action);
-	}
+	$popup = genericAjaxPopup('peek','c=internal&a=showPeekPopup&context=' + $context + '&context_id=0&link_context={$context}&link_context_id={$context_id}',null,false,'500');
+	$popup.one('dialogclose', reload_action);
 	
 	$select.val('');
 }
@@ -192,7 +175,7 @@ $forms = $('#divConnections').delegate('DIV[id^=view]','view_refresh',function()
 							$this
 								.html(html)
 								;
-							$this.find('DIV[id^=view]:first').trigger('view_refresh');
+							//$this.find('DIV[id^=view]:first').trigger('view_refresh');
 							next();
 						}
 					);
@@ -208,7 +191,7 @@ $forms = $('#divConnections').delegate('DIV[id^=view]','view_refresh',function()
 					$div
 						.html(html)
 						;
-					$div.find('DIV[id^=view]:first').trigger('view_refresh');
+					//$div.find('DIV[id^=view]:first').trigger('view_refresh');
 					next();
 				}
 			);

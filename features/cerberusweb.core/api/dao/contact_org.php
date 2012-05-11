@@ -73,8 +73,10 @@ class DAO_ContactOrg extends C4_ORMHelper {
 	 * @return Model_ContactOrg
 	 */
 	static function update($ids, $fields) {
-		if(!is_array($ids)) $ids = array($ids);
 		parent::_update($ids, 'contact_org', $fields);
+		
+		// Log the context update
+		DevblocksPlatform::markContextChanged(CerberusContexts::CONTEXT_ORG, $ids);
 	}
 	
 	static function mergeIds($from_ids, $to_id) {
@@ -487,17 +489,17 @@ class SearchFields_ContactOrg {
 		
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'c', 'id', $translate->_('contact_org.id')),
-			self::NAME => new DevblocksSearchField(self::NAME, 'c', 'name', $translate->_('contact_org.name')),
-			self::STREET => new DevblocksSearchField(self::STREET, 'c', 'street', $translate->_('contact_org.street')),
-			self::CITY => new DevblocksSearchField(self::CITY, 'c', 'city', $translate->_('contact_org.city')),
-			self::PROVINCE => new DevblocksSearchField(self::PROVINCE, 'c', 'province', $translate->_('contact_org.province')),
-			self::POSTAL => new DevblocksSearchField(self::POSTAL, 'c', 'postal', $translate->_('contact_org.postal')),
-			self::COUNTRY => new DevblocksSearchField(self::COUNTRY, 'c', 'country', $translate->_('contact_org.country')),
-			self::PHONE => new DevblocksSearchField(self::PHONE, 'c', 'phone', $translate->_('contact_org.phone')),
-			self::WEBSITE => new DevblocksSearchField(self::WEBSITE, 'c', 'website', $translate->_('contact_org.website')),
-			self::CREATED => new DevblocksSearchField(self::CREATED, 'c', 'created', $translate->_('contact_org.created')),
+			self::NAME => new DevblocksSearchField(self::NAME, 'c', 'name', $translate->_('contact_org.name'),Model_CustomField::TYPE_SINGLE_LINE),
+			self::STREET => new DevblocksSearchField(self::STREET, 'c', 'street', $translate->_('contact_org.street'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::CITY => new DevblocksSearchField(self::CITY, 'c', 'city', $translate->_('contact_org.city'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::PROVINCE => new DevblocksSearchField(self::PROVINCE, 'c', 'province', $translate->_('contact_org.province'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::POSTAL => new DevblocksSearchField(self::POSTAL, 'c', 'postal', $translate->_('contact_org.postal'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::COUNTRY => new DevblocksSearchField(self::COUNTRY, 'c', 'country', $translate->_('contact_org.country'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::PHONE => new DevblocksSearchField(self::PHONE, 'c', 'phone', $translate->_('contact_org.phone'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::WEBSITE => new DevblocksSearchField(self::WEBSITE, 'c', 'website', $translate->_('contact_org.website'), Model_CustomField::TYPE_SINGLE_LINE),
+			self::CREATED => new DevblocksSearchField(self::CREATED, 'c', 'created', $translate->_('contact_org.created'), Model_CustomField::TYPE_DATE),
 
-			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers')),
+			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers'), 'WS'),
 			
 			self::CONTEXT_LINK => new DevblocksSearchField(self::CONTEXT_LINK, 'context_link', 'from_context', null),
 			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
@@ -506,7 +508,7 @@ class SearchFields_ContactOrg {
 		// Comments
 		$tables = DevblocksPlatform::getDatabaseTables();
 		if(isset($tables['fulltext_comment_content'])) {
-			$columns[self::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchField(self::FULLTEXT_COMMENT_CONTENT, 'ftcc', 'content', $translate->_('comment.filters.content'));
+			$columns[self::FULLTEXT_COMMENT_CONTENT] = new DevblocksSearchField(self::FULLTEXT_COMMENT_CONTENT, 'ftcc', 'content', $translate->_('comment.filters.content'), 'FT');
 		}
 		
 		// Custom Fields
@@ -515,7 +517,7 @@ class SearchFields_ContactOrg {
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
-			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		}
 		
 		// Sort by label (translation-conscious)
@@ -675,7 +677,7 @@ class View_ContactOrg extends C4_AbstractView implements IAbstractView_Subtotals
 		switch($this->renderTemplate) {
 			case 'contextlinks_chooser':
 			default:
-				$tpl->assign('view_template', 'devblocks:cerberusweb.core::contacts/orgs/contact_view.tpl');
+				$tpl->assign('view_template', 'devblocks:cerberusweb.core::contacts/orgs/view.tpl');
 				$tpl->display('devblocks:cerberusweb.core::internal/views/subtotals_and_view.tpl');
 				break;
 		}
@@ -879,19 +881,31 @@ class View_ContactOrg extends C4_AbstractView implements IAbstractView_Subtotals
 	}
 };
 
-class Context_Org extends Extension_DevblocksContext {
+class Context_Org extends Extension_DevblocksContext implements IDevblocksContextProfile, IDevblocksContextPeek, IDevblocksContextImport {
 	const ID = 'cerberusweb.contexts.org';
+	
+	function profileGetUrl($context_id) {
+		if(empty($context_id))
+			return '';
+	
+		$url_writer = DevblocksPlatform::getUrlService();
+		$url = $url_writer->writeNoProxy('c=profiles&type=org&id='.$context_id, true);
+		return $url;
+	}
 	
 	function getMeta($context_id) {
 		$org = DAO_ContactOrg::get($context_id);
-		$url_writer = DevblocksPlatform::getUrlService();
-		
+
+		$url = $this->profileGetUrl($context_id);
 		$friendly = DevblocksPlatform::strToPermalink($org->name);
+		
+		if(!empty($friendly))
+			$url .= '-' . $friendly;
 		
 		return array(
 			'id' => $context_id,
 			'name' => $org->name,
-			'permalink' => $url_writer->write(sprintf("c=contacts&tab=orgs&action=display&id=%d-%s", $context_id, $friendly), true),
+			'permalink' => $url
 		);
 	}
 	
@@ -963,7 +977,7 @@ class Context_Org extends Extension_DevblocksContext {
 			
 			// URL
 			$url_writer = DevblocksPlatform::getUrlService();
-			$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=contacts&tab=orgs&action=display&id=%d-%s",$org->id, DevblocksPlatform::strToPermalink($org->name)), true);
+			$token_values['record_url'] = $url_writer->writeNoProxy(sprintf("c=profiles&type=org&id=%d-%s",$org->id, DevblocksPlatform::strToPermalink($org->name)), true);
 		}
 
 		return true;		
@@ -1006,9 +1020,11 @@ class Context_Org extends Extension_DevblocksContext {
 		return $values;
 	}
 	
-	function getChooserView() {
+	function getChooserView($view_id=null) {
+		if(empty($view_id))
+			$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
+
 		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id; 
 		$defaults->is_ephemeral = true;
@@ -1025,7 +1041,7 @@ class Context_Org extends Extension_DevblocksContext {
 		$view->renderSortBy = SearchFields_ContactOrg::NAME;
 		$view->renderSortAsc = true;
 		$view->renderLimit = 10;
-		$view->renderFilters = true;
+		$view->renderFilters = false;
 		$view->renderTemplate = 'contextlinks_chooser';
 		
 		C4_AbstractViewLoader::setView($view_id, $view);
@@ -1056,4 +1072,140 @@ class Context_Org extends Extension_DevblocksContext {
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;
 	}
+	
+	function renderPeekPopup($context_id=0, $view_id='') {
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		$contact = DAO_ContactOrg::get($context_id);
+		$tpl->assign('contact', $contact);
+		
+		// Custom fields
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ORG);
+		$tpl->assign('custom_fields', $custom_fields);
+		
+		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_ORG, $context_id);
+		if(isset($custom_field_values[$context_id]))
+			$tpl->assign('custom_field_values', $custom_field_values[$context_id]);
+		
+		$types = Model_CustomField::getTypes();
+		$tpl->assign('types', $types);
+		
+		// Comments
+		$comments = DAO_Comment::getByContext(CerberusContexts::CONTEXT_ORG, $context_id);
+		$last_comment = array_shift($comments);
+		unset($comments);
+		$tpl->assign('last_comment', $last_comment);
+		
+		// Counts
+		$counts = array(
+			'people' => DAO_Address::getCountByOrgId($context_id),
+		);
+		$tpl->assign('counts', $counts);
+		
+		// View
+		$tpl->assign('view_id', $view_id);
+		
+		$tpl->display('devblocks:cerberusweb.core::contacts/orgs/peek.tpl');
+	}
+	
+	function importGetKeys() {
+		// [TODO] Translate
+	
+		$keys = array(
+			'city' => array(
+				'label' => 'City',
+				'type' => Model_CustomField::TYPE_SINGLE_LINE,
+				'param' => SearchFields_ContactOrg::CITY,
+			),
+			'country' => array(
+				'label' => 'Country',
+				'type' => Model_CustomField::TYPE_SINGLE_LINE,
+				'param' => SearchFields_ContactOrg::COUNTRY,
+			),
+			'created' => array(
+				'label' => 'Created Date',
+				'type' => Model_CustomField::TYPE_DATE,
+				'param' => SearchFields_ContactOrg::CREATED,
+			),
+			'name' => array(
+				'label' => 'Name',
+				'type' => Model_CustomField::TYPE_SINGLE_LINE,
+				'param' => SearchFields_ContactOrg::NAME,
+				'required' => true,
+				'force_match' => true,
+			),
+			'phone' => array(
+				'label' => 'Phone',
+				'type' => Model_CustomField::TYPE_SINGLE_LINE,
+				'param' => SearchFields_ContactOrg::PHONE,
+			),
+			'postal' => array(
+				'label' => 'ZIP/Postal',
+				'type' => Model_CustomField::TYPE_SINGLE_LINE,
+				'param' => SearchFields_ContactOrg::POSTAL,
+			),
+			'province' => array(
+				'label' => 'State/Province',
+				'type' => Model_CustomField::TYPE_SINGLE_LINE,
+				'param' => SearchFields_ContactOrg::PROVINCE,
+			),
+			'street' => array(
+				'label' => 'Street',
+				'type' => Model_CustomField::TYPE_SINGLE_LINE,
+				'param' => SearchFields_ContactOrg::STREET,
+			),
+			'website' => array(
+				'label' => 'Website',
+				'type' => Model_CustomField::TYPE_SINGLE_LINE,
+				'param' => SearchFields_ContactOrg::WEBSITE,
+			),
+		);
+	
+		$cfields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_ORG);
+	
+		foreach($cfields as $cfield_id => $cfield) {
+			$keys['cf_' . $cfield_id] = array(
+				'label' => $cfield->name,
+				'type' => $cfield->type,
+				'param' => 'cf_' . $cfield_id,
+			);
+		}
+	
+		DevblocksPlatform::sortObjects($keys, '[label]', true);
+	
+		return $keys;
+	}
+	
+	function importKeyValue($key, $value) {
+		switch($key) {
+		}
+	
+		return $value;
+	}
+	
+	function importSaveObject(array $fields, array $custom_fields, array $meta) {
+		// If new...
+		if(!isset($meta['object_id']) || empty($meta['object_id'])) {
+			// Make sure we have a name
+			if(!isset($fields[DAO_ContactOrg::NAME])) {
+				$fields[DAO_ContactOrg::NAME] = 'New ' . $this->manifest->name;
+			}
+	
+			// Default the created date to now
+			if(!isset($fields[DAO_ContactOrg::CREATED]))
+				$fields[DAO_ContactOrg::CREATED] = time();
+	
+			// Create
+			$meta['object_id'] = DAO_ContactOrg::create($fields);
+	
+		} else {
+			// Update
+			DAO_ContactOrg::update($meta['object_id'], $fields);
+		}
+	
+		// Custom fields
+		if(!empty($custom_fields) && !empty($meta['object_id'])) {
+			DAO_CustomFieldValue::formatAndSetFieldValues($this->manifest->id, $meta['object_id'], $custom_fields, false, true, true); //$is_blank_unset (4th)
+		}
+	}	
 };

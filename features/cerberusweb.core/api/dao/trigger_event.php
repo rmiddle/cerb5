@@ -234,12 +234,15 @@ class DAO_TriggerEvent extends C4_ORMHelper {
 		return true;
 	}
 	
-	static function deleteByOwner($context, $context_id) {
-		$results = self::getWhere(sprintf("%s = %s AND %s = %d",
+	static function deleteByOwner($context, $context_ids) {
+		if(!is_array($context_ids))
+			$context_ids = array($context_ids);
+		
+		$results = self::getWhere(sprintf("%s = %s AND %s IN (%s)",
 			self::OWNER_CONTEXT,
 			C4_ORMHelper::qstr($context),
 			self::OWNER_CONTEXT_ID,
-			$context_id
+			implode(',', $context_ids)
 		));
 		
 		if(is_array($results))
@@ -436,7 +439,7 @@ class SearchFields_TriggerEvent implements IDevblocksSearchFields {
 		//if(is_array($fields))
 		//foreach($fields as $field_id => $field) {
 		//	$key = 'cf_'.$field_id;
-		//	$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+		//	$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		//}
 		
 		// Sort by label (translation-conscious)

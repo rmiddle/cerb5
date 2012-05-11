@@ -136,13 +136,15 @@ class DevblocksEventHelper {
 				break;
 			
 			case Model_CustomField::TYPE_DATE:
-				$value = $params['value'];
+				$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+				$value = $tpl_builder->build($params['value'], $dict);
+				
 				$value = strtotime($value);
 
 				if(!empty($value)) {
 					$out .= sprintf("%s (%s)\n",
-						date('Y-m-d h:ip', $value),
-						$params['value']
+						date('D M d Y h:ia', $value),
+						$value
 					);
 				}
 				
@@ -398,6 +400,15 @@ class DevblocksEventHelper {
 		} else {
 			@$value = is_array($dict->$token) ? implode(',', $dict->$token) : $dict->$token;
 			
+			switch($var_type) {
+				case Model_CustomField::TYPE_DATE:
+					$value = sprintf("%s (%s)\n",
+						@date('D M d Y h:ia', $value),
+						$value
+					);
+					break;
+			}
+			
 			$out = sprintf(">>> Setting '%s' to:\n%s",
 				$token,
 				$value
@@ -422,8 +433,11 @@ class DevblocksEventHelper {
 			case Model_CustomField::TYPE_DATE:
 				if(!isset($params['value']))
 					break;
+					
+				$tpl_builder = DevblocksPlatform::getTemplateBuilder();
+				$value = $tpl_builder->build($params['value'], $dict);
 				
-				$value = is_numeric($params['value']) ? $params['value'] : @strtotime($params['value']);
+				$value = is_numeric($value) ? $value : @strtotime($value);
 				$dict->$token = $value;
 				break;
 				

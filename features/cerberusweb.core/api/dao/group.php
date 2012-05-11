@@ -172,29 +172,16 @@ class DAO_Group extends C4_ORMHelper {
 	/**
 	 * Enter description here...
 	 *
-	 * @param integer $id
+	 * @param array $ids
 	 * @param array $fields
 	 */
-	static function update($id, $fields) {
-		$db = DevblocksPlatform::getDatabaseService();
-		$sets = array();
-		
-		if(!is_array($fields) || empty($fields) || empty($id))
-			return;
-		
-		foreach($fields as $k => $v) {
-			$sets[] = sprintf("%s = %s",
-				$k,
-				$db->qstr($v)
-			);
-		}
-			
-		$sql = sprintf("UPDATE worker_group SET %s WHERE id = %d",
-			implode(', ', $sets),
-			$id
-		);
-		$db->Execute($sql) or die(__CLASS__ . '('.__LINE__.')'. ':' . $db->ErrorMsg()); 
+	static function update($ids, $fields) {
+		parent::_update($ids, 'worker_group', $fields);
 
+		// Log the context update
+		DevblocksPlatform::markContextChanged(CerberusContexts::CONTEXT_GROUP, $ids);
+
+   		// Clear cache
 		self::clearCache();
 	}
 	
@@ -483,7 +470,7 @@ class SearchFields_Group implements IDevblocksSearchFields {
 		
 		$columns = array(
 			self::ID => new DevblocksSearchField(self::ID, 'g', 'id', $translate->_('common.id')),
-			self::NAME => new DevblocksSearchField(self::NAME, 'g', 'name', $translate->_('common.name')),
+			self::NAME => new DevblocksSearchField(self::NAME, 'g', 'name', $translate->_('common.name'), Model_CustomField::TYPE_SINGLE_LINE),
 			
 			self::CONTEXT_LINK => new DevblocksSearchField(self::CONTEXT_LINK, 'context_link', 'from_context', null),
 			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
@@ -495,7 +482,7 @@ class SearchFields_Group implements IDevblocksSearchFields {
 		if(is_array($fields))
 		foreach($fields as $field_id => $field) {
 			$key = 'cf_'.$field_id;
-			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+			$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		}
 		
 		// Sort by label (translation-conscious)
@@ -989,7 +976,7 @@ class View_Group extends C4_AbstractView implements IAbstractView_Subtotals {
 	}
 };
 
-class Context_Group extends Extension_DevblocksContext {
+class Context_Group extends Extension_DevblocksContext implements IDevblocksContextProfile, IDevblocksContextPeek {
 	const ID = 'cerberusweb.contexts.group';
 	
 	function authorize($context_id, Model_Worker $worker) {
@@ -1012,21 +999,30 @@ class Context_Group extends Extension_DevblocksContext {
 		return DAO_Group::random();
 	}
 	
-	function getMeta($context_id) {
+	function profileGetUrl($context_id) {
+		if(empty($context_id))
+			return '';
+	
 		$url_writer = DevblocksPlatform::getUrlService();
-		
+		$url = $url_writer->writeNoProxy('c=profiles&type=group&id='.$context_id, true);
+		return $url;
+	}
+	
+	function getMeta($context_id) {
 		if(null == ($group = DAO_Group::get($context_id)))
 			return false;
 		
-		$who = sprintf("%d-%s",
-			$group->id,
-			DevblocksPlatform::strToPermalink($group->name)
-		);
+		$url = $this->profileGetUrl($context_id);
+		
+		$who = DevblocksPlatform::strToPermalink($group->name);
+		
+		if(!empty($who))
+			$url .= '-' . $who;
 		
 		return array(
 			'id' => $group->id,
 			'name' => $group->name,
-			'permalink' => $url_writer->writeNoProxy('c=profiles&type=group&who='.$who, true),
+			'permalink' => $url,
 		);
 	}
 	
@@ -1113,9 +1109,11 @@ class Context_Group extends Extension_DevblocksContext {
 		return $values;
 	}	
 	
-	function getChooserView() {
+	function getChooserView($view_id=null) {
+		if(empty($view_id))
+			$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
+
 		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id;
 		$defaults->is_ephemeral = true;
@@ -1133,7 +1131,7 @@ class Context_Group extends Extension_DevblocksContext {
 //		$view->renderSortBy = SearchFields_Group::NAME;
 //		$view->renderSortAsc = true;
 		$view->renderLimit = 10;
-		$view->renderFilters = true;
+		$view->renderFilters = false;
 		$view->renderTemplate = 'contextlinks_chooser';
 		C4_AbstractViewLoader::setView($view_id, $view);
 
@@ -1163,6 +1161,32 @@ class Context_Group extends Extension_DevblocksContext {
 		$view->renderTemplate = 'context';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;
+	}
+	
+	function renderPeekPopup($context_id=0, $view_id='') {
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		$tpl->assign('view_id', $view_id);
+		
+		if(!empty($context_id) && null != ($group = DAO_Group::get($context_id))) {
+			$tpl->assign('group', $group);
+		}
+		
+		// Custom fields
+		
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_GROUP);
+		$tpl->assign('custom_fields', $custom_fields);
+		
+		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_GROUP, $context_id);
+		if(isset($custom_field_values[$context_id]))
+			$tpl->assign('custom_field_values', $custom_field_values[$context_id]);
+		
+		$types = Model_CustomField::getTypes();
+		$tpl->assign('types', $types);
+		
+		// Template
+		
+		$tpl->display('devblocks:cerberusweb.core::groups/peek.tpl');
 	}
 };
 

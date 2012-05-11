@@ -57,6 +57,9 @@ foreach($fields as $field_name => $field_type) {
 	
 	static function update($ids, $fields) {
 		parent::_update($ids, '<?php echo $table_name; ?>', $fields);
+		
+		// Log the context update
+	    //DevblocksPlatform::markContextChanged('example.context', $ids);
 	}
 	
 	static function updateWhere($fields, $where) {
@@ -351,7 +354,7 @@ foreach($fields as $field_name => $field_type) {
 		//if(is_array($fields))
 		//foreach($fields as $field_id => $field) {
 		//	$key = 'cf_'.$field_id;
-		//	$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name);
+		//	$columns[$key] = new DevblocksSearchField($key,$key,'field_value',$field->name,$field->type);
 		//}
 		
 		// Sort by label (translation-conscious)

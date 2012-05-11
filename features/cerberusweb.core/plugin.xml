@@ -44,7 +44,7 @@
 		<patch version="5.6.1" revision="961" file="patches/5.x/5.6.1.php" />
 		<patch version="5.6.2" revision="965" file="patches/5.x/5.6.2.php" />
 		<patch version="5.7.0" revision="973" file="patches/5.x/5.7.0.php" />
-		<patch version="5.8.0" revision="983" file="patches/5.x/5.8.0.php" />
+		<patch version="5.8.0" revision="987" file="patches/5.x/5.8.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -339,13 +339,16 @@
 		</file>
 		
 		<file path="api/dao/workspace.php">
-			<class name="DAO_Workspace" />
 			<class name="DAO_WorkspaceList" />
-			<class name="Model_Workspace" />
+			<class name="DAO_WorkspacePage" />
+			<class name="DAO_WorkspaceTab" />
 			<class name="Model_WorkspaceList" />
 			<class name="Model_WorkspaceListView" />
-			<class name="SearchFields_Workspace" />
-			<class name="View_Workspace" />
+			<class name="Model_WorkspacePage" />
+			<class name="Model_WorkspaceTab" />
+			<class name="SearchFields_WorkspacePage" />
+			<class name="SearchFields_WorkspaceTab" />
+			<class name="View_WorkspacePage" />
 		</file>
 		
 		<file path="api/events/abstract/abstract_event_address.php">
@@ -592,7 +595,6 @@
 	
 		<!-- Addy Book -->
 		<priv id="core.addybook" label="acl.core.addybook" />
-		<priv id="core.addybook.actions.import" label="acl.core.addybook.actions.import" />
 		<priv id="core.addybook.addy.actions.update" label="acl.core.addybook.addy.actions.update" />
 		<priv id="core.addybook.addy.view.actions.broadcast" label="acl.core.addybook.addy.view.actions.broadcast" />
 		<priv id="core.addybook.addy.view.actions.export" label="acl.core.addybook.addy.view.actions.export" />
@@ -615,7 +617,6 @@
 
 		<!-- Mail page -->
 		<priv id="core.mail" label="acl.core.mail" />
-		<priv id="core.mail.search" label="acl.core.mail.search" />
 		<priv id="core.mail.send" label="acl.core.mail.send" />
 
 		<!-- RSS -->
@@ -669,12 +670,14 @@
 				<param key="alias" value="app" />
 				<param key="view_class" value="" />
 				<param key="options">
+					<!--
 					<value>
-						<!--<data key="create" />-->
-						<!--<data key="find" />-->
-						<!--<data key="snippets" />-->
-						<!--<data key="workspace" />-->
+						<data key="create" />
+						<data key="find" />
+						<data key="snippets" />
+						<data key="workspace" />
 					</value>
+					-->
 				</param>
 			</params>
 		</extension>
@@ -702,7 +705,7 @@
 		
 		<extension point="devblocks.context">
 			<id>cerberusweb.contexts.address</id>
-			<name>Address</name>
+			<name>Email Address</name>
 			<class>
 				<file>api/dao/address.php</file>
 				<name>Context_Address</name>
@@ -734,8 +737,8 @@
 				<param key="view_class" value="View_CalendarEvent" />
 				<param key="options">
 					<value>
-						<!--<data key="create" />-->
-						<!--<data key="find" />-->
+						<data key="create" />
+						<data key="find" />
 						<!--<data key="snippets" />-->
 						<data key="va_variable" />
 						<data key="workspace" />
@@ -1273,6 +1276,7 @@
 				<param key="events">
 					<value>
 						<data key="comment.create" />
+						<data key="context.update" />
 						<data key="context.delete" />
 						<data key="context.maint" />
 						<data key="cron.heartbeat" />
@@ -1490,35 +1494,89 @@
 				<param key="menutitle" value="" />
 			</params>
 		</extension>
+		
+		<extension point="cerberusweb.page">
+			<id>core.page.pages</id>
+			<name>Custom Pages</name>
+			<class>
+				<file>api/uri/pages.php</file>
+				<name>Page_Custom</name>
+			</class>
+			<params>
+				<param key="uri" value="pages" />
+				<param key="menutitle" value="" />
+			</params>
+		</extension>
 
 		<extension point="cerberusweb.page">
-			<id>core.page.tickets</id>
+			<id>core.page.search</id>
+			<name>Search Page</name>
+			<class>
+				<file>api/uri/search.php</file>
+				<name>Page_Search</name>
+			</class>
+			<params>
+				<param key="uri" value="search" />
+				<param key="menutitle" value="" />
+			</params>
+		</extension>
+		
+		<extension point="cerberusweb.page">
+			<id>core.page.mail</id>
 			<name>Mail Page</name>
+			<class>
+				<file>api/uri/mail.php</file>
+				<name>Page_Mail</name>
+			</class>
+			<params>
+				<param key="uri" value="mail" />
+				<param key="menutitle" value="common.mail" />
+				<param key="acl" value="core.mail" />
+			</params>
+		</extension>
+		
+			<!-- Mail Page Sections -->
+			
+			<extension point="cerberusweb.ui.page.section">
+				<id>core.page.mail.compose</id>
+				<name>Mail Compose Section</name>
+				<class>
+					<file>api/uri/mail/compose.php</file>
+					<name>PageSection_MailCompose</name>
+				</class>
+				<params>
+					<param key="page_id" value="core.page.mail" />
+					<param key="uri" value="compose" />
+				</params>
+			</extension>
+			
+			<extension point="cerberusweb.ui.page.section">
+				<id>core.page.mail.drafts</id>
+				<name>Drafts Section</name>
+				<class>
+					<file>api/uri/mail/drafts.php</file>
+					<name>PageSection_MailDrafts</name>
+				</class>
+				<params>
+					<param key="page_id" value="core.page.mail" />
+					<param key="uri" value="drafts" />
+				</params>
+			</extension>
+			
+		<extension point="cerberusweb.page">
+			<id>core.page.tickets</id>
+			<name>Tickets Page</name>
 			<class>
 				<file>api/uri/tickets.php</file>
 				<name>ChTicketsPage</name>
 			</class>
 			<params>
 				<param key="uri" value="tickets" />
-				<param key="menutitle" value="common.mail" />
+				<param key="menutitle" value="" />
 				<param key="acl" value="core.mail" />
 			</params>
 		</extension>
-
-		<extension point="cerberusweb.page">
-			<id>core.page.activity</id>
-			<name>Activity Page</name>
-			<class>
-				<file>api/uri/activity.php</file>
-				<name>ChActivityPage</name>
-			</class>
-			<params>
-				<param key="uri" value="activity" />
-				<param key="menutitle" value="core.menu.activity" />
-				<param key="acl" value="core.activity" />
-			</params>
-		</extension>
-
+		
 		<extension point="cerberusweb.page">
 			<id>core.page.tasks</id>
 			<name>Tasks Page</name>
@@ -1554,7 +1612,7 @@
 			</class>
 			<params>
 				<param key="uri" value="contacts" />
-				<param key="menutitle" value="core.menu.address_book" />
+				<param key="menutitle" value="" />
 				<param key="acl" value="core.addybook" />
 			</params>
 		</extension>
@@ -1965,21 +2023,112 @@
 			</params>
 		</extension>
 		
-		<!-- Activity Tabs -->
+			<!-- Profile Page Sections -->
+			
+			<extension point="cerberusweb.ui.page.section">
+				<id>core.page.profiles.address</id>
+				<name>Address Section</name>
+				<class>
+					<file>api/uri/profiles/address.php</file>
+					<name>PageSection_ProfilesAddress</name>
+				</class>
+				<params>
+					<param key="page_id" value="core.page.profiles" />
+					<param key="uri" value="address" />
+				</params>
+			</extension>
 		
-		<extension point="cerberusweb.activity.tab">
-			<id>core.activity.tab.tasks</id>
-			<name>Tasks Tab</name>
-			<class>
-				<file>api/uri/tasks.php</file>
-				<name>ChTasksActivityTab</name>
-			</class>
-			<params>
-				<param key="uri" value="tasks" />
-				<param key="title" value="activity.tab.tasks" />
-			</params>
-		</extension>
+			<extension point="cerberusweb.ui.page.section">
+				<id>core.page.profiles.calendar_event</id>
+				<name>Calendar Event Section</name>
+				<class>
+					<file>api/uri/profiles/calendar_event.php</file>
+					<name>PageSection_ProfilesCalendarEvent</name>
+				</class>
+				<params>
+					<param key="page_id" value="core.page.profiles" />
+					<param key="uri" value="calendar_event" />
+				</params>
+			</extension>
 
+			<extension point="cerberusweb.ui.page.section">
+				<id>core.page.profiles.contact_person</id>
+				<name>Contact Person Section</name>
+				<class>
+					<file>api/uri/profiles/contact_person.php</file>
+					<name>PageSection_ProfilesContactPerson</name>
+				</class>
+				<params>
+					<param key="page_id" value="core.page.profiles" />
+					<param key="uri" value="contact_person" />
+				</params>
+			</extension>
+		
+			<extension point="cerberusweb.ui.page.section">
+				<id>core.page.profiles.group</id>
+				<name>Group Section</name>
+				<class>
+					<file>api/uri/profiles/group.php</file>
+					<name>PageSection_ProfilesGroup</name>
+				</class>
+				<params>
+					<param key="page_id" value="core.page.profiles" />
+					<param key="uri" value="group" />
+				</params>
+			</extension>
+			
+			<extension point="cerberusweb.ui.page.section">
+				<id>core.page.profiles.organization</id>
+				<name>Organization Section</name>
+				<class>
+					<file>api/uri/profiles/organization.php</file>
+					<name>PageSection_ProfilesOrganization</name>
+				</class>
+				<params>
+					<param key="page_id" value="core.page.profiles" />
+					<param key="uri" value="org" />
+				</params>
+			</extension>
+			
+			<extension point="cerberusweb.ui.page.section">
+				<id>core.page.profiles.task</id>
+				<name>Task Section</name>
+				<class>
+					<file>api/uri/profiles/task.php</file>
+					<name>PageSection_ProfilesTask</name>
+				</class>
+				<params>
+					<param key="page_id" value="core.page.profiles" />
+					<param key="uri" value="task" />
+				</params>
+			</extension>
+			
+			<extension point="cerberusweb.ui.page.section">
+				<id>core.page.profiles.ticket</id>
+				<name>Ticket Section</name>
+				<class>
+					<file>api/uri/profiles/ticket.php</file>
+					<name>PageSection_ProfilesTicket</name>
+				</class>
+				<params>
+					<param key="page_id" value="core.page.profiles" />
+					<param key="uri" value="ticket" />
+				</params>
+			</extension>
+			
+			<extension point="cerberusweb.ui.page.section">
+				<id>core.page.profiles.worker</id>
+				<name>Worker Section</name>
+				<class>
+					<file>api/uri/profiles/worker.php</file>
+					<name>PageSection_ProfilesWorker</name>
+				</class>
+				<params>
+					<param key="page_id" value="core.page.profiles" />
+					<param key="uri" value="worker" />
+				</params>
+			</extension>
+		
 		<!--  Login Extensions -->
 
 		<extension point="cerberusweb.login">

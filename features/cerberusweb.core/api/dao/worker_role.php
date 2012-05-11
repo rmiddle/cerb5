@@ -41,6 +41,10 @@ class DAO_WorkerRole extends DevblocksORMHelper {
 	static function update($ids, $fields) {
 		parent::_update($ids, 'worker_role', $fields);
 		
+	    // Log the context update
+   		DevblocksPlatform::markContextChanged(CerberusContexts::CONTEXT_ROLE, $ids);
+		
+		// Clear cache
 		self::clearCache();
 	}
 	
@@ -138,10 +142,7 @@ class DAO_WorkerRole extends DevblocksORMHelper {
 	 * @param integer $id
 	 * @return Model_WorkerRole	 */
 	static function get($id) {
-		$objects = self::getWhere(sprintf("%s = %d",
-			self::ID,
-			$id
-		));
+		$objects = DAO_WorkerRole::getAll();
 		
 		if(isset($objects[$id]))
 			return $objects[$id];
@@ -388,9 +389,11 @@ class Context_WorkerRole extends Extension_DevblocksContext {
 		return $values;
 	}	
 	
-	function getChooserView() {
+	function getChooserView($view_id=null) {
+		if(empty($view_id))
+			$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
+	
 		// View
-		$view_id = 'chooser_'.str_replace('.','_',$this->id).time().mt_rand(0,9999);
 		$defaults = new C4_AbstractViewModel();
 		$defaults->id = $view_id;
 		$defaults->is_ephemeral = true;
