@@ -195,13 +195,6 @@ abstract class Extension_PreferenceTab extends DevblocksExtension {
 	function saveTab() {}
 };
 
-abstract class Extension_MailTab extends DevblocksExtension {
-	const POINT = 'cerberusweb.mail.tab';
-	
-	function showTab() {}
-	function saveTab() {}
-};
-
 abstract class Extension_SendMailToolbarItem extends DevblocksExtension {
 	function render() { }
 };
@@ -296,6 +289,48 @@ abstract class Extension_ContextProfileScript extends DevblocksExtension {
 	}	
 	
 	function renderScript($context, $context_id) {}
+};
+
+abstract class Extension_WorkspacePage extends DevblocksExtension {
+	const POINT = 'cerberusweb.ui.workspace.page';
+	
+	/**
+	 * @return DevblocksExtensionManifest[]|Extension_WorkspacePage[]
+	 */
+	static function getAll($as_instances=true) {
+		$exts = DevblocksPlatform::getExtensions(self::POINT, $as_instances);
+
+		// Sorting
+		if($as_instances)
+			DevblocksPlatform::sortObjects($exts, 'manifest->name');
+		else
+			DevblocksPlatform::sortObjects($exts, 'name');
+	
+		return $exts;
+	}
+	
+	abstract function renderPage(Model_WorkspacePage $page); 
+};
+
+abstract class Extension_WorkspaceTab extends DevblocksExtension {
+	const POINT = 'cerberusweb.ui.workspace.tab';
+	
+	/**
+	 * @return DevblocksExtensionManifest[]|Extension_WorkspaceTab[]
+	 */
+	static function getAll($as_instances=true) {
+		$exts = DevblocksPlatform::getExtensions(self::POINT, $as_instances);
+
+		// Sorting
+		if($as_instances)
+			DevblocksPlatform::sortObjects($exts, 'manifest->name');
+		else
+			DevblocksPlatform::sortObjects($exts, 'name');
+	
+		return $exts;
+	}
+
+	abstract function renderTab(Model_WorkspacePage $page, Model_WorkspaceTab $tab);
 };
 
 abstract class Extension_RssSource extends DevblocksExtension {

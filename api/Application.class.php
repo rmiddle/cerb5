@@ -46,8 +46,8 @@
  * - Jeff Standen, Darren Sugita, Dan Hildebrandt, Scott Luther
  *	 WEBGROUP MEDIA LLC. - Developers of Cerberus Helpdesk
  */
-define("APP_BUILD", 2012051103);
-define("APP_VERSION", '5.8.0-dev');
+define("APP_BUILD", 2012051901);
+define("APP_VERSION", '6.0.0-beta');
 
 define("APP_MAIL_PATH", APP_STORAGE_PATH . '/mail/');
 
@@ -629,6 +629,7 @@ class CerberusContexts {
 	const CONTEXT_COMMENT = 'cerberusweb.contexts.comment';
 	const CONTEXT_CONTACT_PERSON = 'cerberusweb.contexts.contact_person';
 	const CONTEXT_DOMAIN = 'cerberusweb.contexts.datacenter.domain';
+	const CONTEXT_DRAFT = 'cerberusweb.contexts.mail.draft';
 	const CONTEXT_FEEDBACK = 'cerberusweb.contexts.feedback';
 	const CONTEXT_GROUP = 'cerberusweb.contexts.group';
 	const CONTEXT_KB_ARTICLE = 'cerberusweb.contexts.kb_article';
@@ -1437,7 +1438,7 @@ class CerberusLicense {
 	}
 	
 	public static function getReleases() {
-		/*																																																																																																																														*/return array('5.0.0'=>1271894400,'5.1.0'=>1281830400,'5.2.0'=>1288569600,'5.3.0'=>1295049600,'5.4.0'=>1303862400,'5.5.0'=>1312416000,'5.6.0'=>1317686400,'5.7.0'=>1326067200);/*
+		/*																																																																																																																														*/return array('5.0.0'=>1271894400,'5.1.0'=>1281830400,'5.2.0'=>1288569600,'5.3.0'=>1295049600,'5.4.0'=>1303862400,'5.5.0'=>1312416000,'5.6.0'=>1317686400,'5.7.0'=>1326067200,'6.0.0'=>1338163200);/*
 		 * Major versions by release date in GMT
 		 */
 		return array(
@@ -1449,6 +1450,7 @@ class CerberusLicense {
 			'5.5.0' => gmmktime(0,0,0,8,4,2011),
 			'5.6.0' => gmmktime(0,0,0,10,4,2011),
 			'5.7.0' => gmmktime(0,0,0,1,9,2012),
+			'6.0.0' => gmmktime(0,0,0,5,28,2012),
 		);
 	}
 	
@@ -1800,8 +1802,7 @@ class C4_ORMHelper extends DevblocksORMHelper {
 					break;
 				case DevblocksSearchCriteria::OPER_IS_NOT_NULL:
 					$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
-					$where_sql .= sprintf("AND (context_watcher.to_context_id IS NOT NULL) "); //,%s
-						//(!empty($param->value) ? sprintf("OR context_watcher.to_context_id IN (%s)", implode(',',$param->value)) : '')
+					$where_sql .= sprintf("AND (context_watcher.to_context_id IS NOT NULL) ");
 					break;
 				case DevblocksSearchCriteria::OPER_NIN_OR_NULL:
 					$join_sql .= sprintf("LEFT JOIN context_link AS context_watcher ON (context_watcher.from_context = '%s' AND context_watcher.from_context_id = %s AND context_watcher.to_context = 'cerberusweb.contexts.worker') ", $from_context, $from_index);
@@ -1810,6 +1811,50 @@ class C4_ORMHelper extends DevblocksORMHelper {
 					);
 					break;
 			}
+		}
+	}
+	
+	static function _searchComponentsVirtualContextLinks(&$param, $from_context, $from_index, &$join_sql, &$where_sql) {
+		if(empty($param->value) || !is_array($param->value))
+			$param->operator = DevblocksSearchCriteria::OPER_IS_NULL;
+		
+		$where_contexts = array();
+		
+		if(is_array($param->value))
+		foreach($param->value as $context_data) {
+			@list($context, $context_id) = explode(':', $context_data, 2);
+			
+			if(empty($context))
+				return;
+
+			$where_contexts[] = sprintf("(context_links.to_context = %s%s)",
+				self::qstr($context),
+				(!empty($context_id) ? sprintf(" AND context_links.to_context_id = %d", $context_id) : '')
+			);
+		}
+		
+		switch($param->operator) {
+			case DevblocksSearchCriteria::OPER_TRUE:
+				$join_sql .= sprintf("INNER JOIN context_link AS context_links ON (context_links.from_context = '%s' AND context_links.from_context_id = %s ",
+					self::qstr($from_context),
+					$from_index
+				);
+				break;
+				
+			case DevblocksSearchCriteria::OPER_IS_NULL:
+				$where_sql .= sprintf("AND (SELECT count(*) FROM context_link WHERE context_link.from_context=%s AND context_link.from_context_id=%s) = 0 ",
+					self::qstr($from_context),
+					$from_index
+				);
+				break;
+				
+			case DevblocksSearchCriteria::OPER_IN:
+				$join_sql .= sprintf("INNER JOIN context_link AS context_links ON (context_links.from_context = %s AND context_links.from_context_id = %s AND (%s)) ",
+					self::qstr($from_context),
+					$from_index,
+					implode(' OR ', $where_contexts)
+				);
+				break;
 		}
 	}
 };

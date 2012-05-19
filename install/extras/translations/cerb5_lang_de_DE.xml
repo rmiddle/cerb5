@@ -76,11 +76,6 @@
         <seg>[Ticketansicht] Kann Tickets teilen</seg>
       </tuv>
     </tu>
-    <tu tuid="acl.core.home.workspaces">
-      <tuv xml:lang="de_DE">
-        <seg>[Übersicht] Kann private Arbeitsbereiche und -Listen erstellen</seg>
-      </tuv>
-    </tu>
     <tu tuid="acl.core.kb.articles.modify">
       <tuv xml:lang="de_DE">
         <seg>[Hilfedatenbank] Kann Artikel verfassen/bearbeiten</seg>
@@ -89,11 +84,6 @@
     <tu tuid="acl.core.kb.categories.modify">
       <tuv xml:lang="de_DE">
         <seg>[Hilfedatenbank] Kann Kategorien verfassen/bearbeiten</seg>
-      </tuv>
-    </tu>
-    <tu tuid="acl.core.kb.topics.modify">
-      <tuv xml:lang="de_DE">
-        <seg>[Hilfedatenbank] Kann Top-Level Übberschriften verfassen/bearbeiten</seg>
       </tuv>
     </tu>
     <tu tuid="acl.core.mail.overview">
@@ -1651,11 +1641,6 @@
         <seg>Wollen Sie den Arbeitsbereich wirklich löschen?</seg>
       </tuv>
     </tu>
-    <tu tuid="dashboard.edit">
-      <tuv xml:lang="de_DE">
-        <seg>Arbeitsbereich editieren</seg>
-      </tuv>
-    </tu>
     <tu tuid="dashboard.group_filters">
       <tuv xml:lang="de_DE">
         <seg>Gruppen-Filter</seg>
@@ -1839,11 +1824,6 @@
     <tu tuid="display.reply.next.resume_eg">
       <tuv xml:lang="de_DE">
         <seg>z.B. "Freitag", "7 Tage", "Morgen 11:15", "31.12."</seg>
-      </tuv>
-    </tu>
-    <tu tuid="display.reply.next_label">
-      <tuv xml:lang="de_DE">
-        <seg>Weiter</seg>
       </tuv>
     </tu>
     <tu tuid="display.reply.reply_banner">
@@ -3681,11 +3661,6 @@ Wenn Sie dies nich angefordert haben, klicken Sie den o.g. Link nicht. Die Anfor
         <seg>Wort</seg>
       </tuv>
     </tu>
-    <tu tuid="reports.ui.ticket.assignment">
-      <tuv xml:lang="de_DE">
-        <seg>Aktuelle Ticketzuweisungen</seg>
-      </tuv>
-    </tu>
     <tu tuid="reports.ui.ticket.closed">
       <tuv xml:lang="de_DE">
         <seg>Geschlossene Tickets nach Gruppe</seg>
@@ -3701,16 +3676,6 @@ Wenn Sie dies nich angefordert haben, klicken Sie den o.g. Link nicht. Die Anfor
         <seg>Erstellte Tickets nach Gruppe</seg>
       </tuv>
     </tu>
-    <tu tuid="reports.ui.ticket.oldest_open">
-      <tuv xml:lang="de_DE">
-        <seg>Älteste offene Tickets nach Gruppe</seg>
-      </tuv>
-    </tu>
-    <tu tuid="reports.ui.ticket.open_tickets">
-      <tuv xml:lang="de_DE">
-        <seg>Offene Tickets nach Gruppe</seg>
-      </tuv>
-    </tu>
     <tu tuid="reports.ui.ticket.top_contacts">
       <tuv xml:lang="de_DE">
         <seg>Top Tickets (erstellt nach Kontakt)</seg>
@@ -3724,11 +3689,6 @@ Wenn Sie dies nich angefordert haben, klicken Sie den o.g. Link nicht. Die Anfor
     <tu tuid="reports.ui.ticket.top_contacts.by_org">
       <tuv xml:lang="de_DE">
         <seg>Nach Organisation</seg>
-      </tuv>
-    </tu>
-    <tu tuid="reports.ui.ticket.waiting_tickets">
-      <tuv xml:lang="de_DE">
-        <seg>Wartende Tickets nach Gruppe</seg>
       </tuv>
     </tu>
     <tu tuid="reports.ui.worker">

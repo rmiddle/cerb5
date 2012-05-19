@@ -12,7 +12,7 @@
 		<td align="left" valign="bottom">
 			{assign var=logo_url value=$settings->get('cerberusweb.core','helpdesk_logo_url','')}
 			{if empty($logo_url)}
-			<a href="{devblocks_url}{/devblocks_url}"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/wgm/cerb5_logo.png{/devblocks_url}?v={$smarty.const.APP_BUILD}" border="0"></a>
+			<a href="{devblocks_url}{/devblocks_url}"><img src="{devblocks_url}c=resource&p=cerberusweb.core&f=images/wgm/cerb6_logo.png{/devblocks_url}?v={$smarty.const.APP_BUILD}" border="0"></a>
 			{else}
 			<a href="{devblocks_url}{/devblocks_url}"><img src="{$logo_url}" border="0"></a>
 			{/if}
@@ -32,6 +32,7 @@
 				<li><a href="{devblocks_url}c=profiles&w=worker&me=me{/devblocks_url}">{'header.my_profile'|devblocks_translate|lower}</a></li>
 				<li><a href="{devblocks_url}c=preferences{/devblocks_url}">{'common.settings'|devblocks_translate|lower}</a></li>
 				<li><a href="{devblocks_url}c=profiles&w=worker&me=me&tab=notifications{/devblocks_url}">{'home.tab.my_notifications'|devblocks_translate|lower}</a></li>
+				<li><a href="{devblocks_url}c=profiles&w=worker&me=me&tab=calendar{/devblocks_url}">{'calendar'|devblocks_translate|lower}</a></li>
 				<li><a href="{devblocks_url}c=profiles&w=worker&me=me&tab=attendant{/devblocks_url}">{'virtual attendant'|devblocks_translate|lower}</a></li>
 				<li><a href="{devblocks_url}c=profiles&w=worker&me=me&tab=snippets{/devblocks_url}">{'common.snippets'|devblocks_translate|lower}</a></li>
 				<li><a href="{devblocks_url}c=profiles&w=worker&me=me&tab=links{/devblocks_url}">{'watchlist'|devblocks_translate|lower}</a></li>

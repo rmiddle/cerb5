@@ -44,8 +44,12 @@ class Page_Search extends CerberusPageExtension {
 		@array_shift($stack); // search
 		@$context_extid = array_shift($stack); // context
 		
+		if(empty($context_extid))
+			return;
+		
 		if(null == ($context_ext = Extension_DevblocksContext::getByAlias($context_extid, true))) { /* @var $context_ext Extension_DevblocksContext */
-			$context_ext = Extension_DevblocksContext::get($context_extid);
+			if(null == ($context_ext = Extension_DevblocksContext::get($context_extid)))
+				return;
 		}
 		
 		$tpl->assign('context_ext', $context_ext);
@@ -91,7 +95,7 @@ class Page_Search extends CerberusPageExtension {
 			return;
 		}
 		
-		DAO_WorkerPref::set($active_worker->id, 'quicksearch_' . $view_id, $token);
+		DAO_WorkerPref::set($active_worker->id, 'quicksearch_' . strtolower(get_class($view)), $token);
 		
 		if(!empty($reset))
 			$view->doResetCriteria();

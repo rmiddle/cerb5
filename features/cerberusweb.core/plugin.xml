@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.devblocks.com/schema/plugin.xsd">
 	<id>cerberusweb.core</id>
-	<name>[Cerb5] Core</name>
-	<description>The core functionality of Cerberus Helpdesk.</description>
+	<name>Cerb6 Core</name>
+	<description>The core functionality of Cerb6.</description>
 	<author>WebGroup Media, LLC.</author>
-	<version>5.8.0</version>
+	<version>6.0.0</version>
 	<link>http://wiki.cerb4.com/wiki/New_Changes</link>
 	
 	<!-- Plugin Dependencies -->
@@ -44,7 +44,8 @@
 		<patch version="5.6.1" revision="961" file="patches/5.x/5.6.1.php" />
 		<patch version="5.6.2" revision="965" file="patches/5.x/5.6.2.php" />
 		<patch version="5.7.0" revision="973" file="patches/5.x/5.7.0.php" />
-		<patch version="5.8.0" revision="987" file="patches/5.x/5.8.0.php" />
+		
+		<patch version="6.0.0" revision="988" file="patches/6.x/6.0.0.php" />
 	</patches>
 
 	<!-- Declared Extension Points -->
@@ -235,6 +236,7 @@
 		</file>
 		
 		<file path="api/dao/mail_queue.php">
+			<class name="Context_Draft" />
 			<class name="DAO_MailQueue" />
 			<class name="Model_MailQueue" />
 			<class name="SearchFields_MailQueue" />
@@ -647,10 +649,6 @@
 		<!-- Watchers -->
 		<priv id="core.watchers.assign" label="acl.core.watchers.assign" />
 		<priv id="core.watchers.unassign" label="acl.core.watchers.unassign" />
-		
-		<!-- Workspaces -->
-		<priv id="core.home.workspaces" label="acl.core.home.workspaces" />
-		
 	</acl>
 
 	<!-- Extensions -->
@@ -763,6 +761,28 @@
 					</value>
 				</param>
 				-->
+			</params>
+		</extension>
+		
+		<extension point="devblocks.context">
+			<id>cerberusweb.contexts.mail.draft</id>
+			<name>Draft</name>
+			<class>
+				<file>api/dao/mail_queue.php</file>
+				<name>Context_Draft</name>
+			</class>
+			<params>
+				<param key="alias" value="draft" />
+				<param key="view_class" value="View_MailQueue" />
+				<param key="options">
+					<value>
+						<!--<data key="create" />-->
+						<!--<data key="find" />-->
+						<!--<data key="snippets" />-->
+						<data key="va_variable" />
+						<data key="workspace" />
+					</value>
+				</param>
 			</params>
 		</extension>
 		
@@ -903,7 +923,7 @@
 				<param key="view_class" value="View_Ticket" />
 				<param key="options">
 					<value>
-					<!--<data key="create" />-->
+						<data key="create" />
 						<data key="find" />
 						<data key="snippets" />
 						<data key="va_variable" />
@@ -1536,19 +1556,6 @@
 		</extension>
 		
 			<!-- Mail Page Sections -->
-			
-			<extension point="cerberusweb.ui.page.section">
-				<id>core.page.mail.compose</id>
-				<name>Mail Compose Section</name>
-				<class>
-					<file>api/uri/mail/compose.php</file>
-					<name>PageSection_MailCompose</name>
-				</class>
-				<params>
-					<param key="page_id" value="core.page.mail" />
-					<param key="uri" value="compose" />
-				</params>
-			</extension>
 			
 			<extension point="cerberusweb.ui.page.section">
 				<id>core.page.mail.drafts</id>

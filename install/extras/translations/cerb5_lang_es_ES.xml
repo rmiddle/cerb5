@@ -71,11 +71,6 @@
         <seg>[Mostrar Ticket] Puede dividir tickets</seg>
       </tuv>
     </tu>
-    <tu tuid="acl.core.home.workspaces">
-      <tuv xml:lang="es_ES">
-        <seg>[Inicio] Puede construir áreas de trabajo y listas de trabajo privadas</seg>
-      </tuv>
-    </tu>
     <tu tuid="acl.core.kb.articles.modify">
       <tuv xml:lang="es_ES">
         <seg>[Base de conocimientos] Puede gestionar artículos</seg>
@@ -84,11 +79,6 @@
     <tu tuid="acl.core.kb.categories.modify">
       <tuv xml:lang="es_ES">
         <seg>[Base de conocimientos] Puede gestionar categorías</seg>
-      </tuv>
-    </tu>
-    <tu tuid="acl.core.kb.topics.modify">
-      <tuv xml:lang="es_ES">
-        <seg>[Base de conocimientos] Puede gestionar temas de nivel superior</seg>
       </tuv>
     </tu>
     <tu tuid="acl.core.mail.overview">
@@ -1321,11 +1311,6 @@
         <seg>Está seguro que quiere borrar este área de trabajo?</seg>
       </tuv>
     </tu>
-    <tu tuid="dashboard.edit">
-      <tuv xml:lang="es_ES">
-        <seg>editar área de trabajo</seg>
-      </tuv>
-    </tu>
     <tu tuid="dashboard.group_filters">
       <tuv xml:lang="es_ES">
         <seg>Filtros de Grupo</seg>
@@ -1514,11 +1499,6 @@
     <tu tuid="display.reply.next.resume_eg">
       <tuv xml:lang="es_ES">
         <seg>(e.g. "Viernes", "7 días", "Mañana 11:15AM", "Dic 31")</seg>
-      </tuv>
-    </tu>
-    <tu tuid="display.reply.next_label">
-      <tuv xml:lang="es_ES">
-        <seg>Siguiente</seg>
       </tuv>
     </tu>
     <tu tuid="display.reply.reply_banner">
@@ -2943,16 +2923,6 @@ Si no pidió esto, no pinche en el enlace de arriba.  La petición expirará en 
         <seg>Tickets Creados por Grupo</seg>
       </tuv>
     </tu>
-    <tu tuid="reports.ui.ticket.oldest_open">
-      <tuv xml:lang="es_ES">
-        <seg>Tickets Abiertos más Antiguos por Grupo</seg>
-      </tuv>
-    </tu>
-    <tu tuid="reports.ui.ticket.open_tickets">
-      <tuv xml:lang="es_ES">
-        <seg>Tickets Abiertos por Grupo</seg>
-      </tuv>
-    </tu>
     <tu tuid="reports.ui.ticket.top_contacts">
       <tuv xml:lang="es_ES">
         <seg>Primeros Tickets Creados por Contacto</seg>
@@ -2966,11 +2936,6 @@ Si no pidió esto, no pinche en el enlace de arriba.  La petición expirará en 
     <tu tuid="reports.ui.ticket.top_contacts.by_org">
       <tuv xml:lang="es_ES">
         <seg>Por Organización</seg>
-      </tuv>
-    </tu>
-    <tu tuid="reports.ui.ticket.waiting_tickets">
-      <tuv xml:lang="es_ES">
-        <seg>Tickets Esperando por Grupo</seg>
       </tuv>
     </tu>
     <tu tuid="reports.ui.worker">

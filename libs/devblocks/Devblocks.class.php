@@ -5,7 +5,7 @@ include_once(DEVBLOCKS_PATH . "api/services/bootstrap/cache.php");
 include_once(DEVBLOCKS_PATH . "api/services/bootstrap/database.php");
 include_once(DEVBLOCKS_PATH . "api/services/bootstrap/classloader.php");
 
-define('PLATFORM_BUILD',2011120601);
+define('PLATFORM_BUILD',2012051201);
 
 /**
  * A platform container for plugin/extension registries.
@@ -102,7 +102,7 @@ class DevblocksPlatform extends DevblocksEngine {
 		$plugin->uninstall();
 		DevblocksPlatform::readPlugins();
     }
-    
+
 	/**
 	 * @param mixed $value
 	 * @param string $type
@@ -802,20 +802,17 @@ class DevblocksPlatform extends DevblocksEngine {
 	 * @return boolean
 	 */
 	static function versionConsistencyCheck() {
-		$cache = DevblocksPlatform::getCacheService(); /* @var _DevblocksCacheManager $cache */ 
+		$cache = DevblocksPlatform::getCacheService(); /* @var _DevblocksCacheManager $cache */
 		
-		if(null === ($build_cache = $cache->load("devblocks_app_build"))
-			|| $build_cache != APP_BUILD) {
-				
-			// If build changed, clear cache regardless of patch status
-			// [TODO] We need to find a nicer way to not clear a shared memcached cluster when only one desk needs to
-			$cache = DevblocksPlatform::getCacheService(); /* @var $cache _DevblocksCacheManager */
-			$cache->clean();
-			
-			return false;
-		}
+		if(false !== ($build_version = @file_get_contents(APP_STORAGE_PATH . '/_version'))
+			&& $build_version == APP_BUILD)
+				return true;
+
+		// If build changed, clear cache regardless of patch status
+		$cache = DevblocksPlatform::getCacheService(); /* @var $cache _DevblocksCacheManager */
+		$cache->clean();
 		
-		return true;
+		return false;
 	}
 	
 	/**

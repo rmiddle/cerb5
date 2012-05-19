@@ -11,7 +11,7 @@
 <ul class="buffer bubbles"></ul>
 <br>
 <br>
-<button type="button" class="submit"><span class="cerb-sprite2 sprite-tick-circle-frame"></span> {$translate->_('common.save_changes')}</button>
+<button type="button" class="submit"><span class="cerb-sprite2 sprite-tick-circle"></span> {$translate->_('common.save_changes')}</button>
 <br>
 </form>
 
@@ -24,7 +24,7 @@
 		event.stopPropagation();
 		$(this).dialog('option','title','{$context->manifest->name} Chooser');
 		
-		$popup.find('select:first').focus();
+		$popup.find('input:text:first').focus();
 
 		// Progressive de-enhancement
 		
@@ -49,7 +49,7 @@
 				$(this).remove();
 			});
 			
-			$actions = $('#{$view->id}_actions').find('> tbody > tr:first td');
+			$actions = $('#{$view->id}_actions');
 			$actions.html('');
 		}
 		

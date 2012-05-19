@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.devblocks.com/schema/plugin.xsd">
 	<id>cerberusweb.kb</id>
-	<name>[Cerb5] Knowledgebase</name>
+	<name>Knowledgebase</name>
 	<description>Create and categorize articles to share knowledge between workers or your community.</description>
 	<author>WebGroup Media, LLC.</author>
-	<version>5.8.0</version>
+	<version>6.0.0</version>
 	<link>http://wiki.cerb5.com/wiki/Features:Knowledgebase</link>
 	<image>plugin.png</image>
 	
 	<!-- Requirements -->
 
 	<requires>
-		<app_version min="5.6" max="5.8.99" />
+		<app_version min="6.0" max="6.0.99" />
 	</requires>
 	
 	<!-- Plugin Dependencies -->
@@ -71,7 +71,6 @@
 		<!-- KB -->
 		<priv id="core.kb.articles.modify" label="acl.core.kb.articles.modify" />
 		<priv id="core.kb.categories.modify" label="acl.core.kb.categories.modify" />
-		<priv id="core.kb.topics.modify" label="acl.core.kb.topics.modify" />
 		<priv id="kb.articles.actions.update_all" label="acl.kb.articles.actions.update_all" />
 	</acl>
 	
@@ -177,6 +176,20 @@
 			</params>
 		</extension>
 		
+		<!-- Workspace Tab -->
+		
+		<extension point="cerberusweb.ui.workspace.tab">
+			<id>cerberusweb.kb.tab.browse</id>
+			<name>Browse KB Tab</name>
+			<class>
+				<file>api/App.php</file>
+				<name>WorkspaceTab_KbBrowse</name>
+			</class>
+			<params>
+				<param key="label" value="kb.workspace.tab.browser" />
+			</params>
+		</extension>		
+		
 		<!-- Profile Page Sections -->
 		
 		<extension point="cerberusweb.ui.page.section">
@@ -214,19 +227,6 @@
 			<class>
 				<file>api/App.php</file>
 				<name>ChKbReplyToolbarButton</name>
-			</class>
-			<params>
-			</params>
-		</extension>
-		
-		<!-- Send Mail Toolbar -->
-			
-		<extension point="cerberusweb.mail.send.toolbaritem">
-			<id>cerberusweb.kb.sendmail.toolbaritem.kb</id>
-			<name>KB Send Mail Toolbar</name>
-			<class>
-				<file>api/App.php</file>
-				<name>ChKbSendMailToolbarButton</name>
 			</class>
 			<params>
 			</params>

@@ -1232,15 +1232,20 @@ class DAO_Ticket extends C4_ORMHelper {
 		if(!is_a($param, 'DevblocksSearchCriteria'))
 			return;
 		
+		$from_context = 'cerberusweb.contexts.ticket';
+		$from_index = 't.id';
+		
 		$param_key = $param->field;
 		settype($param_key, 'string');
 
 		switch($param_key) {
+			case SearchFields_Ticket::VIRTUAL_CONTEXT_LINK:
+				$args['has_multiple_values'] = true;
+				self::_searchComponentsVirtualContextLinks($param, $from_context, $from_index, $args['join_sql'], $args['where_sql']);
+				break;
+			
 			case SearchFields_Ticket::VIRTUAL_WATCHERS:
 				$args['has_multiple_values'] = true;
-				$from_context = 'cerberusweb.contexts.ticket';
-				$from_index = 't.id';
-				
 				self::_searchComponentsVirtualWatchers($param, $from_context, $from_index, $args['join_sql'], $args['where_sql']);
 				break;
 				
@@ -1399,6 +1404,7 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 	
 	// Virtuals
 	const VIRTUAL_ASSIGNABLE = '*_assignable';
+	const VIRTUAL_CONTEXT_LINK = '*_context_link';
 	const VIRTUAL_GROUPS_OF_WORKER = '*_groups_of_worker';
 	const VIRTUAL_STATUS = '*_status';
 	const VIRTUAL_WATCHERS = '*_workers';
@@ -1456,6 +1462,7 @@ class SearchFields_Ticket implements IDevblocksSearchFields {
 			self::CONTEXT_LINK_ID => new DevblocksSearchField(self::CONTEXT_LINK_ID, 'context_link', 'from_context_id', null),
 			
 			self::VIRTUAL_ASSIGNABLE => new DevblocksSearchField(self::VIRTUAL_ASSIGNABLE, '*', 'assignable', $translate->_('ticket.assignable')),
+			self::VIRTUAL_CONTEXT_LINK => new DevblocksSearchField(self::VIRTUAL_CONTEXT_LINK, '*', 'context_link', $translate->_('common.links'), null),
 			self::VIRTUAL_GROUPS_OF_WORKER => new DevblocksSearchField(self::VIRTUAL_GROUPS_OF_WORKER, '*', 'groups_of_worker', $translate->_('ticket.groups_of_worker')),
 			self::VIRTUAL_STATUS => new DevblocksSearchField(self::VIRTUAL_STATUS, '*', 'status', $translate->_('ticket.status')),
 			self::VIRTUAL_WATCHERS => new DevblocksSearchField(self::VIRTUAL_WATCHERS, '*', 'workers', $translate->_('common.watchers'), 'WS'),
@@ -1579,6 +1586,7 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 			SearchFields_Ticket::TICKET_ORG_ID,
 			SearchFields_Ticket::TICKET_WAITING,
 			SearchFields_Ticket::VIRTUAL_ASSIGNABLE,
+			SearchFields_Ticket::VIRTUAL_CONTEXT_LINK,
 			SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER,
 			SearchFields_Ticket::VIRTUAL_STATUS,
 			SearchFields_Ticket::VIRTUAL_WATCHERS,
@@ -1645,6 +1653,7 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 					$pass = true;
 					break;
 					
+				case SearchFields_Ticket::VIRTUAL_CONTEXT_LINK:
 				case SearchFields_Ticket::VIRTUAL_WATCHERS:
 					$pass = true;
 					break;
@@ -1701,6 +1710,10 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 				
 			case SearchFields_Ticket::VIRTUAL_STATUS:
 				$counts = $this->_getSubtotalCountForStatus();
+				break;
+				
+			case SearchFields_Ticket::VIRTUAL_CONTEXT_LINK:
+				$counts = $this->_getSubtotalCountForContextLinkColumn('DAO_Ticket', CerberusContexts::CONTEXT_TICKET, $column);
 				break;
 				
 			case SearchFields_Ticket::VIRTUAL_WATCHERS:
@@ -2077,6 +2090,12 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__worker.tpl');
 				break;
 				
+			case SearchFields_Ticket::VIRTUAL_CONTEXT_LINK:
+				$contexts = Extension_DevblocksContext::getAll(false);
+				$tpl->assign('contexts', $contexts);
+				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_link.tpl');
+				break;
+				
 			case SearchFields_Ticket::VIRTUAL_WATCHERS:
 				$tpl->display('devblocks:cerberusweb.core::internal/views/criteria/__context_worker.tpl');
 				break;
@@ -2120,15 +2139,25 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 				}
 				break;
 				
+			case SearchFields_Ticket::VIRTUAL_CONTEXT_LINK:
+				$this->_renderVirtualContextLinks($param);
+				break;
+				
 			case SearchFields_Ticket::VIRTUAL_WATCHERS:
 				$this->_renderVirtualWatchers($param);
 				break;
 				
 			case SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER:
-				if(null == ($worker = DAO_Worker::get($param->value)))
-					break;
+				$worker_name = $param->value;
+				
+				if(is_numeric($param->value)) {
+					if(null == ($worker = DAO_Worker::get($param->value)))
+						break;
 					
-				echo sprintf("In <b>%s</b>'s groups", $worker->getName());
+					$worker_name = $worker->getName();
+				}
+					
+				echo sprintf("In <b>%s</b>'s groups", $worker_name);
 				break;
 				
 			case SearchFields_Ticket::VIRTUAL_STATUS:
@@ -2329,13 +2358,18 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 				$criteria = $this->_doSetCriteriaWorker($field, $oper);
 				break;
 				
+			case SearchFields_Ticket::VIRTUAL_CONTEXT_LINK:
+				@$context_links = DevblocksPlatform::importGPC($_REQUEST['context_link'],'array',array());
+				$criteria = new DevblocksSearchCriteria($field,DevblocksSearchCriteria::OPER_IN,$context_links);
+				break;
+				
 			case SearchFields_Ticket::VIRTUAL_WATCHERS:
 				@$worker_ids = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'array',array());
 				$criteria = new DevblocksSearchCriteria($field, $oper, $worker_ids);
 				break;
 				
 			case SearchFields_Ticket::VIRTUAL_GROUPS_OF_WORKER:
-				@$worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'integer',0);
+				@$worker_id = DevblocksPlatform::importGPC($_REQUEST['worker_id'],'string','');
 				$criteria = new DevblocksSearchCriteria($field, '=', $worker_id);
 				break;
 				
@@ -2617,7 +2651,7 @@ class View_Ticket extends C4_AbstractView implements IAbstractView_Subtotals {
 	}
 };
 
-class Context_Ticket extends Extension_DevblocksContext implements IDevblocksContextProfile {
+class Context_Ticket extends Extension_DevblocksContext implements IDevblocksContextPeek, IDevblocksContextProfile {
 	const ID = 'cerberusweb.contexts.ticket';
 	
 	function authorize($context_id, Model_Worker $worker) {
@@ -3079,6 +3113,167 @@ class Context_Ticket extends Extension_DevblocksContext implements IDevblocksCon
 		$view->renderTemplate = 'context';
 		C4_AbstractViewLoader::setView($view_id, $view);
 		return $view;
+	}
+	
+	function renderPeekPopup($context_id=0, $view_id='') {
+		if(empty($context_id)) {
+			$this->_renderPeekComposePopup($view_id);
+		} else {
+			$this->_renderPeekTicketPopup($context_id, $view_id);
+		}
+	}
+	
+	function _renderPeekComposePopup($view_id) {
+		@$to = DevblocksPlatform::importGPC($_REQUEST['to'],'string','');
+		@$draft_id = DevblocksPlatform::importGPC($_REQUEST['draft_id'],'integer',0);
+	    
+		$visit = CerberusApplication::getVisit();
+		$active_worker = CerberusApplication::getActiveWorker();
+		
+		if(!$active_worker->hasPriv('core.mail.send'))
+			break;
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		$tpl->assign('view_id', $view_id);
+		$tpl->assign('to', $to);
+		
+		// Groups
+		$groups = DAO_Group::getAll();
+		$tpl->assign('groups', $groups);
+		
+		// Groups+Buckets
+		$group_buckets = DAO_Bucket::getGroups();
+		$tpl->assign('group_buckets', $group_buckets);
+
+		// Workers
+		$workers = DAO_Worker::getAll();
+		$tpl->assign('workers', $workers);
+		
+		// Preferences
+		$defaults = array(
+			'group_id' => DAO_WorkerPref::get($active_worker->id,'compose.group_id',0),
+			'bucket_id' => DAO_WorkerPref::get($active_worker->id,'compose.bucket_id',0),
+			'status' => DAO_WorkerPref::get($active_worker->id,'compose.status','waiting'),
+		);
+		
+		// Continue a draft?
+		if(!empty($draft_id)) {
+			$drafts = DAO_MailQueue::getWhere(sprintf("%s = %d AND %s = %d AND %s = %s",
+				DAO_MailQueue::ID,
+				$draft_id,
+				DAO_MailQueue::WORKER_ID,
+				$active_worker->id,
+				DAO_MailQueue::TYPE,
+				C4_ORMHelper::qstr(Model_MailQueue::TYPE_COMPOSE)
+			));
+			
+			@$draft = $drafts[$draft_id];
+			
+			if(!empty($drafts)) {
+				$tpl->assign('draft', $draft);
+				
+				// Overload the defaults of the form
+				if(isset($draft->params['group_id']))
+					$defaults['group_id'] = $draft->params['group_id']; 
+				if(isset($draft->params['bucket_id']))
+					$defaults['bucket_id'] = $draft->params['bucket_id']; 
+			}
+		}
+		
+		$tpl->assign('defaults', $defaults);
+		
+		// Custom fields
+		$custom_fields = DAO_CustomField::getByContextAndGroupId(CerberusContexts::CONTEXT_TICKET, 0);
+		$tpl->assign('custom_fields', $custom_fields);
+
+		$default_group_id = isset($defaults['group_id']) ? $defaults['group_id'] : key($groups);
+		$group_fields = DAO_CustomField::getByContextAndGroupId(CerberusContexts::CONTEXT_TICKET, $default_group_id);
+		$tpl->assign('group_fields', $group_fields);
+		
+		// Template
+		$tpl->display('devblocks:cerberusweb.core::mail/section/compose/peek.tpl');
+	}
+	
+	function _renderPeekTicketPopup($context_id, $view_id) {
+	    @$msgid = DevblocksPlatform::importGPC($_REQUEST['msgid'],'integer',0);
+	    @$edit_mode = DevblocksPlatform::importGPC($_REQUEST['edit'],'integer',0);
+	    
+		$tpl = DevblocksPlatform::getTemplateService();
+
+		$tpl->assign('view_id', $view_id);
+		$tpl->assign('edit_mode', $edit_mode);
+
+		$messages = array();
+		
+		if(null != ($ticket = DAO_Ticket::get($context_id))) {
+			/* @var $ticket Model_Ticket */
+		    $tpl->assign('ticket', $ticket);
+		    
+			$messages = $ticket->getMessages();
+		}
+		
+		// Do we have a specific message to look at?
+		if(!empty($msgid) && null != (@$message = $messages[$msgid])) {
+			 // Good
+		} else {
+			$message = null;
+			$msgid = null;
+			
+			if(is_array($messages)) {
+				if(null != ($message = end($messages)))
+					$msgid = $message->id;
+			}
+		}
+
+		if(!empty($message)) {
+			$tpl->assign('message', $message);
+			$tpl->assign('content', $message->getContent());
+		}
+		
+		// Paging
+		$message_ids = array_keys($messages);
+		$tpl->assign('p_count', count($message_ids));
+		if(false !== ($pos = array_search($msgid, $message_ids))) {
+			$tpl->assign('p', $pos);
+			// Prev
+			if($pos > 0)
+				$tpl->assign('p_prev', $message_ids[$pos-1]);
+			// Next
+			if($pos+1 < count($message_ids))
+				$tpl->assign('p_next', $message_ids[$pos+1]);
+		}
+		
+		// Props
+		$workers = DAO_Worker::getAllActive();
+		$tpl->assign('workers', $workers);
+		
+		$groups = DAO_Group::getAll();
+		$tpl->assign('groups', $groups);
+		
+		$group_buckets = DAO_Bucket::getGroups();
+		$tpl->assign('group_buckets', $group_buckets);
+	    
+		// Watchers
+		$object_watchers = DAO_ContextLink::getContextLinks(CerberusContexts::CONTEXT_TICKET, array($ticket->id), CerberusContexts::CONTEXT_WORKER);
+		$tpl->assign('object_watchers', $object_watchers);
+		
+		// Custom fields
+		$custom_fields = DAO_CustomField::getByContext(CerberusContexts::CONTEXT_TICKET, $ticket->group_id);
+		$tpl->assign('custom_fields', $custom_fields);
+		
+		$custom_field_values = DAO_CustomFieldValue::getValuesByContextIds(CerberusContexts::CONTEXT_TICKET, $ticket->id);
+		if(isset($custom_field_values[$ticket->id]))
+			$tpl->assign('custom_field_values', $custom_field_values[$ticket->id]);
+		
+		// Comments
+		$comments = DAO_Comment::getByContext(CerberusContexts::CONTEXT_TICKET, $ticket->id);
+		$last_comment = array_shift($comments);
+		unset($comments);
+		$tpl->assign('last_comment', $last_comment);
+			
+		// Display
+		$tpl->display('devblocks:cerberusweb.core::tickets/peek.tpl');				
 	}
 };
 

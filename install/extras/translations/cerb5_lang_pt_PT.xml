@@ -66,11 +66,6 @@
         <seg>[Mostrar Ticket] Pode dividir tickets</seg>
       </tuv>
     </tu>
-    <tu tuid="acl.core.home.workspaces">
-      <tuv xml:lang="pt_PT">
-        <seg>[Início] Pode criar workspaces e worklists</seg>
-      </tuv>
-    </tu>
     <tu tuid="acl.core.kb">
       <tuv xml:lang="pt_PT">
         <seg>[Knowledgebase] Pode ver a knowledgebase</seg>
@@ -901,11 +896,6 @@
         <seg>Tem a certeza que desejar eliminar este workspace totalmente?</seg>
       </tuv>
     </tu>
-    <tu tuid="dashboard.edit">
-      <tuv xml:lang="pt_PT">
-        <seg>editar workspace</seg>
-      </tuv>
-    </tu>
     <tu tuid="dashboard.group_filters">
       <tuv xml:lang="pt_PT">
         <seg>Filtros de grupo</seg>
@@ -1069,11 +1059,6 @@
     <tu tuid="display.reply.next.resume_eg">
       <tuv xml:lang="pt_PT">
         <seg>(exemplo: "Friday", "7 days", "Tomorrow 11:15AM", "Dec 31")</seg>
-      </tuv>
-    </tu>
-    <tu tuid="display.reply.next_label">
-      <tuv xml:lang="pt_PT">
-        <seg>Seguinte</seg>
       </tuv>
     </tu>
     <tu tuid="display.reply.reply_banner">
