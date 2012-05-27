@@ -68,11 +68,17 @@ class Page_Custom extends CerberusPageExtension {
 		@array_shift($stack); // pages
 		@$page_uri = array_shift($stack);
 
+		$pages = DAO_WorkspacePage::getAll();
+		
+		$page_id = 0;
+		
 		if(intval($page_uri) > 0) {
 			$page_id = intval($page_uri);
 		}
 		
-		// [TODO] If empty, show the page selection link
+		if(!isset($pages[$page_id]))
+			$page_id = 0;
+		
 		if(empty($page_id)) {
 			$this->_renderIndex();
 			
@@ -161,6 +167,219 @@ class Page_Custom extends CerberusPageExtension {
 		$tpl->display('devblocks:cerberusweb.core::pages/page.tpl');
 	}
 	
+	function showPageWizardPopupAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string',null);
+		
+		$tpl = DevblocksPlatform::getTemplateService();
+		
+		$tpl->assign('view_id', $view_id);
+		
+		$tpl->display('devblocks:cerberusweb.core::pages/wizard_popup.tpl');
+	}
+	
+	function savePageWizardPopupAction() {
+		@$view_id = DevblocksPlatform::importGPC($_REQUEST['view_id'],'string',null);
+		@$page_type = DevblocksPlatform::importGPC($_REQUEST['page_type'],'string',null);
+		
+		$active_worker = CerberusApplication::getActiveWorker();
+
+		$page_id = DAO_WorkspacePage::create(array(
+			DAO_WorkspacePage::NAME => 'Mail',
+			DAO_WorkspacePage::OWNER_CONTEXT => CerberusContexts::CONTEXT_WORKER,
+			DAO_WorkspacePage::OWNER_CONTEXT_ID => $active_worker->id,
+		));
+		
+		$pos = 0;
+		
+		// Workflow
+		
+		$tab_id = DAO_WorkspaceTab::create(array(
+			DAO_WorkspaceTab::NAME => 'Inbox',
+			DAO_WorkspaceTab::POS => $pos++,
+			DAO_WorkspaceTab::WORKSPACE_PAGE_ID => $page_id,
+		));
+		
+		$list_pos = 0;
+
+		// Workflow: My conversations
+		
+			$context = CerberusContexts::CONTEXT_TICKET;
+			$context_ext = Extension_DevblocksContext::get($context);
+			$view = $context_ext->getChooserView(); /* @var $view C4_AbstractView */
+			
+			$view->name = 'Needs my attention';
+			$view->renderLimit = 5;
+			$view->view_columns = array(
+				SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
+				SearchFields_Ticket::TICKET_UPDATED_DATE,
+				SearchFields_Ticket::TICKET_GROUP_ID,
+				SearchFields_Ticket::TICKET_BUCKET_ID,
+			);
+			$view->addParams(array(
+				//new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_STATUS, 'in', array('open')),
+			), true);
+			$view->addParamsRequired(array(
+				new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_STATUS, 'in', array('open')),
+				new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_OWNER_ID, 'in', array('{{current_worker_id}}')),
+			), true);
+			
+			$view_model = C4_AbstractViewLoader::serializeAbstractView($view);		
+			
+			$list_view = new Model_WorkspaceListView();
+			$list_view->title = $view_model->name;
+			$list_view->columns = $view_model->view_columns;
+			$list_view->num_rows = $view_model->renderLimit;
+			$list_view->params = $view_model->paramsEditable;
+			$list_view->params_required = $view_model->paramsRequired;
+			$list_view->sort_by = $view_model->renderSortBy;
+			$list_view->sort_asc = $view_model->renderSortAsc;
+			
+			$list_id = DAO_WorkspaceList::create(array(
+				DAO_WorkspaceList::CONTEXT => $context,
+				DAO_WorkspaceList::LIST_POS => $list_pos++,
+				DAO_WorkspaceList::LIST_VIEW => serialize($list_view),
+				DAO_WorkspaceList::WORKSPACE_TAB_ID => $tab_id,
+			));
+			
+		// Workflow: Needs attention from anyone
+			
+			$context = CerberusContexts::CONTEXT_TICKET;
+			$context_ext = Extension_DevblocksContext::get($context);
+			$view = $context_ext->getChooserView(); /* @var $view C4_AbstractView */
+			
+			$view->name = 'Needs attention from anyone';
+			$view->renderLimit = 10;
+			$view->view_columns = array(
+				SearchFields_Ticket::TICKET_LAST_ACTION_CODE,
+				SearchFields_Ticket::TICKET_UPDATED_DATE,
+				SearchFields_Ticket::TICKET_GROUP_ID,
+				SearchFields_Ticket::TICKET_BUCKET_ID,
+				SearchFields_Ticket::TICKET_OWNER_ID,
+			);
+			//$view->renderSubtotals = SearchFields_Ticket::TICKET_GROUP_ID;
+			$view->addParams(array(
+				//new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_STATUS, 'in', array('open')),
+			), true);
+			$view->addParamsRequired(array(
+				new DevblocksSearchCriteria(SearchFields_Ticket::VIRTUAL_STATUS, 'in', array('open')),
+				new DevblocksSearchCriteria(SearchFields_Ticket::TICKET_OWNER_ID, 'in', array(0)),
+			), true);
+			
+			$view_model = C4_AbstractViewLoader::serializeAbstractView($view);		
+			
+			$list_view = new Model_WorkspaceListView();
+			$list_view->title = $view_model->name;
+			$list_view->columns = $view_model->view_columns;
+			$list_view->num_rows = $view_model->renderLimit;
+			$list_view->params = $view_model->paramsEditable;
+			$list_view->params_required = $view_model->paramsRequired;
+			$list_view->sort_by = $view_model->renderSortBy;
+			$list_view->sort_asc = $view_model->renderSortAsc;
+			
+			$list_id = DAO_WorkspaceList::create(array(
+				DAO_WorkspaceList::CONTEXT => $context,
+				DAO_WorkspaceList::LIST_POS => $list_pos++,
+				DAO_WorkspaceList::LIST_VIEW => serialize($list_view),
+				DAO_WorkspaceList::WORKSPACE_TAB_ID => $tab_id,
+			));
+		
+		// Drafts		
+		
+		$tab_id = DAO_WorkspaceTab::create(array(
+			DAO_WorkspaceTab::NAME => 'Drafts',
+			DAO_WorkspaceTab::POS => $pos++,
+			DAO_WorkspaceTab::WORKSPACE_PAGE_ID => $page_id,
+		));
+		
+		// Drafts: My drafts
+		
+			$context = CerberusContexts::CONTEXT_DRAFT;
+			$context_ext = Extension_DevblocksContext::get($context);
+			$view = $context_ext->getChooserView(); /* @var $view C4_AbstractView */
+			
+			$view->name = 'My drafts';
+			$view->renderLimit = 10;
+			$view->view_columns = array(
+				SearchFields_MailQueue::HINT_TO,
+				SearchFields_MailQueue::WORKER_ID,
+				SearchFields_MailQueue::TYPE,
+				SearchFields_MailQueue::UPDATED,
+			);
+			$view->addParams(array(
+				//new DevblocksSearchCriteria(SearchFields_MailQueue::VIRTUAL_STATUS, 'in', array('open')),
+			), true);
+			$view->addParamsRequired(array(
+				new DevblocksSearchCriteria(SearchFields_MailQueue::WORKER_ID, 'in', array('{{current_worker_id}}')),
+				//new DevblocksSearchCriteria(SearchFields_MailQueue::IS_QUEUED, '=', 0),
+			), true);
+			
+			$view_model = C4_AbstractViewLoader::serializeAbstractView($view);		
+			
+			$list_view = new Model_WorkspaceListView();
+			$list_view->title = $view_model->name;
+			$list_view->columns = $view_model->view_columns;
+			$list_view->num_rows = $view_model->renderLimit;
+			$list_view->params = $view_model->paramsEditable;
+			$list_view->params_required = $view_model->paramsRequired;
+			$list_view->sort_by = $view_model->renderSortBy;
+			$list_view->sort_asc = $view_model->renderSortAsc;
+			
+			$list_id = DAO_WorkspaceList::create(array(
+				DAO_WorkspaceList::CONTEXT => $context,
+				DAO_WorkspaceList::LIST_POS => $list_pos++,
+				DAO_WorkspaceList::LIST_VIEW => serialize($list_view),
+				DAO_WorkspaceList::WORKSPACE_TAB_ID => $tab_id,
+			));		
+		
+		// Sent
+		
+		$tab_id = DAO_WorkspaceTab::create(array(
+			DAO_WorkspaceTab::NAME => 'Sent',
+			DAO_WorkspaceTab::POS => $pos++,
+			DAO_WorkspaceTab::WORKSPACE_PAGE_ID => $page_id,
+		));
+		
+		// Sent: my sent messages
+		
+			$context = CerberusContexts::CONTEXT_MESSAGE;
+			$context_ext = Extension_DevblocksContext::get($context);
+			$view = $context_ext->getChooserView(); /* @var $view C4_AbstractView */
+			
+			$view->name = 'My sent messages';
+			$view->renderLimit = 10;
+			$view->view_columns = array(
+				SearchFields_Message::ADDRESS_EMAIL,
+				SearchFields_Message::TICKET_GROUP_ID,
+				SearchFields_Message::CREATED_DATE,
+				SearchFields_Message::WORKER_ID,
+			);
+			$view->addParams(array(
+				//new DevblocksSearchCriteria(SearchFields_Message::VIRTUAL_STATUS, 'in', array('open')),
+			), true);
+			$view->addParamsRequired(array(
+				new DevblocksSearchCriteria(SearchFields_Message::WORKER_ID, 'in', array('{{current_worker_id}}')),
+				new DevblocksSearchCriteria(SearchFields_Message::IS_OUTGOING, '=', 1),
+			), true);
+			
+			$view_model = C4_AbstractViewLoader::serializeAbstractView($view);		
+			
+			$list_view = new Model_WorkspaceListView();
+			$list_view->title = $view_model->name;
+			$list_view->columns = $view_model->view_columns;
+			$list_view->num_rows = $view_model->renderLimit;
+			$list_view->params = $view_model->paramsEditable;
+			$list_view->params_required = $view_model->paramsRequired;
+			$list_view->sort_by = $view_model->renderSortBy;
+			$list_view->sort_asc = $view_model->renderSortAsc;
+			
+			$list_id = DAO_WorkspaceList::create(array(
+				DAO_WorkspaceList::CONTEXT => $context,
+				DAO_WorkspaceList::LIST_POS => $list_pos++,
+				DAO_WorkspaceList::LIST_VIEW => serialize($list_view),
+				DAO_WorkspaceList::WORKSPACE_TAB_ID => $tab_id,
+			));			
+	}
+	
 	function setPageOrderAction() {
 		@$page_ids_str = DevblocksPlatform::importGPC($_REQUEST['pages'],'string','');
 		
@@ -232,6 +451,8 @@ class Page_Custom extends CerberusPageExtension {
 		
 		header('Content-type: application/json');
 
+		$pages = DAO_WorkspacePage::getAll();
+		
 		@$menu = json_decode(DAO_WorkerPref::get($active_worker->id, 'menu_json', json_encode(array())));
 		
 		if(!is_array($menu))
@@ -248,9 +469,16 @@ class Page_Custom extends CerberusPageExtension {
 					$menu[] = $page_id;
 				}
 				
-				DAO_WorkerPref::set($active_worker->id, 'menu_json', json_encode(array_values($menu)));
 			}
 		}
+		
+		// Remove dead links
+		foreach($menu as $idx => $page_id) {
+			if(!isset($pages[$page_id]))
+				unset($menu[$idx]);
+		}
+		
+		DAO_WorkerPref::set($active_worker->id, 'menu_json', json_encode(array_values($menu)));
 		
 		echo json_encode(array(
 			'success' => true,
